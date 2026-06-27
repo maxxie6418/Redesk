@@ -8,7 +8,6 @@
 
 [![Status](https://img.shields.io/badge/status-M0%20工程地基-green.svg)](#项目状态)
 [![Stack](https://img.shields.io/badge/stack-TypeScript-3178c6.svg)](#技术栈)
-[![License](https://img.shields.io/badge/license-待定-lightgrey.svg)](#许可证)
 
 </div>
 
@@ -237,7 +236,3 @@ docker compose up -d
 - `data/`
 
 ---
-
-## 📄 许可证
-
-待定。
