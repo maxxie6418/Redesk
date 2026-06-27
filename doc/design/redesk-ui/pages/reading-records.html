@@ -1,16 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Untitled</title>
-    <style id="theme-vars">
-<!DOCTYPE html>
 <html lang="zh-CN" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redesk - 阅读主题 - v4</title>
+    <title>Redesk - 阅读记录</title>
     <style id="theme-vars">
 /* Source: structured-spec */
 /* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
@@ -349,6 +342,9 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Badge ─────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="badge filled">Essay</span> <span class="badge filled">Editorial</span> <span class="badge filled is-disabled" aria-disabled="true">Essay</span>
+*/
 .preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .badge{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 calc(var(--spacing)*3.5);border-radius:var(--radius);font:600 12px/1 var(--font-sans);letter-spacing:.01em;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease,border-color .16s ease}
@@ -363,6 +359,9 @@
 .outline.is-disabled{background:var(--background);color:var(--muted-foreground)}
 
 /* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">Primary</span> <div class="examples"> <button class="btn primary" type="button">Start a new chat</button> <button class="btn primary" type="button" disabled>Start a new chat</button> </div>
+*/
 .preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .examples{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:center;padding:clamp(18px,3vw,24px);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);background:var(--popover);box-shadow:var(--shadow-xs)}
@@ -379,6 +378,9 @@
 .ghost:disabled{background:transparent;color:var(--muted-foreground);border-color:transparent}
 
 /* ── Card ──────────────────────────────────────────────────── */
+/* @anatomy
+   <article class="card"> <p class="eyebrow">Reading Card</p> <h2 class="title">Summarize this chapter</h2> <p class="body">Claude Design System frames long-form AI assistant reading with soft elevation, calm spacing, and editorial rhythm.</p> </article> <article class="card disabled" aria-disabled="true"> <p class="eyebrow">Reading Card</p> <h2 class="title">Context locked</h2> <p class="body">Th...
+*/
 .preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .card{width:100%;height:100%;display:flex;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
@@ -397,6 +399,9 @@
 .emphasis .body,.emphasis .title{color:var(--background)}
 
 /* ── Chat Bubble ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="bubble user"> <span class="meta">You · now</span> <p class="copy">Recommend a writer for light reading.</p>
+*/
 .preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .bubble{display:grid;gap:8px;max-width:280px;padding:calc(var(--spacing)*3.5) calc(var(--spacing)*4);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
@@ -413,6 +418,9 @@
 .thread{display:grid;gap:12px;width:min(100%,360px);padding:calc(var(--spacing)*4);background:var(--popover);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-sm)}
 
 /* ── Input ─────────────────────────────────────────────────── */
+/* @anatomy
+   <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input"> <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input disabled" disabled>
+*/
 .preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
@@ -425,6 +433,9 @@
 .dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--muted-foreground);opacity:.5}
 
 /* ── Navigation ────────────────────────────────────────────── */
+/* @anatomy
+   <nav class="tabs" aria-label="Navigation tabs"> <button class="tab active" type="button">Web</button> <button class="tab" type="button">Mobile</button> <button class="tab" type="button">Library</button> <button class="tab" type="button" disabled>Syncing</button> </nav>
+*/
 .preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
 .section{display:grid;gap:14px}
 .tabs,.rail,.bottom-nav{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs)}
@@ -484,7 +495,7 @@
       <span class="shell-brand-name">Redesk</span>
     </div>
 
-    <!-- ── V4: Search bar in sidebar ──────────────────────────── -->
+    <!-- ── Search bar in sidebar ──────────────────────────── -->
     <div class="sidebar-search">
       <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
       <input type="text" placeholder="搜索书名、作者..." aria-label="搜索书籍">
@@ -503,12 +514,12 @@
         阅读档案
       </a>
 
-      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
+      <a class="shell-nav-item active" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
         阅读记录
       </a>
 
-      <a class="shell-nav-item active" href="#" data-active="true">
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
         阅读主题
       </a>
@@ -558,343 +569,245 @@
 
   <!-- ── Main Content ─────────────────────────────────────── -->
   <main class="shell-main">
+    <div class="rr-page">
 
-    <!-- ═══════════════════════════════════════════════════════
-         阅读主题 — Reading Topics Page
-         ═══════════════════════════════════════════════════════ -->
-    <div class="topics-page">
+      <!-- PAGE TITLE AREA -->
+      <div class="rr-title-area">
+        <h1>阅读记录</h1>
+        <p>你的阅读痕迹</p>
+      </div>
 
-      <!-- ── Page Title Area ──────────────────────────────── -->
-      <div class="topics-header">
-        <div class="topics-header-left">
-          <h1 class="topics-title">阅读主题</h1>
-          <p class="topics-subtitle">围绕主题，跨书整理阅读思考</p>
+      <!-- TOP ACTION BAR -->
+      <div class="rr-action-bar">
+        <div class="rr-search-bar">
+          <span data-icon="search" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg');flex-shrink:0"></span>
+          <input type="text" class="rr-search-input" placeholder="搜索高亮与笔记..." aria-label="搜索阅读痕迹">
+        </div>
+        <div class="rr-filter-tabs">
+          <button class="rr-filter-tab active" type="button">全部</button>
+          <button class="rr-filter-tab" type="button">高亮</button>
+          <button class="rr-filter-tab" type="button">笔记</button>
         </div>
       </div>
 
-      <!-- ── Action Bar ────────────────────────────────────── -->
-      <div class="topics-action-bar">
-        <button class="btn primary" style="display:inline-flex;align-items:center;gap:calc(var(--spacing)*2)">
-          <span data-icon="circle-plus" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');color:var(--primary-foreground)"></span>
-          新建主题
-        </button>
-        <div class="topics-search">
-          <span data-icon="search" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
-          <input type="text" placeholder="搜索主题名称或描述..." aria-label="搜索主题">
+      <!-- ── Book Group 1: 百年孤独 (在读) ──────────────────── -->
+      <div class="rr-book-group">
+        <div class="rr-book-header">
+          <div class="rr-book-identity">
+            <div class="rr-book-cover" style="background:var(--brand-200)">
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--brand-700)">百</span>
+            </div>
+            <div>
+              <div class="rr-book-title">百年孤独</div>
+              <div class="rr-book-author">加西亚·马尔克斯</div>
+            </div>
+          </div>
+          <span class="rr-status-badge rr-status-reading">在读</span>
+        </div>
+
+        <div class="rr-traces">
+          <!-- Trace 1: Note -->
+          <div class="rr-trace-card rr-trace--note">
+            <div class="rr-trace-badge rr-badge-note">笔记</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">家族的孤独是一个循环，每个新成员都在重复前人的命运</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第3章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月25日</span>
+            </div>
+          </div>
+
+          <!-- Trace 2: Highlight -->
+          <div class="rr-trace-card rr-trace--highlight">
+            <div class="rr-trace-badge rr-badge-highlight">高亮</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"多年以后，面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起..."</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第1章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月22日</span>
+            </div>
+          </div>
+
+          <!-- Trace 3: Note -->
+          <div class="rr-trace-card rr-trace--note">
+            <div class="rr-trace-badge rr-badge-note">笔记</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">时间在这个家族里不是线性的，而是螺旋的</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第2章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月20日</span>
+            </div>
+          </div>
+
+          <!-- Trace 4: Highlight -->
+          <div class="rr-trace-card rr-trace--highlight">
+            <div class="rr-trace-badge rr-badge-highlight">高亮</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"世界新生伊始，许多事物还没有名字..."</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第1章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月18日</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ── Topics List ──────────────────────────────────── -->
-      <div class="topics-list">
-
-        <!-- ── Topic 1: 拉美文学研究 (most active) ──────────── -->
-        <article class="topic-card topic-card--active">
-          <div class="topic-card-header">
-            <h2 class="topic-card-title">拉美文学研究</h2>
-            <p class="topic-card-desc">探索拉美文学的魔幻现实主义传统，从马尔克斯到博尔赫斯</p>
+      <!-- ── Book Group 2: 人类简史 (已读) ──────────────────── -->
+      <div class="rr-book-group">
+        <div class="rr-book-header">
+          <div class="rr-book-identity">
+            <div class="rr-book-cover" style="background:var(--bg-400)">
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--text-700)">人</span>
+            </div>
+            <div>
+              <div class="rr-book-title">人类简史</div>
+              <div class="rr-book-author">尤瓦尔·赫拉利</div>
+            </div>
           </div>
+          <span class="rr-status-badge rr-status-done">已读</span>
+        </div>
 
-          <div class="topic-card-meta">
-            <span class="topic-meta-pill">
-              <span data-icon="book-open" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
-              4 本关联书籍
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="pen-line" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-              12 条高亮
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="file" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
-              8 条笔记
-            </span>
-            <span class="topic-meta-date">最近更新 6月25日</span>
-          </div>
-
-          <div class="topic-card-books">
-            <span class="topic-section-label">关联书籍</span>
-            <div class="topic-books-row">
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--brand-100);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">百年孤独</span>
-                </div>
-                <span class="topic-book-name">百年孤独</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--brand-50);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:10px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">霍乱时期的爱情</span>
-                </div>
-                <span class="topic-book-name">霍乱时期的爱情</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">佩德罗·巴拉莫</span>
-                </div>
-                <span class="topic-book-name">佩德罗·巴拉莫</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">绿房子</span>
-                </div>
-                <span class="topic-book-name">绿房子</span>
-              </div>
+        <div class="rr-traces">
+          <!-- Trace 1: Highlight -->
+          <div class="rr-trace-card rr-trace--highlight">
+            <div class="rr-trace-badge rr-badge-highlight">高亮</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"农业革命是史上最大的骗局"</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第8章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月15日</span>
             </div>
           </div>
 
-          <details class="topic-details" open>
-            <summary class="topic-summary">最近阅读痕迹</summary>
-
-            <div class="topic-traces">
-              <div class="topic-trace topic-trace--highlight">
-                <span class="trace-type-badge">高亮</span>
-                <div class="trace-content">
-                  <p class="trace-text">"家族的孤独是一个循环..."</p>
-                  <span class="trace-source">百年孤独 · 第3章</span>
-                </div>
-              </div>
-              <div class="topic-trace topic-trace--note">
-                <span class="trace-type-badge trace-type-badge--note">笔记</span>
-                <div class="trace-content">
-                  <p class="trace-text">"博尔赫斯的迷宫隐喻与马尔克斯的时间观形成有趣对照"</p>
-                  <span class="trace-source">独立笔记</span>
-                </div>
-              </div>
-              <div class="topic-trace topic-trace--highlight">
-                <span class="trace-type-badge">高亮</span>
-                <div class="trace-content">
-                  <p class="trace-text">"世界新生伊始..."</p>
-                  <span class="trace-source">百年孤独 · 第1章</span>
-                </div>
-              </div>
+          <!-- Trace 2: Note -->
+          <div class="rr-trace-card rr-trace--note">
+            <div class="rr-trace-badge rr-badge-note">笔记</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">作者对认知革命的分析很有启发性，人类能讲故事的能力可能是关键</p>
             </div>
-
-            <div class="topic-questions">
-              <span class="topic-section-label" style="display:flex;align-items:center;gap:calc(var(--spacing)*1.5);">
-                <span data-icon="circle-question-mark" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-question-mark.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-question-mark.svg')"></span>
-                待解答的问题
-              </span>
-              <ul class="question-list">
-                <li class="question-item">魔幻现实主义在欧洲文学中的根源是什么？</li>
-                <li class="question-item">拉美文学的政治性与文学性的关系？</li>
-              </ul>
-            </div>
-
-            <div class="topic-judgments">
-              <span class="topic-section-label">判断与洞察</span>
-              <div class="judgment-card">
-                <p class="judgment-text">魔幻现实主义的本质是用日常化的语言描述超自然现象，让读者在恍惚中接受另一种真实</p>
-              </div>
-            </div>
-
-          </details>
-        </article>
-
-        <!-- ── Topic 2: 认知科学与意识 ─────────────────────── -->
-        <article class="topic-card">
-          <div class="topic-card-header">
-            <h2 class="topic-card-title">认知科学与意识</h2>
-            <p class="topic-card-desc">理解人类认知、意识和心智的运作方式</p>
-          </div>
-
-          <div class="topic-card-meta">
-            <span class="topic-meta-pill">
-              <span data-icon="book-open" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
-              3 本关联书籍
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="pen-line" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-              8 条高亮
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="file" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
-              5 条笔记
-            </span>
-            <span class="topic-meta-date">最近更新 6月20日</span>
-          </div>
-
-          <div class="topic-card-books">
-            <span class="topic-section-label">关联书籍</span>
-            <div class="topic-books-row">
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">人类简史</span>
-                </div>
-                <span class="topic-book-name">人类简史</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--brand-50);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:10px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">意识的解释</span>
-                </div>
-                <span class="topic-book-name">意识的解释</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:10px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">思考快与慢</span>
-                </div>
-                <span class="topic-book-name">思考快与慢</span>
-              </div>
+            <div class="rr-trace-meta">
+              <span>第2章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月10日</span>
             </div>
           </div>
-
-          <details class="topic-details">
-            <summary class="topic-summary">展开阅读痕迹</summary>
-
-            <div class="topic-traces">
-              <div class="topic-trace topic-trace--highlight">
-                <span class="trace-type-badge">高亮</span>
-                <div class="trace-content">
-                  <p class="trace-text">"意识是大脑活动的副产品"</p>
-                  <span class="trace-source">意识的解释 · 第4章</span>
-                </div>
-              </div>
-              <div class="topic-trace topic-trace--note">
-                <span class="trace-type-badge trace-type-badge--note">笔记</span>
-                <div class="trace-content">
-                  <p class="trace-text">"系统1与系统2的划分对理解认知偏差非常关键"</p>
-                  <span class="trace-source">独立笔记</span>
-                </div>
-              </div>
-            </div>
-
-          </details>
-        </article>
-
-        <!-- ── Topic 3: 科技与人文 ─────────────────────────── -->
-        <article class="topic-card">
-          <div class="topic-card-header">
-            <h2 class="topic-card-title">科技与人文</h2>
-            <p class="topic-card-desc">技术发展对人类社会和人文精神的影响</p>
-          </div>
-
-          <div class="topic-card-meta">
-            <span class="topic-meta-pill">
-              <span data-icon="book-open" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
-              2 本关联书籍
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="pen-line" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-              4 条高亮
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="file" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
-              3 条笔记
-            </span>
-            <span class="topic-meta-date">最近更新 6月12日</span>
-          </div>
-
-          <div class="topic-card-books">
-            <span class="topic-section-label">关联书籍</span>
-            <div class="topic-books-row">
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--brand-50);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">科技想要什么</span>
-                </div>
-                <span class="topic-book-name">科技想要什么</span>
-              </div>
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">人类简史</span>
-                </div>
-                <span class="topic-book-name">人类简史</span>
-              </div>
-            </div>
-          </div>
-
-          <details class="topic-details">
-            <summary class="topic-summary">展开阅读痕迹</summary>
-
-            <div class="topic-traces">
-              <div class="topic-trace topic-trace--highlight">
-                <span class="trace-type-badge">高亮</span>
-                <div class="trace-content">
-                  <p class="trace-text">"技术是人类意志的延伸"</p>
-                  <span class="trace-source">科技想要什么 · 第2章</span>
-                </div>
-              </div>
-            </div>
-
-          </details>
-        </article>
-
-        <!-- ── Topic 4: 存在主义哲学 ───────────────────────── -->
-        <article class="topic-card">
-          <div class="topic-card-header">
-            <h2 class="topic-card-title">存在主义哲学</h2>
-            <p class="topic-card-desc">从存在主义视角理解个体自由与责任</p>
-          </div>
-
-          <div class="topic-card-meta">
-            <span class="topic-meta-pill">
-              <span data-icon="book-open" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
-              1 本关联书籍
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="pen-line" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-              2 条高亮
-            </span>
-            <span class="topic-meta-pill">
-              <span data-icon="file" style="width:13px;height:13px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
-              1 条笔记
-            </span>
-            <span class="topic-meta-date">最近更新 6月5日</span>
-          </div>
-
-          <div class="topic-card-books">
-            <span class="topic-section-label">关联书籍</span>
-            <div class="topic-books-row">
-              <div class="topic-book-thumb">
-                <div class="topic-book-cover" style="background:var(--bg-300);border:1px solid var(--border-200);">
-                  <span style="font-family:var(--font-serif);font-size:11px;color:var(--text-600);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;">存在与虚无</span>
-                </div>
-                <span class="topic-book-name">存在与虚无</span>
-              </div>
-            </div>
-          </div>
-
-          <details class="topic-details">
-            <summary class="topic-summary">展开阅读痕迹</summary>
-
-            <div class="topic-traces">
-              <div class="topic-trace topic-trace--note">
-                <span class="trace-type-badge trace-type-badge--note">笔记</span>
-                <div class="trace-content">
-                  <p class="trace-text">"存在先于本质——萨特这一命题彻底改变了我们对人的理解"</p>
-                  <span class="trace-source">存在与虚无 · 导论</span>
-                </div>
-              </div>
-            </div>
-
-          </details>
-        </article>
-
-      </div><!-- /.topics-list -->
-
-      <!-- ── Empty State ───────────────────────────────────── -->
-      <div class="topics-empty-state">
-        <p class="topics-empty-text">创建一个主题，开始跨书整理你的阅读思考</p>
-        <a class="topics-empty-link" href="#">新建主题</a>
+        </div>
       </div>
 
-    </div><!-- /.topics-page -->
+      <!-- ── Book Group 3: 三体 (已读) ──────────────────────── -->
+      <div class="rr-book-group">
+        <div class="rr-book-header">
+          <div class="rr-book-identity">
+            <div class="rr-book-cover" style="background:var(--text-100)">
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--text-700)">三</span>
+            </div>
+            <div>
+              <div class="rr-book-title">三体</div>
+              <div class="rr-book-author">刘慈欣</div>
+            </div>
+          </div>
+          <span class="rr-status-badge rr-status-done">已读</span>
+        </div>
 
+        <div class="rr-traces">
+          <!-- Trace 1: Highlight -->
+          <div class="rr-trace-card rr-trace--highlight">
+            <div class="rr-trace-badge rr-badge-highlight">高亮</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"给岁月以文明，而不是给文明以岁月"</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第12章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月8日</span>
+            </div>
+          </div>
+
+          <!-- Trace 2: Highlight -->
+          <div class="rr-trace-card rr-trace--highlight">
+            <div class="rr-trace-badge rr-badge-highlight">高亮</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"黑暗森林法则"</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第8章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月5日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Book Group 4: 小王子 (已读) ────────────────────── -->
+      <div class="rr-book-group">
+        <div class="rr-book-header">
+          <div class="rr-book-identity">
+            <div class="rr-book-cover" style="background:var(--success-100)">
+              <span style="font-family:var(--font-display);font-size:14px;font-weight:500;color:var(--success-700)">小</span>
+            </div>
+            <div>
+              <div class="rr-book-title">小王子</div>
+              <div class="rr-book-author">安托万·德·圣-埃克苏佩里</div>
+            </div>
+          </div>
+          <span class="rr-status-badge rr-status-done">已读</span>
+        </div>
+
+        <div class="rr-traces">
+          <!-- Trace 1: Note -->
+          <div class="rr-trace-card rr-trace--note">
+            <div class="rr-trace-badge rr-badge-note">笔记</div>
+            <div class="rr-trace-content">
+              <p class="rr-trace-text">"只有用心灵才能看清事物的本质"</p>
+            </div>
+            <div class="rr-trace-meta">
+              <span>第21章</span>
+              <span class="rr-trace-sep">&middot;</span>
+              <span>6月1日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Empty State ────────────────────────────────────── -->
+      <div class="rr-empty-state">
+        <div class="rr-empty-icon">
+          <span data-icon="book-open" style="width:28px;height:28px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+        </div>
+        <p>更多阅读痕迹将在这里出现</p>
+      </div>
+
+    </div>
   </main>
+
 </div>
 
 <!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
 <nav class="shell-mobile-tabs" aria-label="移动端导航">
   <div class="shell-mobile-tabs-inner">
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-bookshelf">
-      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="book-open" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
       书架
     </a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile">
       <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
       阅读档案
     </a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
+    <a class="shell-mobile-tab active" href="#" data-dom-id="nav-reading-records">
       <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
       阅读记录
     </a>
-    <a class="shell-mobile-tab active" href="#">
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
       <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
       主题
     </a>
@@ -906,9 +819,9 @@
 </nav>
 
 <style>
-  /* ═══════════════════════════════════════════════════════
-     Redesk Shell Layout
-     ═══════════════════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════════════════════
+     Shell Layout & Sidebar (shared across pages)
+     ═══════════════════════════════════════════════════════════ */
   body {
     margin: 0;
     background: var(--background);
@@ -923,7 +836,6 @@
     min-height: 100vh;
   }
 
-  /* ── Sidebar ────────────────────────────────────────────── */
   .shell-sidebar {
     position: fixed;
     top: 0;
@@ -969,7 +881,7 @@
     letter-spacing: -0.01em;
   }
 
-  /* ── V4: Sidebar Search Bar ──────────────────────────── */
+  /* ── Sidebar Search Bar ──────────────────────────────────── */
   .sidebar-search {
     display: flex;
     align-items: center;
@@ -1009,6 +921,37 @@
   .sidebar-search input::placeholder {
     color: var(--muted-foreground);
     font-size: 12px;
+  }
+
+  /* ── Sidebar Stats (lightweight, non-interactive) ────── */
+  .sidebar-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--spacing) * 2);
+    padding: 12px 20px;
+    border-top: 1px solid var(--sidebar-border);
+  }
+
+  .sidebar-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .sidebar-stat-num {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--sidebar-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sidebar-stat-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted-foreground);
   }
 
   .shell-nav {
@@ -1072,38 +1015,6 @@
     flex-shrink: 0;
   }
 
-  /* ── Sidebar Stats ────────────────────────────────────── */
-  .sidebar-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: calc(var(--spacing) * 2);
-    padding: 12px 20px;
-    border-top: 1px solid var(--sidebar-border);
-  }
-
-  .sidebar-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .sidebar-stat-num {
-    font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 16px;
-    line-height: 1.2;
-    color: var(--sidebar-foreground);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .sidebar-stat-label {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--muted-foreground);
-  }
-
-  /* ── Sidebar Footer ─────────────────────────────────────── */
   .shell-sidebar-footer {
     display: flex;
     flex-direction: column;
@@ -1155,11 +1066,7 @@
     font-weight: 600;
   }
 
-  .shell-user-info {
-    flex: 1;
-    min-width: 0;
-  }
-
+  .shell-user-info { flex: 1; min-width: 0; }
   .shell-user-name {
     font-size: 13px;
     font-weight: 500;
@@ -1168,13 +1075,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
   .shell-user-role {
     font-size: 11px;
     color: var(--muted-foreground);
   }
 
-  /* ── Main Content ──────────────────────────────────────── */
   .shell-main {
     flex: 1;
     margin-left: 256px;
@@ -1184,7 +1089,6 @@
     overflow-x: hidden;
   }
 
-  /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
   .shell-mobile-tabs {
     display: none;
     position: fixed;
@@ -1221,524 +1125,337 @@
     text-decoration: none;
   }
 
-  .shell-mobile-tab [data-icon] {
-    width: 20px;
-    height: 20px;
-  }
-
+  .shell-mobile-tab [data-icon] { width: 20px; height: 20px; }
   .shell-mobile-tab:hover {
     background: var(--sidebar-accent);
     color: var(--sidebar-accent-foreground);
   }
+  .shell-mobile-tab.active { color: var(--primary); }
 
-  .shell-mobile-tab.active {
-    color: var(--primary);
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  [data-icon] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    background-color: currentColor;
   }
 
-  /* ── Responsive ─────────────────────────────────────────── */
+  .shell-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(0,0,0,0.3);
+  }
+  .shell-sidebar-backdrop.is-visible { display: block; }
+
   @media (max-width: 768px) {
-    .shell-sidebar {
-      transform: translateX(-100%);
-    }
-
-    .shell-sidebar.is-open {
-      transform: translateX(0);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .shell-sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 35;
-      background: rgba(0,0,0,0.3);
-    }
-
-    .shell-sidebar-backdrop.is-visible {
-      display: block;
-    }
-
-    .shell-main {
-      margin-left: 0;
-      padding: 20px 16px 88px;
-    }
-
-    .shell-mobile-tabs {
-      display: block;
-    }
-
-    .sidebar-search {
-      margin: 8px 8px 4px;
-    }
-  }
-</style>
-
-<style>
-  /* ═══════════════════════════════════════════════════════
-     READING TOPICS — Page-specific Styles
-     ═══════════════════════════════════════════════════════ */
-
-  /* ── Page layout ────────────────────────────────────────── */
-  .topics-page {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 5);
-    max-width: 960px;
-    width: 100%;
-    min-width: 0;
+    .shell-sidebar { transform: translateX(-100%); }
+    .shell-sidebar.is-open { transform: translateX(0); box-shadow: var(--shadow-xl); }
+    .shell-main { margin-left: 0; padding: 20px 16px 88px; }
+    .shell-mobile-tabs { display: block; }
   }
 
-  /* ── Page title area ────────────────────────────────────── */
-  .topics-header {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 1);
+  /* ═══════════════════════════════════════════════════════════
+     PAGE-SPECIFIC: 阅读记录 (Reading Records)
+     ═══════════════════════════════════════════════════════════ */
+
+  .rr-page {
+    max-width: 820px;
+    margin: 0 auto;
   }
 
-  .topics-title {
-    margin: 0;
+  /* ── Page Title ──────────────────────────────────────────── */
+  .rr-title-area {
+    margin-bottom: 32px;
+  }
+  .rr-title-area h1 {
     font-family: var(--font-display);
-    font-weight: 400;
     font-size: 24px;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
+    font-weight: 400;
     color: var(--foreground);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
   }
-
-  .topics-subtitle {
-    margin: 0;
+  .rr-title-area p {
     font-family: var(--font-serif);
     font-size: 14px;
-    line-height: 1.5;
     color: var(--muted-foreground);
+    margin: 0;
+    line-height: 1.5;
   }
 
-  /* ── Action bar ─────────────────────────────────────────── */
-  .topics-action-bar {
+  /* ── Action Bar ──────────────────────────────────────────── */
+  .rr-action-bar {
     display: flex;
     align-items: center;
-    gap: calc(var(--spacing) * 4);
+    gap: 16px;
+    margin-bottom: 36px;
     flex-wrap: wrap;
   }
 
-  .topics-search {
+  .rr-search-bar {
     display: flex;
     align-items: center;
-    gap: calc(var(--spacing) * 2);
-    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-    background: var(--popover);
+    gap: 10px;
+    flex: 1 1 280px;
+    min-width: 200px;
+    height: 40px;
+    padding: 0 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    background: var(--card);
     box-shadow: var(--shadow-xs);
     transition: border-color 0.16s ease, box-shadow 0.16s ease;
-    flex: 1 1 240px;
-    max-width: 360px;
+    color: var(--muted-foreground);
   }
-
-  .topics-search:focus-within {
+  .rr-search-bar:focus-within {
     border-color: var(--ring);
     box-shadow: var(--shadow-sm);
   }
 
-  .topics-search [data-icon] {
-    color: var(--muted-foreground);
-    flex-shrink: 0;
-  }
-
-  .topics-search input {
+  .rr-search-input {
     flex: 1;
     min-width: 0;
     border: none;
     background: transparent;
-    outline: none;
-    color: var(--foreground);
     font-family: var(--font-sans);
     font-size: 13px;
+    color: var(--foreground);
+    outline: none;
   }
-
-  .topics-search input::placeholder {
+  .rr-search-input::placeholder {
     color: var(--muted-foreground);
   }
 
-  /* ── Topics list ───────────────────────────────────────── */
-  .topics-list {
+  .rr-filter-tabs {
     display: flex;
-    flex-direction: column;
-    gap: 32px;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    background: var(--muted);
   }
 
-  /* ── Topic card ────────────────────────────────────────── */
-  .topic-card {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 28px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--popover);
-    box-shadow: var(--shadow-xs);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  .rr-filter-tab {
+    appearance: none;
+    border: none;
+    padding: 6px 14px;
+    border-radius: calc(var(--radius-sm) - 4px);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease;
   }
-
-  .topic-card:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .topic-card--active {
-    border-left: 3px solid var(--primary);
-    padding-left: 25px;
-  }
-
-  /* ── Topic card header ──────────────────────────────────── */
-  .topic-card-header {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 1.5);
-  }
-
-  .topic-card-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 20px;
-    line-height: 1.25;
-    letter-spacing: -0.01em;
+  .rr-filter-tab:hover {
     color: var(--foreground);
   }
+  .rr-filter-tab.active {
+    background: var(--popover);
+    color: var(--foreground);
+    box-shadow: var(--shadow-xs);
+  }
 
-  .topic-card-desc {
-    margin: 0;
+  /* ── Book Group ──────────────────────────────────────────── */
+  .rr-book-group {
+    margin-bottom: 32px;
+  }
+
+  .rr-book-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .rr-book-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .rr-book-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .rr-book-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--foreground);
+    line-height: 1.3;
+  }
+
+  .rr-book-author {
     font-family: var(--font-serif);
     font-size: 13px;
-    line-height: 1.6;
     color: var(--muted-foreground);
+    line-height: 1.4;
   }
 
-  /* ── Meta row ───────────────────────────────────────────── */
-  .topic-card-meta {
-    display: flex;
-    align-items: center;
-    gap: calc(var(--spacing) * 3);
-    flex-wrap: wrap;
-  }
-
-  .topic-meta-pill {
+  /* ── Status Badges ───────────────────────────────────────── */
+  .rr-status-badge {
     display: inline-flex;
     align-items: center;
-    gap: calc(var(--spacing) * 1.5);
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-  }
-
-  .topic-meta-pill [data-icon] {
-    color: var(--text-400);
-  }
-
-  .topic-meta-date {
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--text-400);
-    margin-left: auto;
-  }
-
-  /* ── Section labels ────────────────────────────────────── */
-  .topic-section-label {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-400);
-    margin-bottom: calc(var(--spacing) * 1);
-  }
-
-  /* ── Books row ─────────────────────────────────────────── */
-  .topic-card-books {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .topic-books-row {
-    display: flex;
-    align-items: flex-start;
-    gap: calc(var(--spacing) * 4);
-    flex-wrap: wrap;
-  }
-
-  .topic-book-thumb {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--spacing) * 2);
-  }
-
-  .topic-book-cover {
-    width: 48px;
-    height: 64px;
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  .topic-book-name {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--secondary-foreground);
-    white-space: nowrap;
-    max-width: 64px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* ── Details/Summary toggle ─────────────────────────────── */
-  .topic-details {
-    border: none;
-    margin: 0;
-  }
-
-  .topic-summary {
-    display: flex;
-    align-items: center;
-    gap: calc(var(--spacing) * 1.5);
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-400);
-    cursor: pointer;
-    padding: calc(var(--spacing) * 1.5) 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    list-style: none;
-    transition: color 0.16s ease;
-  }
-
-  .topic-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .topic-summary::before {
-    content: '';
-    display: inline-block;
-    width: 0;
-    height: 0;
-    border-left: 5px solid var(--text-400);
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  .topic-details[open] > .topic-summary::before {
-    transform: rotate(90deg);
-  }
-
-  .topic-details[open] > .topic-summary {
-    border-top: 1px solid var(--border);
-  }
-
-  .topic-summary:hover {
-    color: var(--foreground);
-  }
-
-  /* ── Traces ─────────────────────────────────────────────── */
-  .topic-traces {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 3);
-    padding: 16px 0;
-  }
-
-  .topic-trace {
-    display: flex;
-    align-items: flex-start;
-    gap: calc(var(--spacing) * 3);
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    background: var(--background);
-    border-left: 3px solid var(--border);
-    transition: background-color 0.16s ease;
-  }
-
-  .topic-trace:hover {
-    background: var(--card);
-  }
-
-  .topic-trace--highlight {
-    border-left-color: var(--primary);
-  }
-
-  .topic-trace--note {
-    border-left-color: var(--success);
-  }
-
-  .trace-type-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2);
+    min-height: 26px;
+    padding: 0 10px;
     border-radius: var(--radius-full);
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.02em;
     white-space: nowrap;
-    background: var(--brand-50);
-    color: var(--brand-700);
     flex-shrink: 0;
-    min-width: 32px;
+  }
+  .rr-status-reading {
+    background: var(--brand-100);
+    color: var(--brand-700);
+  }
+  .rr-status-done {
+    background: var(--bg-300);
+    color: var(--text-500);
   }
 
-  .trace-type-badge--note {
-    background: var(--success-50);
+  /* ── Traces List ─────────────────────────────────────────── */
+  .rr-traces {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rr-trace-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: var(--popover);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+    cursor: default;
+  }
+  .rr-trace-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Left border indicator */
+  .rr-trace--highlight {
+    border-left: 3px solid var(--brand-400);
+  }
+  .rr-trace--note {
+    border-left: 3px solid var(--success-400);
+  }
+
+  /* ── Trace Badge ─────────────────────────────────────────── */
+  .rr-trace-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .rr-badge-highlight {
+    background: var(--brand-100);
+    color: var(--brand-700);
+  }
+  .rr-badge-note {
+    background: var(--success-100);
     color: var(--success-700);
   }
 
-  .trace-content {
+  /* ── Trace Content ───────────────────────────────────────── */
+  .rr-trace-content {
     flex: 1;
     min-width: 0;
   }
-
-  .trace-text {
-    margin: 0 0 calc(var(--spacing) * 1);
-    font-family: var(--font-serif);
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--foreground);
-  }
-
-  .trace-source {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--muted-foreground);
-  }
-
-  /* ── Questions ─────────────────────────────────────────── */
-  .topic-questions {
-    padding: 16px 0;
-  }
-
-  .question-list {
-    list-style: none;
-    margin: calc(var(--spacing) * 2) 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--spacing) * 2);
-  }
-
-  .question-item {
-    position: relative;
-    padding-left: calc(var(--spacing) * 5);
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--secondary-foreground);
-  }
-
-  .question-item::before {
-    content: '?';
-    position: absolute;
-    left: 0;
-    top: 0;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-weight: 500;
-    font-size: 15px;
-    color: var(--primary);
-  }
-
-  /* ── Judgments ──────────────────────────────────────────── */
-  .topic-judgments {
-    padding: 8px 0 4px;
-  }
-
-  .judgment-card {
-    padding: 16px 18px;
-    border-radius: var(--radius-sm);
-    background: var(--muted);
-    border: 1px solid var(--border-200);
-  }
-
-  .judgment-text {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--foreground);
-  }
-
-  /* ── Empty state ─────────────────────────────────────────── */
-  .topics-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--spacing) * 2);
-    padding: 48px 20px;
-  }
-
-  .topics-empty-text {
+  .rr-trace-text {
     margin: 0;
     font-family: var(--font-serif);
     font-size: 14px;
-    color: var(--muted-foreground);
+    line-height: 1.65;
+    color: var(--foreground);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .rr-trace--highlight .rr-trace-text {
+    font-style: italic;
+    color: var(--text-700);
   }
 
-  .topics-empty-link {
+  /* ── Trace Meta ─────────────────────────────────────────── */
+  .rr-trace-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
     font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--primary);
-    text-decoration: none;
-    transition: color 0.16s ease;
+    font-size: 11px;
+    color: var(--muted-foreground);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .rr-trace-sep {
+    opacity: 0.4;
+    margin: 0 1px;
   }
 
-  .topics-empty-link:hover {
-    color: var(--brand-600);
+  /* ── Empty State ──────────────────────────────────────────── */
+  .rr-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 24px 64px;
+    color: var(--text-400);
   }
-
-  /* ── Responsive adjustments ─────────────────────────────── */
-  @media (max-width: 768px) {
-    .topics-page {
-      gap: 20px;
-    }
-
-    .topic-card {
-      padding: 20px 16px;
-      gap: 16px;
-    }
-
-    .topic-card--active {
-      padding-left: 13px;
-    }
-
-    .topic-card-meta {
-      gap: calc(var(--spacing) * 2);
-    }
-
-    .topic-meta-date {
-      margin-left: 0;
-    }
-
-    .topic-books-row {
-      gap: calc(var(--spacing) * 3);
-    }
-
-    .topics-action-bar {
-      gap: calc(var(--spacing) * 3);
-    }
-
-    .topics-search {
-      max-width: 100%;
-    }
+  .rr-empty-state .rr-empty-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background: var(--bg-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-400);
+  }
+  .rr-empty-state p {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-400);
   }
 </style>
 
@@ -1762,9 +1479,7 @@
   }
 
   const savedTheme = localStorage.getItem('redesk-theme');
-  if (savedTheme === 'dark') {
-    applyTheme(true);
-  }
+  if (savedTheme === 'dark') { applyTheme(true); }
 
   themeToggle.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1779,43 +1494,15 @@
     sidebar.classList.remove('is-open');
     backdrop.classList.remove('is-visible');
   });
+
+  // ── Filter tabs interaction ──────────────────────────────
+  document.querySelectorAll('.rr-filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.rr-filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
 </script>
 
-</html>
-
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
-    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
-    <style type="text/tailwindcss">
-  @theme inline {
-    --color-foreground: var(--card-foreground);
-  }
-  @layer base {
-    body { background: var(--card-background); color: var(--card-foreground); }
-    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
-    th { @apply whitespace-nowrap; }
-  }
-    </style>
-    <style>
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      [data-icon] {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        -webkit-mask-size: contain;
-        mask-size: contain;
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
-        -webkit-mask-position: center;
-        mask-position: center;
-        background-color: currentColor;
-      }
-    </style>
-</head>
-<body class="min-h-screen font-sans antialiased">
-    <main>
-    </main>
-    <script>lucide.createIcons();</script>
 </body>
 </html>

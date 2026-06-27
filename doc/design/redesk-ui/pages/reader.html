@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesk - 阅读器 - v4</title>
+    <style id="theme-vars">
+/* PLACEHOLDER_THEME_VARS */
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="shell-layout">
+
+  <!-- ── Sidebar (copy from bookshelf, "书架" active) ───────── -->
+  <aside class="shell-sidebar" id="sidebar">
+    <div class="shell-sidebar-header">
+      <div class="shell-brand-mark">R</div>
+      <span class="shell-brand-name">Redesk</span>
+    </div>
+
+    <div class="sidebar-search">
+      <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+      <input type="text" placeholder="搜索书名、作者..." aria-label="搜索书籍">
+    </div>
+
+    <nav class="shell-nav" aria-label="主导航">
+      <p class="shell-nav-group-label">浏览</p>
+
+      <a class="shell-nav-item active" href="#" data-active="true">
+        <span data-icon="book-open" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+        书架
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" data-hideedge="true">
+        <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+        阅读档案
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
+        <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+        阅读记录
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        阅读主题
+      </a>
+    </nav>
+
+    <div class="sidebar-stats">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">127</span>
+        <span class="sidebar-stat-label">总藏书</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">15</span>
+        <span class="sidebar-stat-label">计划读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">3</span>
+        <span class="sidebar-stat-label">在读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">86</span>
+        <span class="sidebar-stat-label">已读</span>
+      </div>
+    </div>
+
+    <div class="shell-sidebar-footer">
+      <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
+        <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+        <span>深色模式</span>
+      </a>
+      <a class="shell-footer-row" href="#">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        <span>设置</span>
+      </a>
+      <div class="shell-footer-row" style="cursor:default">
+        <div class="shell-avatar">M</div>
+        <div class="shell-user-info">
+          <div class="shell-user-name">我的书房</div>
+          <div class="shell-user-role">个人空间</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Mobile Backdrop ──────────────────────────────────── -->
+  <div class="shell-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="shell-main reader-shell-main">
+
+    <!-- ═══════════════════════════════════════════════════════
+         阅读器 — Reader Page
+         ═══════════════════════════════════════════════════════ -->
+    <div class="reader-page">
+
+      <!-- ── 1. Top Toolbar ─────────────────────────────── -->
+      <div class="reader-toolbar">
+        <!-- Left: Book info -->
+        <div class="reader-toolbar-left">
+          <span class="reader-toolbar-title">百年孤独</span>
+          <span class="reader-toolbar-chapter">第3章 · 布恩迪亚家族</span>
+        </div>
+
+        <!-- Center: Progress -->
+        <div class="reader-toolbar-center">
+          <div class="reader-progress-bar">
+            <div class="reader-progress-fill" style="width:25%"></div>
+          </div>
+          <span class="reader-progress-text">第 87 / 345 页 · 25%</span>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="reader-toolbar-right">
+          <a class="reader-toolbar-link" href="#" data-dom-id="reader-back-bookshelf">
+            <span data-icon="arrow-left" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg')"></span>
+            书架
+          </a>
+          <a class="reader-toolbar-link" href="#" data-dom-id="reader-open-detail">
+            <span data-icon="eye" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/eye.svg');mask-image:url('../assets/icons/dl-builtin-claude/eye.svg')"></span>
+            详情
+          </a>
+
+          <div class="reader-toolbar-divider"></div>
+
+          <!-- Toggle buttons -->
+          <button class="reader-tool-toggle is-active" type="button" title="高亮">
+            <span data-icon="highlighter" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
+          </button>
+          <button class="reader-tool-toggle" type="button" title="笔记">
+            <span data-icon="message-square-plus" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg')"></span>
+          </button>
+          <button class="reader-tool-toggle" type="button" title="书签">
+            <span data-icon="bookmark" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg');mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg')"></span>
+          </button>
+
+          <div class="reader-toolbar-divider"></div>
+
+          <!-- Typography settings trigger -->
+          <div class="reader-settings-wrapper">
+            <input type="checkbox" id="reader-settings-toggle" class="reader-settings-checkbox" checked>
+            <label for="reader-settings-toggle" class="reader-tool-toggle" title="排版设置">
+              <span data-icon="type" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/type.svg');mask-image:url('../assets/icons/dl-builtin-claude/type.svg')"></span>
+            </label>
+
+            <!-- Typography Popover -->
+            <div class="reader-settings-popover">
+              <div class="reader-settings-group">
+                <span class="reader-settings-label">字体大小</span>
+                <div class="reader-settings-options">
+                  <button class="reader-settings-btn" type="button">小</button>
+                  <button class="reader-settings-btn active" type="button">中</button>
+                  <button class="reader-settings-btn" type="button">大</button>
+                </div>
+              </div>
+              <div class="reader-settings-group">
+                <span class="reader-settings-label">行间距</span>
+                <div class="reader-settings-options">
+                  <button class="reader-settings-btn" type="button">紧凑</button>
+                  <button class="reader-settings-btn active" type="button">适中</button>
+                  <button class="reader-settings-btn" type="button">宽松</button>
+                </div>
+              </div>
+              <div class="reader-settings-group">
+                <span class="reader-settings-label">主题</span>
+                <div class="reader-settings-themes">
+                  <button class="reader-theme-dot active" type="button" style="background:#faf9f5;border-color:var(--border)" title="默认"></button>
+                  <button class="reader-theme-dot" type="button" style="background:#e8f0e0;border-color:#c5d8b5" title="护眼"></button>
+                  <button class="reader-theme-dot" type="button" style="background:#262624;border-color:#3e3e38" title="暗色"></button>
+                  <button class="reader-theme-dot" type="button" style="background:#f5e6c8;border-color:#dcc49a" title="羊皮纸"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fullscreen toggle -->
+          <button class="reader-tool-toggle" type="button" title="全屏">
+            <span data-icon="grip" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/grip.svg');mask-image:url('../assets/icons/dl-builtin-claude/grip.svg')"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 2. Reading Content Area ────────────────────── -->
+      <div class="reader-content">
+        <div class="reader-column">
+
+          <h2 class="reader-chapter-heading">第三章</h2>
+
+          <p class="reader-paragraph">
+            <span class="reader-highlight" data-annotation="✦ 家族的记忆是循环的">面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起</span>父亲带他去见识冰块的那个遥远的下午。那时的马孔多是一个二十户人家的村落，泥巴和芦苇盖成的屋子沿河岸排开，湍急的河水清澈见底，河床里卵石洁白光滑宛如史前巨蛋。
+          </p>
+
+          <p class="reader-paragraph">
+            <span class="reader-highlight">世界新生伊始，许多事物还没有名字</span>，提到的时候尚需用手指指点点。每年三月前后，一家衣衫褴褛的吉卜赛人都会来到村边搭起帐篷，在笛鼓的喧嚣中，向马孔多的居民介绍科学家们的最新发明。
+          </p>
+
+          <p class="reader-paragraph">
+            他们首先带来的是磁铁。一个身躯粗壮的吉卜赛人，自称梅尔基亚德斯，满脸络腮胡子，手指瘦得像鸟的爪子，向公众展示了他所谓的马其顿炼金术士创造的第八大奇迹。他挨家串户地拖着两块磁铁，大伙儿惊异地看见铁锅、铁盆、铁钳、铁炉纷纷从原地落下，木板因铁钉和螺钉没命地挣脱出来而嘎嘎作响，甚至连那些遗失很久的东西也从找过多次的地方兀然出现，乱七八糟地跟在梅尔基亚德斯的魔铁后面。
+          </p>
+
+          <p class="reader-paragraph">
+            "万物皆有生命，"吉卜赛人用刺耳的语调说道，"只要唤醒它们的灵魂。"何塞·阿尔卡蒂奥·布恩迪亚的想象力一向超越自然的能力，甚至超越了魔术和妖术。他认为这种无用的发明可以用来开采地下的金子。
+          </p>
+
+          <!-- ── Highlight Selection Popup (floating) ───────── -->
+          <div class="reader-selection-popup">
+            <button class="reader-popup-btn is-active" type="button" title="高亮">
+              <span data-icon="highlighter" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
+            </button>
+            <button class="reader-popup-btn" type="button" title="笔记">
+              <span data-icon="message-circle-more" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+            </button>
+            <button class="reader-popup-btn" type="button" title="划线">
+              <span data-icon="pen-line" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 3. Bottom Note Panel ────────────────────────── -->
+      <div class="reader-note-panel">
+        <!-- Panel Header -->
+        <div class="reader-note-header">
+          <div class="reader-note-header-left">
+            <span data-icon="pen-line" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <span class="reader-note-header-title">笔记</span>
+            <span class="reader-note-header-count">2 条笔记 · 第3章</span>
+          </div>
+          <label for="reader-note-toggle" class="reader-note-chevron" title="收起笔记">
+            <span data-icon="chevron-down" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+          </label>
+          <input type="checkbox" id="reader-note-toggle" class="reader-note-checkbox" checked>
+        </div>
+
+        <!-- Panel Body (expanded by default) -->
+        <div class="reader-note-body">
+          <div class="reader-note-list">
+            <!-- Note 1 -->
+            <div class="reader-note-item">
+              <div class="reader-note-text">家族的孤独是一个循环，每个新成员都在重复前人的命运，但又不完全相同。马尔克斯用时间的螺旋来构建这个家族的叙事。</div>
+              <div class="reader-note-meta">
+                <span>第3章</span>
+                <span>6月25日</span>
+              </div>
+            </div>
+
+            <!-- Note 2 -->
+            <div class="reader-note-item">
+              <div class="reader-note-text">吉卜赛人的到来象征着外部世界对马孔多的入侵，也是魔幻现实主义元素的引入。</div>
+              <div class="reader-note-meta">
+                <span>第3章</span>
+                <span>6月23日</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Note Input -->
+          <div class="reader-note-input">
+            <input type="text" placeholder="添加笔记..." class="reader-note-input-field" aria-label="添加笔记">
+            <button class="reader-note-send" type="button" title="发送">
+              <span data-icon="send-horizontal" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/send-horizontal.svg');mask-image:url('../assets/icons/dl-builtin-claude/send-horizontal.svg')"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
+<nav class="shell-mobile-tabs" aria-label="移动端导航">
+  <div class="shell-mobile-tabs-inner">
+    <a class="shell-mobile-tab active" href="#">
+      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+      书架
+    </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile">
+      <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+      阅读档案
+    </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
+      <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+      阅读记录
+    </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
+      <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+      主题
+    </a>
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+      我的
+    </a>
+  </div>
+</nav>
+
+<script>
+  // ── Dark mode toggle ────────────────────────────────────
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  function applyTheme(dark) {
+    html.classList.toggle('dark', dark);
+    localStorage.setItem('redesk-theme', dark ? 'dark' : 'light');
+    const icon = themeToggle.querySelector('[data-icon]');
+    const label = themeToggle.querySelector('span:last-child');
+    if (dark) {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
+      label.textContent = '浅色模式';
+    } else {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')";
+      label.textContent = '深色模式';
+    }
+  }
+
+  const savedTheme = localStorage.getItem('redesk-theme');
+  if (savedTheme === 'dark') {
+    applyTheme(true);
+  }
+
+  themeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyTheme(!html.classList.contains('dark'));
+  });
+
+  // ── Mobile sidebar toggle ─────────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.remove('is-open');
+    backdrop.classList.remove('is-visible');
+  });
+
+  // ── Close settings popover when clicking outside ─────
+  document.addEventListener('click', (e) => {
+    const toggle = document.getElementById('reader-settings-toggle');
+    const wrapper = document.querySelector('.reader-settings-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      toggle.checked = false;
+    }
+  });
+
+  // ── Typography settings button interaction ────────────
+  document.querySelectorAll('.reader-settings-options .reader-settings-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.closest('.reader-settings-options');
+      group.querySelectorAll('.reader-settings-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ── Theme dot selection ────────────────────────────────
+  document.querySelectorAll('.reader-theme-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      document.querySelectorAll('.reader-theme-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+    });
+  });
+
+  // ── Reader tool toggles ────────────────────────────────
+  document.querySelectorAll('.reader-tool-toggle:not([for])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('is-active');
+    });
+  });
+
+  // ── Note panel collapse ───────────────────────────────
+  const noteCheckbox = document.getElementById('reader-note-toggle');
+  const noteBody = document.querySelector('.reader-note-body');
+  noteCheckbox.addEventListener('change', () => {
+    noteBody.style.display = noteCheckbox.checked ? 'block' : 'none';
+  });
+</script>
+
+<style>
+  /* ═══════════════════════════════════════════════════════
+     Redesk Shell Layout (shared with bookshelf)
+     ═══════════════════════════════════════════════════════ */
+
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .shell-layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────── */
+  .shell-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    width: 256px;
+    height: 100vh;
+    background: var(--sidebar);
+    border-right: 1px solid var(--sidebar-border);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.55;
+  }
+
+  .shell-sidebar:hover {
+    opacity: 1;
+    transition: opacity 0.4s ease;
+  }
+
+  .shell-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 28px 24px 24px;
+    border-bottom: 1px solid var(--sidebar-border);
+  }
+
+  .shell-brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-foreground);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .shell-brand-name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--sidebar-foreground);
+    letter-spacing: -0.01em;
+  }
+
+  .sidebar-search {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 1.5);
+    margin: 12px 12px 4px;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    background: var(--muted);
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .sidebar-search:focus-within {
+    border-color: var(--ring);
+    box-shadow: var(--shadow-xs);
+    background: var(--popover);
+  }
+
+  .sidebar-search [data-icon] {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+  }
+
+  .sidebar-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+  }
+
+  .sidebar-search input::placeholder {
+    color: var(--muted-foreground);
+    font-size: 12px;
+  }
+
+  .shell-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+    overflow-y: auto;
+  }
+
+  .shell-nav-group-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    padding: 8px 12px 8px;
+    margin-top: 8px;
+  }
+
+  .shell-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius) - 8px);
+    background: transparent;
+    color: var(--sidebar-foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    text-decoration: none;
+  }
+
+  .shell-nav-item:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .shell-nav-item:focus-visible {
+    outline: 2px solid var(--sidebar-ring);
+    outline-offset: 2px;
+  }
+
+  .shell-nav-item.active {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: transparent;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .shell-nav-item [data-icon] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--spacing) * 2);
+    padding: 12px 20px;
+    border-top: 1px solid var(--sidebar-border);
+  }
+
+  .sidebar-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .sidebar-stat-num {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--sidebar-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sidebar-stat-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+
+  .shell-sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 12px 20px;
+    border-top: 1px solid var(--sidebar-border);
+  }
+
+  .shell-footer-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius) - 8px);
+    background: transparent;
+    color: var(--sidebar-foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease;
+    text-decoration: none;
+  }
+
+  .shell-footer-row:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .shell-footer-row [data-icon] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .shell-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--bg-300);
+    border: 2px solid var(--border-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .shell-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .shell-user-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sidebar-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shell-user-role {
+    font-size: 11px;
+    color: var(--muted-foreground);
+  }
+
+  /* ── Main Content ──────────────────────────────────────── */
+  .shell-main {
+    flex: 1;
+    margin-left: 256px;
+    min-height: 100vh;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Reader-specific main: no padding, full bleed */
+  .reader-shell-main {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
+  .shell-mobile-tabs {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    border-top: 1px solid var(--sidebar-border);
+    background: var(--sidebar);
+    box-shadow: 0 -1px 3px 0 rgba(0,0,0,0.06);
+  }
+
+  .shell-mobile-tabs-inner {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .shell-mobile-tab {
+    display: grid;
+    gap: 3px;
+    justify-items: center;
+    padding: 8px 4px;
+    border: none;
+    border-radius: calc(var(--radius) - 6px);
+    background: transparent;
+    color: var(--sidebar-foreground);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease;
+    text-decoration: none;
+  }
+
+  .shell-mobile-tab [data-icon] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .shell-mobile-tab:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .shell-mobile-tab.active {
+    color: var(--primary);
+  }
+
+  /* ── Responsive ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .shell-sidebar {
+      transform: translateX(-100%);
+    }
+
+    .shell-sidebar.is-open {
+      transform: translateX(0);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .shell-sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      background: rgba(0,0,0,0.3);
+    }
+
+    .shell-sidebar-backdrop.is-visible {
+      display: block;
+    }
+
+    .shell-main {
+      margin-left: 0;
+      padding: 0;
+    }
+
+    .shell-mobile-tabs {
+      display: block;
+    }
+
+    .sidebar-search {
+      margin: 8px 8px 4px;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     READER — Page-specific Styles
+     ═══════════════════════════════════════════════════════ */
+
+  .reader-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  /* ── 1. Top Toolbar ─────────────────────────────────────── */
+  .reader-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 32px;
+    height: 44px;
+    min-height: 44px;
+    background: var(--popover);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+
+  .reader-toolbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .reader-toolbar-title {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reader-toolbar-chapter {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  .reader-toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .reader-progress-bar {
+    width: 120px;
+    height: 3px;
+    background: var(--muted);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .reader-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: var(--radius-full);
+    transition: width 0.4s ease;
+  }
+
+  .reader-progress-text {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reader-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .reader-toolbar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.16s ease, background-color 0.16s ease;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .reader-toolbar-link:hover {
+    color: var(--foreground);
+    background: var(--muted);
+  }
+
+  .reader-toolbar-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+
+  .reader-tool-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+    flex-shrink: 0;
+  }
+
+  .reader-tool-toggle:hover {
+    color: var(--foreground);
+    background: var(--muted);
+  }
+
+  .reader-tool-toggle.is-active {
+    color: var(--primary);
+    background: rgba(201, 100, 66, 0.08);
+  }
+
+  .reader-tool-toggle.is-active:hover {
+    background: rgba(201, 100, 66, 0.14);
+  }
+
+  /* ── Typography Settings Popover ────────────────────────── */
+  .reader-settings-wrapper {
+    position: relative;
+  }
+
+  .reader-settings-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .reader-settings-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 240px;
+    padding: 16px;
+    background: var(--popover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 20;
+    display: none;
+  }
+
+  .reader-settings-checkbox:checked ~ .reader-settings-popover {
+    display: block;
+  }
+
+  .reader-settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .reader-settings-group:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .reader-settings-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .reader-settings-options {
+    display: flex;
+    gap: 6px;
+  }
+
+  .reader-settings-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--muted-foreground);

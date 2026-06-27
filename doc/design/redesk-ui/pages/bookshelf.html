@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redesk - 书架</title>
+    <title>Redesk - 书架 - v4</title>
     <style id="theme-vars">
 /* Source: structured-spec */
 /* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
@@ -495,23 +495,59 @@
       <span class="shell-brand-name">Redesk</span>
     </div>
 
+    <!-- ── V4: Search bar in sidebar ──────────────────────────── -->
+    <div class="sidebar-search">
+      <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+      <input type="text" placeholder="搜索书名、作者..." aria-label="搜索书籍">
+    </div>
+
     <nav class="shell-nav" aria-label="主导航">
       <p class="shell-nav-group-label">浏览</p>
 
       <a class="shell-nav-item active" href="#" data-active="true">
-        <span data-icon="house" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+        <span data-icon="book-open" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
         书架
       </a>
 
-      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile">
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" data-hideedge="true">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
         阅读档案
       </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
+        <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+        阅读记录
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        阅读主题
+      </a>
     </nav>
+
+    <!-- ── Sidebar Stats ──────────────────────────────────── -->
+    <div class="sidebar-stats">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">127</span>
+        <span class="sidebar-stat-label">总藏书</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">15</span>
+        <span class="sidebar-stat-label">计划读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">3</span>
+        <span class="sidebar-stat-label">在读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">86</span>
+        <span class="sidebar-stat-label">已读</span>
+      </div>
+    </div>
 
     <div class="shell-sidebar-footer">
       <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
-        <span data-icon="circle-pause" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')"></span>
+        <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
         <span>深色模式</span>
       </a>
       <a class="shell-footer-row" href="#">
@@ -535,18 +571,14 @@
   <main class="shell-main">
 
     <!-- ═══════════════════════════════════════════════════════
-         书架 — Page Content
+         书架 — V4 Split-click + List View
          ═══════════════════════════════════════════════════════ -->
     <div class="bookshelf-page">
 
-      <!-- ── Top Area ─────────────────────────────────────── -->
+      <!-- ── Top Area (NO search bar here in V4) ────────── -->
       <div class="bookshelf-header">
         <div class="bookshelf-header-left">
           <h1 class="bookshelf-title">书架</h1>
-          <div class="bookshelf-search">
-            <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
-            <input type="text" placeholder="搜索书名、作者、ISBN..." aria-label="搜索书籍">
-          </div>
         </div>
         <div class="bookshelf-actions">
           <button class="btn primary" style="display:inline-flex;align-items:center;gap:calc(var(--spacing)*2)">
@@ -567,6 +599,67 @@
           <button class="filter-pill">存</button>
         </div>
         <div class="bookshelf-sort-view">
+
+          <!-- Display Settings Button -->
+          <div class="display-settings-wrapper">
+            <input type="checkbox" id="display-settings-toggle" class="display-settings-toggle">
+            <label for="display-settings-toggle" class="display-settings-btn">
+              <span data-icon="settings" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+              卡片显示
+            </label>
+            <div class="display-settings-panel">
+              <span class="display-settings-label">显示字段</span>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="status" checked>
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                状态
+              </label>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="rating" checked>
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                评分
+              </label>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="progress" checked>
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                阅读进度
+              </label>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="tags">
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                标签
+              </label>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="last-read">
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                上次阅读位置
+              </label>
+
+              <label class="display-checkbox-row">
+                <input type="checkbox" class="display-checkbox" data-field="author" checked>
+                <span class="custom-check">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </span>
+                作者
+              </label>
+            </div>
+          </div>
+
           <div class="sort-select">
             <select style="border:none;background:transparent;font:500 13px var(--font-sans);color:var(--foreground);outline:none;appearance:none;cursor:pointer;padding-right:4px">
               <option>最近添加</option>
@@ -576,226 +669,345 @@
             <span data-icon="chevron-down" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');color:var(--muted-foreground)"></span>
           </div>
           <div class="view-toggle">
-            <button class="view-toggle-btn active" aria-label="网格视图">
-              <span data-icon="house" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+            <button class="view-toggle-btn active" id="btn-grid-view" aria-label="网格视图">
+              <span data-icon="grip" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/grip.svg');mask-image:url('../assets/icons/dl-builtin-claude/grip.svg')"></span>
             </button>
-            <button class="view-toggle-btn" aria-label="列表视图">
-              <span data-icon="user" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/user.svg');mask-image:url('../assets/icons/dl-builtin-claude/user.svg')"></span>
+            <button class="view-toggle-btn" id="btn-list-view" aria-label="列表视图">
+              <span data-icon="funnel" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg');mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg')"></span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- ── Stats Overview Row ────────────────────────────── -->
-      <div class="bookshelf-stats">
-        <div class="stat-card">
-          <span class="stat-number">127</span>
-          <span class="stat-label">总藏书</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-number">23</span>
-          <span class="stat-label">收录</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-number">15</span>
-          <span class="stat-label">计划读</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-number">3</span>
-          <span class="stat-label">在读</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-number">86</span>
-          <span class="stat-label">已读</span>
-        </div>
-      </div>
+      <!-- ── Book Grid (V4: 6-col vertical cards, split-click) ─── -->
+      <div class="book-grid" id="book-grid">
 
-      <!-- ── Book Grid ────────────────────────────────────── -->
-      <div class="book-grid">
-
-        <!-- Card 1: Featured / 今日推荐 -->
-        <div class="book-card featured" data-dom-id="link-book-detail" href="#">
-          <div class="featured-label">
+        <!-- Card 1: Today's Recommendation -->
+        <div class="book-card is-recommended">
+          <span class="recommend-badge">
             <span data-icon="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
             今日推荐
-          </div>
-          <div class="book-cover cover-gradient-4">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-          </div>
-          <div class="book-info">
-            <h3 class="book-title">百年孤独</h3>
-            <p class="book-author">加西亚·马尔克斯</p>
-            <div class="book-meta">
-              <span class="status-pill status-reading">在读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+          </span>
+          <div class="book-cover cover-gradient-4" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
             </div>
-            <div class="book-progress">
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">百年孤独</h3>
+            <p class="book-author field-author">加西亚·马尔克斯</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-reading">在读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <div class="book-progress field-progress">
               <div class="progress-track">
                 <div class="progress-fill" style="width:72%"></div>
               </div>
               <span class="progress-text">72%</span>
             </div>
-            <p class="book-last-read">上次读到 第87页</p>
-          </div>
-        </div>
-
-        <!-- Card 2 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-1">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-          </div>
-          <div class="book-info">
-            <h3 class="book-title">人类简史</h3>
-            <p class="book-author">尤瓦尔·赫拉利</p>
-            <div class="book-meta">
-              <span class="status-pill status-completed">已读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+            <div class="book-tags field-tags">
+              <span class="book-tag">文学</span>
+              <span class="book-tag">拉美</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 3 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-3">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+        <!-- Card 2 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-1" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
           </div>
-          <div class="book-info">
-            <h3 class="book-title">小王子</h3>
-            <p class="book-author">安东尼·圣埃克苏佩里</p>
-            <div class="book-meta">
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">人类简史</h3>
+            <p class="book-author field-author">尤瓦尔·赫拉利</p>
+            <div class="book-meta field-status">
               <span class="status-pill status-completed">已读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <div class="book-last-read field-last-read">上次读到 第201页</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-3" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">小王子</h3>
+            <p class="book-author field-author">安东尼·圣埃克苏佩里</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-completed">已读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
             </div>
           </div>
         </div>
 
         <!-- Card 4 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-2">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+        <div class="book-card">
+          <div class="book-cover cover-gradient-2" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
           </div>
-          <div class="book-info">
+          <div class="book-info" data-dom-id="link-book-detail">
             <h3 class="book-title">三体</h3>
-            <p class="book-author">刘慈欣</p>
-            <div class="book-meta">
+            <p class="book-author field-author">刘慈欣</p>
+            <div class="book-meta field-status">
               <span class="status-pill status-collected">收录</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
             </div>
           </div>
         </div>
 
         <!-- Card 5 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-5">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-          </div>
-          <div class="book-info">
-            <h3 class="book-title">活着</h3>
-            <p class="book-author">余华</p>
-            <div class="book-meta">
-              <span class="status-pill status-reading">在读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+        <div class="book-card">
+          <div class="book-cover cover-gradient-5" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
             </div>
-            <div class="book-progress">
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">活着</h3>
+            <p class="book-author field-author">余华</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-reading">在读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <div class="book-progress field-progress">
               <div class="progress-track">
                 <div class="progress-fill" style="width:38%"></div>
               </div>
               <span class="progress-text">38%</span>
             </div>
-            <p class="book-last-read">上次读到 第62页</p>
+            <div class="book-last-read field-last-read">上次读到 第87页</div>
           </div>
         </div>
 
         <!-- Card 6 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-6">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+        <div class="book-card">
+          <div class="book-cover cover-gradient-6" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
           </div>
-          <div class="book-info">
+          <div class="book-info" data-dom-id="link-book-detail">
             <h3 class="book-title">月亮与六便士</h3>
-            <p class="book-author">毛姆</p>
-            <div class="book-meta">
+            <p class="book-author field-author">毛姆</p>
+            <div class="book-meta field-status">
               <span class="status-pill status-planned">计划读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
             </div>
           </div>
         </div>
 
         <!-- Card 7 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-7">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+        <div class="book-card">
+          <div class="book-cover cover-gradient-7" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
           </div>
-          <div class="book-info">
+          <div class="book-info" data-dom-id="link-book-detail">
             <h3 class="book-title">挪威的森林</h3>
-            <p class="book-author">村上春树</p>
-            <div class="book-meta">
+            <p class="book-author field-author">村上春树</p>
+            <div class="book-meta field-status">
               <span class="status-pill status-completed">已读</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
             </div>
           </div>
         </div>
 
         <!-- Card 8 -->
-        <div class="book-card" data-dom-id="link-book-detail" href="#">
-          <div class="book-cover cover-gradient-8">
-            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
-          </div>
-          <div class="book-info">
-            <h3 class="book-title">设计心理学</h3>
-            <p class="book-author">唐纳德·诺曼</p>
-            <div class="book-meta">
-              <span class="status-pill status-stored">存</span>
-              <div class="star-rating">
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-              </div>
+        <div class="book-card">
+          <div class="book-cover cover-gradient-8" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
             </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">设计心理学</h3>
+            <p class="book-author field-author">唐纳德·诺曼</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-stored">存</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 9 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-1" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">苏菲的世界</h3>
+            <p class="book-author field-author">乔斯坦·贾德</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-completed">已读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 10 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-4" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">追风筝的人</h3>
+            <p class="book-author field-author">卡勒德·胡赛尼</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-planned">计划读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 11 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-2" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">瓦尔登湖</h3>
+            <p class="book-author field-author">梭罗</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-completed">已读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 12 -->
+        <div class="book-card">
+          <div class="book-cover cover-gradient-5" data-dom-id="link-read-book">
+            <span data-icon="pen-line" class="cover-icon" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <div class="cover-read-overlay">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              打开阅读
+            </div>
+          </div>
+          <div class="book-info" data-dom-id="link-book-detail">
+            <h3 class="book-title">沉默的大多数</h3>
+            <p class="book-author field-author">王小波</p>
+            <div class="book-meta field-status">
+              <span class="status-pill status-reading">在读</span>
+            </div>
+            <div class="star-rating field-rating">
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star-empty" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <div class="book-progress field-progress">
+              <div class="progress-track">
+                <div class="progress-fill" style="width:15%"></div>
+              </div>
+              <span class="progress-text">15%</span>
+            </div>
+            <div class="book-last-read field-last-read">上次读到 第42页</div>
           </div>
         </div>
 
@@ -805,7 +1017,7 @@
       <!-- ── Empty State (hidden by default) ──────────────── -->
       <div class="empty-state">
         <div class="empty-illustration">
-          <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+          <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
         </div>
         <h2 class="empty-title">书架还是空的</h2>
         <p class="empty-desc">开始录入你的第一本书</p>
@@ -852,8 +1064,16 @@
       <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
       阅读档案
     </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
+      <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+      阅读记录
+    </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
+      <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+      主题
+    </a>
     <a class="shell-mobile-tab" href="#">
-      <span data-icon="user" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/user.svg');mask-image:url('../assets/icons/dl-builtin-claude/user.svg')"></span>
+      <span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
       我的
     </a>
   </div>
@@ -895,6 +1115,70 @@
   backdrop.addEventListener('click', () => {
     sidebar.classList.remove('is-open');
     backdrop.classList.remove('is-visible');
+  });
+
+  // ── Display Settings checkbox toggle ─────────────────────
+  document.querySelectorAll('.display-checkbox').forEach(cb => {
+    const field = cb.getAttribute('data-field');
+    const fieldClass = 'field-' + field;
+    if (!cb.checked) {
+      document.querySelectorAll('.' + fieldClass).forEach(el => {
+        el.classList.add('is-hidden');
+      });
+    }
+
+    cb.addEventListener('change', () => {
+      const field = cb.getAttribute('data-field');
+      const fieldClass = 'field-' + field;
+      document.querySelectorAll('.' + fieldClass).forEach(el => {
+        if (cb.checked) {
+          el.classList.remove('is-hidden');
+        } else {
+          el.classList.add('is-hidden');
+        }
+      });
+    });
+  });
+
+  // ── Close display settings panel when clicking outside ───
+  document.addEventListener('click', (e) => {
+    const toggle = document.getElementById('display-settings-toggle');
+    const wrapper = document.querySelector('.display-settings-wrapper');
+    if (!wrapper.contains(e.target)) {
+      toggle.checked = false;
+    }
+  });
+
+  // ── V4: Grid / List view toggle ──────────────────────────
+  const bookGrid = document.getElementById('book-grid');
+  const btnGrid = document.getElementById('btn-grid-view');
+  const btnList = document.getElementById('btn-list-view');
+
+  btnGrid.addEventListener('click', () => {
+    bookGrid.classList.remove('view-list');
+    btnGrid.classList.add('active');
+    btnList.classList.remove('active');
+  });
+
+  btnList.addEventListener('click', () => {
+    bookGrid.classList.add('view-list');
+    btnList.classList.add('active');
+    btnGrid.classList.remove('active');
+  });
+
+  // ── V4: Split-click behavior — cover → reading, info → detail ──
+  document.querySelectorAll('.book-cover[data-dom-id="link-read-book"]').forEach(cover => {
+    cover.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Navigate to reader page
+    });
+  });
+
+  document.querySelectorAll('.book-info[data-dom-id="link-book-detail"]').forEach(info => {
+    info.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Navigate to book detail page
+    });
   });
 </script>
 
@@ -976,12 +1260,54 @@
         letter-spacing: -0.01em;
       }
 
+      /* ── V4: Sidebar Search Bar ──────────────────────────── */
+      .sidebar-search {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1.5);
+        margin: 12px 12px 4px;
+        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+        background: var(--muted);
+        border: 1px solid transparent;
+        border-radius: var(--radius-full);
+        transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .sidebar-search:focus-within {
+        border-color: var(--ring);
+        box-shadow: var(--shadow-xs);
+        background: var(--popover);
+      }
+
+      .sidebar-search [data-icon] {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+      }
+
+      .sidebar-search input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        outline: none;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+      }
+
+      .sidebar-search input::placeholder {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+
       .shell-nav {
         flex: 1;
         display: flex;
         flex-direction: column;
         gap: 2px;
-        padding: 20px 12px;
+        padding: 16px 12px;
         overflow-y: auto;
       }
 
@@ -1035,6 +1361,37 @@
         width: 18px;
         height: 18px;
         flex-shrink: 0;
+      }
+
+      /* ── Sidebar Stats (lightweight, non-interactive) ────── */
+      .sidebar-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(var(--spacing) * 2);
+        padding: 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+
+      .sidebar-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .sidebar-stat-num {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.2;
+        color: var(--sidebar-foreground);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .sidebar-stat-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--muted-foreground);
       }
 
       /* ── Sidebar Footer ─────────────────────────────────────── */
@@ -1133,7 +1490,7 @@
 
       .shell-mobile-tabs-inner {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 4px;
         padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
       }
@@ -1200,15 +1557,23 @@
         .shell-mobile-tabs {
           display: block;
         }
+
+        .sidebar-search {
+          margin: 8px 8px 4px;
+        }
       }
     </style>
     <style>
+      /* ═══════════════════════════════════════════════════════
+         V4 BOOKSHELF — Page-specific Styles
+         ═══════════════════════════════════════════════════════ */
+
       /* ── Page header area ─────────────────────────────────── */
       .bookshelf-page {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--spacing) * 6);
-        max-width: 1180px;
+        gap: calc(var(--spacing) * 5);
+        max-width: 1440px;
         width: 100%;
         min-width: 0;
       }
@@ -1223,7 +1588,7 @@
 
       .bookshelf-header-left {
         display: flex;
-        flex-direction: column;
+        align-direction: column;
         gap: calc(var(--spacing) * 1);
         min-width: 0;
       }
@@ -1232,10 +1597,10 @@
         margin: 0;
         font-family: var(--font-display);
         font-weight: 400;
-        font-size: 32px;
-        line-height: 1.1;
+        font-size: 24px;
+        line-height: 1.2;
         letter-spacing: -0.01em;
-        color: var(--card-foreground);
+        color: var(--foreground);
       }
 
       .bookshelf-actions {
@@ -1243,42 +1608,6 @@
         align-items: center;
         gap: calc(var(--spacing) * 3);
         flex-shrink: 0;
-      }
-
-      /* ── Search bar ──────────────────────────────────────── */
-      .bookshelf-search {
-        display: flex;
-        align-items: center;
-        gap: calc(var(--spacing) * 2);
-        padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 4);
-        background: var(--popover);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-xs);
-        max-width: 480px;
-        width: 100%;
-      }
-
-      .bookshelf-search [data-icon] {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-        color: var(--muted-foreground);
-      }
-
-      .bookshelf-search input {
-        flex: 1;
-        min-width: 0;
-        border: none;
-        background: transparent;
-        outline: none;
-        color: var(--foreground);
-        font-family: var(--font-sans);
-        font-size: 14px;
-      }
-
-      .bookshelf-search input::placeholder {
-        color: var(--muted-foreground);
       }
 
       /* ── Filter + Controls bar ──────────────────────────── */
@@ -1394,152 +1723,115 @@
         height: 16px;
       }
 
-      /* ── Stats row ───────────────────────────────────────── */
-      .bookshelf-stats {
+      /* ═══════════════════════════════════════════════════════
+         V4: Book Grid — Grid View (default)
+         ═══════════════════════════════════════════════════════ */
+      .book-grid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: calc(var(--spacing) * 3);
+        grid-template-columns: repeat(6, 1fr);
+        gap: calc(var(--spacing) * 4);
       }
 
-      .stat-card {
+      /* ── V4: Vertical book card (cover on top, info below) ── */
+      .book-card {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: calc(var(--spacing) * 1);
-        padding: calc(var(--spacing) * 3) calc(var(--spacing) * 2);
+        padding: 0;
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
         background: var(--popover);
         box-shadow: var(--shadow-xs);
-        transition: transform 0.16s ease, box-shadow 0.16s ease;
-      }
-
-      .stat-card:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-sm);
-      }
-
-      .stat-number {
-        font-family: var(--font-sans);
-        font-weight: 700;
-        font-size: 24px;
-        line-height: 1;
-        letter-spacing: -0.03em;
-        color: var(--card-foreground);
-        font-variant-numeric: tabular-nums;
-      }
-
-      .stat-label {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--muted-foreground);
-        white-space: nowrap;
-      }
-
-      /* ── Book grid ────────────────────────────────────────── */
-      .book-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: calc(var(--spacing) * 5);
-      }
-
-      .book-card {
-        display: flex;
-        flex-direction: column;
-        gap: calc(var(--spacing) * 2.5);
-        padding: calc(var(--spacing) * 3);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        background: var(--popover);
-        box-shadow: var(--shadow-sm);
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        text-decoration: none;
+        overflow: hidden;
       }
 
       .book-card:hover {
         transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
-      }
-
-      /* Featured card */
-      .book-card.featured {
-        border: 2px solid var(--brand-500);
         box-shadow: var(--shadow-md);
       }
 
-      .book-card.featured:hover {
-        box-shadow: 0 4px 12px 0px rgba(201, 100, 66, 0.18);
-      }
-
-      .featured-label {
-        display: inline-flex;
-        align-items: center;
-        gap: calc(var(--spacing) * 1);
-        font-family: var(--font-sans);
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--brand-500);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-
-      .featured-label [data-icon] {
-        width: 14px;
-        height: 14px;
-      }
-
-      /* Book cover placeholder */
+      /* V4: Cover area — clickable zone for reading */
       .book-cover {
         width: 100%;
-        aspect-ratio: 120 / 170;
-        border-radius: var(--radius-sm);
+        aspect-ratio: 3 / 2;
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
         overflow: hidden;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
       }
 
-      .book-cover [data-icon] {
+      .book-cover:hover .cover-read-overlay {
+        opacity: 1;
+      }
+
+      .book-cover [data-icon].cover-icon {
         width: 32px;
         height: 32px;
-        color: rgba(255, 255, 255, 0.6);
+        color: rgba(255, 255, 255, 0.5);
       }
 
-      /* Warm gradient variations for variety */
-      .cover-gradient-1 { background: linear-gradient(135deg, #e0a892 0%, #d6866a 100%); }
-      .cover-gradient-2 { background: linear-gradient(135deg, #c2c0b6 0%, #9b988c 100%); }
-      .cover-gradient-3 { background: linear-gradient(135deg, #b8c69e 0%, #788c5d 100%); }
-      .cover-gradient-4 { background: linear-gradient(135deg, #ebc6b6 0%, #c96442 100%); }
-      .cover-gradient-5 { background: linear-gradient(135deg, #d3dcc1 0%, #9aac79 100%); }
-      .cover-gradient-6 { background: linear-gradient(135deg, #dad9d4 0%, #b4b2a7 100%); }
-      .cover-gradient-7 { background: linear-gradient(135deg, #e0a892 0%, #934828 100%); }
-      .cover-gradient-8 { background: linear-gradient(135deg, #e7ecdd 0%, #647649 100%); }
+      /* V4: "打开阅读" overlay on cover hover */
+      .cover-read-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--spacing) * 1);
+        background: rgba(201, 100, 66, 0.55);
+        color: #ffffff;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 2;
+        backdrop-filter: blur(1px);
+      }
 
+      .cover-read-overlay [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* V4: Info area — clickable zone for detail */
       .book-info {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--spacing) * 1.5);
-        min-width: 0;
+        gap: calc(var(--spacing) * 1);
+        padding: calc(var(--spacing) * 3);
+        flex: 1;
+        cursor: pointer;
+        transition: background-color 0.16s ease;
+      }
+
+      .book-info:hover {
+        background: var(--muted);
       }
 
       .book-title {
         margin: 0;
         font-family: var(--font-sans);
-        font-weight: 500;
-        font-size: 14px;
-        line-height: 1.3;
-        color: var(--card-foreground);
+        font-weight: 700;
+        font-size: 15px;
+        line-height: 1.25;
+        color: var(--text-800);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       .book-author {
         margin: 0;
         font-family: var(--font-serif);
-        font-size: 12.5px;
+        font-size: 11.5px;
         color: var(--muted-foreground);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1549,7 +1841,7 @@
       .book-meta {
         display: flex;
         align-items: center;
-        gap: calc(var(--spacing) * 2);
+        gap: calc(var(--spacing) * 1.5);
         flex-wrap: wrap;
       }
 
@@ -1557,10 +1849,10 @@
       .status-pill {
         display: inline-flex;
         align-items: center;
-        padding: calc(var(--spacing) * 0.75) calc(var(--spacing) * 2.5);
+        padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2);
         border-radius: var(--radius-full);
         font-family: var(--font-sans);
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
         white-space: nowrap;
       }
@@ -1571,16 +1863,16 @@
       .status-completed  { background: var(--bg-300); color: var(--text-600); }
       .status-stored     { background: var(--bg-200); color: var(--text-500); }
 
-      /* Star rating */
+      /* Star rating — compact */
       .star-rating {
         display: inline-flex;
         align-items: center;
-        gap: 1px;
+        gap: 0;
       }
 
       .star-rating [data-icon] {
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
       }
 
       .star-filled {
@@ -1591,19 +1883,20 @@
         color: var(--border-400);
       }
 
-      /* Progress bar */
+      /* Progress bar — compact */
       .book-progress {
         display: flex;
         align-items: center;
-        gap: calc(var(--spacing) * 2);
+        gap: calc(var(--spacing) * 1.5);
       }
 
       .progress-track {
         flex: 1;
-        height: 4px;
+        height: 3px;
         border-radius: 2px;
         background: var(--bg-300);
         overflow: hidden;
+        min-width: 40px;
       }
 
       .progress-fill {
@@ -1615,18 +1908,375 @@
 
       .progress-text {
         font-family: var(--font-sans);
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
         color: var(--muted-foreground);
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
       }
 
+      /* Tags (compact) */
+      .book-tags {
+        display: flex;
+        gap: calc(var(--spacing) * 1);
+        flex-wrap: wrap;
+      }
+
+      .book-tag {
+        display: inline-flex;
+        padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 1.5);
+        border-radius: var(--radius-full);
+        background: var(--bg-200);
+        color: var(--text-500);
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
       .book-last-read {
         margin: 0;
         font-family: var(--font-serif);
-        font-size: 11.5px;
+        font-size: 10.5px;
         color: var(--muted-foreground);
+      }
+
+      /* Warm gradient variations for cover variety */
+      .cover-gradient-1 { background: linear-gradient(135deg, #e0a892 0%, #d6866a 100%); }
+      .cover-gradient-2 { background: linear-gradient(135deg, #c2c0b6 0%, #9b988c 100%); }
+      .cover-gradient-3 { background: linear-gradient(135deg, #b8c69e 0%, #788c5d 100%); }
+      .cover-gradient-4 { background: linear-gradient(135deg, #ebc6b6 0%, #c96442 100%); }
+      .cover-gradient-5 { background: linear-gradient(135deg, #d3dcc1 0%, #9aac79 100%); }
+      .cover-gradient-6 { background: linear-gradient(135deg, #dad9d4 0%, #b4b2a7 100%); }
+      .cover-gradient-7 { background: linear-gradient(135deg, #e0a892 0%, #934828 100%); }
+      .cover-gradient-8 { background: linear-gradient(135deg, #e7ecdd 0%, #647649 100%); }
+
+      /* ═══════════════════════════════════════════════════════
+         V4: Featured / Today's Recommendation card
+         ═══════════════════════════════════════════════════════ */
+      .book-card.is-recommended {
+        border-left: 3px solid var(--brand-500);
+        position: relative;
+      }
+
+      .book-card.is-recommended:hover {
+        box-shadow: var(--shadow-md);
+      }
+
+      .recommend-badge {
+        position: absolute;
+        top: calc(var(--spacing) * 2);
+        right: calc(var(--spacing) * 2);
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 0.5);
+        padding: calc(var(--spacing) * 0.75) calc(var(--spacing) * 2);
+        border-radius: var(--radius-full);
+        background: var(--brand-500);
+        color: var(--primary-foreground);
+        font-family: var(--font-sans);
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        z-index: 2;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .recommend-badge [data-icon] {
+        width: 10px;
+        height: 10px;
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         V4: Display Settings Dropdown
+         ═══════════════════════════════════════════════════════ */
+      .display-settings-wrapper {
+        position: relative;
+      }
+
+      .display-settings-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1.5);
+        padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--popover);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, border-color 0.16s ease;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .display-settings-btn:hover {
+        background: var(--muted);
+      }
+
+      .display-settings-btn [data-icon] {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+      }
+
+      .display-settings-toggle {
+        display: none;
+      }
+
+      .display-settings-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + calc(var(--spacing) * 2));
+        right: 0;
+        z-index: 50;
+        min-width: 200px;
+        padding: calc(var(--spacing) * 2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--popover);
+        box-shadow: var(--shadow-lg);
+        flex-direction: column;
+        gap: calc(var(--spacing) * 1);
+      }
+
+      .display-settings-toggle:checked ~ .display-settings-panel {
+        display: flex;
+      }
+
+      .display-settings-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding-bottom: calc(var(--spacing) * 1);
+        border-bottom: 1px solid var(--border);
+        margin-bottom: calc(var(--spacing) * 0.5);
+      }
+
+      .display-checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 2);
+        padding: calc(var(--spacing) * 1) calc(var(--spacing) * 0.5);
+        border-radius: calc(var(--radius) - 8px);
+        cursor: pointer;
+        transition: background-color 0.12s ease;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--foreground);
+      }
+
+      .display-checkbox-row:hover {
+        background: var(--muted);
+      }
+
+      .display-checkbox {
+        display: none;
+      }
+
+      .custom-check {
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        border-radius: 4px;
+        border: 2px solid var(--border-400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.16s ease, border-color 0.16s ease;
+      }
+
+      .custom-check [data-icon] {
+        width: 12px;
+        height: 12px;
+        color: var(--primary-foreground);
+        opacity: 0;
+        transition: opacity 0.12s ease;
+      }
+
+      .display-checkbox:checked + .custom-check {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+
+      .display-checkbox:checked + .custom-check [data-icon] {
+        opacity: 1;
+      }
+
+      /* ── V4: Visibility toggle classes ── */
+      .book-card .field-status,
+      .book-card .field-rating,
+      .book-card .field-progress,
+      .book-card .field-tags,
+      .book-card .field-last-read,
+      .book-card .field-author {
+        transition: opacity 0.2s ease, max-height 0.2s ease;
+        overflow: hidden;
+      }
+
+      .book-card .field-status.is-hidden,
+      .book-card .field-rating.is-hidden,
+      .book-card .field-progress.is-hidden,
+      .book-card .field-tags.is-hidden,
+      .book-card .field-last-read.is-hidden,
+      .book-card .field-author.is-hidden {
+        display: none;
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         V4: LIST VIEW — activated by .view-list on .book-grid
+         ═══════════════════════════════════════════════════════ */
+      .book-grid.view-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .book-grid.view-list .book-card {
+        display: flex;
+        flex-direction: row;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        border-top: none;
+        padding: 0;
+        min-height: 64px;
+        transition: background-color 0.16s ease;
+      }
+
+      .book-grid.view-list .book-card:first-child {
+        border-top: 1px solid var(--border);
+      }
+
+      .book-grid.view-list .book-card + .book-card {
+        border-top: 1px solid var(--border);
+      }
+
+      .book-grid.view-list .book-card:hover {
+        transform: none;
+        box-shadow: none;
+        background: var(--bg-200);
+      }
+
+      /* List view cover — small thumbnail */
+      .book-grid.view-list .book-cover {
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        aspect-ratio: 1;
+        border-radius: var(--radius-sm);
+        margin: calc(var(--spacing) * 2);
+        overflow: hidden;
+      }
+
+      .book-grid.view-list .book-cover .cover-icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .book-grid.view-list .book-cover .cover-read-overlay {
+        font-size: 0;
+        padding: 0;
+        gap: 0;
+      }
+
+      .book-grid.view-list .book-cover .cover-read-overlay [data-icon] {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* List view info — horizontal layout */
+      .book-grid.view-list .book-info {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: calc(var(--spacing) * 3);
+        flex: 1;
+        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) calc(var(--spacing) * 2) 0;
+        min-width: 0;
+      }
+
+      .book-grid.view-list .book-info:hover {
+        background: transparent;
+      }
+
+      /* List view inner layout groups */
+      .book-grid.view-list .list-info-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .book-grid.view-list .list-info-main .book-title {
+        font-size: 14px;
+        -webkit-line-clamp: 1;
+      }
+
+      .book-grid.view-list .list-info-main .book-author {
+        font-size: 11px;
+      }
+
+      .book-grid.view-list .list-info-meta {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 2);
+        flex-shrink: 0;
+        flex-wrap: wrap;
+      }
+
+      .book-grid.view-list .list-info-meta .star-rating [data-icon] {
+        width: 11px;
+        height: 11px;
+      }
+
+      .book-grid.view-list .list-info-progress {
+        width: 100px;
+        min-width: 80px;
+      }
+
+      .book-grid.view-list .list-info-progress .progress-track {
+        height: 4px;
+      }
+
+      .book-grid.view-list .list-info-tags {
+        display: flex;
+        gap: calc(var(--spacing) * 1);
+        flex-wrap: wrap;
+      }
+
+      .book-grid.view-list .list-info-tags .book-tag {
+        font-size: 9px;
+      }
+
+      .book-grid.view-list .list-info-right {
+        margin-left: auto;
+        flex-shrink: 0;
+        text-align: right;
+      }
+
+      .book-grid.view-list .list-last-read {
+        font-family: var(--font-serif);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+
+      /* Hide recommend badge border in list view */
+      .book-grid.view-list .book-card.is-recommended {
+        border-left: none;
+      }
+
+      .book-grid.view-list .book-card.is-recommended .recommend-badge {
+        display: none;
       }
 
       /* ── Batch action bar ────────────────────────────────── */
@@ -1741,10 +2391,18 @@
         line-height: 1.5;
       }
 
-      /* ── Responsive bookshelf ────────────────────────────── */
+      /* ── V4 Responsive bookshelf ──────────────────────────── */
+      @media (max-width: 1280px) {
+        .book-grid {
+          grid-template-columns: repeat(6, 1fr);
+          gap: calc(var(--spacing) * 3);
+        }
+      }
+
       @media (max-width: 1024px) {
         .book-grid {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
+          gap: calc(var(--spacing) * 3);
         }
       }
 
@@ -1760,22 +2418,23 @@
           justify-content: space-between;
         }
 
-        .bookshelf-stats {
-          grid-template-columns: repeat(5, 1fr);
-          gap: calc(var(--spacing) * 2);
-        }
-
-        .stat-card {
-          padding: calc(var(--spacing) * 2) calc(var(--spacing) * 1.5);
-        }
-
-        .stat-number {
-          font-size: 18px;
-        }
-
-        .book-grid {
-          grid-template-columns: repeat(2, 1fr);
+        .book-grid:not(.view-list) {
+          grid-template-columns: repeat(3, 1fr);
           gap: calc(var(--spacing) * 3);
+        }
+
+        .book-title {
+          font-size: 14px;
+        }
+
+        /* List view responsive */
+        .book-grid.view-list .list-info-meta {
+          gap: calc(var(--spacing) * 1);
+        }
+
+        .book-grid.view-list .list-info-tags,
+        .book-grid.view-list .list-info-progress {
+          display: none;
         }
 
         .batch-bar {
@@ -1787,8 +2446,15 @@
       }
 
       @media (max-width: 480px) {
-        .bookshelf-stats {
-          grid-template-columns: repeat(3, 1fr);
+        .book-grid:not(.view-list) {
+          grid-template-columns: repeat(2, 1fr);
+          gap: calc(var(--spacing) * 2.5);
+        }
+
+        /* Compact list on small screens */
+        .book-grid.view-list .book-info {
+          flex-wrap: wrap;
+          gap: calc(var(--spacing) * 1);
         }
       }
     </style>

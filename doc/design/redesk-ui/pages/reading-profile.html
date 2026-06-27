@@ -495,11 +495,17 @@
       <span class="shell-brand-name">Redesk</span>
     </div>
 
+    <!-- ── V4: Search bar in sidebar ──────────────────────────── -->
+    <div class="sidebar-search">
+      <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+      <input type="text" placeholder="搜索书名、作者..." aria-label="搜索书籍">
+    </div>
+
     <nav class="shell-nav" aria-label="主导航">
       <p class="shell-nav-group-label">浏览</p>
 
-      <a class="shell-nav-item" data-dom-id="nav-bookshelf" hideEdge="true" href="#">
-        <span data-icon="house" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+      <a class="shell-nav-item" href="#" data-dom-id="nav-bookshelf" data-hideedge="true">
+        <span data-icon="book-open" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
         书架
       </a>
 
@@ -507,11 +513,41 @@
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
         阅读档案
       </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
+        <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+        阅读记录
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        阅读主题
+      </a>
     </nav>
+
+    <!-- ── Sidebar Stats ──────────────────────────────────── -->
+    <div class="sidebar-stats">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">127</span>
+        <span class="sidebar-stat-label">总藏书</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">15</span>
+        <span class="sidebar-stat-label">计划读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">3</span>
+        <span class="sidebar-stat-label">在读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">86</span>
+        <span class="sidebar-stat-label">已读</span>
+      </div>
+    </div>
 
     <div class="shell-sidebar-footer">
       <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
-        <span data-icon="circle-play" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')"></span>
+        <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
         <span>深色模式</span>
       </a>
       <a class="shell-footer-row" href="#">
@@ -1025,15 +1061,23 @@
 <nav class="shell-mobile-tabs" aria-label="移动端导航">
   <div class="shell-mobile-tabs-inner">
     <a class="shell-mobile-tab" href="#">
-      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+      <span data-icon="book-open" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
       书架
     </a>
     <a class="shell-mobile-tab active" href="#">
       <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
       阅读档案
     </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
+      <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+      阅读记录
+    </a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
+      <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+      主题
+    </a>
     <a class="shell-mobile-tab" href="#">
-      <span data-icon="circle-check" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
+      <span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
       我的
     </a>
   </div>
@@ -1158,12 +1202,54 @@
         letter-spacing: -0.01em;
       }
 
+      /* ── V4: Sidebar Search Bar ──────────────────────────── */
+      .sidebar-search {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1.5);
+        margin: 12px 12px 4px;
+        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+        background: var(--muted);
+        border: 1px solid transparent;
+        border-radius: var(--radius-full);
+        transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .sidebar-search:focus-within {
+        border-color: var(--ring);
+        box-shadow: var(--shadow-xs);
+        background: var(--popover);
+      }
+
+      .sidebar-search [data-icon] {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+      }
+
+      .sidebar-search input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        outline: none;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+      }
+
+      .sidebar-search input::placeholder {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+
       .shell-nav {
         flex: 1;
         display: flex;
         flex-direction: column;
         gap: 2px;
-        padding: 20px 12px;
+        padding: 16px 12px;
         overflow-y: auto;
       }
 
@@ -1217,6 +1303,37 @@
         width: 18px;
         height: 18px;
         flex-shrink: 0;
+      }
+
+      /* ── Sidebar Stats (lightweight, non-interactive) ────── */
+      .sidebar-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(var(--spacing) * 2);
+        padding: 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+
+      .sidebar-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .sidebar-stat-num {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.2;
+        color: var(--sidebar-foreground);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .sidebar-stat-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--muted-foreground);
       }
 
       /* ── Sidebar Footer ─────────────────────────────────────── */
@@ -1315,7 +1432,7 @@
 
       .shell-mobile-tabs-inner {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 4px;
         padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
       }
@@ -1382,6 +1499,10 @@
         .shell-mobile-tabs {
           display: block;
         }
+
+        .sidebar-search {
+          margin: 8px 8px 4px;
+        }
       }
 
       /* ═══════════════════════════════════════════════════════════
@@ -1396,7 +1517,7 @@
       }
       .rp-title-area h1 {
         font-family: var(--font-display);
-        font-size: 36px;
+        font-size: 24px;
         font-weight: 400;
         color: var(--foreground);
         margin: 0 0 8px;
@@ -1424,24 +1545,19 @@
         border-radius: var(--radius-md);
         padding: 20px 18px;
         box-shadow: var(--shadow-xs);
-        transition: transform 0.16s ease, box-shadow 0.16s ease;
-      }
-      .rp-stat-card:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-sm);
       }
       .rp-stat-label {
         font-family: var(--font-sans);
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 400;
         color: var(--muted-foreground);
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         letter-spacing: 0.02em;
       }
       .rp-stat-value {
         font-family: var(--font-sans);
-        font-size: 32px;
-        font-weight: 700;
+        font-size: 18px;
+        font-weight: 600;
         color: var(--foreground);
         line-height: 1;
         margin-bottom: 4px;
@@ -1523,7 +1639,7 @@
       /* Section Headings */
       .rp-section-heading {
         font-family: var(--font-display);
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 400;
         color: var(--foreground);
         margin: 0 0 20px;
