@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Redesk 是自托管的个人阅读管理与 AI 陪读系统。技术路线为全栈 TypeScript（Route A）。当前处于**规划阶段完成、尚未开始编码**，从 M0 工程地基开始执行。
+Redesk 是自托管的个人阅读管理与 AI 陪读系统。技术路线为全栈 TypeScript（Route A）。当前处于**M0 工程地基已搭建、M1 书架功能尚未开始**阶段。
 
 一句话定位：藏书—阅读—沉淀—思考的数据闭环，数据存本地 SQLite，自托管 Docker，AI 作为增强层分阶段引入。
 
@@ -78,17 +78,31 @@ doc/          # 全部设计文档（勿放代码）
 
 ## 开发命令
 
-> 代码建立后此处补充。M0 完成后预期命令：
-
 ```bash
-pnpm install              # 安装依赖
-pnpm --filter @redesk/api dev      # 后端开发
-pnpm --filter @redesk/web dev      # 前端开发
-pnpm --filter @redesk/db migrate   # 数据库迁移
-docker compose up -d      # Docker 部署
+pnpm install       # 安装依赖
+pnpm dev           # 同时启动后端与前端
+pnpm dev:api       # 后端开发，默认 http://localhost:8787
+pnpm dev:web       # 前端开发，默认 http://localhost:5173
+pnpm db:migrate    # 执行数据库迁移
+pnpm typecheck     # 类型检查
+pnpm lint          # ESLint 检查
+pnpm build         # 生产构建
 ```
 
-类型检查与 lint 命令在 M0-01 建立后回填。完成代码任务后必须运行 lint 与 typecheck。
+Windows 本地可双击 `start-local.bat`，脚本会启动 API/Web 两个窗口并自动打开前端页面。
+
+Docker Compose 运行前必须设置强随机 `SESSION_SECRET`，例如写入本地 `.env`：
+
+```bash
+SESSION_SECRET=your-long-random-secret
+docker compose up -d
+```
+
+完成代码任务后必须运行 `pnpm typecheck` 与 `pnpm lint`；涉及构建或部署时同时运行 `pnpm build`。
+
+本地测试素材放入 `local-tests/`、`test-files/`、`.uploads/` 或 `data/`，这些目录已加入 `.gitignore`，不得强行提交。
+
+本地开发当前临时免登录：`VITE_AUTH_DISABLED=true`。后端鉴权接口仍保留，生产构建默认不免登录；恢复登录时将该值设为 `false`。
 
 ## AI 代理工作守则
 
@@ -105,6 +119,6 @@ docker compose up -d      # Docker 部署
 
 ## 当前阶段注意
 
-- 代码尚未建立，M0 是第一个编码里程碑。
-- M0/M1 执行项已细化到可直接开工；M2–M5 为模块级，临近再细化。
+- M0 工程地基已搭建；当前下一阶段是 M1 书架与文件管理。
+- M1 执行项已细化到可直接开工；M2–M5 为模块级，临近再细化。
 - 若发现文档间矛盾或需求有变，先更新文档再改代码，保持文档与实现一致。

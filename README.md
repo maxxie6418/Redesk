@@ -6,7 +6,7 @@
 
 > 把书库、阅读痕迹、主题思考沉淀在自己手里，让 AI 基于你真实的阅读经历陪读、提问、归纳。
 
-[![Status](https://img.shields.io/badge/status-规划完成-blue.svg)](#项目状态)
+[![Status](https://img.shields.io/badge/status-M0%20工程地基-green.svg)](#项目状态)
 [![Stack](https://img.shields.io/badge/stack-TypeScript-3178c6.svg)](#技术栈)
 [![License](https://img.shields.io/badge/license-待定-lightgrey.svg)](#许可证)
 
@@ -53,7 +53,7 @@ Redesk 的长期价值在于能否把个人阅读中真正有价值的内容长�
 
 ## 🚧 项目状态
 
-**规划阶段完成，尚未开始编码。**
+**M0 工程地基已搭建，M1 书架功能尚未开始。**
 
 已完成的文档体系（位于 `doc/`）：
 
@@ -68,13 +68,22 @@ Redesk 的长期价值在于能否把个人阅读中真正有价值的内容长�
 | 执行层 | [开发执行计划 v1.0.2](doc/开发执行计划.md) | 六里程碑、按序执行项、功能点覆盖 |
 | Review 辅助 | [数据模型导览](doc/数据模型导览.html) | 面向非技术视角的字段说明（浏览器打开） |
 
-下一步从 M0（工程地基）开始编码。详见开发执行计划。
+当前已具备：
+
+- pnpm monorepo：`apps/api`、`apps/web`、`packages/db`、`packages/shared`
+- Fastify 后端：健康检查、配置加载、CORS、统一错误处理、鉴权接口
+- Drizzle + better-sqlite3：`users` 首个迁移、启动时自动迁移、手动迁移命令
+- Vite + React 前端：路由、Query、主题壳、侧边栏、空书架、登录/初始化页
+- 本地启动脚本：`start-local.bat` / `start-local.ps1`
+- Dockerfile 与 docker-compose 基础部署文件
+
+说明：当前本地开发模式临时免登录，便于先推进书架功能；后端鉴权链路仍保留，生产构建默认不免登录。
 
 ---
 
 ## 🗺️ Roadmap
 
-当前进展：规划阶段完成，尚未开始编码。下方按功能领域列出规划功能与状态。
+当前进展：M0 工程地基已搭建。下方按功能领域列出规划功能与状态。
 
 > 状态：🗓️ 规划中 / 👷 开发中 / ✅ 已上线
 
@@ -102,8 +111,8 @@ Redesk 的长期价值在于能否把个人阅读中真正有价值的内容长�
 | | 全量备份与自动备份 | 🗓️ 规划中 |
 | | OPDS 订阅（KOReader 等阅读器） | 🗓️ 规划中 |
 | | 对象存储云同步（S3 / OSS） | 🗓️ 规划中 |
-| **其他** | 自托管 Docker 部署 | 🗓️ 规划中 |
-| | 单账户登录与多用户预留 | 🗓️ 规划中 |
+| **其他** | 自托管 Docker 部署 | 👷 开发中 |
+| | 单账户登录与多用户预留 | 👷 开发中 |
 | | 阅读器增强项（主题 / 字体 / TTS 等，待定位） | 🗓️ 规划中 |
 | | 阅读统计增强（热力图 / 趋势等，待定位） | 🗓️ 规划中 |
 
@@ -155,7 +164,77 @@ Redesk/
 
 ## 🚀 部署与开发
 
-> 代码尚未建立。M0 完成后此处将补充本地开发与 Docker 部署指引。
+### 本地启动
+
+Windows 下可直接双击：
+
+```text
+start-local.bat
+```
+
+脚本会打开 API 与 Web 两个服务窗口，并在服务就绪后自动打开：
+
+```text
+http://localhost:5173/
+```
+
+也可以手动启动：
+
+```bash
+pnpm install
+pnpm dev
+```
+
+常用命令：
+
+```bash
+pnpm dev          # 同时启动 API 与 Web
+pnpm dev:api      # 仅启动后端，默认 http://localhost:8787
+pnpm dev:web      # 仅启动前端，默认 http://localhost:5173
+pnpm db:migrate   # 执行数据库迁移
+pnpm typecheck    # 类型检查
+pnpm lint         # ESLint 检查
+pnpm build        # 生产构建
+```
+
+### 临时免登录
+
+本地开发默认免登录：
+
+```env
+VITE_AUTH_DISABLED=true
+```
+
+如需恢复登录/初始化页，在 `.env` 中设置：
+
+```env
+VITE_AUTH_DISABLED=false
+```
+
+后端鉴权接口仍保留；生产构建默认不免登录。
+
+### Docker
+
+Docker Compose 运行前必须提供强随机 `SESSION_SECRET`，例如在 `.env` 中设置：
+
+```env
+SESSION_SECRET=your-long-random-secret
+```
+
+然后运行：
+
+```bash
+docker compose up -d
+```
+
+### 本地测试文件
+
+以下目录用于本地测试素材或运行产物，已加入 `.gitignore`，不会提交到 GitHub：
+
+- `local-tests/`
+- `test-files/`
+- `.uploads/`
+- `data/`
 
 ---
 

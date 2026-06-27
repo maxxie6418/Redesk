@@ -1,0 +1,36 @@
+{
+  "name": "redesk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "自托管个人阅读管理与 AI 陪读系统",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @redesk/api --filter @redesk/web dev",
+    "dev:api": "pnpm --filter @redesk/api dev",
+    "dev:web": "pnpm --filter @redesk/web dev",
+    "build": "pnpm --filter @redesk/shared build && pnpm --filter @redesk/db build && pnpm --filter @redesk/api build && pnpm --filter @redesk/web build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @redesk/db generate",
+    "db:migrate": "pnpm --filter @redesk/db migrate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}
