@@ -511,17 +511,17 @@
 
       <a class="shell-nav-item active" href="#" data-active="true">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-        阅读档案
+        档案
       </a>
 
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-        阅读记录
+        记录
       </a>
 
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-        阅读主题
+        主题
       </a>
     </nav>
 
@@ -571,541 +571,350 @@
   <main class="shell-main">
     <div class="rp-page">
 
-      <!-- PAGE TITLE AREA -->
-      <div class="rp-title-area">
-        <h1>阅读档案</h1>
-        <p>你的阅读旅程，一目了然</p>
+      <!-- PAGE TITLE + TOPBAR ACTIONS -->
+      <div class="rp-topbar">
+        <div class="rp-page-copy">
+          <h1>阅读档案</h1>
+          <p>按长期统计、结构分布与阅读轨迹重构的总览页，不再依赖今天 / 本周 / 本月的活跃表现。</p>
+        </div>
+        <div class="rp-topbar-actions">
+          <button class="rp-ghost-btn">
+            <span data-icon="external-link" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+            <span>导出报告</span>
+          </button>
+          <button class="rp-ghost-btn">
+            <span data-icon="funnel" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg');mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg')"></span>
+            <span>筛选维度</span>
+          </button>
+        </div>
       </div>
 
-      <!-- TOP STATS CARDS ROW -->
-      <div class="rp-stats-grid">
-
-        <!-- Card 1: 累计阅读 -->
-        <div class="rp-stat-card">
-          <div class="rp-stat-label">累计阅读</div>
-          <div class="rp-stat-value">127</div>
-          <div class="rp-stat-unit">本</div>
-        </div>
-
-        <!-- Card 2: 高亮 -->
-        <div class="rp-stat-card">
-          <div class="rp-stat-label">高亮</div>
-          <div class="rp-stat-value accent">486</div>
-          <div class="rp-stat-unit">条</div>
-        </div>
-
-        <!-- Card 3: 笔记 -->
-        <div class="rp-stat-card">
-          <div class="rp-stat-label">笔记</div>
-          <div class="rp-stat-value">203</div>
-          <div class="rp-stat-unit">条</div>
-        </div>
-
-        <!-- Card 4: 连续阅读 -->
-        <div class="rp-stat-card">
-          <div class="rp-stat-label">连续阅读</div>
-          <div class="rp-stat-value accent">14 <span class="rp-stat-icon"><span data-icon="star" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span></span></div>
-          <div class="rp-stat-unit">天</div>
-        </div>
-
-        <!-- Card 5: 年度目标 -->
-        <div class="rp-stat-card">
-          <div class="rp-stat-label">年度目标</div>
-          <div class="rp-ring-container">
-            <svg class="rp-ring-svg" viewBox="0 0 48 48">
-              <circle class="rp-ring-bg" cx="24" cy="24" r="22"/>
-              <circle class="rp-ring-fill" cx="24" cy="24" r="22"/>
-              <text class="rp-ring-text" x="24" y="24" font-size="11">64%</text>
-            </svg>
-            <div class="rp-ring-meta">
-              <span class="count">32 / 50</span>
-              <span class="label">已完成</span>
+      <!-- ROW 1: KPI CARDS (6) -->
+      <section class="rp-kpi-grid">
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">累计阅读时长</span>
+            <div class="rp-kpi-icon rp-kpi-icon--brand">
+              <span data-icon="clock" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/clock.svg');mask-image:url('../assets/icons/dl-builtin-claude/clock.svg')"></span>
             </div>
           </div>
+          <div class="rp-kpi-value">62.4<small>小时</small></div>
+          <div class="rp-kpi-meta">约 2 天 14 小时</div>
         </div>
 
-      </div>
-
-      <!-- COMPLETION RATIO DONUT -->
-      <div style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
-        <div class="rp-donut-wrap">
-          <svg class="rp-donut-svg" viewBox="0 0 48 48">
-            <circle class="rp-donut-bg" cx="24" cy="24" r="20"/>
-            <circle class="rp-donut-fill" cx="24" cy="24" r="20"/>
-          </svg>
-          <div class="rp-donut-center">
-            <span class="rp-donut-pct">68%</span>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span class="rp-donut-title">完成比例</span>
-          <div style="display:flex;gap:16px;align-items:center;">
-            <span class="rp-donut-legend"><span class="rp-donut-legend-dot" style="background:var(--brand-500);display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:4px;"></span>已读 68%</span>
-            <span class="rp-donut-legend"><span class="rp-donut-legend-dot" style="background:var(--bg-400);display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:4px;"></span>未读 32%</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- READING ACTIVITY SECTION -->
-      <div class="rp-section">
-        <h2 class="rp-section-heading">阅读活跃度</h2>
-        <div class="rp-two-col">
-
-          <!-- LEFT: Heatmap -->
-          <div class="rp-panel">
-            <h3 class="rp-panel-title">阅读热力图</h3>
-            <div class="rp-heatmap">
-              <div class="rp-heatmap-day-labels">
-                <span class="rp-heatmap-day-label">一</span>
-                <span class="rp-heatmap-day-label" style="visibility:hidden">三</span>
-                <span class="rp-heatmap-day-label">三</span>
-                <span class="rp-heatmap-day-label" style="visibility:hidden">五</span>
-                <span class="rp-heatmap-day-label">五</span>
-                <span class="rp-heatmap-day-label" style="visibility:hidden">日</span>
-                <span class="rp-heatmap-day-label">日</span>
-              </div>
-              <div class="rp-heatmap-grid-wrap">
-                <div class="rp-heatmap-months">
-                  <span class="rp-heatmap-month" style="width:56px">4月</span>
-                  <span class="rp-heatmap-month" style="width:112px">5月</span>
-                  <span class="rp-heatmap-month" style="width:140px">6月</span>
-                </div>
-                <div class="rp-heatmap-grid" title="近12周阅读热力图">
-                  <!-- Week 1 -->
-                  <div class="rp-heatmap-cell" title="4月7日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="4月8日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="4月9日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell" title="4月10日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="4月11日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="4月12日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell" title="4月13日 · 阅读 0 分钟"></div>
-                  <!-- Week 2 -->
-                  <div class="rp-heatmap-cell level-1" title="4月14日 · 阅读 15 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="4月15日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="4月16日 · 阅读 60 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="4月17日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell" title="4月18日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="4月19日 · 阅读 5 分钟"></div>
-                  <div class="rp-heatmap-cell" title="4月20日 · 阅读 0 分钟"></div>
-                  <!-- Week 3 -->
-                  <div class="rp-heatmap-cell level-2" title="4月21日 · 阅读 30 分钟"></div>
-                  <div class="rp-heatmap-cell" title="4月22日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="4月23日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="4月24日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="4月25日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="4月26日 · 阅读 55 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="4月27日 · 阅读 15 分钟"></div>
-                  <!-- Week 4 -->
-                  <div class="rp-heatmap-cell" title="4月28日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="4月29日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="4月30日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="5月1日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月2日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月3日 · 阅读 65 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月4日 · 阅读 20 分钟"></div>
-                  <!-- Week 5 -->
-                  <div class="rp-heatmap-cell level-3" title="5月5日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月6日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="5月7日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月8日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月9日 · 阅读 70 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月10日 · 阅读 15 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="5月11日 · 阅读 10 分钟"></div>
-                  <!-- Week 6 -->
-                  <div class="rp-heatmap-cell level-2" title="5月12日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月13日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月14日 · 阅读 55 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月15日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="5月16日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月17日 · 阅读 30 分钟"></div>
-                  <div class="rp-heatmap-cell" title="5月18日 · 阅读 0 分钟"></div>
-                  <!-- Week 7 -->
-                  <div class="rp-heatmap-cell level-4" title="5月19日 · 阅读 75 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月20日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月21日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月22日 · 阅读 60 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月23日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="5月24日 · 阅读 10 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月25日 · 阅读 20 分钟"></div>
-                  <!-- Week 8 -->
-                  <div class="rp-heatmap-cell level-3" title="5月26日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月27日 · 阅读 50 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="5月28日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月29日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="5月30日 · 阅读 65 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="5月31日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-1" title="6月1日 · 阅读 10 分钟"></div>
-                  <!-- Week 9 -->
-                  <div class="rp-heatmap-cell level-4" title="6月2日 · 阅读 60 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月3日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月4日 · 阅读 55 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="6月5日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月6日 · 阅读 70 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月7日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="6月8日 · 阅读 20 分钟"></div>
-                  <!-- Week 10 -->
-                  <div class="rp-heatmap-cell level-3" title="6月9日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月10日 · 阅读 55 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月11日 · 阅读 65 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月12日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月13日 · 阅读 60 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="6月14日 · 阅读 25 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月15日 · 阅读 45 分钟"></div>
-                  <!-- Week 11 -->
-                  <div class="rp-heatmap-cell level-4" title="6月16日 · 阅读 70 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月17日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月18日 · 阅读 50 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="6月19日 · 阅读 20 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月20日 · 阅读 65 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月21日 · 阅读 35 分钟"></div>
-                  <div class="rp-heatmap-cell level-2" title="6月22日 · 阅读 20 分钟"></div>
-                  <!-- Week 12 -->
-                  <div class="rp-heatmap-cell level-4" title="6月23日 · 阅读 60 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月24日 · 阅读 75 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月25日 · 阅读 45 分钟"></div>
-                  <div class="rp-heatmap-cell level-4" title="6月26日 · 阅读 55 分钟"></div>
-                  <div class="rp-heatmap-cell level-3" title="6月27日 · 阅读 40 分钟"></div>
-                  <div class="rp-heatmap-cell" title="6月28日 · 阅读 0 分钟"></div>
-                  <div class="rp-heatmap-cell" title="6月29日 · 阅读 0 分钟"></div>
-                </div>
-              </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">累计阅读页数</span>
+            <div class="rp-kpi-icon rp-kpi-icon--chart1">
+              <span data-icon="file" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
             </div>
           </div>
+          <div class="rp-kpi-value">1,245<small>页</small></div>
+          <div class="rp-kpi-meta">约 4 本书的体量</div>
+        </div>
 
-          <!-- RIGHT: Bar Chart -->
-          <div class="rp-panel">
-            <h3 class="rp-panel-title">阅读趋势</h3>
-            <div class="rp-bar-chart">
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">45</span>
-                <div class="rp-bar level-3" style="height: 72px"></div>
-                <span class="rp-bar-label">周一</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">60</span>
-                <div class="rp-bar level-4" style="height: 96px"></div>
-                <span class="rp-bar-label">周二</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">30</span>
-                <div class="rp-bar level-2" style="height: 48px"></div>
-                <span class="rp-bar-label">周三</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">75</span>
-                <div class="rp-bar level-4" style="height: 120px"></div>
-                <span class="rp-bar-label">周四</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">55</span>
-                <div class="rp-bar level-3" style="height: 88px"></div>
-                <span class="rp-bar-label">周五</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">20</span>
-                <div class="rp-bar level-1" style="height: 32px"></div>
-                <span class="rp-bar-label">周六</span>
-              </div>
-              <div class="rp-bar-col">
-                <span class="rp-bar-value">40</span>
-                <div class="rp-bar level-3 today" style="height: 64px"></div>
-                <span class="rp-bar-label" style="color:var(--brand-500);font-weight:600">周日</span>
-              </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">已读完书籍</span>
+            <div class="rp-kpi-icon rp-kpi-icon--success">
+              <span data-icon="circle-check" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
             </div>
           </div>
-
+          <div class="rp-kpi-value">32<small>本</small></div>
+          <div class="rp-kpi-meta">占全部书籍 12.5%</div>
         </div>
-      </div>
 
-      <!-- BOOKSHELF STRUCTURE SECTION -->
-      <div class="rp-section">
-        <h2 class="rp-section-heading">书架结构</h2>
-        <div class="rp-two-col">
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">笔记 / 摘录总数</span>
+            <div class="rp-kpi-icon rp-kpi-icon--chart2">
+              <span data-icon="pen-line" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            </div>
+          </div>
+          <div class="rp-kpi-value">86<small>条</small></div>
+          <div class="rp-kpi-meta">划线 142 条</div>
+        </div>
 
-          <!-- LEFT: Status Distribution -->
-          <div class="rp-panel">
-            <h3 class="rp-panel-title">状态分布</h3>
-            <div class="rp-stacked-bar-wrap">
-              <div class="rp-stacked-bar">
-                <div class="rp-stacked-bar-segment seg-1" style="width:58.5%">86</div>
-                <div class="rp-stacked-bar-segment seg-2" style="width:2%">3</div>
-                <div class="rp-stacked-bar-segment seg-3" style="width:10.2%">15</div>
-                <div class="rp-stacked-bar-segment seg-4" style="width:15.6%">23</div>
-              </div>
-              <div class="rp-stacked-legend">
-                <div class="rp-legend-item">
-                  <span class="rp-legend-dot" style="background:var(--brand-500)"></span>
-                  已读 86
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">年度阅读时长</span>
+            <div class="rp-kpi-icon rp-kpi-icon--brand400">
+              <span data-icon="clock" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/clock.svg');mask-image:url('../assets/icons/dl-builtin-claude/clock.svg')"></span>
+            </div>
+          </div>
+          <div class="rp-kpi-value">18.7<small>小时</small></div>
+          <div class="rp-kpi-meta">2025 年累计</div>
+        </div>
+
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-top">
+            <span class="rp-kpi-label">最长阅读间隔</span>
+            <div class="rp-kpi-icon rp-kpi-icon--error">
+              <span data-icon="circle-pause" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')"></span>
+            </div>
+          </div>
+          <div class="rp-kpi-value">27<small>天</small></div>
+          <div class="rp-kpi-meta">2024年7月 - 8月</div>
+        </div>
+      </section>
+
+      <!-- ROW 2: DASHBOARD GRID (3-column, span-2) -->
+      <section class="rp-dashboard-grid">
+
+        <!-- 1. BAR CHART (span-2) -->
+        <section class="rp-panel rp-panel--span2">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">近 12 个月阅读时长趋势</h3>
+              <div class="rp-panel-subtle">适合不规律阅读场景，突出长期波动而非短期空白。</div>
+            </div>
+            <div class="rp-panel-actions">
+              <span class="rp-panel-chip">按月</span>
+              <span class="rp-panel-chip">近12个月</span>
+            </div>
+          </div>
+          <div class="rp-bar-chart-wrap">
+            <div class="rp-chart-guide"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="rp-month-col"><strong>4.5h</strong><div class="rp-bar" style="height:78px"></div><span>2024-07</span></div>
+            <div class="rp-month-col"><strong>5.1h</strong><div class="rp-bar" style="height:88px"></div><span>2024-08</span></div>
+            <div class="rp-month-col"><strong>3.4h</strong><div class="rp-bar" style="height:58px"></div><span>2024-09</span></div>
+            <div class="rp-month-col"><strong>10.2h</strong><div class="rp-bar" style="height:176px"></div><span>2024-10</span></div>
+            <div class="rp-month-col"><strong>4.1h</strong><div class="rp-bar" style="height:70px"></div><span>2024-11</span></div>
+            <div class="rp-month-col"><strong>10.0h</strong><div class="rp-bar" style="height:172px"></div><span>2024-12</span></div>
+            <div class="rp-month-col"><strong>5.0h</strong><div class="rp-bar" style="height:86px"></div><span>2025-01</span></div>
+            <div class="rp-month-col"><strong>1.8h</strong><div class="rp-bar" style="height:30px"></div><span>2025-02</span></div>
+            <div class="rp-month-col"><strong>12.7h</strong><div class="rp-bar" style="height:220px"></div><span>2025-03</span></div>
+            <div class="rp-month-col"><strong>6.3h</strong><div class="rp-bar" style="height:108px"></div><span>2025-04</span></div>
+            <div class="rp-month-col"><strong>7.2h</strong><div class="rp-bar" style="height:124px"></div><span>2025-05</span></div>
+            <div class="rp-month-col"><strong>10.8h</strong><div class="rp-bar" style="height:186px"></div><span>2025-06</span></div>
+          </div>
+        </section>
+
+        <!-- 2. ANNUAL GOALS -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">年度目标（2025）</h3>
+              <div class="rp-panel-subtle">按长期目标追踪，而不是强调短期完成率。</div>
+            </div>
+            <span class="rp-panel-chip">编辑目标</span>
+          </div>
+          <div class="rp-goal-stack">
+            <div class="rp-goal-item">
+              <div class="rp-goal-meta"><span>阅读时长目标</span><strong>46.8%</strong></div>
+              <div class="rp-goal-meta"><span style="font-size:24px;color:var(--foreground);font-weight:600">40 小时</span><span class="rp-panel-subtle">18.7 / 40 小时</span></div>
+              <div class="rp-goal-track"><span class="rp-goal-fill rp-goal-fill--brand"></span></div>
+            </div>
+            <div class="rp-goal-item">
+              <div class="rp-goal-meta"><span>读完书籍目标</span><strong>60.0%</strong></div>
+              <div class="rp-goal-meta"><span style="font-size:24px;color:var(--foreground);font-weight:600">20 本</span><span class="rp-panel-subtle">12 / 20 本</span></div>
+              <div class="rp-goal-track"><span class="rp-goal-fill rp-goal-fill--success"></span></div>
+            </div>
+            <div class="rp-goal-item">
+              <div class="rp-goal-meta"><span>阅读主题拓展</span><strong>38.0%</strong></div>
+              <div class="rp-goal-meta"><span style="font-size:24px;color:var(--foreground);font-weight:600">8 类</span><span class="rp-panel-subtle">3 / 8 类</span></div>
+              <div class="rp-goal-track"><span class="rp-goal-fill rp-goal-fill--chart2"></span></div>
+            </div>
+            <div class="rp-goal-footer">距离年底还有 209 天</div>
+          </div>
+        </section>
+
+        <!-- 3. HEATMAP (span-2) -->
+        <section class="rp-panel rp-panel--span2">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">阅读热力图（过去 12 个月）</h3>
+              <div class="rp-panel-subtle">允许出现大量空白日；低频阅读也能通过长期分布呈现习惯轮廓。</div>
+            </div>
+          </div>
+          <div class="rp-heatmap-months">
+            <span>07</span><span>08</span><span>09</span><span>10</span><span>11</span><span>12</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span>
+          </div>
+          <div class="rp-heatmap-layout">
+            <div class="rp-heatmap-day-labels"><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span>日</span></div>
+            <div class="rp-heatmap-grid" id="rpHeatmapGrid"></div>
+          </div>
+          <div class="rp-heatmap-legend">
+            <span>少</span>
+            <span class="rp-legend-group"><span class="rp-heat-cell"></span><span>无阅读</span></span>
+            <span class="rp-legend-group"><span class="rp-heat-cell rp-heat-lv1"></span><span>&lt;15 分钟</span></span>
+            <span class="rp-legend-group"><span class="rp-heat-cell rp-heat-lv2"></span><span>15-30 分钟</span></span>
+            <span class="rp-legend-group"><span class="rp-heat-cell rp-heat-lv3"></span><span>30-60 分钟</span></span>
+            <span class="rp-legend-group"><span class="rp-heat-cell rp-heat-lv4"></span><span>&gt;60 分钟</span></span>
+            <span>多</span>
+          </div>
+        </section>
+
+        <!-- 4. TIME-OF-DAY DISTRIBUTION DONUT -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">阅读时段分布</h3>
+              <div class="rp-panel-subtle">比"今日阅读"更稳定，也更能体现个人习惯。</div>
+            </div>
+          </div>
+          <div class="rp-donut-area">
+            <div class="rp-donut-wrap">
+              <svg viewBox="0 0 120 120">
+                <circle class="rp-donut-ring-bg" cx="60" cy="60" r="42"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--chart-1)" stroke-dasharray="33.8 230" stroke-dashoffset="0"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--success)" stroke-dasharray="104.3 230" stroke-dashoffset="-37"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--brand-500)" stroke-dasharray="101.0 230" stroke-dashoffset="-145"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--chart-2)" stroke-dasharray="25.1 230" stroke-dashoffset="-249"></circle>
+              </svg>
+              <div class="rp-donut-center"><div><strong>4 段</strong><span>主要时段</span></div></div>
+            </div>
+            <div class="rp-donut-legend">
+              <div class="rp-legend-row"><span class="rp-legend-left"><span class="rp-legend-dot" style="background:var(--chart-1)"></span>上午（6-12）</span><strong>12.8%</strong></div>
+              <div class="rp-legend-row"><span class="rp-legend-left"><span class="rp-legend-dot" style="background:var(--success)"></span>下午（12-18）</span><strong>39.5%</strong></div>
+              <div class="rp-legend-row"><span class="rp-legend-left"><span class="rp-legend-dot" style="background:var(--brand-500)"></span>晚上（18-23）</span><strong>38.2%</strong></div>
+              <div class="rp-legend-row"><span class="rp-legend-left"><span class="rp-legend-dot" style="background:var(--chart-2)"></span>深夜（23-6）</span><strong>9.5%</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. CURRENTLY READING -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">当前在读</h3>
+              <div class="rp-panel-subtle">保持"正在读什么"的即时感，但放在统计结构之后。</div>
+            </div>
+          </div>
+          <div class="rp-reading-card">
+            <div class="rp-reading-book">
+              <div class="rp-book-cover rp-book-cover--cloud"><div class="rp-book-cover-label">被讨厌的勇气</div></div>
+              <div class="rp-reading-meta">
+                <h4>被讨厌的勇气</h4>
+                <div class="rp-author">[日] 岸见一郎 / 古贺史健</div>
+                <div class="rp-progress-row">
+                  <strong style="font-size:28px;line-height:1;color:var(--foreground)">41%</strong>
+                  <div class="rp-progress-bar"><span></span></div>
                 </div>
-                <div class="rp-legend-item">
-                  <span class="rp-legend-dot" style="background:var(--brand-300)"></span>
-                  在读 3
-                </div>
-                <div class="rp-legend-item">
-                  <span class="rp-legend-dot" style="background:var(--brand-100)"></span>
-                  计划读 15
-                </div>
-                <div class="rp-legend-item">
-                  <span class="rp-legend-dot" style="background:var(--bg-400)"></span>
-                  收录 23
-                </div>
-                <div class="rp-legend-item">
-                  <span class="rp-legend-dot" style="background:var(--bg-500)"></span>
-                  存档 0
+                <div class="rp-reading-stats">
+                  <div><strong>65 / 159</strong>已读页数</div>
+                  <div><strong>6 天</strong>预计读完</div>
+                  <div><strong>心理学</strong>当前分类</div>
                 </div>
               </div>
             </div>
+            <button class="rp-continue-btn">继续阅读</button>
           </div>
+        </section>
 
-          <!-- RIGHT: Category Distribution -->
-          <div class="rp-panel">
-            <h3 class="rp-panel-title">类别分布</h3>
-            <div class="rp-cat-chart">
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">42</span>
-                <div class="rp-cat-bar cat-1" style="height: 151px"></div>
-                <span class="rp-cat-label">文学</span>
-              </div>
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">28</span>
-                <div class="rp-cat-bar cat-2" style="height: 101px"></div>
-                <span class="rp-cat-label">科技</span>
-              </div>
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">18</span>
-                <div class="rp-cat-bar cat-3" style="height: 65px"></div>
-                <span class="rp-cat-label">历史</span>
-              </div>
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">15</span>
-                <div class="rp-cat-bar cat-4" style="height: 54px"></div>
-                <span class="rp-cat-label">哲学</span>
-              </div>
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">12</span>
-                <div class="rp-cat-bar cat-5" style="height: 43px"></div>
-                <span class="rp-cat-label">商业</span>
-              </div>
-              <div class="rp-cat-col">
-                <span class="rp-cat-value">7</span>
-                <div class="rp-cat-bar cat-6" style="height: 25px"></div>
-                <span class="rp-cat-label">艺术</span>
-              </div>
+        <!-- 6. CATEGORY DISTRIBUTION DONUT + LIST -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">分类分布（按阅读时长）</h3>
+              <div class="rp-panel-subtle">让页面更像"档案"，而不是简单的日志聚合。</div>
             </div>
           </div>
-
-        </div>
-      </div>
-
-      <!-- WANT vs ACTUAL COMPARISON -->
-      <div class="rp-section">
-        <div class="rp-panel">
-          <h3 class="rp-panel-title">想读 vs 已读</h3>
-          <div class="rp-compare-wrap">
-            <div class="rp-compare-row">
-              <span class="rp-compare-label">想读</span>
-              <div class="rp-compare-bar-track">
-                <div class="rp-compare-bar-fill want">124</div>
-              </div>
+          <div class="rp-category-grid">
+            <div class="rp-simple-donut">
+              <svg viewBox="0 0 120 120">
+                <circle class="rp-donut-ring-bg" cx="60" cy="60" r="42"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--brand-500)" stroke-dasharray="58.3 230" stroke-dashoffset="0"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--success)" stroke-dasharray="51.7 230" stroke-dashoffset="-62"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--chart-1)" stroke-dasharray="40.6 230" stroke-dashoffset="-117"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--chart-2)" stroke-dasharray="34.3 230" stroke-dashoffset="-161"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--brand-300)" stroke-dasharray="25.9 230" stroke-dashoffset="-199"></circle>
+                <circle class="rp-donut-seg" cx="60" cy="60" r="42" stroke="var(--bg-700)" stroke-dasharray="47.2 230" stroke-dashoffset="-229"></circle>
+              </svg>
+              <div class="rp-simple-center"><div><strong>6 类</strong><span>活跃分类</span></div></div>
             </div>
-            <div class="rp-compare-row">
-              <span class="rp-compare-label">已读</span>
-              <div class="rp-compare-bar-track">
-                <div class="rp-compare-bar-fill done">86</div>
-              </div>
+            <div class="rp-category-list">
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--brand-500)"></span>心理学</span><span>22.1%</span><span class="rp-panel-subtle">13.8h</span></div>
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--success)"></span>小说</span><span>19.6%</span><span class="rp-panel-subtle">12.2h</span></div>
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--chart-1)"></span>历史</span><span>15.4%</span><span class="rp-panel-subtle">9.6h</span></div>
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--chart-2)"></span>自我成长</span><span>13.0%</span><span class="rp-panel-subtle">8.1h</span></div>
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--brand-300)"></span>哲学</span><span>9.8%</span><span class="rp-panel-subtle">6.1h</span></div>
+              <div class="rp-category-row"><span class="rp-category-name"><span class="rp-legend-dot" style="background:var(--bg-700)"></span>其他</span><span>20.1%</span><span class="rp-panel-subtle">12.6h</span></div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- RECENT ACTIVITY SECTION -->
-      <div class="rp-section">
-        <h2 class="rp-section-heading">最近动态</h2>
-        <div class="rp-activity-grid">
-
-          <!-- 最近新增 -->
-          <div class="rp-activity-panel">
-            <h3 class="rp-activity-panel-title">最近新增</h3>
-            <ul class="rp-activity-list">
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-title">百年孤独</span>
-                <span class="rp-activity-item-meta">6月25日</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-title">人类简史</span>
-                <span class="rp-activity-item-meta">6月22日</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-title">设计心理学</span>
-                <span class="rp-activity-item-meta">6月20日</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-title">枪炮、病菌与钢铁</span>
-                <span class="rp-activity-item-meta">6月18日</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-title">小王子</span>
-                <span class="rp-activity-item-meta">6月15日</span>
-              </li>
-            </ul>
+        <!-- 7. COMPLETED BOOKS HORIZONTAL BAR -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">已读完书籍分类分布</h3>
+              <div class="rp-panel-subtle">结构视角优先，信息密度高于装饰感。</div>
+            </div>
           </div>
-
-          <!-- 最近阅读 -->
-          <div class="rp-activity-panel">
-            <h3 class="rp-activity-panel-title">最近阅读</h3>
-            <ul class="rp-activity-list">
-              <li class="rp-reading-item">
-                <div class="rp-reading-cover" style="background:var(--brand-100);border:1px solid var(--border-200);width:36px;height:48px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                  <span style="font-family:var(--font-serif);font-size:8px;color:var(--text-600);text-align:center;padding:2px;">百年孤独</span>
-                </div>
-                <div class="rp-reading-info">
-                  <span class="rp-activity-item-title">百年孤独</span>
-                  <span class="rp-reading-page">读到第 286 页</span>
-                  <span class="rp-activity-item-meta">今天 · 40 分钟</span>
-                </div>
-              </li>
-              <li class="rp-reading-item">
-                <div class="rp-reading-cover" style="background:var(--brand-50);border:1px solid var(--border-200);width:36px;height:48px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                  <span style="font-family:var(--font-serif);font-size:7px;color:var(--text-600);text-align:center;padding:2px;">思考快与慢</span>
-                </div>
-                <div class="rp-reading-info">
-                  <span class="rp-activity-item-title">思考，快与慢</span>
-                  <span class="rp-reading-page">读到第 142 页</span>
-                  <span class="rp-activity-item-meta">昨天 · 55 分钟</span>
-                </div>
-              </li>
-              <li class="rp-reading-item">
-                <div class="rp-reading-cover" style="background:var(--bg-300);border:1px solid var(--border-200);width:36px;height:48px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                  <span style="font-family:var(--font-serif);font-size:7px;color:var(--text-600);text-align:center;padding:2px;">月亮与六便士</span>
-                </div>
-                <div class="rp-reading-info">
-                  <span class="rp-activity-item-title">月亮与六便士</span>
-                  <span class="rp-reading-page">读到第 89 页</span>
-                  <span class="rp-activity-item-meta">6月24日 · 30 分钟</span>
-                </div>
-              </li>
-              <li class="rp-reading-item">
-                <div class="rp-reading-cover" style="background:var(--bg-300);border:1px solid var(--border-200);width:36px;height:48px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                  <span style="font-family:var(--font-serif);font-size:8px;color:var(--text-600);text-align:center;padding:2px;">乡土中国</span>
-                </div>
-                <div class="rp-reading-info">
-                  <span class="rp-activity-item-title">乡土中国</span>
-                  <span class="rp-reading-page">读到第 65 页</span>
-                  <span class="rp-activity-item-meta">6月23日 · 45 分钟</span>
-                </div>
-              </li>
-              <li class="rp-reading-item">
-                <div class="rp-reading-cover" style="background:var(--bg-300);border:1px solid var(--border-200);width:36px;height:48px;border-radius:var(--radius-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                  <span style="font-family:var(--font-serif);font-size:8px;color:var(--text-600);text-align:center;padding:2px;">三体</span>
-                </div>
-                <div class="rp-reading-info">
-                  <span class="rp-activity-item-title">三体</span>
-                  <span class="rp-reading-page">读到第 312 页</span>
-                  <span class="rp-activity-item-meta">6月22日 · 60 分钟</span>
-                </div>
-              </li>
-            </ul>
+          <div class="rp-hbar-list">
+            <div class="rp-hbar-row"><span>小说</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:100%"></div></div><strong>12</strong></div>
+            <div class="rp-hbar-row"><span>心理学</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:58%"></div></div><strong>7</strong></div>
+            <div class="rp-hbar-row"><span>历史</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:42%"></div></div><strong>5</strong></div>
+            <div class="rp-hbar-row"><span>自我成长</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:25%"></div></div><strong>3</strong></div>
+            <div class="rp-hbar-row"><span>经济管理</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:25%"></div></div><strong>3</strong></div>
+            <div class="rp-hbar-row"><span>其他</span><div class="rp-hbar-track"><div class="rp-hbar-fill" style="width:17%"></div></div><strong>2</strong></div>
           </div>
+        </section>
 
-          <!-- 最近笔记 -->
-          <div class="rp-activity-panel">
-            <h3 class="rp-activity-panel-title">最近笔记</h3>
-            <ul class="rp-activity-list">
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-excerpt">马尔克斯对时间的处理方式令人惊叹，循环往复的叙事结构...</span>
-                <span class="rp-activity-item-meta">百年孤独 · 今天</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-excerpt">系统一和系统二的区别本质上是对认知资源的分配策略...</span>
-                <span class="rp-activity-item-meta">思考，快与慢 · 昨天</span>
-              </li>
-              <li class="rp-activity-item">
-                <span class="rp-activity-item-excerpt">费孝通对差序格局的论述放到今天看依然有很强的解释力...</span>
-                <span class="rp-activity-item-meta">乡土中国 · 6月23日</span>
-              </li>
-            </ul>
+        <!-- 8. RECENT READING RECORDS -->
+        <section class="rp-panel">
+          <div class="rp-panel-header">
+            <div>
+              <h3 class="rp-panel-title">最近阅读记录</h3>
+              <div class="rp-panel-subtle">辅助回顾入口，主次上低于长期统计区块。</div>
+            </div>
+            <span class="rp-panel-chip">全部记录</span>
           </div>
+          <div class="rp-records-list">
+            <div class="rp-record-item">
+              <div class="rp-thumb"></div>
+              <div class="rp-record-main"><strong>深度工作</strong><span>[美] 卡尔-纽波特 - 2025-06-25</span></div>
+              <div class="rp-record-meta"><strong>21:10 - 21:40</strong><span>30 分钟 - 记 1 条</span></div>
+            </div>
+            <div class="rp-record-item">
+              <div class="rp-thumb" style="background:linear-gradient(180deg, rgba(231,236,221,0.7), rgba(120,140,93,0.18))"></div>
+              <div class="rp-record-main"><strong>瓦尔登湖</strong><span>[美] 亨利-戴维-梭罗 - 2025-06-24</span></div>
+              <div class="rp-record-meta"><strong>06:45 - 07:30</strong><span>45 分钟 - 记 2 条</span></div>
+            </div>
+            <div class="rp-record-item">
+              <div class="rp-thumb" style="background:linear-gradient(180deg, rgba(147,72,40,0.16), rgba(147,72,40,0.36))"></div>
+              <div class="rp-record-main"><strong>人类简史：从动物到上帝</strong><span>[以] 尤瓦尔-赫拉利 - 2025-06-20</span></div>
+              <div class="rp-record-meta"><strong>20:15 - 21:05</strong><span>50 分钟 - 进度 35%</span></div>
+            </div>
+            <div class="rp-record-item">
+              <div class="rp-thumb" style="background:linear-gradient(180deg, rgba(251,242,237,0.92), rgba(235,198,182,0.24))"></div>
+              <div class="rp-record-main"><strong>被讨厌的勇气</strong><span>[日] 岸见一郎 / 古贺史健 - 2025-06-18</span></div>
+              <div class="rp-record-meta"><strong>19:30 - 20:05</strong><span>35 分钟 - 进度 41%</span></div>
+            </div>
+          </div>
+        </section>
 
-        </div>
-      </div>
-
-      <!-- READING HISTORY -->
-      <div class="rp-section">
-        <h2 class="rp-section-heading">阅读历史</h2>
-        <div class="rp-panel">
-          <ul class="rp-history-list">
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">百年孤独</span>
-                <span class="rp-history-date">6/10 - 6/25</span>
-                <span class="rp-history-time">12 小时 30 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">思考，快与慢</span>
-                <span class="rp-history-date">5/28 - 6/15</span>
-                <span class="rp-history-time">18 小时 45 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">月亮与六便士</span>
-                <span class="rp-history-date">5/15 - 5/27</span>
-                <span class="rp-history-time">8 小时 20 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">乡土中国</span>
-                <span class="rp-history-date">5/1 - 5/14</span>
-                <span class="rp-history-time">6 小时 10 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">三体</span>
-                <span class="rp-history-date">4/10 - 4/30</span>
-                <span class="rp-history-time">22 小时 5 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">苏菲的世界</span>
-                <span class="rp-history-date">3/20 - 4/9</span>
-                <span class="rp-history-time">14 小时 50 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">瓦尔登湖</span>
-                <span class="rp-history-date">3/1 - 3/19</span>
-                <span class="rp-history-time">9 小时 15 分</span>
-              </div>
-            </li>
-            <li class="rp-history-item">
-              <span class="rp-history-dot"></span>
-              <div class="rp-history-info">
-                <span class="rp-history-title">刻意练习</span>
-                <span class="rp-history-date">2/10 - 2/28</span>
-                <span class="rp-history-time">7 小时 40 分</span>
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-
+      </section>
     </div>
   </main>
 
 </div>
+
+<!-- ── Heatmap Generation JS ──────────────────────────────── -->
+<script>
+  (function() {
+    var values = [
+      0,0,1,0,0,2,0,  0,0,0,1,0,0,0,  0,0,2,0,0,0,0,  1,0,0,0,0,1,0,
+      0,0,0,2,0,0,0,  0,0,0,0,1,0,0,  2,0,0,0,0,0,1,  0,0,0,0,0,0,0,
+      0,1,0,0,0,0,0,  0,0,2,0,1,0,0,  0,0,0,0,0,0,0,  0,0,0,0,0,1,0,
+      0,0,0,3,0,0,0,  0,0,0,0,0,0,0,  0,1,0,0,0,0,0,  0,0,0,0,1,0,0,
+      0,0,0,2,0,0,0,  0,2,0,0,0,0,0,  0,0,0,0,0,0,0,  1,0,0,0,0,0,0,
+      0,0,0,2,0,0,0,  0,0,0,1,0,0,0,  0,0,0,0,0,0,0,  0,1,0,0,0,0,0,
+      0,0,2,0,0,0,0,  0,0,0,0,1,0,0,  0,0,0,0,0,0,0,  1,0,0,0,0,0,0,
+      0,0,0,3,0,0,0,  0,2,0,0,0,0,0,  0,0,0,1,0,0,0,  0,0,0,0,0,0,0,
+      0,1,0,0,0,0,0,  0,0,0,0,0,0,0,  0,0,0,2,0,0,0,  0,0,0,0,1,0,0,
+      0,0,0,3,0,1,0,  0,0,0,0,0,0,0,  0,2,0,0,0,0,0,  0,0,0,4,0,0,0
+    ];
+    var grid = document.getElementById('rpHeatmapGrid');
+    if (!grid) return;
+    values.forEach(function(v) {
+      var cell = document.createElement('div');
+      cell.className = 'rp-heat-cell' + (v ? ' rp-heat-lv' + Math.min(v, 4) : '');
+      grid.appendChild(cell);
+    });
+  })();
+</script>
 
 <!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
 <nav class="shell-mobile-tabs" aria-label="移动端导航">
@@ -1116,11 +925,11 @@
     </a>
     <a class="shell-mobile-tab active" href="#">
       <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-      阅读档案
+      档案
     </a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
       <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-      阅读记录
+      记录
     </a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
       <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
@@ -1556,638 +1365,228 @@
       }
 
       /* ═══════════════════════════════════════════════════════════
-         PAGE-SPECIFIC: 阅读档案 (Reading Profile)
+         PAGE-SPECIFIC: 阅读档案 (Reading Profile) — Redesigned v3
          ═══════════════════════════════════════════════════════════ */
 
-      .rp-page { max-width: 1080px; margin: 0 auto; }
+      .rp-page { display: flex; flex-direction: column; gap: 18px; }
 
-      /* Page Title */
-      .rp-title-area {
-        margin-bottom: 36px;
+      /* Topbar */
+      .rp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 4px; }
+      .rp-page-copy h1 { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-page-copy p { margin: 8px 0 0; color: var(--muted-foreground); font-size: 13px; font-family: var(--font-serif); line-height: 1.5; }
+      .rp-topbar-actions { display: flex; align-items: center; gap: 10px; }
+      .rp-ghost-btn {
+        border: 1px solid var(--border); background: var(--popover); color: var(--foreground);
+        border-radius: var(--radius-md); height: 40px; padding: 0 14px;
+        display: inline-flex; align-items: center; gap: 8px;
+        box-shadow: var(--shadow-xs); cursor: pointer; font-family: var(--font-sans); font-size: 13px;
       }
-      .rp-title-area h1 {
-        font-family: var(--font-display);
-        font-size: 24px;
-        font-weight: 400;
-        color: var(--foreground);
-        margin: 0 0 8px;
-        letter-spacing: -0.01em;
-        line-height: 1.2;
-      }
-      .rp-title-area p {
-        font-family: var(--font-serif);
-        font-size: 15px;
-        color: var(--muted-foreground);
-        margin: 0;
-        line-height: 1.5;
-      }
+      .rp-ghost-btn [data-icon] { width: 16px; height: 16px; color: var(--muted-foreground); }
 
-      /* Top Stats Cards */
-      .rp-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 16px;
-        margin-bottom: 40px;
+      /* ── KPI Grid (6 cols) ──────────────────────────────────── */
+      .rp-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+      .rp-kpi-card {
+        background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius-xl);
+        padding: 16px; box-shadow: var(--shadow-sm); min-height: 118px; display: grid; gap: 8px;
       }
-      .rp-stat-card {
-        background: var(--popover);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 20px 18px;
-        box-shadow: var(--shadow-xs);
-      }
-      .rp-stat-label {
-        font-family: var(--font-sans);
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--muted-foreground);
-        margin-bottom: 8px;
-        letter-spacing: 0.02em;
-      }
-      .rp-stat-value {
-        font-family: var(--font-sans);
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--foreground);
-        line-height: 1;
-        margin-bottom: 4px;
-      }
-      .rp-stat-value.accent {
-        color: var(--brand-500);
-      }
-      .rp-stat-unit {
-        font-family: var(--font-sans);
-        font-size: 12px;
-        color: var(--muted-foreground);
-      }
-      .rp-stat-icon {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        margin-left: 4px;
-        color: var(--brand-500);
-      }
-      .rp-stat-icon [data-icon] {
-        width: 16px;
-        height: 16px;
-      }
+      .rp-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .rp-kpi-label { font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-kpi-icon { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; }
+      .rp-kpi-icon [data-icon] { width: 16px; height: 16px; }
+      .rp-kpi-icon--brand { background: rgba(201, 100, 66, 0.14); color: var(--brand-500); }
+      .rp-kpi-icon--chart1 { background: rgba(176, 87, 48, 0.14); color: var(--chart-1); }
+      .rp-kpi-icon--success { background: rgba(120, 140, 93, 0.18); color: var(--success); }
+      .rp-kpi-icon--chart2 { background: rgba(156, 135, 245, 0.18); color: var(--chart-2); }
+      .rp-kpi-icon--brand400 { background: rgba(214, 134, 106, 0.16); color: var(--brand-400); }
+      .rp-kpi-icon--error { background: rgba(214, 69, 69, 0.14); color: var(--error); }
+      .rp-kpi-value { font-size: 38px; line-height: 0.95; letter-spacing: -0.03em; font-weight: 700; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-kpi-value small { font-size: 16px; color: var(--muted-foreground); margin-left: 4px; font-weight: 400; }
+      .rp-kpi-meta { font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
 
-      /* Progress ring */
-      .rp-ring-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-        margin-top: 8px;
-      }
-      .rp-ring-svg {
-        width: 56px;
-        height: 56px;
-        transform: rotate(-90deg);
-      }
-      .rp-ring-bg {
-        fill: none;
-        stroke: var(--muted);
-        stroke-width: 5;
-      }
-      .rp-ring-fill {
-        fill: none;
-        stroke: var(--brand-500);
-        stroke-width: 5;
-        stroke-linecap: round;
-        stroke-dasharray: 138.23;
-        stroke-dashoffset: 49.76;
-      }
-      .rp-ring-text {
-        font-family: var(--font-sans);
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--brand-500);
-        fill: var(--brand-500);
-        text-anchor: middle;
-        dominant-baseline: central;
-        transform: rotate(90deg);
-        transform-origin: center;
-      }
-      .rp-ring-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .rp-ring-meta .count {
-        font-family: var(--font-sans);
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--foreground);
-      }
-      .rp-ring-meta .label {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        color: var(--muted-foreground);
-      }
+      /* ── Dashboard Grid (3-col, span-2) ──────────────────────── */
+      .rp-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 
-      /* Donut chart (completion ratio) */
-      .rp-donut-wrap {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        flex-shrink: 0;
-      }
-      .rp-donut-svg {
-        width: 120px;
-        height: 120px;
-        transform: rotate(-90deg);
-      }
-      .rp-donut-bg {
-        fill: none;
-        stroke: var(--muted);
-        stroke-width: 8;
-      }
-      .rp-donut-fill {
-        fill: none;
-        stroke: var(--brand-500);
-        stroke-width: 8;
-        stroke-linecap: round;
-        stroke-dasharray: 125.66;
-        stroke-dashoffset: 40.21; /* 68% of 125.66 => 85.45 filled, offset = 125.66 - 85.45 = 40.21 */
-      }
-      .rp-donut-center {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .rp-donut-pct {
-        font-family: var(--font-sans);
-        font-size: 24px;
-        font-weight: 600;
-        color: var(--brand-500);
-      }
-      .rp-donut-title {
-        font-family: var(--font-sans);
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--foreground);
-      }
-      .rp-donut-legend {
-        font-family: var(--font-sans);
-        font-size: 12px;
-        color: var(--muted-foreground);
-        display: flex;
-        align-items: center;
-      }
-
-      /* Section Headings */
-      .rp-section-heading {
-        font-family: var(--font-display);
-        font-size: 20px;
-        font-weight: 400;
-        color: var(--foreground);
-        margin: 0 0 20px;
-        letter-spacing: -0.01em;
-      }
-      .rp-section {
-        margin-bottom: 44px;
-      }
-
-      /* Two-column panels */
-      .rp-two-col {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
-      }
-
-      /* Panel card */
+      /* ── Panel ──────────────────────────────────────────────── */
       .rp-panel {
-        background: var(--popover);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 24px;
-        box-shadow: var(--shadow-xs);
+        background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius-2xl);
+        padding: 18px; box-shadow: var(--shadow-sm);
       }
-      .rp-panel-title {
-        font-family: var(--font-sans);
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--foreground);
-        margin: 0 0 20px;
+      .rp-panel--span2 { grid-column: span 2; }
+      .rp-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+      .rp-panel-title { font-size: 16px; font-weight: 600; margin: 0; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-panel-subtle { font-size: 12px; color: var(--muted-foreground); font-family: var(--font-serif); margin-top: 2px; }
+      .rp-panel-actions { display: flex; gap: 8px; }
+      .rp-panel-chip {
+        border: 1px solid var(--border); background: rgba(0,0,0,0.03); color: var(--muted-foreground);
+        border-radius: var(--radius-full); padding: 6px 10px; font-size: 12px; font-family: var(--font-sans);
       }
-
-      /* ── Heatmap ────────────────────────────────────────────── */
-      .rp-heatmap {
-        display: flex;
-        gap: 12px;
-        overflow-x: auto;
-      }
-      .rp-heatmap-day-labels {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        padding-top: 24px;
-        flex-shrink: 0;
-      }
-      .rp-heatmap-day-label {
-        font-family: var(--font-sans);
-        font-size: 10px;
-        color: var(--muted-foreground);
-        height: 14px;
-        line-height: 14px;
-        text-align: right;
-        width: 20px;
-      }
-      .rp-heatmap-grid-wrap {
-        flex: 1;
-        overflow-x: auto;
-      }
-      .rp-heatmap-months {
-        display: flex;
-        gap: 0;
-        margin-bottom: 6px;
-        padding-left: 0;
-      }
-      .rp-heatmap-month {
-        font-family: var(--font-sans);
-        font-size: 10px;
-        color: var(--muted-foreground);
-      }
-      .rp-heatmap-grid {
-        display: grid;
-        grid-template-rows: repeat(7, 14px);
-        grid-auto-flow: column;
-        grid-auto-columns: 14px;
-        gap: 3px;
-      }
-      .rp-heatmap-cell {
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
-        background: var(--bg-300);
-      }
-      .rp-heatmap-cell.level-1 { background: var(--brand-100); }
-      .rp-heatmap-cell.level-2 { background: var(--brand-200); }
-      .rp-heatmap-cell.level-3 { background: var(--brand-400); }
-      .rp-heatmap-cell.level-4 { background: var(--brand-500); }
 
       /* ── Bar Chart ─────────────────────────────────────────── */
-      .rp-bar-chart {
-        display: flex;
-        align-items: flex-end;
-        gap: 12px;
-        height: 180px;
-        padding-top: 8px;
+      .rp-bar-chart-wrap {
+        height: 270px; display: flex; align-items: flex-end; gap: 14px;
+        padding: 12px 4px 4px; border-top: 1px dashed rgba(218, 217, 212, 0.7); position: relative;
       }
-      .rp-bar-col {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        height: 100%;
-        justify-content: flex-end;
+      .rp-chart-guide {
+        position: absolute; left: 0; right: 0; top: 12px; bottom: 28px;
+        display: grid; grid-template-rows: repeat(5, 1fr); pointer-events: none;
       }
-      .rp-bar-value {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--muted-foreground);
-      }
+      .rp-chart-guide span { border-top: 1px dashed rgba(218, 217, 212, 0.66); }
+      .rp-month-col { flex: 1; min-width: 0; display: grid; justify-items: center; align-items: end; gap: 10px; z-index: 1; }
+      .rp-month-col strong { font-size: 12px; color: var(--foreground); font-weight: 600; font-family: var(--font-sans); }
+      .rp-month-col span { font-size: 11px; color: var(--muted-foreground); font-family: var(--font-sans); }
       .rp-bar {
-        width: 100%;
-        max-width: 40px;
-        border-radius: var(--radius-sm) var(--radius-sm) 4px 4px;
-        background: var(--brand-100);
-        transition: background-color 0.2s ease;
-        min-height: 4px;
-      }
-      .rp-bar.level-1 { background: var(--brand-100); }
-      .rp-bar.level-2 { background: var(--brand-200); }
-      .rp-bar.level-3 { background: var(--brand-300); }
-      .rp-bar.level-4 { background: var(--brand-500); }
-      .rp-bar.today {
-        box-shadow: 0 0 0 2px var(--brand-500);
-      }
-      .rp-bar-label {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        color: var(--muted-foreground);
-      }
-      .rp-bar-y-hint {
-        font-family: var(--font-sans);
-        font-size: 10px;
-        color: var(--muted-foreground);
-        writing-mode: vertical-lr;
-        transform: rotate(180deg);
-        position: absolute;
-        top: 8px;
-        left: -18px;
+        width: 16px; border-radius: var(--radius-full);
+        background: linear-gradient(180deg, rgba(214, 134, 106, 0.88), var(--brand-500));
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,0.12);
       }
 
-      /* ── Stacked Horizontal Bar ────────────────────────────── */
-      .rp-stacked-bar-wrap {
-        margin-bottom: 16px;
+      /* ── Annual Goals ──────────────────────────────────────── */
+      .rp-goal-stack { display: grid; gap: 18px; }
+      .rp-goal-item { display: grid; gap: 10px; }
+      .rp-goal-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-goal-meta strong { font-weight: 600; }
+      .rp-goal-track {
+        height: 12px; background: rgba(0,0,0,0.04); border-radius: var(--radius-full); overflow: hidden;
       }
-      .rp-stacked-bar {
-        display: flex;
-        height: 28px;
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-        gap: 2px;
+      .rp-goal-fill { height: 100%; display: block; border-radius: inherit; }
+      .rp-goal-fill--brand { background: linear-gradient(90deg, var(--brand-400), var(--brand-500)); width: 46.8%; }
+      .rp-goal-fill--success { background: linear-gradient(90deg, var(--success-400), var(--success-600)); width: 60%; }
+      .rp-goal-fill--chart2 { background: linear-gradient(90deg, var(--chart-2), rgba(156, 135, 245, 0.7)); width: 38%; }
+      .rp-goal-footer { font-size: 12px; color: var(--muted-foreground); padding-top: 2px; font-family: var(--font-sans); }
+
+      /* ── Heatmap ──────────────────────────────────────────── */
+      .rp-heatmap-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; margin-bottom: 8px; padding-left: 24px; }
+      .rp-heatmap-months span { font-size: 11px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-heatmap-layout { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; }
+      .rp-heatmap-day-labels { display: grid; grid-template-rows: repeat(7, 12px); gap: 4px; margin-top: 2px; }
+      .rp-heatmap-day-labels span { font-size: 10px; color: var(--muted-foreground); font-family: var(--font-sans); line-height: 12px; }
+      .rp-heatmap-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); gap: 4px; overflow: hidden; }
+      .rp-heat-cell {
+        width: 12px; height: 12px; border-radius: 4px;
+        background: rgba(0,0,0,0.03); border: 1px solid rgba(218, 217, 212, 0.55);
       }
-      .rp-stacked-bar-segment {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-sans);
-        font-size: 10px;
-        font-weight: 500;
-        color: #fff;
-        border-radius: 4px;
-        min-width: 0;
+      .rp-heat-lv1 { background: rgba(244, 224, 213, 0.7); border-color: transparent; }
+      .rp-heat-lv2 { background: rgba(224, 168, 146, 0.66); border-color: transparent; }
+      .rp-heat-lv3 { background: rgba(201, 100, 66, 0.75); border-color: transparent; }
+      .rp-heat-lv4 { background: rgba(147, 72, 40, 0.78); border-color: transparent; }
+      .rp-heatmap-legend { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; font-size: 11px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-legend-group { display: inline-flex; align-items: center; gap: 6px; }
+
+      /* ── Donut (Time-of-day) ──────────────────────────────── */
+      .rp-donut-area { display: grid; grid-template-columns: 160px 1fr; gap: 18px; align-items: center; min-height: 244px; }
+      .rp-donut-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+      .rp-donut-wrap svg { width: 150px; height: 150px; transform: rotate(-90deg); }
+      .rp-donut-ring-bg { fill: none; stroke: rgba(0,0,0,0.03); stroke-width: 10; }
+      .rp-donut-seg { fill: none; stroke-width: 10; stroke-linecap: round; }
+      .rp-donut-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+      .rp-donut-center strong { font-size: 28px; line-height: 1; display: block; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-donut-center span { font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-donut-legend { display: grid; gap: 12px; }
+      .rp-legend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-legend-left { display: inline-flex; align-items: center; gap: 8px; }
+      .rp-legend-dot { width: 10px; height: 10px; border-radius: var(--radius-full); flex-shrink: 0; }
+
+      /* ── Currently Reading Card ────────────────────────────── */
+      .rp-reading-card { display: grid; gap: 14px; }
+      .rp-reading-book { display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: start; }
+      .rp-book-cover {
+        width: 76px; height: 108px; border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(244, 224, 213, 0.86), rgba(224, 168, 146, 0.32));
+        border: 1px solid rgba(218, 217, 212, 0.8); box-shadow: var(--shadow-xs); position: relative; overflow: hidden;
       }
-      .rp-stacked-bar-segment.seg-1 { background: var(--brand-500); }
-      .rp-stacked-bar-segment.seg-2 { background: var(--brand-300); color: var(--text-900); }
-      .rp-stacked-bar-segment.seg-3 { background: var(--brand-100); color: var(--text-800); }
-      .rp-stacked-bar-segment.seg-4 { background: var(--bg-400); color: var(--text-700); }
-      .rp-stacked-bar-segment.seg-5 { background: var(--bg-500); color: var(--text-600); }
-      .rp-stacked-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 12px;
+      .rp-book-cover--cloud::before, .rp-book-cover--cloud::after {
+        content: ''; position: absolute; border-radius: var(--radius-full);
+        background: rgba(255,255,255,0.75); filter: blur(1px);
       }
-      .rp-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-family: var(--font-sans);
-        font-size: 12px;
-        color: var(--muted-foreground);
+      .rp-book-cover--cloud::before { width: 48px; height: 18px; left: 12px; bottom: 28px; }
+      .rp-book-cover--cloud::after { width: 38px; height: 14px; left: 26px; bottom: 40px; }
+      .rp-book-cover-label {
+        position: absolute; top: 14px; left: 10px; right: 10px;
+        font-family: var(--font-serif); font-size: 12px; line-height: 1.25;
+        color: rgba(61, 57, 41, 0.75);
       }
-      .rp-legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 3px;
-        flex-shrink: 0;
+      .rp-reading-meta h4 { margin: 0 0 6px; font-size: 20px; line-height: 1.1; font-family: var(--font-serif); color: var(--foreground); font-weight: 600; }
+      .rp-author { font-size: 13px; color: var(--muted-foreground); margin-bottom: 14px; font-family: var(--font-sans); }
+      .rp-progress-row { display: flex; align-items: center; gap: 10px; margin: 10px 0 8px; }
+      .rp-progress-bar { flex: 1; height: 10px; border-radius: var(--radius-full); background: rgba(0,0,0,0.04); overflow: hidden; }
+      .rp-progress-bar span { display: block; height: 100%; width: 41%; background: linear-gradient(90deg, var(--brand-400), var(--brand-500)); }
+      .rp-reading-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-reading-stats strong { display: block; font-size: 15px; color: var(--foreground); margin-bottom: 2px; }
+      .rp-continue-btn {
+        margin-top: 4px; width: 100%; border: 0; border-radius: var(--radius-md); height: 42px;
+        background: rgba(201, 100, 66, 0.16); color: var(--brand-600);
+        cursor: pointer; font-weight: 600; font-family: var(--font-sans); font-size: 14px;
       }
 
-      /* ── Vertical Bar Chart (Categories) ────────────────────── */
-      .rp-cat-chart {
-        display: flex;
-        align-items: flex-end;
-        gap: 16px;
-        height: 180px;
-        padding-top: 8px;
-      }
-      .rp-cat-col {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        height: 100%;
-        justify-content: flex-end;
-      }
-      .rp-cat-value {
-        font-family: var(--font-sans);
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--foreground);
-      }
-      .rp-cat-bar {
-        width: 100%;
-        max-width: 36px;
-        border-radius: var(--radius-sm) var(--radius-sm) 4px 4px;
-        min-height: 4px;
-      }
-      .rp-cat-bar.cat-1 { background: var(--brand-100); }
-      .rp-cat-bar.cat-2 { background: var(--brand-200); }
-      .rp-cat-bar.cat-3 { background: var(--brand-300); }
-      .rp-cat-bar.cat-4 { background: var(--bg-400); }
-      .rp-cat-bar.cat-5 { background: var(--bg-500); }
-      .rp-cat-bar.cat-6 { background: var(--bg-600); }
-      .rp-cat-label {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        color: var(--muted-foreground);
-      }
+      /* ── Category Distribution Donut + List ─────────────────── */
+      .rp-category-grid { display: grid; grid-template-columns: 172px 1fr; gap: 18px; align-items: center; }
+      .rp-simple-donut { position: relative; width: 156px; height: 156px; margin: 0 auto; }
+      .rp-simple-donut svg { width: 156px; height: 156px; transform: rotate(-90deg); }
+      .rp-simple-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+      .rp-simple-center strong { display: block; font-size: 26px; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-simple-center span { font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-category-list { display: grid; gap: 10px; }
+      .rp-category-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; font-size: 13px; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-category-name { display: inline-flex; align-items: center; gap: 8px; }
 
-      /* ── Want vs Actual ─────────────────────────────────────── */
-      .rp-compare-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .rp-compare-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-      .rp-compare-label {
-        font-family: var(--font-sans);
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--foreground);
-        width: 48px;
-        flex-shrink: 0;
-      }
-      .rp-compare-bar-track {
-        flex: 1;
-        height: 24px;
-        background: var(--muted);
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-      }
-      .rp-compare-bar-fill {
-        height: 100%;
-        border-radius: var(--radius-sm);
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-right: 10px;
-        font-family: var(--font-sans);
-        font-size: 12px;
-        font-weight: 600;
-        color: #fff;
-        transition: width 0.4s ease;
-      }
-      .rp-compare-bar-fill.want {
-        background: var(--brand-300);
-        width: 100%;
-      }
-      .rp-compare-bar-fill.done {
-        background: var(--brand-500);
-        width: 69.4%;
-      }
+      /* ── Horizontal Bar (Completed books) ──────────────────── */
+      .rp-hbar-list { display: grid; gap: 14px; }
+      .rp-hbar-row { display: grid; grid-template-columns: 62px 1fr 32px; gap: 12px; align-items: center; font-size: 13px; font-family: var(--font-sans); color: var(--foreground); }
+      .rp-hbar-track { height: 10px; background: rgba(0,0,0,0.04); border-radius: var(--radius-full); overflow: hidden; }
+      .rp-hbar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand-300), var(--brand-500)); }
 
-      /* ── Recent Activity ────────────────────────────────────── */
-      .rp-activity-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
+      /* ── Recent Records ─────────────────────────────────────── */
+      .rp-records-list { display: grid; gap: 12px; }
+      .rp-record-item {
+        display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px;
+        align-items: center; padding: 10px 0; border-top: 1px solid rgba(218, 217, 212, 0.62);
       }
-      .rp-activity-panel {
-        background: var(--popover);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 20px;
-        box-shadow: var(--shadow-xs);
+      .rp-record-item:first-child { border-top: 0; padding-top: 0; }
+      .rp-thumb {
+        width: 42px; height: 58px; border-radius: 10px;
+        background: linear-gradient(180deg, rgba(251, 242, 237, 0.9), rgba(224, 168, 146, 0.3));
+        border: 1px solid rgba(218, 217, 212, 0.8);
       }
-      .rp-activity-panel-title {
-        font-family: var(--font-sans);
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--foreground);
-        margin: 0 0 16px;
-      }
-      .rp-activity-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .rp-activity-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid var(--border);
-      }
-      .rp-activity-item:last-child {
-        padding-bottom: 0;
-        border-bottom: none;
-      }
-      .rp-activity-item-title {
-        font-family: var(--font-serif);
-        font-size: 13px;
-        color: var(--foreground);
-        line-height: 1.4;
-      }
-      .rp-activity-item-meta {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        color: var(--muted-foreground);
-      }
-      .rp-activity-item-excerpt {
-        font-family: var(--font-serif);
-        font-size: 12px;
-        color: var(--secondary-foreground);
-        line-height: 1.5;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
+      .rp-record-main strong { display: block; font-size: 14px; line-height: 1.25; font-family: var(--font-serif); color: var(--foreground); }
+      .rp-record-main span { display: block; font-size: 12px; color: var(--muted-foreground); margin-top: 3px; font-family: var(--font-sans); }
+      .rp-record-meta { text-align: right; font-size: 12px; color: var(--muted-foreground); font-family: var(--font-sans); }
+      .rp-record-meta strong { display: block; font-size: 13px; color: var(--foreground); margin-bottom: 3px; }
 
-      /* ── Reading item (enhanced) ──────────────────────────── */
-      .rp-reading-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid var(--border);
+      /* ── Responsive adjustments ─────────────────────────────── */
+      @media (max-width: 1400px) {
+        .rp-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .rp-dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .rp-panel--span2 { grid-column: span 2; }
       }
-      .rp-reading-item:last-child {
-        padding-bottom: 0;
-        border-bottom: none;
-      }
-      .rp-reading-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        flex: 1;
-        min-width: 0;
-      }
-      .rp-reading-page {
-        font-family: var(--font-sans);
-        font-size: 11px;
-        color: var(--brand-600);
-        font-weight: 500;
-      }
-
-      /* ── Reading History Timeline ────────────────────────────── */
-      .rp-history-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-      }
-      .rp-history-item {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--border);
-      }
-      .rp-history-item:last-child {
-        border-bottom: none;
-      }
-      .rp-history-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: var(--radius-full);
-        background: var(--brand-300);
-        flex-shrink: 0;
-      }
-      .rp-history-item:first-child .rp-history-dot {
-        background: var(--brand-500);
-        width: 10px;
-        height: 10px;
-      }
-      .rp-history-info {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        min-width: 0;
-      }
-      .rp-history-title {
-        font-family: var(--font-serif);
-        font-size: 14px;
-        color: var(--foreground);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 1;
-      }
-      .rp-history-date {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--muted-foreground);
-        flex-shrink: 0;
-      }
-      .rp-history-time {
-        font-family: var(--font-sans);
-        font-size: 12px;
-        color: var(--muted-foreground);
-        flex-shrink: 0;
-      }
-
-      /* Responsive adjustments */
       @media (max-width: 1024px) {
-        .rp-stats-grid {
-          grid-template-columns: repeat(3, 1fr);
-        }
-        .rp-two-col {
-          grid-template-columns: 1fr;
-        }
-        .rp-activity-grid {
-          grid-template-columns: 1fr;
-        }
+        .rp-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .rp-dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .rp-panel--span2 { grid-column: span 2; }
       }
-      @media (max-width: 768px) {
-        .rp-stats-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        .rp-history-info {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-        }
+      @media (max-width: 900px) {
+        .rp-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .rp-dashboard-grid { grid-template-columns: 1fr; }
+        .rp-panel--span2 { grid-column: span 1; }
+        .rp-donut-area, .rp-category-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 640px) {
+        .rp-topbar { flex-direction: column; align-items: flex-start; }
+        .rp-kpi-grid { grid-template-columns: 1fr; }
+        .rp-reading-book { grid-template-columns: 1fr; }
+        .rp-reading-stats { grid-template-columns: 1fr; }
+        .rp-record-item { grid-template-columns: 42px 1fr; }
+        .rp-record-meta { text-align: left; }
+      }
+
+      /* ── Dark Mode Overrides ──────────────────────────────────── */
+      html.dark .shell-sidebar-backdrop,
+      .dark .shell-sidebar-backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+      html.dark .shell-mobile-tabs,
+      .dark .shell-mobile-tabs {
+        box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.3);
       }
     </style>
 </body>

@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/cli/migrate.ts",
+    "seed": "tsx src/cli/seed.ts",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {

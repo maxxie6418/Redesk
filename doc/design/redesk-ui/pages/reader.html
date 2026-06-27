@@ -507,15 +507,15 @@
       </a>
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" data-hideedge="true">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-        阅读档案
+        档案
       </a>
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-        阅读记录
+        记录
       </a>
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-        阅读主题
+        主题
       </a>
     </nav>
 
@@ -693,9 +693,9 @@
 
 <nav class="shell-mobile-tabs" aria-label="移动端导航">
   <div class="shell-mobile-tabs-inner">
-    <a class="shell-mobile-tab active" href="#"><span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>书架</a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile"><span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>阅读档案</a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records"><span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>阅读记录</a>
+    <a class="shell-mobile-tab active" href="#"><span data-icon="book-open" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>书架</a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile"><span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>档案</a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records"><span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>记录</a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics"><span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>主题</a>
     <a class="shell-mobile-tab" href="#"><span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>我的</a>
   </div>
@@ -1008,6 +1008,40 @@
   }
 
   /* 3.25 — Full-text search button (no extra style needed, uses reader-tool-toggle) */
+
+  /* ═══════════════════════════════════════════════════════════════
+     Dark mode overrides — hardcoded rgba adjustments
+     ═══════════════════════════════════════════════════════════════ */
+  .dark .reader-tool-toggle.is-active {
+    background: rgba(201, 100, 66, 0.14);
+  }
+  .dark .reader-tool-toggle.is-active:hover {
+    background: rgba(201, 100, 66, 0.22);
+  }
+  .dark .reader-highlight {
+    background: rgba(201, 100, 66, 0.22);
+  }
+  .dark .reader-highlight:hover {
+    background: rgba(201, 100, 66, 0.35);
+  }
+  .dark .reader-popup-btn.is-active {
+    background: rgba(201, 100, 66, 0.18);
+  }
+  .dark .reader-theme-dot.active {
+    box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.35);
+  }
+  .dark .reader-note-panel {
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+  }
+  .dark .shell-sidebar-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+  .dark .shell-mobile-tabs {
+    box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.3);
+  }
+  .dark .reader-bookmark-indicator {
+    opacity: .85;
+  }
 </style>
 </body>
 </html>

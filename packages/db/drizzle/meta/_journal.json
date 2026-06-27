@@ -8,6 +8,13 @@
       "when": 1782549788572,
       "tag": "0000_awesome_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782566648504,
+      "tag": "0001_eager_susan_delgado",
+      "breakpoints": true
     }
   ]
 }

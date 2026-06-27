@@ -8,6 +8,7 @@ import { config } from './config';
 import { errorHandler } from './plugins/error-handler';
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
+import { bookRoutes } from './routes/books';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -49,6 +50,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(healthRoutes);
   await app.register(async (api) => {
     await api.register(authRoutes, { prefix: '/api/v1' });
+    await api.register(bookRoutes, { prefix: '/api/v1' });
   });
 
   const spaExists = existsSync(config.spaDir);

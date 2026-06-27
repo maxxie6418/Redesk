@@ -13,6 +13,7 @@ export interface CreateDatabaseOptions {
 
 export interface DatabaseHandle {
   db: AppDatabase;
+  sqlite: Database.Database;
   close: () => void;
 }
 
@@ -25,6 +26,7 @@ export function createDatabase({ url, readonly = false }: CreateDatabaseOptions)
   const db = drizzle(sqlite, { schema });
   return {
     db,
+    sqlite,
     close: () => sqlite.close(),
   };
 }

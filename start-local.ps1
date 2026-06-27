@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $apiUrl = 'http://localhost:8787/health'
@@ -53,10 +53,11 @@ Start-Process -FilePath cmd.exe -ArgumentList @('/k', 'set CI=true&& pnpm dev:ap
 Write-Info 'starting Web at http://localhost:5173'
 Start-Process -FilePath cmd.exe -ArgumentList @('/k', 'set CI=true&& pnpm dev:web') -WorkingDirectory $root
 
-Write-Info 'waiting for services. Browser will open automatically when ready.'
+Write-Info 'waiting for services. Browser will open automatically as soon as the page is reachable.'
 
 $apiReady = $false
 $webReady = $false
+$browserOpened = $false
 
 for ($i = 0; $i -lt 90; $i++) {
   if (-not $apiReady) {
@@ -77,9 +78,14 @@ for ($i = 0; $i -lt 90; $i++) {
     }
   }
 
-  if ($apiReady -and $webReady) {
+  if ($webReady -and -not $browserOpened) {
     Start-Process $webUrl
-    Write-Info "services are ready. Opened $webUrl"
+    $browserOpened = $true
+    Write-Info "opened $webUrl"
+  }
+
+  if ($apiReady -and $webReady) {
+    Write-Info 'services are ready.'
     Write-Info 'to stop services, close the Redesk API and Redesk Web windows.'
     exit 0
   }
@@ -87,10 +93,9 @@ for ($i = 0; $i -lt 90; $i++) {
   Start-Sleep -Seconds 1
 }
 
-if ($webReady) {
-  Start-Process $webUrl
-  Write-Info "Web is ready, but API health check did not confirm. Opened $webUrl"
-  Write-Info 'check the API window for details.'
+if ($browserOpened) {
+  Write-Info 'page has been opened, but API health check did not fully confirm within the wait window.'
+  Write-Info 'check the API window if the page data still looks abnormal.'
   exit 0
 }
 

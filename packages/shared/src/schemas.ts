@@ -46,3 +46,51 @@ export const paginationSchema = z.object({
   sort: z.string().max(64).optional(),
 });
 export type PaginationInput = z.infer<typeof paginationSchema>;
+
+export const createBookSchema = z.object({
+  title: z.string().min(1).max(500),
+  author: z.string().min(1).max(500),
+  isbn: z.string().max(20).optional().nullable(),
+  publisher: z.string().max(200).optional().nullable(),
+  publish_year: z.number().int().min(0).max(2100).optional().nullable(),
+  description: z.string().max(10000).optional().nullable(),
+  language: z.string().max(20).optional().nullable(),
+  category_id: z.number().int().optional().nullable(),
+  status: bookStatusSchema.optional(),
+  visibility: visibilitySchema.optional(),
+  reading_purpose: z.string().max(500).optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
+  tag_ids: z.array(z.number().int()).optional(),
+  custom_attributes: z.record(z.unknown()).optional().nullable(),
+  metadata_source: metadataSourceSchema.optional(),
+});
+export type CreateBookInput = z.infer<typeof createBookSchema>;
+
+export const updateBookSchema = z.object({
+  title: z.string().min(1).max(500).optional(),
+  author: z.string().min(1).max(500).optional(),
+  isbn: z.string().max(20).optional().nullable(),
+  publisher: z.string().max(200).optional().nullable(),
+  publish_year: z.number().int().min(0).max(2100).optional().nullable(),
+  description: z.string().max(10000).optional().nullable(),
+  language: z.string().max(20).optional().nullable(),
+  category_id: z.number().int().optional().nullable(),
+  status: bookStatusSchema.optional(),
+  visibility: visibilitySchema.optional(),
+  reading_purpose: z.string().max(500).optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
+  tag_ids: z.array(z.number().int()).optional(),
+  custom_attributes: z.record(z.unknown()).optional().nullable(),
+  metadata_source: metadataSourceSchema.optional(),
+});
+export type UpdateBookInput = z.infer<typeof updateBookSchema>;
+
+export const bookQuerySchema = paginationSchema.extend({
+  q: z.string().max(200).optional(),
+  status: z.string().max(200).optional(),
+  category_id: z.coerce.number().int().optional(),
+  tag_id: z.string().max(200).optional(),
+  visibility: visibilitySchema.optional(),
+  in_trash: z.coerce.boolean().optional(),
+});
+export type BookQueryInput = z.output<typeof bookQuerySchema>;

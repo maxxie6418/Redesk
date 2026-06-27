@@ -28,7 +28,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestBody(path: string, init?: RequestInit): Promise<unknown> {
   const headers = new Headers(init?.headers);
   if (init?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -39,8 +39,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers,
   });
+
   const text = await res.text();
   const body = text ? (JSON.parse(text) as unknown) : null;
+
   if (!res.ok) {
     const err = (body as { error?: ApiErrorShape } | null)?.error ?? {
       code: 'INTERNAL_ERROR',
@@ -48,11 +50,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     };
     throw new ApiError(err);
   }
+
+  return body;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const body = await requestBody(path, init);
   return (body as { data?: T } | null)?.data as T;
 }
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  getBody: <T>(path: string) => requestBody(path) as Promise<T>,
   post: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) }),
   patch: <T>(path: string, data?: unknown) =>

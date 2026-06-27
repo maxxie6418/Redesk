@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redesk - 阅读记录</title>
+    <title>Redesk - 记录</title>
     <style id="theme-vars">
 /* Source: structured-spec */
 /* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
@@ -511,17 +511,17 @@
 
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" data-hideedge="true">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-        阅读档案
+        档案
       </a>
 
       <a class="shell-nav-item active" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-        阅读记录
+        记录
       </a>
 
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-        阅读主题
+        主题
       </a>
     </nav>
 
@@ -573,7 +573,7 @@
 
       <!-- PAGE TITLE AREA -->
       <div class="rr-title-area">
-        <h1>阅读记录</h1>
+        <h1>记录</h1>
         <p>你的阅读痕迹</p>
       </div>
 
@@ -801,11 +801,11 @@
     </a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile">
       <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-      阅读档案
+      档案
     </a>
     <a class="shell-mobile-tab active" href="#" data-dom-id="nav-reading-records">
       <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-      阅读记录
+      记录
     </a>
     <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
       <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
@@ -1456,6 +1456,17 @@
     font-size: 14px;
     font-style: italic;
     color: var(--text-400);
+  }
+
+  /* ── Dark Mode Overrides ──────────────────────────────────── */
+  html.dark .shell-sidebar-backdrop,
+  .dark .shell-sidebar-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  html.dark .shell-mobile-tabs,
+  .dark .shell-mobile-tabs {
+    box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.3);
   }
 </style>
 

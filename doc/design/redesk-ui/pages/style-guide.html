@@ -510,17 +510,17 @@
 
       <a class="shell-nav-item" href="#">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-        阅读档案
+        档案
       </a>
 
       <a class="shell-nav-item" href="#">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-        阅读记录
+        记录
       </a>
 
       <a class="shell-nav-item" href="#">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-        阅读主题
+        主题
       </a>
     </nav>
 
@@ -551,7 +551,7 @@
     </div>
 
     <div class="shell-sidebar-footer">
-      <a class="shell-footer-row" href="#" aria-label="深色模式">
+      <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
         <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
         <span>深色模式</span>
       </a>
@@ -1222,15 +1222,15 @@
               </a>
               <a class="sg-nav-sample-item active" href="#">
                 <span data-icon="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-                阅读档案
+                档案
               </a>
               <a class="sg-nav-sample-item" href="#">
                 <span data-icon="message-circle-more" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-                阅读记录
+                记录
               </a>
               <a class="sg-nav-sample-item" href="#">
                 <span data-icon="tag" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-                阅读主题
+                主题
               </a>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--font-mono);font-size:10px;color:var(--muted-foreground);padding-top:8px">
@@ -3701,6 +3701,62 @@
         align-items: center;
         gap: 10px;
       }
+
+      /* ── Dark Mode Overrides ──────────────────────────────────── */
+      html.dark .shell-sidebar-backdrop,
+      .dark .shell-sidebar-backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+      html.dark .shell-mobile-tabs,
+      .dark .shell-mobile-tabs {
+        box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.3);
+      }
+
+      html.dark .sg-dialog-overlay,
+      .dark .sg-dialog-overlay {
+        background: rgba(0, 0, 0, 0.5);
+      }
     </style>
+
+<script>
+  // ── Dark mode toggle ────────────────────────────────────
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  function applyTheme(dark) {
+    html.classList.toggle('dark', dark);
+    localStorage.setItem('redesk-theme', dark ? 'dark' : 'light');
+    const icon = themeToggle.querySelector('[data-icon]');
+    const label = themeToggle.querySelector('span:last-child');
+    if (dark) {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
+      label.textContent = '浅色模式';
+    } else {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')";
+      label.textContent = '深色模式';
+    }
+  }
+
+  const savedTheme = localStorage.getItem('redesk-theme');
+  if (savedTheme === 'dark') {
+    applyTheme(true);
+  }
+
+  themeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyTheme(!html.classList.contains('dark'));
+  });
+
+  // ── Mobile sidebar toggle ─────────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.remove('is-open');
+    backdrop.classList.remove('is-visible');
+  });
+</script>
+
 </body>
 </html>

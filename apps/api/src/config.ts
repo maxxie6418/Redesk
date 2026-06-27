@@ -20,6 +20,7 @@ const envSchema = z.object({
   WEB_URL: z.string().default('http://localhost:5173'),
   SPA_DIR: z.string().default('./apps/web/dist'),
   LOG_LEVEL: z.string().default('info'),
+  VITE_AUTH_DISABLED: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -47,6 +48,8 @@ export const config = {
   isDefaultSessionSecret: env.SESSION_SECRET === DEFAULT_SESSION_SECRET,
   webUrl: env.WEB_URL,
   logLevel: env.LOG_LEVEL,
+  devAuthDisabled:
+    String(env.VITE_AUTH_DISABLED ?? (env.NODE_ENV === 'development' ? 'true' : 'false')).toLowerCase() === 'true',
 };
 
 export type AppConfig = typeof config;
