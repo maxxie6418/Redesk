@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书籍详情 - Redesk</title>
+    <style id="theme-vars">
+/* Source: structured-spec */
+/* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
+   Poppins (compact UI) + Lora (reading). Mono kept for code/token surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,18..72,300;0,18..72,400;0,18..72,500;1,18..72,400&family=Geist+Mono:wght@400;500&display=swap');
+/* ============================================================
+   Token model
+   1) Primitives — 7 key color cards as 10-step scales (50→900).
+      These are the single source of truth (mirrored in the linshi
+      preview tool). The flagged "standard" step per group:
+        brand-500 · text-800 · bg-100 · icon-700 · border-300 · success-500 · error-500
+   2) Semantic tokens — reference the primitives above (no raw hex
+      duplicates). These are the API consumed by preview / ui_kits /
+      components.
+   3) Non-color tokens — font, spacing, radius, shadow, type.
+   ============================================================ */
+:root {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #c96442 */
+  --brand-50: #fbf2ed;
+  --brand-100: #f4e0d5;
+  --brand-200: #ebc6b6;
+  --brand-300: #e0a892;
+  --brand-400: #d6866a;
+  --brand-500: #c96442;
+  --brand-600: #b0562f;
+  --brand-700: #934828;
+  --brand-800: #753a22;
+  --brand-900: #582e1d;
+  /* text — standard: --text-800 #3d3929 */
+  --text-50: #f6f5f0;
+  --text-100: #ece9de;
+  --text-200: #dad9d4;
+  --text-300: #c2c0b6;
+  --text-400: #9b988c;
+  --text-500: #6e6d68;
+  --text-600: #535146;
+  --text-700: #46443b;
+  --text-800: #3d3929;
+  --text-900: #28261b;
+  /* background — standard: --bg-100 #faf9f5 */
+  --bg-50: #ffffff;
+  --bg-100: #faf9f5;
+  --bg-200: #f5f4ef;
+  --bg-300: #ede9de;
+  --bg-400: #e3e0d4;
+  --bg-500: #dad9d4;
+  --bg-600: #cdcabf;
+  --bg-700: #b4b2a7;
+  --bg-800: #8a887e;
+  --bg-900: #535146;
+  /* icon — standard: --icon-700 #3d3929 */
+  --icon-50: #ffffff;
+  --icon-100: #dad9d4;
+  --icon-200: #c2c0b6;
+  --icon-300: #9b988c;
+  --icon-400: #6e6d68;
+  --icon-500: #535146;
+  --icon-600: #46443b;
+  --icon-700: #3d3929;
+  --icon-800: #28261b;
+  --icon-900: #141413;
+  /* border — standard: --border-300 #dad9d4 */
+  --border-50: #f0efe9;
+  --border-100: #ebebeb;
+  --border-200: #e3e0d4;
+  --border-300: #dad9d4;
+  --border-400: #cdcabf;
+  --border-500: #b4b2a7;
+  --border-600: #9b988c;
+  --border-700: #6e6d68;
+  --border-800: #535146;
+  --border-900: #3d3929;
+  /* state · success — standard: --success-500 #788c5d */
+  --success-50: #f0f3ea;
+  --success-100: #e7ecdd;
+  --success-200: #d3dcc1;
+  --success-300: #b8c69e;
+  --success-400: #9aac79;
+  --success-500: #788c5d;
+  --success-600: #647649;
+  --success-700: #4f5d3a;
+  --success-800: #3d482d;
+  --success-900: #2b331f;
+  /* state · error — standard: --error-500 #d64545 */
+  --error-50: #fcecea;
+  --error-100: #f7dedb;
+  --error-200: #f3c4bf;
+  --error-300: #eb9d96;
+  --error-400: #e0716a;
+  --error-500: #d64545;
+  --error-600: #b83636;
+  --error-700: #962c2c;
+  --error-800: #732222;
+  --error-900: #531818;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-50);
+  --muted: var(--bg-300);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--icon-900);
+  --popover-foreground: var(--text-900);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--text-600);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: var(--text-900);
+  --destructive-foreground: #ffffff;
+  /* semantic */
+  --primary: var(--brand-500);
+  --secondary: #e9e6dc;
+  --accent: var(--secondary);
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #ffffff;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #ded8c4;
+  --chart-4: #dbd3f0;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #f5f4ee;
+  --sidebar-foreground: #3d3d3a;
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #e9e6dc;
+  --sidebar-accent-foreground: #343434;
+  --sidebar-border: var(--border-100);
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — display (Newsreader) for slogans/headlines, sans (Poppins) for compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* spacing */
+  --spacing: 0.25rem;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+  /* type */
+  --tracking-normal: 0em;
+}
+
+.dark {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #d97757 */
+  --brand-50: #3a2a22;
+  --brand-100: #4d3528;
+  --brand-200: #6b4533;
+  --brand-300: #8a5740;
+  --brand-400: #b0683f;
+  --brand-500: #d97757;
+  --brand-600: #e08d6f;
+  --brand-700: #e8a98f;
+  --brand-800: #f0c6b3;
+  --brand-900: #f8e3d8;
+  /* text — standard: --text-800 #f1f1ef */
+  --text-50: #1b1b19;
+  --text-100: #2c2c2b;
+  --text-200: #46443b;
+  --text-300: #6e6d68;
+  --text-400: #908e84;
+  --text-500: #b7b5a9;
+  --text-600: #c3c0b6;
+  --text-700: #d8d6cd;
+  --text-800: #f1f1ef;
+  --text-900: #faf9f5;
+  /* background — standard: --bg-100 #262624 */
+  --bg-50: #1b1b19;
+  --bg-100: #262624;
+  --bg-200: #2c2c2b;
+  --bg-300: #30302e;
+  --bg-400: #3e3e38;
+  --bg-500: #4a4a43;
+  --bg-600: #52514a;
+  --bg-700: #6e6d68;
+  --bg-800: #908e84;
+  --bg-900: #b7b5a9;
+  /* icon — standard: --icon-700 #f1f1ef */
+  --icon-50: #1b1b19;
+  --icon-100: #2c2c2b;
+  --icon-200: #46443b;
+  --icon-300: #6e6d68;
+  --icon-400: #908e84;
+  --icon-500: #b7b5a9;
+  --icon-600: #d8d6cd;
+  --icon-700: #f1f1ef;
+  --icon-800: #f8f8f6;
+  --icon-900: #ffffff;
+  /* border — standard: --border-300 #3e3e38 */
+  --border-50: #1f1e1d;
+  --border-100: #2c2c2b;
+  --border-200: #343430;
+  --border-300: #3e3e38;
+  --border-400: #4a4a43;
+  --border-500: #52514a;
+  --border-600: #6e6d68;
+  --border-700: #908e84;
+  --border-800: #b7b5a9;
+  --border-900: #d8d6cd;
+  /* state · success — standard: --success-500 #8ca06f */
+  --success-50: #232a1c;
+  --success-100: #2e3823;
+  --success-200: #3f4d30;
+  --success-300: #556640;
+  --success-400: #708353;
+  --success-500: #8ca06f;
+  --success-600: #a3b58a;
+  --success-700: #bccaa8;
+  --success-800: #d6dfc8;
+  --success-900: #edf2e4;
+  /* state · error — standard: --error-500 #ef4444 */
+  --error-50: #3a1f1f;
+  --error-100: #4d2424;
+  --error-200: #6e2c2c;
+  --error-300: #93302f;
+  --error-400: #c43a39;
+  --error-500: #ef4444;
+  --error-600: #f26b6b;
+  --error-700: #f59292;
+  --error-800: #f9b9b9;
+  --error-900: #fcdede;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-300);
+  --muted: var(--bg-50);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--text-900);
+  --popover-foreground: #e5e5e2;
+  --primary-foreground: #141413;
+  --secondary-foreground: var(--bg-300);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: #f5f4ee;
+  --destructive-foreground: #ffffff;
+  /* accent */
+  --primary: var(--brand-500);
+  --secondary: var(--text-900);
+  --accent: #1a1915;
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  /* border */
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #141413;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #1a1915;
+  --chart-4: #2f2b48;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #1f1e1d;
+  --sidebar-foreground: #c3c0b6;
+  --sidebar-primary: #343434;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #0f0f0e;
+  --sidebar-accent-foreground: #c3c0b6;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — sans (Poppins) for headings + compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Badge ─────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="badge filled">Essay</span> <span class="badge filled">Editorial</span> <span class="badge filled is-disabled" aria-disabled="true">Essay</span>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 calc(var(--spacing)*3.5);border-radius:var(--radius);font:600 12px/1 var(--font-sans);letter-spacing:.01em;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease,border-color .16s ease}
+.badge:hover{transform:translateY(-1px)}
+.filled{background:var(--primary);color:var(--primary-foreground);border:1px solid transparent;box-shadow:var(--shadow-xs)}
+.filled:hover{box-shadow:var(--shadow-sm)}
+.muted{background:var(--muted);color:var(--foreground);border:1px solid transparent}
+.outline{background:var(--popover);color:var(--foreground);border:1px solid var(--border)}
+.is-disabled{pointer-events:none;box-shadow:none}
+.filled.is-disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.muted.is-disabled{background:var(--card);color:var(--muted-foreground);border-color:transparent}
+.outline.is-disabled{background:var(--background);color:var(--muted-foreground)}
+
+/* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">Primary</span> <div class="examples"> <button class="btn primary" type="button">Start a new chat</button> <button class="btn primary" type="button" disabled>Start a new chat</button> </div>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.examples{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:center;padding:clamp(18px,3vw,24px);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);background:var(--popover);box-shadow:var(--shadow-xs)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--radius);box-shadow:var(--shadow-sm);background:transparent;color:var(--foreground);font:600 14px/1.1 var(--font-sans);white-space:nowrap;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.btn:hover,.btn:focus-visible{box-shadow:var(--shadow-md)}
+.btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.btn:disabled{cursor:not-allowed;box-shadow:none}
+.primary{background:var(--primary);color:var(--primary-foreground)}
+.primary:disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.secondary{background:var(--secondary);color:var(--foreground);border-color:var(--border)}
+.secondary:disabled{background:var(--background);color:var(--muted-foreground);border-color:var(--border)}
+.ghost{background:transparent;color:var(--foreground);box-shadow:none}
+.ghost:hover,.ghost:focus-visible{background:var(--muted)}
+.ghost:disabled{background:transparent;color:var(--muted-foreground);border-color:transparent}
+
+/* ── Card ──────────────────────────────────────────────────── */
+/* @anatomy
+   <article class="card"> <p class="eyebrow">Reading Card</p> <h2 class="title">Summarize this chapter</h2> <p class="body">Claude Design System frames long-form AI assistant reading with soft elevation, calm spacing, and editorial rhythm.</p> </article> <article class="card disabled" aria-disabled="true"> <p class="eyebrow">Reading Card</p> <h2 class="title">Context locked</h2> <p class="body">Th...
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.card{width:100%;height:100%;display:flex;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.eyebrow{margin:0 0 10px;font:600 10px/1.2 var(--font-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground)}
+.title{margin:0 0 10px;font:600 21px/1.18 var(--font-sans);color:var(--foreground)}
+.body{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--secondary-foreground)}
+.disabled{background:var(--card);box-shadow:none;border-color:var(--border);pointer-events:none}
+.disabled .eyebrow{color:var(--muted-foreground)}
+.disabled .title{color:var(--foreground)}
+.disabled .body{color:var(--muted-foreground)}
+.sunken{background:var(--card);box-shadow:none}
+.sunken .body{color:var(--foreground)}
+.emphasis{background:var(--foreground);color:var(--background);border-color:transparent;box-shadow:var(--shadow-xl)}
+.emphasis .eyebrow{color:var(--secondary)}
+.emphasis .body,.emphasis .title{color:var(--background)}
+
+/* ── Chat Bubble ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="bubble user"> <span class="meta">You · now</span> <p class="copy">Recommend a writer for light reading.</p>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.bubble{display:grid;gap:8px;max-width:280px;padding:calc(var(--spacing)*3.5) calc(var(--spacing)*4);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+.user{background:var(--primary);color:var(--primary-foreground)}
+.assistant{background:var(--popover);color:var(--card-foreground);border:1px solid var(--border)}
+.meta{display:block;font:500 11px/1.3 var(--font-sans);letter-spacing:.01em}
+.user .meta{color:var(--primary-foreground);opacity:.78}
+.assistant .meta{color:var(--muted-foreground)}
+.copy{margin:0;font-size:14px;line-height:1.6}
+.disabled{box-shadow:none}
+.user.disabled{background:var(--secondary);color:var(--secondary-foreground)}
+.user.disabled .meta{color:var(--secondary-foreground);opacity:1}
+.assistant.disabled{background:var(--card);color:var(--muted-foreground)}
+.thread{display:grid;gap:12px;width:min(100%,360px);padding:calc(var(--spacing)*4);background:var(--popover);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-sm)}
+
+/* ── Input ─────────────────────────────────────────────────── */
+/* @anatomy
+   <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input"> <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input disabled" disabled>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
+.field{padding:0 calc(var(--spacing)*3);color:var(--foreground);font:inherit}
+.field::placeholder,.bar input::placeholder{color:var(--muted-foreground)}
+.field:focus,.bar:focus-within{outline:none;border-color:var(--ring);box-shadow:var(--shadow-sm)}
+.field:disabled,.bar.disabled{background:var(--card);color:var(--muted-foreground);box-shadow:none}
+.bar{display:flex;align-items:center;gap:8px;padding:0 calc(var(--spacing)*3);background:var(--card);border-color:transparent}
+.bar input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--muted-foreground);opacity:.5}
+
+/* ── Navigation ────────────────────────────────────────────── */
+/* @anatomy
+   <nav class="tabs" aria-label="Navigation tabs"> <button class="tab active" type="button">Web</button> <button class="tab" type="button">Mobile</button> <button class="tab" type="button">Library</button> <button class="tab" type="button" disabled>Syncing</button> </nav>
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.tabs,.rail,.bottom-nav{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:100%;padding:6px;background:var(--card)}
+.tab,.item,.nav-item{appearance:none;border:1px solid transparent;background:transparent;color:var(--muted-foreground);font:600 13px/1.1 var(--font-sans);cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab{padding:11px 15px;border-radius:calc(var(--radius) - 6px)}
+.tab:hover,.nav-item:hover{background:var(--popover);color:var(--foreground)}
+.item:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.tab:focus-visible,.item:focus-visible,.nav-item:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tab.active,.nav-item.active{background:var(--popover);color:var(--foreground);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tab.active{box-shadow:var(--shadow-sm)}
+.tab:disabled,.item:disabled,.nav-item:disabled{cursor:not-allowed;box-shadow:none;background:transparent;color:var(--muted-foreground)}
+.brand{margin:0 0 12px;font:600 11px/1.2 var(--font-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-foreground)}
+.stack{display:grid;gap:8px}
+.item{width:100%;padding:12px 13px;border-radius:calc(var(--radius) - 8px);text-align:left;color:var(--sidebar-foreground);background:transparent}
+.item.active{background:var(--popover);color:var(--foreground);border-color:var(--sidebar-border);box-shadow:var(--shadow-xs)}
+.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);padding:8px;background:var(--popover)}
+.nav-item{display:grid;gap:4px;justify-items:center;padding:12px 10px;border-radius:calc(var(--radius) - 6px)}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--card-foreground);
+  }
+  @layer base {
+    body { background: var(--card-background); color: var(--card-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="shell-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="shell-sidebar" id="sidebar">
+    <div class="shell-sidebar-header">
+      <div class="shell-brand-mark">R</div>
+      <span class="shell-brand-name">Redesk</span>
+    </div>
+
+    <nav class="shell-nav" aria-label="主导航">
+      <p class="shell-nav-group-label">浏览</p>
+
+      <a class="shell-nav-item active" href="#">
+        <span data-icon="house" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+        书架
+      </a>
+
+      <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" hideEdge="true">
+        <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+        阅读档案
+      </a>
+    </nav>
+
+    <div class="shell-sidebar-footer">
+      <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
+        <span data-icon="circle-pause" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')"></span>
+        <span>深色模式</span>
+      </a>
+      <a class="shell-footer-row" href="#">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        <span>设置</span>
+      </a>
+      <div class="shell-footer-row" style="cursor:default">
+        <div class="shell-avatar">M</div>
+        <div class="shell-user-info">
+          <div class="shell-user-name">我的书房</div>
+          <div class="shell-user-role">个人空间</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Mobile Backdrop ──────────────────────────────────── -->
+  <div class="shell-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="shell-main">
+
+    <!-- ── Breadcrumb ──────────────────────────────────────── -->
+    <div class="bd-breadcrumb">
+      <a href="#" data-dom-id="back-bookshelf" hideEdge="true">
+        <span data-icon="arrow-left" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg')"></span>
+        返回书架
+      </a>
+      <span>/</span>
+      <span>百年孤独</span>
+    </div>
+
+    <!-- ── Two-Column Layout ───────────────────────────────── -->
+    <div class="bd-layout">
+
+      <!-- LEFT COLUMN: Book Header -->
+      <div class="bd-book-header">
+
+        <!-- Book Cover -->
+        <div class="bd-cover-wrap">
+          <div class="bd-cover-inner">
+            <span class="bd-cover-title">百年孤独</span>
+          </div>
+        </div>
+
+        <!-- Book Meta -->
+        <div class="bd-book-meta">
+          <h1 class="bd-book-title">百年孤独</h1>
+          <p class="bd-book-author">加西亚·马尔克斯</p>
+          <p class="bd-book-publisher">南海出版公司 · 2011</p>
+          <p class="bd-book-isbn">978-7-5442-5580-3</p>
+        </div>
+
+        <!-- Status -->
+        <div class="bd-status-row">
+          <div class="bd-status-badge">
+            在读
+            <span data-icon="chevron-down" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+          </div>
+        </div>
+
+        <!-- Rating -->
+        <div class="bd-rating">
+          <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+          <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+          <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+          <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+          <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+        </div>
+
+        <!-- Tags -->
+        <div class="bd-tags">
+          <span class="bd-tag">
+            魔幻现实主义
+            <span data-icon="x" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+          </span>
+          <span class="bd-tag">
+            拉美文学
+            <span data-icon="x" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+          </span>
+          <button class="bd-add-tag">
+            <span data-icon="circle-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg')"></span>
+            添加标签
+          </button>
+        </div>
+
+        <!-- Category -->
+        <div class="bd-info-row">
+          <span data-icon="folder" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/folder.svg');mask-image:url('../assets/icons/dl-builtin-claude/folder.svg')"></span>
+          <span class="bd-info-label">分类</span>
+          <span class="bd-info-value">文学</span>
+        </div>
+
+        <!-- Visibility Toggle -->
+        <div class="bd-toggle-row">
+          <button class="bd-toggle is-on" aria-label="切换可见性"></button>
+          <span class="bd-toggle-label">公开</span>
+        </div>
+
+        <!-- Reading Purpose -->
+        <div class="bd-info-row">
+          <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+          <span class="bd-info-label">阅读方式</span>
+          <span class="bd-reading-purpose">精读</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="bd-actions">
+          <button class="btn btn-outline">
+            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            编辑信息
+          </button>
+          <button class="btn btn-primary">
+            <span data-icon="file" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
+            开始阅读
+          </button>
+          <button class="btn btn-danger-ghost">
+            <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+            删除
+          </button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Content Tabs -->
+      <div class="bd-tabs-panel">
+
+        <!-- Tab Bar -->
+        <div class="bd-tab-bar">
+          <button class="bd-tab-btn active" data-tab="reading-traces">阅读痕迹</button>
+          <button class="bd-tab-btn" data-tab="file-management">文件管理</button>
+          <button class="bd-tab-btn" data-tab="relations">关联与历史</button>
+        </div>
+
+        <!-- TAB 1: 阅读痕迹 -->
+        <div class="bd-tab-content active" id="tab-reading-traces">
+
+          <!-- Search -->
+          <div class="bd-search">
+            <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+            <input type="text" placeholder="搜索高亮和笔记..." />
+          </div>
+
+          <!-- Reading Progress -->
+          <div class="bd-progress-card">
+            <div class="bd-progress-header">
+              <span class="bd-progress-label">阅读进度</span>
+              <span class="bd-progress-stats">72%</span>
+            </div>
+            <div class="bd-progress-bar-wrap">
+              <div class="bd-progress-bar-fill"></div>
+            </div>
+            <p class="bd-progress-detail">第 87/345 页 · 预计剩余 3 小时</p>
+          </div>
+
+          <!-- Highlights Section -->
+          <h3 class="bd-section-heading">高亮与笔记 <span class="bd-section-count">(23)</span></h3>
+
+          <!-- Highlight 1 -->
+          <div class="bd-highlight-card">
+            <p class="bd-highlight-text">"多年以后，面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起父亲带他去见识冰块的那个遥远的下午。"</p>
+            <p class="bd-highlight-chapter">第 1 章</p>
+            <p class="bd-highlight-annotation">开篇第一句便展现了全书的时间观：过去、现在、未来交织在一起，创造了一种独特的叙事节奏。马尔克斯将一生的回忆压缩在一个句子里。</p>
+            <div class="bd-highlight-actions">
+              <button title="跳转到原文">
+                <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+              </button>
+              <button title="编辑">
+                <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+              </button>
+              <button title="删除">
+                <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Highlight 2 -->
+          <div class="bd-highlight-card">
+            <p class="bd-highlight-text">"世界新生伊始，许多事物还没有名字，提到的时候尚需用手指指点点。"</p>
+            <p class="bd-highlight-chapter">第 1 章</p>
+            <p class="bd-highlight-annotation">马孔多的起源叙事，带有创世神话的色彩。这种"命名之前"的状态暗示了文明的初始阶段。</p>
+            <div class="bd-highlight-actions">
+              <button title="跳转到原文">
+                <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+              </button>
+              <button title="编辑">
+                <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+              </button>
+              <button title="删除">
+                <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Highlight 3 -->
+          <div class="bd-highlight-card">
+            <p class="bd-highlight-text">"生命中曾经有过的所有灿烂，终究都需要用寂寞来偿还。"</p>
+            <p class="bd-highlight-chapter">第 3 章</p>
+            <p class="bd-highlight-annotation">孤独的主题贯穿全书。这里的"灿烂"与"寂寞"构成了命运的辩证法——每一个布恩迪亚家族成员的荣耀，都伴随着更深沉的孤独。</p>
+            <div class="bd-highlight-actions">
+              <button title="跳转到原文">
+                <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+              </button>
+              <button title="编辑">
+                <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+              </button>
+              <button title="删除">
+                <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Highlight 4 -->
+          <div class="bd-highlight-card">
+            <p class="bd-highlight-text">"过去都是假的，回忆是一条没有归途的路，以往的一切春天都无法复原。"</p>
+            <p class="bd-highlight-chapter">第 7 章</p>
+            <p class="bd-highlight-annotation">关于记忆与时间的沉思。回忆的不可逆性成为贯穿布恩迪亚家族的诅咒——他们无法真正回到过去，只能在循环中重复。</p>
+            <div class="bd-highlight-actions">
+              <button title="跳转到原文">
+                <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+              </button>
+              <button title="编辑">
+                <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+              </button>
+              <button title="删除">
+                <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Independent Notes -->
+          <h3 class="bd-section-heading" style="margin-top:8px;">独立笔记 <span class="bd-section-count">(5)</span></h3>
+
+          <!-- Note 1 -->
+          <div class="bd-note-card">
+            <p class="bd-note-date">2026-06-15</p>
+            <p class="bd-note-text">布恩迪亚家族的命名规律值得关注——每一代都重复着相同的名字，这似乎暗示了拉美历史的循环性。需要进一步整理各代人物关系图谱。</p>
+            <p class="bd-note-chapter">关联：第 1–5 章</p>
+          </div>
+
+          <!-- Note 2 -->
+          <div class="bd-note-card">
+            <p class="bd-note-date">2026-06-12</p>
+            <p class="bd-note-text">马尔克斯的叙事节奏很有意思：他经常在一个段落内跨越数十年，然后用极其缓慢的笔触描写一个瞬间。这种时空的伸缩感是魔幻现实主义的精髓。</p>
+            <p class="bd-note-chapter">关联：第 3 章</p>
+          </div>
+
+        </div>
+
+        <!-- TAB 2: 文件管理 -->
+        <div class="bd-tab-content" id="tab-file-management">
+
+          <div class="bd-file-actions-header">
+            <h3 class="bd-section-heading">文件列表</h3>
+            <button class="btn btn-primary" style="min-height:36px;font-size:13px;padding:0 16px;">
+              <span data-icon="circle-plus" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');display:inline-flex;align-items:center;justify-content:center;background-color:currentColor;"></span>
+              上传文件
+            </button>
+          </div>
+
+          <table class="bd-file-table">
+            <thead>
+              <tr>
+                <th>文件名</th>
+                <th>格式</th>
+                <th>大小</th>
+                <th>标签</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <span class="file-name">
+                    <span data-icon="file" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
+                    百年孤独.epub
+                  </span>
+                </td>
+                <td class="file-format">EPUB</td>
+                <td class="file-size">2.3 MB</td>
+                <td><span class="bd-file-badge">主阅读文件</span></td>
+                <td>
+                  <div class="bd-file-actions">
+                    <button title="下载"><span data-icon="download" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/download.svg');mask-image:url('../assets/icons/dl-builtin-claude/download.svg')"></span></button>
+                    <button title="替换"><span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span></button>
+                    <button title="删除"><span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="file-name">
+                    <span data-icon="file" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
+                    百年孤独-mobi.pdf
+                  </span>
+                </td>
+                <td class="file-format">PDF</td>
+                <td class="file-size">8.1 MB</td>
+                <td></td>
+                <td>
+                  <div class="bd-file-actions">
+                    <button title="下载"><span data-icon="download" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/download.svg');mask-image:url('../assets/icons/dl-builtin-claude/download.svg')"></span></button>
+                    <button title="替换"><span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span></button>
+                    <button title="删除"><span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Drop Zone -->
+          <div class="bd-dropzone">
+            <span data-icon="circle-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg')"></span>
+            <p class="bd-dropzone-text">拖拽文件到此处上传</p>
+            <p class="bd-dropzone-hint">支持 EPUB, PDF, MOBI 等格式</p>
+          </div>
+
+        </div>
+
+        <!-- TAB 3: 关联与历史 -->
+        <div class="bd-tab-content" id="tab-relations">
+
+          <!-- Status History -->
+          <h3 class="bd-section-heading">状态历史</h3>
+          <div class="bd-timeline">
+            <div class="bd-timeline-item">
+              <p class="bd-timeline-date">2026-06-10</p>
+              <p class="bd-timeline-text">计划读 <span class="arrow">→</span> 在读</p>
+            </div>
+            <div class="bd-timeline-item">
+              <p class="bd-timeline-date">2026-06-05</p>
+              <p class="bd-timeline-text">收录 <span class="arrow">→</span> 计划读</p>
+            </div>
+            <div class="bd-timeline-item">
+              <p class="bd-timeline-date">2026-06-01</p>
+              <p class="bd-timeline-text">录入 <span class="arrow">→</span> 收录</p>
+            </div>
+          </div>
+
+          <!-- Related Topics -->
+          <h3 class="bd-section-heading" style="margin-top:8px;">相关主题</h3>
+          <div class="bd-related-section">
+            <a class="bd-related-topic" href="#">
+              <span data-icon="tag" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+              拉美文学研究
+              <span data-icon="external-link" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');opacity:0.5;"></span>
+            </a>
+          </div>
+
+          <!-- Related Books -->
+          <h3 class="bd-section-heading" style="margin-top:8px;">相关书籍</h3>
+          <div class="bd-related-section">
+            <div class="bd-related-book-card">
+              <div class="bd-related-book-cover"></div>
+              <div class="bd-related-book-info">
+                <span class="bd-related-book-title">霍乱时期的爱情</span>
+                <span class="bd-related-book-author">加西亚·马尔克斯</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Derived Content -->
+          <h3 class="bd-section-heading" style="margin-top:12px;">AI 衍生内容</h3>
+          <div class="bd-ai-section">
+            <p class="bd-ai-label">
+              <span data-icon="circle-check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
+              AI 摘要
+            </p>
+            <p class="bd-ai-text">
+              《百年孤独》描写了布恩迪亚家族七代人的传奇故事，以及加勒比海沿岸小镇马孔多的百年兴衰。作品融入神话传说、民间故事、宗教典故等元素，通过布恩迪亚家族的命运折射出哥伦比亚乃至整个拉丁美洲百年的历史演变。小说以魔幻现实主义手法打破了时间线性的束缚，将现实与幻想、历史与神话巧妙融合，创造出一个既真实又超现实的文学世界。
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+    <!-- / bd-layout -->
+
+  </main>
+
+</div>
+
+<!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
+<nav class="shell-mobile-tabs" aria-label="移动端导航">
+  <div class="shell-mobile-tabs-inner">
+    <a class="shell-mobile-tab active" href="#">
+      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+      书架
+    </a>
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+      阅读档案
+    </a>
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="user" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/user.svg');mask-image:url('../assets/icons/dl-builtin-claude/user.svg')"></span>
+      我的
+    </a>
+  </div>
+</nav>
+
+<script>
+  // ── Dark mode toggle ────────────────────────────────────
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  function applyTheme(dark) {
+    html.classList.toggle('dark', dark);
+    localStorage.setItem('redesk-theme', dark ? 'dark' : 'light');
+    const icon = themeToggle.querySelector('[data-icon]');
+    const label = themeToggle.querySelector('span:last-child');
+    if (dark) {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
+      label.textContent = '浅色模式';
+    } else {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')";
+      label.textContent = '深色模式';
+    }
+  }
+
+  const savedTheme = localStorage.getItem('redesk-theme');
+  if (savedTheme === 'dark') {
+    applyTheme(true);
+  }
+
+  themeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyTheme(!html.classList.contains('dark'));
+  });
+
+  // ── Mobile sidebar toggle ─────────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.remove('is-open');
+    backdrop.classList.remove('is-visible');
+  });
+
+  // ── Tab Switching ──────────────────────────────────────────
+  const tabButtons = document.querySelectorAll('.bd-tab-btn');
+  const tabContents = document.querySelectorAll('.bd-tab-content');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.getAttribute('data-tab');
+
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      tabContents.forEach(tc => tc.classList.remove('active'));
+      const targetEl = document.getElementById('tab-' + targetTab);
+      if (targetEl) targetEl.classList.add('active');
+    });
+  });
+
+  // ── Visibility Toggle ──────────────────────────────────────
+  const toggleBtn = document.querySelector('.bd-toggle');
+  const toggleLabel = document.querySelector('.bd-toggle-label');
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      toggleBtn.classList.toggle('is-on');
+      toggleLabel.textContent = toggleBtn.classList.contains('is-on') ? '公开' : '私有';
+    });
+  }
+</script>
+
+
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+
+      /* ── Redesk Shell Layout ───────────────────────────────── */
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-serif);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .shell-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ── Sidebar ────────────────────────────────────────────── */
+      .shell-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        width: 256px;
+        height: 100vh;
+        background: var(--sidebar);
+        border-right: 1px solid var(--sidebar-border);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .shell-sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 28px 24px 24px;
+        border-bottom: 1px solid var(--sidebar-border);
+      }
+
+      .shell-brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-foreground);
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .shell-brand-name {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 22px;
+        color: var(--sidebar-foreground);
+        letter-spacing: -0.01em;
+      }
+
+      .shell-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 20px 12px;
+        overflow-y: auto;
+      }
+
+      .shell-nav-group-label {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        padding: 8px 12px 8px;
+        margin-top: 8px;
+      }
+
+      .shell-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-nav-item:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-nav-item:focus-visible {
+        outline: 2px solid var(--sidebar-ring);
+        outline-offset: 2px;
+      }
+
+      .shell-nav-item.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: transparent;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .shell-nav-item [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      /* ── Sidebar Footer ─────────────────────────────────────── */
+      .shell-sidebar-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+
+      .shell-footer-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-footer-row:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-footer-row [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      .shell-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        background: var(--bg-300);
+        border: 2px solid var(--border-300);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .shell-user-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .shell-user-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--sidebar-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .shell-user-role {
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Main Content ──────────────────────────────────────── */
+      .shell-main {
+        flex: 1;
+        margin-left: 256px;
+        min-height: 100vh;
+        padding: 32px 40px;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
+      .shell-mobile-tabs {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        border-top: 1px solid var(--sidebar-border);
+        background: var(--sidebar);
+        box-shadow: 0 -1px 3px 0 rgba(0,0,0,0.06);
+      }
+
+      .shell-mobile-tabs-inner {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .shell-mobile-tab {
+        display: grid;
+        gap: 3px;
+        justify-items: center;
+        padding: 8px 4px;
+        border: none;
+        border-radius: calc(var(--radius) - 6px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-mobile-tab [data-icon] {
+        width: 20px;
+        height: 20px;
+      }
+
+      .shell-mobile-tab:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-mobile-tab.active {
+        color: var(--primary);
+      }
+
+      /* ── Responsive ─────────────────────────────────────────── */
+      @media (max-width: 768px) {
+        .shell-sidebar {
+          transform: translateX(-100%);
+        }
+
+        .shell-sidebar.is-open {
+          transform: translateX(0);
+          box-shadow: var(--shadow-xl);
+        }
+
+        .shell-sidebar-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          z-index: 35;
+          background: rgba(0,0,0,0.3);
+        }
+
+        .shell-sidebar-backdrop.is-visible {
+          display: block;
+        }
+
+        .shell-main {
+          margin-left: 0;
+          padding: 20px 16px 88px;
+        }
+
+        .shell-mobile-tabs {
+          display: block;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         Book Detail Page — Scoped Styles
+         ═══════════════════════════════════════════════════════════ */
+
+      .bd-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 28px;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .bd-breadcrumb a {
+        color: var(--muted-foreground);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.16s ease;
+      }
+      .bd-breadcrumb a:hover {
+        color: var(--foreground);
+      }
+      .bd-breadcrumb [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      .bd-layout {
+        display: grid;
+        grid-template-columns: 35% 1fr;
+        gap: 36px;
+        align-items: start;
+      }
+
+      /* ── Left Column: Book Header ──────────────────────────── */
+      .bd-book-header {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .bd-cover-wrap {
+        position: relative;
+        width: 200px;
+        height: 280px;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        background: linear-gradient(145deg, var(--brand-200) 0%, var(--brand-400) 40%, var(--brand-600) 100%);
+        flex-shrink: 0;
+      }
+      .bd-cover-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 24px;
+      }
+      .bd-cover-title {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 28px;
+        line-height: 1.2;
+        color: #fff;
+        text-align: center;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      }
+
+      .bd-book-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .bd-book-title {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 28px;
+        line-height: 1.2;
+        color: var(--foreground);
+        margin: 0;
+      }
+      .bd-book-author {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--muted-foreground);
+      }
+      .bd-book-publisher {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--text-400);
+      }
+      .bd-book-isbn {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-400);
+        letter-spacing: 0.02em;
+      }
+
+      /* ── Status Dropdown ─────────────────────────────────────── */
+      .bd-status-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .bd-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        background: var(--brand-50);
+        color: var(--brand-500);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid var(--brand-200);
+        cursor: pointer;
+        transition: background-color 0.16s ease, box-shadow 0.16s ease;
+      }
+      .bd-status-badge:hover {
+        background: var(--brand-100);
+        box-shadow: var(--shadow-xs);
+      }
+      .bd-status-badge [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ── Star Rating ────────────────────────────────────────── */
+      .bd-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .bd-rating .star {
+        width: 18px;
+        height: 18px;
+        color: var(--brand-500);
+        cursor: pointer;
+        transition: transform 0.16s ease;
+      }
+      .bd-rating .star:hover {
+        transform: scale(1.15);
+      }
+      .bd-rating .star.empty {
+        color: var(--border-400);
+      }
+
+      /* ── Tags ───────────────────────────────────────────────── */
+      .bd-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .bd-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: var(--radius-full);
+        background: var(--brand-50);
+        color: var(--brand-600);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid var(--brand-100);
+        transition: background-color 0.16s ease;
+      }
+      .bd-tag:hover {
+        background: var(--brand-100);
+      }
+      .bd-tag [data-icon] {
+        width: 12px;
+        height: 12px;
+        opacity: 0.6;
+        cursor: pointer;
+      }
+      .bd-tag [data-icon]:hover {
+        opacity: 1;
+      }
+      .bd-add-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 10px;
+        border-radius: var(--radius-full);
+        background: transparent;
+        border: 1px dashed var(--border-400);
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: border-color 0.16s ease, color 0.16s ease;
+      }
+      .bd-add-tag:hover {
+        border-color: var(--brand-400);
+        color: var(--brand-500);
+      }
+      .bd-add-tag [data-icon] {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* ── Category & Info Rows ───────────────────────────────── */
+      .bd-info-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--secondary-foreground);
+      }
+      .bd-info-row [data-icon] {
+        width: 16px;
+        height: 16px;
+        color: var(--muted-foreground);
+      }
+      .bd-info-label {
+        color: var(--muted-foreground);
+      }
+      .bd-info-value {
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .bd-reading-purpose {
+        display: inline-flex;
+        padding: 3px 10px;
+        border-radius: var(--radius-full);
+        background: var(--success-50);
+        color: var(--success-600);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid var(--success-200);
+      }
+
+      /* ── Visibility Toggle ──────────────────────────────────── */
+      .bd-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .bd-toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        border-radius: var(--radius-full);
+        background: var(--border-400);
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        flex-shrink: 0;
+      }
+      .bd-toggle::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-full);
+        background: var(--bg-50);
+        box-shadow: var(--shadow-xs);
+        transition: transform 0.2s ease;
+      }
+      .bd-toggle.is-on {
+        background: var(--primary);
+      }
+      .bd-toggle.is-on::after {
+        transform: translateX(18px);
+      }
+      .bd-toggle-label {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--secondary-foreground);
+      }
+
+      /* ── Action Buttons ─────────────────────────────────────── */
+      .bd-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        margin-top: 4px;
+      }
+      .bd-actions .btn {
+        min-height: 38px;
+        font-size: 13px;
+        padding: 0 16px;
+        gap: 6px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .bd-actions .btn [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+      .bd-actions .btn-outline {
+        background: var(--popover);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+      }
+      .bd-actions .btn-outline:hover {
+        border-color: var(--brand-300);
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-actions .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border: 1px solid transparent;
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-actions .btn-primary:hover {
+        box-shadow: var(--shadow-md);
+      }
+      .bd-actions .btn-danger-ghost {
+        background: transparent;
+        color: var(--muted-foreground);
+        border: 1px solid transparent;
+        box-shadow: none;
+      }
+      .bd-actions .btn-danger-ghost:hover {
+        color: var(--error-500);
+        background: var(--error-50);
+      }
+
+      /* ── Right Column: Tabs ─────────────────────────────────── */
+      .bd-tabs-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .bd-tab-bar {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+      }
+      .bd-tab-btn {
+        position: relative;
+        padding: 12px 20px;
+        border: none;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: color 0.16s ease;
+      }
+      .bd-tab-btn:hover {
+        color: var(--foreground);
+      }
+      .bd-tab-btn.active {
+        color: var(--foreground);
+        font-weight: 600;
+      }
+      .bd-tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 12px;
+        right: 12px;
+        height: 2px;
+        background: var(--primary);
+        border-radius: 1px;
+      }
+
+      .bd-tab-content {
+        display: none;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .bd-tab-content.active {
+        display: flex;
+      }
+
+      /* ── Search Bar ─────────────────────────────────────────── */
+      .bd-search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        height: 40px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--popover);
+        box-shadow: var(--shadow-xs);
+      }
+      .bd-search [data-icon] {
+        width: 16px;
+        height: 16px;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+      }
+      .bd-search input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+        outline: none;
+      }
+      .bd-search input::placeholder {
+        color: var(--text-400);
+      }
+
+      /* ── Progress Card ───────────────────────────────────────── */
+      .bd-progress-card {
+        padding: 20px;
+        border-radius: var(--radius-md);
+        background: var(--popover);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-progress-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .bd-progress-label {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .bd-progress-stats {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .bd-progress-bar-wrap {
+        width: 100%;
+        height: 8px;
+        border-radius: var(--radius-full);
+        background: var(--bg-300);
+        overflow: hidden;
+      }
+      .bd-progress-bar-fill {
+        height: 100%;
+        width: 72%;
+        border-radius: var(--radius-full);
+        background: var(--primary);
+        transition: width 0.3s ease;
+      }
+      .bd-progress-detail {
+        margin-top: 8px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--text-400);
+      }
+
+      /* ── Section Heading ─────────────────────────────────────── */
+      .bd-section-heading {
+        font-family: var(--font-sans);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .bd-section-count {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Highlight Card (margin annotation style) ────────────── */
+      .bd-highlight-card {
+        border-radius: var(--radius-sm);
+        border-left: 3px solid var(--primary);
+        background: var(--brand-50);
+        padding: 16px 18px;
+        transition: box-shadow 0.16s ease;
+      }
+      .bd-highlight-card:hover {
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-highlight-text {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--foreground);
+        margin-bottom: 8px;
+        font-style: italic;
+      }
+      .bd-highlight-chapter {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-400);
+        margin-bottom: 8px;
+      }
+      .bd-highlight-annotation {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--secondary-foreground);
+        padding-top: 8px;
+        border-top: 1px solid var(--brand-100);
+      }
+      .bd-highlight-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .bd-highlight-actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--popover);
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: color 0.16s ease, border-color 0.16s ease;
+      }
+      .bd-highlight-actions button:hover {
+        color: var(--foreground);
+        border-color: var(--brand-300);
+      }
+      .bd-highlight-actions button [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ── Note Card ──────────────────────────────────────────── */
+      .bd-note-card {
+        padding: 16px 18px;
+        border-radius: var(--radius-sm);
+        background: var(--popover);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+        transition: box-shadow 0.16s ease;
+      }
+      .bd-note-card:hover {
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-note-date {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-400);
+        margin-bottom: 6px;
+      }
+      .bd-note-text {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--foreground);
+        margin-bottom: 8px;
+      }
+      .bd-note-chapter {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── File Management ────────────────────────────────────── */
+      .bd-file-actions-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .bd-file-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-family: var(--font-sans);
+        font-size: 13px;
+      }
+      .bd-file-table thead th {
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted-foreground);
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-200);
+      }
+      .bd-file-table thead th:first-child {
+        border-radius: var(--radius-sm) 0 0 0;
+      }
+      .bd-file-table thead th:last-child {
+        border-radius: 0 var(--radius-sm) 0 0;
+      }
+      .bd-file-table tbody tr {
+        transition: background-color 0.16s ease;
+      }
+      .bd-file-table tbody tr:hover {
+        background: var(--bg-100);
+      }
+      .bd-file-table tbody td {
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground);
+        vertical-align: middle;
+      }
+      .bd-file-table .file-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+      }
+      .bd-file-table .file-name [data-icon] {
+        width: 18px;
+        height: 18px;
+        color: var(--brand-500);
+      }
+      .bd-file-table .file-format {
+        color: var(--muted-foreground);
+        font-weight: 500;
+      }
+      .bd-file-table .file-size {
+        color: var(--text-400);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .bd-file-badge {
+        display: inline-flex;
+        padding: 3px 10px;
+        border-radius: var(--radius-full);
+        background: var(--brand-50);
+        color: var(--brand-600);
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid var(--brand-100);
+      }
+      .bd-file-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .bd-file-actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: color 0.16s ease, background-color 0.16s ease;
+      }
+      .bd-file-actions button:hover {
+        color: var(--foreground);
+        background: var(--bg-200);
+      }
+      .bd-file-actions button [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ── Upload Drop Zone ───────────────────────────────────── */
+      .bd-dropzone {
+        border: 2px dashed var(--border-400);
+        border-radius: var(--radius-md);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-50);
+        transition: border-color 0.16s ease, background-color 0.16s ease;
+        cursor: pointer;
+      }
+      .bd-dropzone:hover {
+        border-color: var(--brand-300);
+        background: var(--brand-50);
+      }
+      .bd-dropzone [data-icon] {
+        width: 28px;
+        height: 28px;
+        color: var(--border-500);
+      }
+      .bd-dropzone-text {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+      .bd-dropzone-hint {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--text-400);
+      }
+
+      /* ── Timeline ────────────────────────────────────────────── */
+      .bd-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding-left: 20px;
+        border-left: 2px solid var(--border-300);
+      }
+      .bd-timeline-item {
+        position: relative;
+        padding: 0 0 20px 20px;
+      }
+      .bd-timeline-item:last-child {
+        padding-bottom: 0;
+      }
+      .bd-timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -26px;
+        top: 6px;
+        width: 10px;
+        height: 10px;
+        border-radius: var(--radius-full);
+        background: var(--primary);
+        border: 2px solid var(--bg-100);
+      }
+      .bd-timeline-date {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-400);
+        margin-bottom: 4px;
+      }
+      .bd-timeline-text {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+      }
+      .bd-timeline-text .arrow {
+        color: var(--muted-foreground);
+        margin: 0 8px;
+      }
+
+      /* ── Related Books ──────────────────────────────────────── */
+      .bd-related-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .bd-related-topic {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: var(--radius-sm);
+        background: var(--popover);
+        border: 1px solid var(--border);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+        text-decoration: none;
+        transition: box-shadow 0.16s ease, border-color 0.16s ease;
+        width: fit-content;
+      }
+      .bd-related-topic:hover {
+        box-shadow: var(--shadow-sm);
+        border-color: var(--brand-300);
+      }
+      .bd-related-topic [data-icon] {
+        width: 14px;
+        height: 14px;
+        color: var(--brand-500);
+      }
+      .bd-related-book-card {
+        display: flex;
+        gap: 16px;
+        padding: 14px;
+        border-radius: var(--radius-sm);
+        background: var(--popover);
+        border: 1px solid var(--border);
+        transition: box-shadow 0.16s ease;
+        width: fit-content;
+      }
+      .bd-related-book-card:hover {
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-related-book-cover {
+        width: 48px;
+        height: 68px;
+        border-radius: 4px;
+        background: linear-gradient(145deg, var(--brand-200) 0%, var(--brand-400) 100%);
+        flex-shrink: 0;
+      }
+      .bd-related-book-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        justify-content: center;
+      }
+      .bd-related-book-title {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .bd-related-book-author {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── AI Content Section ─────────────────────────────────── */
+      .bd-ai-section {
+        border-left: 3px solid var(--chart-2);
+        background: var(--bg-50);
+        padding: 18px 20px;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        box-shadow: var(--shadow-xs);
+      }
+      .bd-ai-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--chart-2);
+        margin-bottom: 10px;
+      }
+      .bd-ai-label [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+      .bd-ai-text {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--secondary-foreground);
+      }
+
+      /* ── Responsive Book Detail ─────────────────────────────── */
+      @media (max-width: 1024px) {
+        .bd-layout {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+        .bd-cover-wrap {
+          width: 160px;
+          height: 224px;
+        }
+      }
+    </style>
+</body>
+</html>

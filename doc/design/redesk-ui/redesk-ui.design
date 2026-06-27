@@ -1,0 +1,97 @@
+{
+  "data": [
+    {
+      "id": "page-bookshelf",
+      "title": "书架",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1719470400000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/bookshelf.html",
+        "interactions": [
+          {
+            "domId": "link-book-detail",
+            "targetPageId": "page-book-detail",
+            "label": "查看书籍详情"
+          },
+          {
+            "domId": "nav-reading-profile",
+            "targetPageId": "page-reading-profile",
+            "label": "阅读档案",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-book-detail",
+      "title": "书籍详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1719470400000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/book-detail.html",
+        "interactions": [
+          {
+            "domId": "back-bookshelf",
+            "targetPageId": "page-bookshelf",
+            "label": "返回书架",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-reading-profile",
+            "targetPageId": "page-reading-profile",
+            "label": "阅读档案",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-reading-profile",
+      "title": "阅读档案",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1719470400000,
+      "canvasData": {
+        "x": 0,
+        "y": 556,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/reading-profile.html",
+        "interactions": [
+          {
+            "domId": "nav-bookshelf",
+            "targetPageId": "page-bookshelf",
+            "label": "书架",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "Redesk 核心页面",
+    "designLibrary": {
+      "name": "Claude",
+      "id": "dl_builtin_claude",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "c:\\Users\\Maxxie\\.trae-cn\\design_libraries\\dl_builtin_claude",
+      "versionSource": null
+    }
+  }
+}

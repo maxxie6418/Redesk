@@ -1,0 +1,191 @@
+{
+  "project": {
+    "name": "Redesk 核心页面",
+    "operation": "create",
+    "deviceType": "desktop",
+    "designRead": "Personal book library management / avid readers / warm editorial calm / medium density / avoid neon tech feel",
+    "designDials": {
+      "layoutVariance": 2,
+      "motionIntensity": 1,
+      "visualDensity": 3
+    },
+    "styleContinuityAnchors": {
+      "colorSystem": "Claude DL terra-cotta accent #C96442, paper-like backgrounds, warm gray text, muted beige surfaces",
+      "shapeSystem": "Soft geometry: 8px/12px/16px/20px/24px radius, quiet paper-like shadows",
+      "typographySystem": "Newsreader for display, Poppins for compact UI, Lora for reading surfaces, Geist Mono for code",
+      "spacingSystem": "4px base rhythm, generous breathable layouts: 12/16/24/32/48/64",
+      "componentLanguage": "Lightweight controls, tonal separation over nested borders, editorial warmth",
+      "surfaceAndDepth": "Quiet elevation for separation, not spectacle; tonal surface layering",
+      "imageryAndIconography": "Clean SVG icons via CSS mask, editorial product photography style",
+      "interactionTone": "Calm, readable, trustworthy; subtle hover transitions"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-bookshelf", "page-book-detail", "page-reading-profile"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["header", "sidebar-nav", "global-background", "brand-css"],
+        "privateRegions": [],
+        "mutableSlots": ["activeNavItem"],
+        "status": "planned",
+        "children": [
+          {
+            "nodeId": "gen-page-bookshelf",
+            "kind": "page-leaf",
+            "pageIds": ["page-bookshelf"],
+            "output": "pages/bookshelf.html",
+            "sharedRegions": [],
+            "privateRegions": ["search-bar", "filter-bar", "stats-overview", "book-grid", "empty-state"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-book-detail",
+            "kind": "page-leaf",
+            "pageIds": ["page-book-detail"],
+            "output": "pages/book-detail.html",
+            "sharedRegions": [],
+            "privateRegions": ["book-header", "file-manager", "reading-traces", "related-topics", "status-history"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-reading-profile",
+            "kind": "page-leaf",
+            "pageIds": ["page-reading-profile"],
+            "output": "pages/reading-profile.html",
+            "sharedRegions": [],
+            "privateRegions": ["reading-stats-cards", "heatmap", "trend-chart", "distribution-charts", "recent-activity"],
+            "mutableSlots": [],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "libraryIdentity": {
+      "name": "Claude",
+      "id": "dl_builtin_claude",
+      "version": null,
+      "scope": "built-in-global",
+      "path": "c:\\Users\\Maxxie\\.trae-cn\\design_libraries\\dl_builtin_claude",
+      "versionSource": null
+    },
+    "brandPrefix": "claude",
+    "cssFilePath": "c:\\Users\\Maxxie\\.trae-cn\\design_libraries\\dl_builtin_claude\\colors_and_type.css",
+    "cssJsonPath": "c:\\Users\\Maxxie\\.trae-cn\\design_libraries\\dl_builtin_claude\\css.json",
+    "styleConstraints": {
+      "radiusMax": 24,
+      "spacingBase": 4,
+      "fontBody": 16,
+      "controlHeightDefault": 40
+    },
+    "iconAssets": {
+      "source": "assets/icons",
+      "projectIconDir": "assets/icons/dl-builtin-claude",
+      "libraryKey": "dl-builtin-claude",
+      "renderMethod": "css-mask",
+      "pathTemplate": "../assets/icons/dl-builtin-claude/{name}.svg",
+      "availableNames": ["arrow-down","arrow-left","arrow-right","arrow-up","box","check","chevron-down","chevron-left","chevron-right","chevron-up","chevrons-down-up","chevrons-up-down","circle-alert","circle-check","circle-minus","circle-pause","circle-play","circle-plus","circle-question-mark","external-link","file","folder-open","folder","funnel","grip","heart","house","mail","map-pin","message-circle-more","mouse-pointer-click","pen-line","send-horizontal","star","tag","thumbs-down","thumbs-up","trash-2","triangle-alert","user"],
+      "totalCount": 41,
+      "coloringRule": "currentColor by default; override with Library token when needed"
+    },
+    "forbiddenInventedComponents": "none",
+    "allowedComponents": "unrestricted",
+    "productContext": {
+      "kitType": "website",
+      "productType": "Personal book library management system"
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-bookshelf",
+      "title": "书架",
+      "htmlSrc": "pages/bookshelf.html",
+      "pageIndex": 1,
+      "pageType": "information-dense",
+      "visualNorthStar": "Open, breathable book grid with editorial warmth — each book card feels like a bookshelf entry, not a data row",
+      "compositionPattern": "search-filters-top, stats-overview-row, book-grid-main",
+      "continuityAnchors": {
+        "header": "Left sidebar with nav: 书架(active), 阅读档案, plus bottom settings area",
+        "surfaceModel": "Paper-like bg, warm beige cards, terra-cotta accent for active states",
+        "typography": "Newsreader for section headings, Poppins for labels and controls, Lora for book descriptions"
+      },
+      "componentPlan": [
+        {"slug": "navigation", "role": "sidebar-nav"},
+        {"slug": "card", "role": "book-card"},
+        {"slug": "badge", "role": "status-badge"},
+        {"slug": "input", "role": "search-input"}
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "soulElement": "Book covers displayed with subtle warm shadow and gentle hover lift — like pulling a book from a real shelf",
+      "requirements": "书架主页：搜索栏、筛选器组（状态/分类/标签/可见性）、概览统计卡片（总数/各状态数量/最近新增/最近阅读/今日推荐）、书籍网格（封面/书名/作者/状态标签/评分/阅读进度/上次读到第几页）、批量操作栏、空状态引导、新建书籍按钮"
+    },
+    {
+      "nodeId": "page-book-detail",
+      "title": "书籍详情",
+      "htmlSrc": "pages/book-detail.html",
+      "pageIndex": 2,
+      "pageType": "information-dense",
+      "visualNorthStar": "A single-book information hub that reads like a well-organized reading journal page — warm, clear, layered",
+      "compositionPattern": "book-header-top, tabs-content-below",
+      "continuityAnchors": {
+        "header": "Left sidebar with nav: 书架, 阅读档案, plus bottom settings area",
+        "surfaceModel": "Paper-like bg, warm beige cards, terra-cotta accent for active states",
+        "typography": "Newsreader for book title, Poppins for labels, Lora for reading notes content"
+      },
+      "componentPlan": [
+        {"slug": "navigation", "role": "sidebar-nav"},
+        {"slug": "card", "role": "section-card"},
+        {"slug": "badge", "role": "status-badge"},
+        {"slug": "chat-bubble", "role": "reading-note-bubble"}
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "soulElement": "Book cover with warm glow shadow alongside metadata — the page feels like opening a personal reading journal",
+      "requirements": "书籍详情页：封面大图+书名+作者+出版社+ISBN+简介、状态标签可切换、评分可编辑、标签增删、分类、可见性开关、阅读目的标记、操作按钮组（编辑/阅读/删除）、文件管理区（文件列表/上传/主文件标记/下载/替换/删除）、阅读痕迹区（进度/高亮列表/笔记列表/全文搜索）、关联主题列表、状态变更历史时间轴、AI 派生内容区（视觉区分）"
+    },
+    {
+      "nodeId": "page-reading-profile",
+      "title": "阅读档案",
+      "htmlSrc": "pages/reading-profile.html",
+      "pageIndex": 3,
+      "pageType": "information-dense",
+      "visualNorthStar": "A personal reading dashboard that feels like a warm annual reading report — numbers tell a quiet story",
+      "compositionPattern": "stats-cards-top, activity-heatmap, distribution-charts, recent-activity",
+      "continuityAnchors": {
+        "header": "Left sidebar with nav: 书架, 阅读档案(active), plus bottom settings area",
+        "surfaceModel": "Paper-like bg, warm beige cards, terra-cotta accent for active states",
+        "typography": "Newsreader for section headings, Poppins for stat numbers and labels, Lora for activity descriptions"
+      },
+      "componentPlan": [
+        {"slug": "navigation", "role": "sidebar-nav"},
+        {"slug": "card", "role": "stat-card"},
+        {"slug": "badge", "role": "trend-badge"}
+      ],
+      "imagePlan": [],
+      "chartsRequired": true,
+      "soulElement": "Reading streak heatmap using warm terra-cotta intensity gradient — like ink absorption on paper",
+      "requirements": "阅读档案页：顶部统计卡片（累计书籍数/高亮数/笔记数/连续阅读天数/年度目标进度环）、阅读活跃度区（热力图/趋势折线图/阅读时长统计）、书架结构区（各状态数量分布/已读未读比例饼图/类别分布柱状图/想要vs实际对比）、最近动态区（最近新增/最近阅读/最近笔记）、阅读历史列表"
+    }
+  ],
+  "wiringPlan": [
+    {"sourcePageId": "page-bookshelf", "domId": "link-book-detail", "targetPageId": "page-book-detail", "label": "查看书籍详情"},
+    {"sourcePageId": "page-bookshelf", "domId": "nav-reading-profile", "targetPageId": "page-reading-profile", "label": "阅读档案", "hideEdge": true},
+    {"sourcePageId": "page-book-detail", "domId": "back-bookshelf", "targetPageId": "page-bookshelf", "label": "返回书架", "hideEdge": true},
+    {"sourcePageId": "page-book-detail", "domId": "nav-reading-profile", "targetPageId": "page-reading-profile", "label": "阅读档案", "hideEdge": true},
+    {"sourcePageId": "page-reading-profile", "domId": "nav-bookshelf", "targetPageId": "page-bookshelf", "label": "书架", "hideEdge": true}
+  ],
+  "hiddenInteractionPlan": [
+    {"sourcePageId": "page-bookshelf", "domId": "nav-bookshelf", "targetPageId": "page-bookshelf", "label": "当前页"},
+    {"sourcePageId": "page-book-detail", "domId": "nav-bookshelf", "targetPageId": "page-bookshelf", "label": "书架", "hideEdge": true},
+    {"sourcePageId": "page-reading-profile", "domId": "nav-reading-profile", "targetPageId": "page-reading-profile", "label": "当前页"}
+  ],
+  "assets": []
+}

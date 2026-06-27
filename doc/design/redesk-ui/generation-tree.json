@@ -1,0 +1,47 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-bookshelf", "page-book-detail", "page-reading-profile"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["header", "sidebar-nav", "global-background", "brand-css"],
+    "privateRegions": [],
+    "mutableSlots": ["activeNavItem"],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-bookshelf",
+        "kind": "page-leaf",
+        "pageIds": ["page-bookshelf"],
+        "output": "pages/bookshelf.html",
+        "sharedRegions": [],
+        "privateRegions": ["search-bar", "filter-bar", "stats-overview", "book-grid", "empty-state"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-book-detail",
+        "kind": "page-leaf",
+        "pageIds": ["page-book-detail"],
+        "output": "pages/book-detail.html",
+        "sharedRegions": [],
+        "privateRegions": ["book-header", "file-manager", "reading-traces", "related-topics", "status-history"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-reading-profile",
+        "kind": "page-leaf",
+        "pageIds": ["page-reading-profile"],
+        "output": "pages/reading-profile.html",
+        "sharedRegions": [],
+        "privateRegions": ["reading-stats-cards", "heatmap", "trend-chart", "distribution-charts", "recent-activity"],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

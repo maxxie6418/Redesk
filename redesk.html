@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自建书架系统 — 需求规格文档</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #1a1a1a;
+            --text-secondary: #5a5a5a;
+            --border: #e2e8f0;
+            --green: #10b981;
+            --green-bg: #d1fae5;
+            --yellow: #f59e0b;
+            --yellow-bg: #fef3c7;
+            --orange: #f97316;
+            --orange-bg: #ffedd5;
+            --red: #ef4444;
+            --red-bg: #fee2e2;
+            --blue: #3b82f6;
+            --blue-bg: #dbeafe;
+            --purple: #8b5cf6;
+            --purple-bg: #ede9fe;
+            --teal: #14b8a6;
+            --teal-bg: #ccfbf1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+        h3 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; color: var(--text); }
+        h4 { font-size: 1.05rem; margin: 1.2rem 0 0.5rem; color: var(--text); }
+        .subtitle { color: var(--text-secondary); margin-bottom: 2rem; }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            white-space: nowrap;
+        }
+        .badge-green { background: var(--green-bg); color: #065f46; }
+        .badge-yellow { background: var(--yellow-bg); color: #92400e; }
+        .badge-orange { background: var(--orange-bg); color: #9a3412; }
+        .badge-red { background: var(--red-bg); color: #991b1b; }
+        .badge-blue { background: var(--blue-bg); color: #1e40af; }
+        .badge-purple { background: var(--purple-bg); color: #5b21b6; }
+        .badge-teal { background: var(--teal-bg); color: #0f766e; }
+        
+        .status-must { color: var(--green); font-weight: 600; }
+        .status-pending { color: var(--orange); font-weight: 600; }
+        .status-ext { color: var(--purple); font-weight: 600; }
+        .status-cut { color: var(--red); font-weight: 600; text-decoration: line-through; opacity: 0.7; }
+        
+        .info-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            position: relative;
+            padding-left: 2rem;
+        }
+        .flow-step::before {
+            content: attr(data-step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            background: var(--blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .flow-arrow {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin: 0.5rem 0 0.5rem 0.75rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+        th {
+            background: #f1f5f9;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #f8fafc; }
+        td:first-child { font-weight: 500; width: 80px; color: var(--text-secondary); }
+        
+        .pending-box {
+            background: var(--orange-bg);
+            border-left: 4px solid var(--orange);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+        .pending-box h4 { color: #9a3412; margin-bottom: 0.5rem; }
+        
+        .ext-box {
+            background: var(--purple-bg);
+            border-left: 4px solid var(--purple);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+        .ext-box h4 { color: #5b21b6; margin-bottom: 0.5rem; }
+        
+        .phase-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .phase-box h3 {
+            margin-top: 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .summary-card h4 { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .summary-card .number { font-size: 1.5rem; font-weight: 700; color: var(--blue); }
+        
+        .module-tag {
+            display: inline-block;
+            background: #1e293b;
+            color: white;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+        }
+        
+        .arch-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+        }
+        .arch-box pre {
+            font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: #334155;
+            margin: 0;
+        }
+        
+        .why-not {
+            background: #fef2f2;
+            border-left: 3px solid var(--red);
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
+        }
+        .why-not strong { color: #991b1b; }
+        
+        .module-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .module-card h4 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        .module-card .module-meta {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .roadmap-list {
+            list-style: none;
+            padding: 0;
+        }
+        .roadmap-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .roadmap-list li:last-child { border-bottom: none; }
+        .roadmap-list .seq {
+            background: var(--blue);
+            color: white;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+        
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem; }
+            table { font-size: 0.85rem; }
+            td, th { padding: 0.5rem; }
+            .arch-box pre { font-size: 0.7rem; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+<h1>📚 自建书架系统 — 需求规格文档</h1>
+<p class="subtitle">单 Docker 部署 · 5 人以内 · EPUB 核心 · 元数据驱动</p>
+
+<div class="summary-grid">
+    <div class="summary-card">
+        <h4>第一期必做</h4>
+        <div class="number" style="color: var(--green);">84</div>
+    </div>
+    <div class="summary-card">
+        <h4>待定</h4>
+        <div class="number" style="color: var(--orange);">2</div>
+    </div>
+    <div class="summary-card">
+        <h4>扩展模块</h4>
+        <div class="number" style="color: var(--purple);">1</div>
+    </div>
+    <div class="summary-card">
+        <h4>已剔除</h4>
+        <div class="number" style="color: var(--red);">11</div>
+    </div>
+    <div class="summary-card">
+        <h4>总功能点</h4>
+        <div class="number">98</div>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>🎯 系统定位</h3>
+    <p>替代 Notion 书架表单，建立自托管的私人书籍管理系统。将「书籍管理」「在线阅读」「阅读数据」「OPDS 推送」「数据备份」整合为单一 Docker 服务。</p>
+    <br>
+    <p><strong>核心约束：</strong></p>
+    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+        <li>单 Docker 容器 All-in-One，不拼接多个第三方组件</li>
+        <li>使用人数 ≤ 5 人，轻量级 JWT 用户系统</li>
+        <li>EPUB 为主格式；TXT 上传自动转 EPUB；MOBI/PDF 仅存储/下载，不原生在线阅读</li>
+        <li>元数据优先从 NeoDB 获取，中文书补全</li>
+        <li>极其重视数据自主权：所有数据必须可随时导出</li>
+    </ul>
+</div>
+
+<h2>📋 核心使用逻辑</h2>
+
+<div class="info-card">
+    <div class="flow-step" data-step="1">
+        <div><strong>录入书籍</strong><br>粘贴 NeoDB/豆瓣链接 → 系统自动抓取元数据 → 确认后保存，状态设为「想读」或「待收录」</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step" data-step="2">
+        <div><strong>收书归档</strong><br>找到 EPUB 文件 → 上传至系统 → 自动存储、提取封面、状态自动变为「已收录」</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step" data-step="3">
+        <div><strong>阅读与批注</strong><br>浏览器在线阅读（epub.js）→ 划线高亮、快捷标签批注、写独立笔记 → 自动记录阅读时长与进度</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step" data-step="4">
+        <div><strong>多端使用</strong><br>书架页面显示上次阅读位置 → 一键继续；或通过 OPDS 推送到 KOReader/Librera 等第三方阅读器</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step" data-step="5">
+        <div><strong>数据沉淀与备份</strong><br>笔记自动备份为 Markdown；阅读统计生成热力图/趋势；数据库定时备份；一键打包导出全部数据</div>
+    </div>
+</div>
+
+<h2>🏗️ 技术架构</h2>
+
+<div class="info-card">
+    <h3>推荐架构：All-in-One 单容器</h3>
+    
+    <div class="arch-box">
+<pre>
++-------------------------+
+|    Docker Container     |
+|     (Single Process)    |
+|                         |
+|   Uvicorn + FastAPI     |
+|   + React Static Files  |
+|                         |
+|   /api/books/*          |
+|   /api/reading/*        |
+|   /api/opds/*           |
+|   /*  (SPA fallback)    |
+|                         |
+|   SQLite (WAL mode)     |
+|   /data/uploads/        |
++-------------------------+
+            |
+    Host Mount
+    /host/book-data
+            |
+    +-------+-------+
+    |       |       |
+ rclone  Syncthing  Cloudflare
+    |       |       |
+  GDrive   (opt)    CDN/Tunnel
+</pre>
+    </div>
+    
+    <table style="margin-top: 1rem;">
+        <tr>
+            <th style="width: 100px;">层级</th>
+            <th style="width: 180px;">选型</th>
+            <th>理由</th>
+        </tr>
+        <tr>
+            <td><strong>后端</strong></td>
+            <td>FastAPI (Python)</td>
+            <td>异步处理 IO 密集型任务（文件上传、NeoDB 抓取、EPUB 解析）；自动 Swagger 文档；AI 生成代码准确率最高；Python 的 zipfile / ebooklib / Pillow 生态处理 EPUB 最顺手</td>
+        </tr>
+        <tr>
+            <td><strong>前端</strong></td>
+            <td>React + Vite + Tailwind</td>
+            <td>极致简单，无框架约定负担；Vite 构建秒开；标准 React 组件，AI 辅助开发最成熟；React Router 声明式路由足够灵活；最终输出纯静态文件由 FastAPI 挂载</td>
+        </tr>
+        <tr>
+            <td><strong>数据库</strong></td>
+            <td>SQLite (WAL)</td>
+            <td>单文件零配置，5 人并发完全够用；备份就是复制一个文件；SQLAlchemy 未来可无缝迁移到 PostgreSQL</td>
+        </tr>
+        <tr>
+            <td><strong>文件存储</strong></td>
+            <td>本地文件系统</td>
+            <td>EPUB 和封面图直接存本地，读写无网络延迟；挂载宿主机目录持久化；不引入 OSS 避免网络依赖</td>
+        </tr>
+        <tr>
+            <td><strong>在线阅读</strong></td>
+            <td>epub.js</td>
+            <td>Mozilla 出品，浏览器端 EPUB 渲染标准库；原生支持 CFI 定位、高亮、主题注入、目录导航；与 React 组件化封装成熟</td>
+        </tr>
+        <tr>
+            <td><strong>部署</strong></td>
+            <td>单 Docker + Uvicorn</td>
+            <td>运行时只有一个进程，没有 Node 运行时、没有进程管理器、没有多端口映射；镜像最小，维护最简</td>
+        </tr>
+        <tr>
+            <td><strong>备份出口</strong></td>
+            <td>rclone → Google Drive</td>
+            <td>增量同步，配置简单；数据自主权高；容器内 APScheduler 定时触发或宿主机 cron</td>
+        </tr>
+    </table>
+</div>
+
+<div class="info-card">
+    <h3>开发模式 vs 生产模式</h3>
+    
+    <p><strong>开发模式（本地）：</strong></p>
+    <div class="arch-box" style="margin-bottom: 1rem;">
+<pre>
+Terminal 1:  uvicorn main:app --reload --port 8000
+Terminal 2:  cd frontend && npm run dev
+
+# vite.config.js
+proxy: { '/api': 'http://localhost:8000' }
+
+# Browser: http://localhost:5173
+# All /api/* auto-forwarded to FastAPI
+</pre>
+    </div>
+    
+    <p><strong>生产模式（Docker）：</strong></p>
+    <div class="arch-box">
+<pre>
+# Multi-stage build
+FROM node:20-alpine AS frontend
+COPY frontend/ . 
+RUN npm ci && npm run build
+
+FROM python:3.11-slim
+COPY --from=frontend /app/dist ./static
+COPY backend/ .
+RUN pip install -r requirements.txt
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+# FastAPI mounts static files + SPA fallback
+app.mount("/", StaticFiles(directory="static", html=True))
+</pre>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>为什么不选 Next.js</h3>
+    
+    <div class="why-not">
+        <strong>❌ 不选 Next.js SSR（服务端渲染）</strong><br>
+        SSR 的核心价值是 SEO 和首屏速度。你的书库是私人系统，登录后才能访问，不需要 SEO；统计页面数据量极小，客户端 fetch 后渲染在 100ms 内完成，SSR 无感知收益。代价是容器内必须常驻 Node 进程 + Python 进程，镜像体积暴涨到 1GB+，违背单进程极简原则。
+    </div>
+    
+    <div class="why-not">
+        <strong>❌ 不选 Next.js API 路由</strong><br>
+        如果同时用 FastAPI 处理文件/数据库，又用 Next.js API 路由处理部分业务，会导致「双后端」架构混乱。Node 处理 EPUB 解析、封面提取、TXT 转换的库远不如 Python 成熟，数据库连接和异步模型也不如 Python 顺手。
+    </div>
+    
+    <div class="why-not">
+        <strong>⚠️ Next.js Static Export 可用，但没必要</strong><br>
+        Next.js 做 next export 输出纯静态文件，再由 FastAPI 挂载，这个路线是可行的。但相比 React + Vite：构建时间更慢（30-60s vs 3-5s）、输出体积更大、有框架约定负担。除非你有明确的 Shadcn/ui 或 Next 生态依赖，否则 Vite 更干净。
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>第三方服务定位</h3>
+    
+    <table>
+        <tr>
+            <th style="width: 120px;">服务</th>
+            <th style="width: 100px;">推荐度</th>
+            <th>用途</th>
+            <th>不做什么</th>
+        </tr>
+        <tr>
+            <td><strong>Cloudflare CDN</strong></td>
+            <td><span class="badge badge-green">⭐⭐⭐⭐</span></td>
+            <td>给 VPS 域名套 CDN，加速静态资源；HTTPS 证书自动</td>
+            <td>不存业务数据，不介入阅读逻辑</td>
+        </tr>
+        <tr>
+            <td><strong>Cloudflare Tunnel</strong></td>
+            <td><span class="badge badge-green">⭐⭐⭐⭐</span></td>
+            <td>Homelab 无公网 IP 时，直接获得 https 域名访问本地服务</td>
+            <td>不替代 Syncthing，只做访问入口</td>
+        </tr>
+        <tr>
+            <td><strong>阿里云 OSS</strong></td>
+            <td><span class="badge badge-yellow">⭐⭐</span></td>
+            <td>仅当 VPS 磁盘 &lt; 50GB 且书库增长极快时，冷存历史文件</td>
+            <td>不做主力存储，避免上传/下载走网络增加复杂度</td>
+        </tr>
+        <tr>
+            <td><strong>Google Drive</strong></td>
+            <td><span class="badge badge-green">⭐⭐⭐⭐</span></td>
+            <td>rclone 定时增量同步：数据库 + 书库文件 + Markdown 笔记</td>
+            <td>不做实时同步，做定时冷备</td>
+        </tr>
+        <tr>
+            <td><strong>Syncthing</strong></td>
+            <td><span class="badge badge-green">⭐⭐⭐⭐</span></td>
+            <td>Homelab ↔ VPS 双向实时同步，任何一边挂掉另一边有完整数据</td>
+            <td>不做公网访问，只做数据冗余</td>
+        </tr>
+    </table>
+    
+    <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+        <strong>原则：</strong>第三方服务只解决「怎么访问」和「怎么备份」，不介入「怎么存书、怎么阅读、怎么记笔记」的核心业务逻辑。即使所有第三方服务同时挂掉，你的单 Docker 容器依然可以在本地正常运行。
+    </p>
+</div>
+
+<h2>🧩 模块设计（全局规划）</h2>
+
+<div class="info-card">
+    <p style="margin-bottom: 1rem;">系统拆分为 <strong>6 个顶层模块</strong>，按「书籍生命周期」和「阅读数据流」组织。模块间通过 FastAPI 路由和数据库关系耦合，不引入消息队列等中间件。</p>
+    
+    <div class="module-card">
+        <h4>模块 1：基础架构</h4>
+        <div class="module-meta">职责：部署、进程、数据库、认证、配置、全局 UI</div>
+        <p>单 Docker 容器内维持一个 Uvicorn 进程；SQLite 以 WAL 模式运行，数据文件挂载宿主机；JWT 用户系统隔离多用户数据；环境变量通过 Pydantic BaseSettings 统一管理；前端 React 构建产物由 FastAPI StaticFiles 挂载，实现 SPA fallback。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>users | <strong>外部依赖：</strong>无</p>
+    </div>
+    
+    <div class="module-card">
+        <h4>模块 2：书籍管理</h4>
+        <div class="module-meta">职责：书籍全生命周期 — 录入、元数据、状态流转、文件上传、封面、批量操作</div>
+        <p>提供书籍 CRUD 接口；集成 NeoDB API 自动抓取中文元数据；支持粘贴 URL 预填和 AI 辅助文本解析；定义「想读/待收录/已收录/在读/已读」状态机；上传 EPUB 后自动提取封面、更新状态；文件按 {book_id}/ 目录组织；支持批量改状态/标签/删除；回收站软删除；书架卡片展示「上次读到」位置。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>books, tags, book_tags, status_history | <strong>外部依赖：</strong>NeoDB API, 可选 LLM API</p>
+    </div>
+    
+    <div class="module-card">
+        <h4>模块 3：在线阅读器</h4>
+        <div class="module-meta">职责：浏览器 EPUB 渲染、阅读交互、主题、进度、TTS</div>
+        <p>基于 epub.js 封装 React 阅读器组件；支持目录导航、书签（CFI）、阅读进度百分比/物理页码、阅读计时、主题与字体切换、快捷键、专注模式、移动端快读模式；markClicked 事件支持点击高亮查看批注；TTS 接入第三方 AI 语音 API（讯飞/Mimo），按段落调用音频流。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>bookmarks, reading_sessions | <strong>外部依赖：</strong>可选 TTS API</p>
+    </div>
+    
+    <div class="module-card">
+        <h4>模块 4：阅读数据</h4>
+        <div class="module-meta">职责：阅读行为产生的所有数据 — 主动笔记、自动统计、目标、导出</div>
+        <p>epub.js 高亮层与后端数据分离：前端画高亮，后端存 CFI + 文本 + 批注；快捷标签（💡❓⭐📌）支持后期筛选；独立笔记与书籍关联；笔记列表支持按书/按时间查看并跳转回阅读位置；笔记全文搜索；自动异步备份为 Markdown；阅读时长聚合、热力图、趋势图、已读/未读比例、类别分布；年度阅读目标 + 进度环；阅读 Streak 连续天数；今日随机推荐。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>highlights, notes, reading_sessions, reading_goals | <strong>外部依赖：</strong>无</p>
+    </div>
+    
+    <div class="module-card">
+        <h4>模块 5：OPDS 服务</h4>
+        <div class="module-meta">职责：第三方阅读器订阅协议</div>
+        <p>输出标准 OPDS 1.2 Atom XML；支持按收录状态、标签筛选；提供搜索接口和书籍下载链接；KOReader、Librera 等可通过订阅地址直接浏览书库并下载阅读。不处理阅读进度回传。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>复用 books, tags | <strong>外部依赖：</strong>无</p>
+    </div>
+    
+    <div class="module-card">
+        <h4>模块 6：备份与导出</h4>
+        <div class="module-meta">职责：数据库备份、文件同步、一键导出、跨节点冗余</div>
+        <p>APScheduler 定时备份 SQLite 数据库（保留最近 N 份）；rclone 增量同步书库文件到 Google Drive；手动一键打包导出全部数据（ZIP：JSON + Markdown + 原文件）；可选 Syncthing 实现 Homelab ↔ VPS 双向实时同步。</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);"><strong>核心表：</strong>无 | <strong>外部依赖：</strong>rclone, Google Drive API, 可选 Syncthing</p>
+    </div>
+</div>
+
+<div class="info-card">
+    <h3>模块间数据流</h3>
+    
+    <div class="arch-box">
+<pre>
+User
+ |
+ +-- CRUD / Upload ----> Module 2 (Books) ----> SQLite + Files
+ |                           |
+ |                           v
+ +-- Read --------------> Module 3 (Reader) <--- File Stream
+ |                           |
+ |                           +-- Highlight/Note --> Module 4 (Data) --> SQLite
+ |                           |                        |
+ |                           |                        +-- Stats --> Dashboard
+ |                           |                        |
+ |                           |                        v
+ |                           |                   Module 6 (Backup) --> Markdown
+ |                           |
+ |                           +-- Session Time ---------------------+
+ |
+ +-- Third-party Reader --> Module 5 (OPDS) --> Book Library
+ |
+ +-- Export / Backup ----> Module 6 (Backup) --> ZIP / GDrive
+</pre>
+    </div>
+    
+    <p style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+        <strong>设计原则：</strong>所有模块共享同一个 SQLite 数据库，通过 SQL 关系（外键、JOIN）实现数据关联，不引入 Redis/RabbitMQ 等中间件。文件系统作为「第二数据库」存储 epub/封面/笔记 Markdown，与 SQLite 记录通过 file_path 关联。
+    </p>
+</div>
+
+<h2>🗺️ 开发路线图</h2>
+
+<div class="phase-box">
+    <h3><span class="badge badge-green">第一期</span> 核心闭环（MVP）</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">目标：让用户能完成「录入 → 上传 → 阅读 → 记笔记 → 导出」的最小闭环。系统可自用，但体验较朴素。</p>
+    
+    <ul class="roadmap-list">
+        <li><span class="seq">1</span><div><strong>基础架构</strong>：单 Docker 部署、SQLite、JWT 用户登录、暗色模式、空状态提示</div></li>
+        <li><span class="seq">2</span><div><strong>书籍管理</strong>：手动录入、NeoDB 抓取、URL 预填、封面自动提取、标签、搜索排序、状态字段、上传 EPUB 自动改状态、文件存储、回收站</div></li>
+        <li><span class="seq">3</span><div><strong>在线阅读器</strong>：epub.js 基础渲染、目录、书签、位置恢复、进度百分比、主题切换、暗色/护眼、快捷键</div></li>
+        <li><span class="seq">4</span><div><strong>阅读数据</strong>：划线高亮、高亮批注、独立笔记、笔记列表、编辑删除</div></li>
+        <li><span class="seq">5</span><div><strong>备份导出</strong>：SQLite 自动备份、手动一键导出（JSON + Markdown + 文件）</div></li>
+    </ul>
+    
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+        <strong>本期不做：</strong>AI 辅助录入、TTS、物理页码、markClicked、OPDS、统计看板、批量导入导出、TXT/MOBI/PDF 支持、阅读计时、阅读热力图、阅读目标。
+    </p>
+</div>
+
+<div class="phase-box">
+    <h3><span class="badge badge-yellow">第二期</span> 满足日常使用</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">目标：补齐格式兼容、多端访问、自动化备份，让系统成为日常主力工具。</p>
+    
+    <ul class="roadmap-list">
+        <li><span class="seq">1</span><div><strong>格式兼容</strong>：TXT 上传自动转 EPUB；MOBI/AZW3/PDF 仅存储+下载（提取元数据，不入阅读器）</div></li>
+        <li><span class="seq">2</span><div><strong>OPDS 服务</strong>：基础协议、按状态/标签筛选、搜索、下载链接（支持 KOReader/Librera）</div></li>
+        <li><span class="seq">3</span><div><strong>批量操作</strong>：批量导入（CSV/JSON）、批量导出、批量改状态/标签、重复检测（模糊匹配）</div></li>
+        <li><span class="seq">4</span><div><strong>阅读数据增强</strong>：阅读时长统计、已读/未读比例、类别分布、书架总量、个人档案页</div></li>
+        <li><span class="seq">5</span><div><strong>备份自动化</strong>：rclone 定时同步 Google Drive；本地与 VPS Syncthing 双向同步</div></li>
+        <li><span class="seq">6</span><div><strong>笔记增强</strong>：笔记全文搜索、导入外部笔记（Notion/Obsidian）模糊匹配、笔记自动备份 Markdown</div></li>
+    </ul>
+</div>
+
+<div class="phase-box">
+    <h3><span class="badge badge-blue">第三期</span> 体验丰富</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">目标：打磨细节，提升阅读和管理体验，让系统用起来「爽」。</p>
+    
+    <ul class="roadmap-list">
+        <li><span class="seq">1</span><div><strong>阅读器增强</strong>：物理页码生成（"第 X 页"）、markClicked 点击高亮查看批注、移动端快读模式、专注模式、字体自定义上传</div></li>
+        <li><span class="seq">2</span><div><strong>快捷批注</strong>：高亮时 💡❓⭐📌 预设标签、按标签筛选笔记</div></li>
+        <li><span class="seq">3</span><div><strong>阅读数据深化</strong>：阅读计时（本次/累计）、阅读进度预估剩余时间、阅读热力图、阅读 Streak、年度目标、今日推荐</div></li>
+        <li><span class="seq">4</span><div><strong>管理体验</strong>：书架「上次读到」直接展示、批量改状态、"想要 vs 实际"对比、随机推荐</div></li>
+        <li><span class="seq">5</span><div><strong>AI 辅助录入</strong>：粘贴豆瓣文本 → LLM 解析 → 自动回填表单</div></li>
+        <li><span class="seq">6</span><div><strong>TTS 语音朗读</strong>：接入讯飞/Mimo 等第三方 AI TTS，段落级朗读</div></li>
+    </ul>
+</div>
+
+<div class="phase-box">
+    <h3><span class="badge badge-purple">第四期</span> 后期拓展</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">目标：引入 AI 能力，探索更智能的阅读辅助，保持架构可扩展。</p>
+    
+    <ul class="roadmap-list">
+        <li><span class="seq">1</span><div><strong>AI 笔记分析（扩展模块）</strong>：按 💡❓⭐📌 标签分组 → LLM 归纳章节摘要、核心观点、个人启发；生成可编辑的 AI 笔记</div></li>
+        <li><span class="seq">2</span><div><strong>AI 阅读助手</strong>：针对单本书问答（基于划线内容）、关键词提取、自动目录补全</div></li>
+        <li><span class="seq">3</span><div><strong>社交化（可选）</strong>：5 人内简单评论、书籍分享链接、借阅管理（如有实体书）</div></li>
+        <li><span class="seq">4</span><div><strong>性能优化</strong>：SQLite → PostgreSQL 迁移、全文搜索升级 Meilisearch、EPUB 全文索引</div></li>
+        <li><span class="seq">5</span><div><strong>客户端探索</strong>：Tauri 桌面端、PWA 离线缓存、阅读器手势增强</div></li>
+    </ul>
+    
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+        <strong>扩展模块原则：</strong>AI 能力以「插件」形式设计，LLM API 调用集中在独立 service 层，不耦合到核心 CRUD 逻辑。即使 AI 服务不可用，系统基础功能不受影响。
+    </p>
+</div>
+
+<h2>🔧 模块 1：基础架构</h2>
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>单 Docker 容器 All-in-One 部署</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>FastAPI + React 静态文件 + SQLite，Uvicorn 单进程 serve</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>SQLite 数据库（WAL 模式）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>单文件零配置，挂载宿主机持久化，5 人性能足够</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>用户注册/登录（JWT）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>fastapi-users 库，邮箱密码即可，无需 OAuth</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>多用户隔离（最多 5 人）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>所有数据表加 user_id 字段过滤</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>用户角色（普通/管理员）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>简单角色字段，控制部分管理接口</td>
+    </tr>
+    <tr>
+        <td>6</td>
+        <td>环境变量配置</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>Pydantic BaseSettings 统一管理密钥/路径/备份开关</td>
+    </tr>
+    <tr>
+        <td>7</td>
+        <td>系统日志</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>Python logging 输出到挂载目录的日志文件</td>
+    </tr>
+    <tr>
+        <td>8</td>
+        <td>响应式布局（手机浏览器可访问）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>Tailwind 断点适配，书库管理在手机上简化展示</td>
+    </tr>
+    <tr>
+        <td>9</td>
+        <td>暗色模式全局开关</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>Tailwind dark: 前缀 + localStorage，管理界面与阅读器同步</td>
+    </tr>
+    <tr>
+        <td>10</td>
+        <td>空状态友好提示</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>书架空/笔记空/搜索无结果时，展示引导文案与快捷按钮</td>
+    </tr>
+</table>
+
+<h2>📚 模块 2：书籍管理</h2>
+<p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">原「元数据管理」与「收录状态/文件管理」合并。覆盖一本书从录入信息、设置状态、上传文件到归档管理的完整生命周期。</p>
+
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>11</td>
+        <td>手动录入书籍信息</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>书名、副标题、作者、出版社、ISBN、页数、类别、评分、简介</td>
+    </tr>
+    <tr>
+        <td>12</td>
+        <td>从 NeoDB API 自动抓取元数据</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>NeoDB 有开放 API，传入书名或链接返回结构化数据，优先使用</td>
+    </tr>
+    <tr>
+        <td>13</td>
+        <td>粘贴 URL 自动预填表单</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>解析 NeoDB/豆瓣链接中的 ID，调 API 回填，用户确认后保存</td>
+    </tr>
+    <tr>
+        <td>93</td>
+        <td>AI 辅助录入（粘贴文本解析）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>用户复制豆瓣页面文本粘贴进系统，调 LLM API 按固定 JSON 格式提取信息回填表单</td>
+    </tr>
+    <tr>
+        <td>14</td>
+        <td>封面自动提取（从 EPUB 内）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>Python zipfile 解压，读取 content.opf 定位封面路径</td>
+    </tr>
+    <tr>
+        <td>15</td>
+        <td>封面手动上传/替换</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>标准文件上传接口，覆盖原封面文件</td>
+    </tr>
+    <tr>
+        <td>16</td>
+        <td>标签/分类系统（多对多）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>中间表 book_tags，支持一本书多个标签</td>
+    </tr>
+    <tr>
+        <td>17</td>
+        <td>书籍搜索（标题/作者/标签）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>SQLite LIKE 查询，5 千本书内性能足够</td>
+    </tr>
+    <tr>
+        <td>18</td>
+        <td>书籍排序（时间/评分/名称/状态）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>SQL ORDER BY 多字段排序</td>
+    </tr>
+    <tr>
+        <td>19</td>
+        <td>重复检测升级（模糊匹配）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>作者+标题用 difflib.SequenceMatcher 算相似度，疑似重复提醒</td>
+    </tr>
+    <tr>
+        <td>20</td>
+        <td>批量导入（CSV/JSON）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>读文件循环写入，需处理重复 ISBN 和缺失字段</td>
+    </tr>
+    <tr>
+        <td>21</td>
+        <td>批量导出（CSV/JSON）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>Python 标准库生成，保障数据自主权</td>
+    </tr>
+    <tr>
+        <td>24</td>
+        <td>自定义收录状态字段</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>枚举：想读/待收录/已收录/在读/已读，数据库 CHECK 约束</td>
+    </tr>
+    <tr>
+        <td>25</td>
+        <td>上传 EPUB 自动变更状态为「已收录」</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>上传接口内直接 UPDATE 状态字段，核心自动化逻辑</td>
+    </tr>
+    <tr>
+        <td>26</td>
+        <td>状态变更历史记录</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>加 status_history 表记录时间戳和变更前后状态</td>
+    </tr>
+    <tr>
+        <td>27</td>
+        <td>文件上传与存储</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>FastAPI UploadFile，存 /data/uploads/{book_id}/</td>
+    </tr>
+    <tr>
+        <td>28</td>
+        <td>文件与元数据关联</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>books 表 file_path 字段，上传后写入路径</td>
+    </tr>
+    <tr>
+        <td>29</td>
+        <td>回收站（软删除）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>is_deleted + deleted_at 字段，30 天后定时任务清理</td>
+    </tr>
+    <tr>
+        <td>30</td>
+        <td>上次读到哪里（书架直接展示）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>书架卡片显示"第 87 页/读到一半"，点击直达该位置</td>
+    </tr>
+    <tr>
+        <td>31</td>
+        <td>批量改状态</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>多选书籍，一键从「想读」改「在读」等，Checkbox + 事务</td>
+    </tr>
+    <tr>
+        <td>32</td>
+        <td>批量操作（改标签/删除）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>与批量改状态共用选择逻辑</td>
+    </tr>
+    <tr>
+        <td>33</td>
+        <td>书籍评分（1-5 星）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>整数字段，前端星形组件</td>
+    </tr>
+    <tr>
+        <td>34</td>
+        <td>私密短评/读后感</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>text 字段，仅自己可见，每本书独立</td>
+    </tr>
+    <tr>
+        <td>35</td>
+        <td>随机推荐一本书</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>ORDER BY RANDOM() LIMIT 1，首页展示未读书籍</td>
+    </tr>
+    <tr style="background: #fffbeb;">
+        <td>—</td>
+        <td><strong>【待定】TXT 上传自动转 EPUB</strong></td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-pending">待定</td>
+        <td>ebooklib 自动包装，按正则分章节，用户无感知</td>
+    </tr>
+    <tr style="background: #fffbeb;">
+        <td>—</td>
+        <td><strong>【待定】MOBI/AZW3 仅存储+下载</strong></td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-pending">待定</td>
+        <td>提取元数据入库，文件原样存储，不提供在线阅读按钮</td>
+    </tr>
+    <tr>
+        <td>22</td>
+        <td>从豆瓣抓取元数据（爬虫）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>豆瓣反爬严重，已放弃，用 NeoDB/AI 粘贴替代</td>
+    </tr>
+    <tr>
+        <td>23</td>
+        <td>AI 自动标签/摘要</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>需接入外部 LLM API，费用+延迟+中文效果不稳定</td>
+    </tr>
+    <tr>
+        <td>36</td>
+        <td>借阅管理（借给谁/何时还）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-cut">剔除</td>
+        <td>无实体书需求，暂不实现</td>
+    </tr>
+</table>
+
+<h2>📖 模块 3：在线阅读器</h2>
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>37</td>
+        <td>浏览器内在线阅读 EPUB</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js 加载文件流，基础渲染稳定，核心功能</td>
+    </tr>
+    <tr>
+        <td>38</td>
+        <td>目录导航</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js book.navigation 获取目录树，侧边栏展示</td>
+    </tr>
+    <tr>
+        <td>39</td>
+        <td>书签（记录当前位置）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>保存 CFI 字符串，下次 rendition.display(cfi) 恢复</td>
+    </tr>
+    <tr>
+        <td>40</td>
+        <td>阅读位置自动恢复</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>打开书籍时查询上次保存的 CFI 并跳转</td>
+    </tr>
+    <tr>
+        <td>41</td>
+        <td>阅读进度条/百分比</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js book.locations 生成后计算百分比</td>
+    </tr>
+    <tr>
+        <td>42</td>
+        <td>阅读进度预估剩余时间</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>全书字符数 − 已读字符 / 历史平均速度，算"还剩 X 分钟"</td>
+    </tr>
+    <tr>
+        <td>43</td>
+        <td>阅读计时（本次/累计）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>前端 setInterval + 页面关闭前 sendBeacon 发送后端</td>
+    </tr>
+    <tr>
+        <td>44</td>
+        <td>阅读器主题切换（背景/字体/字号/行距）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js 支持 CSS 注入，或外层 CSS 变量控制</td>
+    </tr>
+    <tr>
+        <td>45</td>
+        <td>阅读器暗色/护眼模式</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>预设几套配色方案（米白/深灰/暗黑/sepia）</td>
+    </tr>
+    <tr>
+        <td>46</td>
+        <td>阅读器快捷键（翻页/书签/高亮/主题）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>前端 keydown 事件监听，如 ←/→ 翻页、B 加书签</td>
+    </tr>
+    <tr>
+        <td>47</td>
+        <td>专注模式（隐藏 UI）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>CSS 全屏 + 隐藏工具栏，沉浸式阅读</td>
+    </tr>
+    <tr>
+        <td>48</td>
+        <td>移动端快读模式</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>检测手机端自动：横屏提示 + 调大字号 + 隐藏侧边栏 + 底部进度条</td>
+    </tr>
+    <tr>
+        <td>49</td>
+        <td>全文搜索（当前书籍内）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js qsa 或解压章节文本搜索，建议自建 SQLite FTS5 索引</td>
+    </tr>
+    <tr>
+        <td>52</td>
+        <td>字体自定义（上传字体文件）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>上传后前端 @font-face 动态加载，epub.js 不拦截</td>
+    </tr>
+    <tr>
+        <td>53</td>
+        <td>PDF 支持（仅存储+下载）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>提取元数据入库，文件原样存储，不提供在线阅读按钮，与 MOBI 同策略</td>
+    </tr>
+    <tr>
+        <td>55</td>
+        <td>语音朗读（TTS）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>接入第三方 AI TTS API（讯飞/Mimo），文本分段 → API 调用 → 音频流缓存 → 播放器集成</td>
+    </tr>
+    <tr>
+        <td>95</td>
+        <td>物理页码生成</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js generatePagination() 基于页面尺寸生成物理页码，显示"第 X 页"更直观</td>
+    </tr>
+    <tr>
+        <td>96</td>
+        <td>markClicked 事件（点击高亮查看批注）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js 原生事件，点击已有高亮触发，用于快速查看/编辑批注</td>
+    </tr>
+    <tr>
+        <td>50</td>
+        <td>阅读器双页/单页模式</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>epub.js spread 支持不稳定，中文重排后易错位，且移动端无用</td>
+    </tr>
+    <tr>
+        <td>51</td>
+        <td>阅读器手势支持（移动端翻页）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>连续模式下 epub.js 已有基础滑动，复杂手势性价比低，转 OPDS 用第三方阅读器</td>
+    </tr>
+</table>
+
+<h2>📊 模块 4：阅读数据</h2>
+<p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">原「批注与笔记」与「统计与数据看板」合并。覆盖阅读行为产生的所有数据沉淀：用户主动记录的笔记/高亮，以及系统自动聚合的阅读统计/目标。</p>
+
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>56</td>
+        <td>划线高亮（选中文本加亮）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>epub.js annotations.add() + 后端存 CFI 范围和高亮文本</td>
+    </tr>
+    <tr>
+        <td>57</td>
+        <td>高亮批注（在高亮上写文字笔记）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>高亮表加 note 字段，弹窗编辑，核心功能</td>
+    </tr>
+    <tr>
+        <td>58</td>
+        <td>快捷笔记模板（💡❓⭐📌）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>高亮时弹预设标签，存 note_tag 字段，后期按标签检索</td>
+    </tr>
+    <tr>
+        <td>59</td>
+        <td>独立笔记（不关联高亮，写段落感想）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>独立 notes 表，支持时间戳，每本书可有多条</td>
+    </tr>
+    <tr>
+        <td>60</td>
+        <td>批注/笔记列表（按书/按时间查看）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>聚合查询，前端列表页展示，支持跳转回阅读位置</td>
+    </tr>
+    <tr>
+        <td>61</td>
+        <td>批注编辑/删除</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>标准更新/删除接口</td>
+    </tr>
+    <tr>
+        <td>62</td>
+        <td>笔记全文搜索</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>SQLite FTS5 扩展或简单 LIKE，笔记量不大时性能足够</td>
+    </tr>
+    <tr>
+        <td>63</td>
+        <td>批注导出为 Markdown</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>按格式拼接：引用原文 + 批注 + 位置信息，每本书一个文件</td>
+    </tr>
+    <tr>
+        <td>64</td>
+        <td>批注导出为 JSON</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>直接序列化数据库记录，方便机器处理</td>
+    </tr>
+    <tr>
+        <td>65</td>
+        <td>导入时匹配已有笔记（Notion/Obsidian）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>解析外部 Markdown 的 # 书名 标题，模糊匹配入库</td>
+    </tr>
+    <tr>
+        <td>66</td>
+        <td>笔记与书籍关联查询</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>SQL JOIN，阅读器内展示该书所有笔记</td>
+    </tr>
+    <tr>
+        <td>67</td>
+        <td>笔记自动备份为 Markdown（随书库同步）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>每次笔记变更后，异步重写该书 Markdown 文件，纯文本最安全</td>
+    </tr>
+    <tr>
+        <td>74</td>
+        <td>阅读时长统计（总时长/本周/本月）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>聚合 reading_sessions 表，前端展示</td>
+    </tr>
+    <tr>
+        <td>75</td>
+        <td>阅读热力图（GitHub 风格连续天数）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>按日聚合是否有阅读记录，SVG/CSS Grid 渲染格子</td>
+    </tr>
+    <tr>
+        <td>76</td>
+        <td>已读/未读比例可视化</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>简单聚合 + 饼图/环形图组件</td>
+    </tr>
+    <tr>
+        <td>77</td>
+        <td>类别分布统计</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>按标签分组计数，柱状图或饼图展示</td>
+    </tr>
+    <tr>
+        <td>78</td>
+        <td>书架统计看板（总藏书/本月新增）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>聚合查询 + 卡片数字展示，首页 dashboard</td>
+    </tr>
+    <tr>
+        <td>79</td>
+        <td>"想要 vs 实际"对比</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>录入页/首页展示：想读数 vs 已读数 vs 在读数，一眼看清趋势</td>
+    </tr>
+    <tr>
+        <td>80</td>
+        <td>年度阅读目标（数量/页数）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>reading_goals 表 + 进度环/进度条展示</td>
+    </tr>
+    <tr>
+        <td>81</td>
+        <td>个人阅读档案页</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>聚合上述所有统计的展示页，个人中心</td>
+    </tr>
+    <tr>
+        <td>82</td>
+        <td>阅读趋势图（折线/柱状）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>Recharts 前端渲染，后端按日/周聚合数据</td>
+    </tr>
+    <tr>
+        <td>83</td>
+        <td>阅读 Streak（连续阅读天数）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>每日检查是否有阅读记录，前端火焰图标激励</td>
+    </tr>
+    <tr>
+        <td>84</td>
+        <td>今日推荐（随机未读）</td>
+        <td><span class="badge badge-green">🟢 容易</span></td>
+        <td class="status-must">必做</td>
+        <td>随机查询一本「想读」或「已收录」未读的书</td>
+    </tr>
+    <tr>
+        <td>94</td>
+        <td>AI 分析笔记（划线总结）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-ext">扩展</td>
+        <td>将一本书的所有划线文本（按标签分组）发给 LLM，自动输出章节摘要、核心观点、启发整理；作为后续扩展模块开发</td>
+    </tr>
+    <tr>
+        <td>85</td>
+        <td>阅读速度估算（字/分钟）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>需准确统计字数和时长，EPUB 字数提取不标准，建议先不做</td>
+    </tr>
+    <tr>
+        <td>86</td>
+        <td>阅读事件日志（打开/关闭/翻页）</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-cut">剔除</td>
+        <td>reading_events 表记录，数据量较大，可选做；为统计服务可简化</td>
+    </tr>
+</table>
+
+<h2>🌐 模块 5：OPDS 服务</h2>
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>68</td>
+        <td>OPDS 1.2 基础协议支持</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>输出 Atom XML 格式，按分类/书架组织，第三方阅读器可订阅</td>
+    </tr>
+    <tr>
+        <td>69</td>
+        <td>OPDS 按收录状态筛选</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>URL 参数过滤，如 /opds?status=已收录</td>
+    </tr>
+    <tr>
+        <td>70</td>
+        <td>OPDS 按标签筛选</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>如 /opds?tag=哲学，复用后端标签逻辑</td>
+    </tr>
+    <tr>
+        <td>71</td>
+        <td>OPDS 搜索接口</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>复用后端搜索，输出 OPDS 标准 XML</td>
+    </tr>
+    <tr>
+        <td>72</td>
+        <td>OPDS 书籍下载链接</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>标准自带下载链接，KOReader/Librera 等原生支持下载阅读</td>
+    </tr>
+    <tr>
+        <td>73</td>
+        <td>OPDS 阅读进度同步（第三方阅读器回传）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>需第三方阅读器支持且协议复杂，建议先不做</td>
+    </tr>
+</table>
+
+<h2>💾 模块 6：备份与导出</h2>
+<table>
+    <tr>
+        <th>序号</th>
+        <th>功能点</th>
+        <th style="width:90px">评级</th>
+        <th style="width:80px">状态</th>
+        <th>备注</th>
+    </tr>
+    <tr>
+        <td>87</td>
+        <td>SQLite 数据库自动备份</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>APScheduler 定时任务，复制 .db 到备份目录，保留最近 N 份</td>
+    </tr>
+    <tr>
+        <td>88</td>
+        <td>书籍文件自动备份到 Google Drive</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>容器内集成 rclone 或 Python google-api-client，定时增量同步</td>
+    </tr>
+    <tr>
+        <td>89</td>
+        <td>手动一键导出全部数据</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>打包 ZIP：JSON（元数据）+ Markdown（笔记）+ 原 EPUB 文件</td>
+    </tr>
+    <tr>
+        <td>90</td>
+        <td>本地与 VPS 双向同步</td>
+        <td><span class="badge badge-yellow">🟡 可实现</span></td>
+        <td class="status-must">必做</td>
+        <td>宿主机运行 Syncthing，同步挂载的书库目录</td>
+    </tr>
+    <tr>
+        <td>91</td>
+        <td>跨设备实时同步（阅读进度/高亮）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>需 WebSocket 或轮询，多设备冲突解决复杂，建议先不做</td>
+    </tr>
+    <tr>
+        <td>92</td>
+        <td>外部笔记集成（Notion/Obsidian 实时同步）</td>
+        <td><span class="badge badge-orange">🟠 成本高</span></td>
+        <td class="status-cut">剔除</td>
+        <td>需调外部 API，格式映射维护成本高，建议用 Markdown 导出替代</td>
+    </tr>
+</table>
+
+<h2>📋 状态汇总</h2>
+
+<div class="pending-box">
+    <h4>⏳ 待定功能（2）</h4>
+    <p>以下功能需在开发启动前确认是否纳入第一期：</p>
+    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+        <li><span class="module-tag">模块2</span> <strong>TXT 上传自动转 EPUB</strong>：上传时自动包装为标准 EPUB，用户无感知</li>
+        <li><span class="module-tag">模块2</span> <strong>MOBI/AZW3 仅存储+下载</strong>：提取元数据入库，文件原样存储，不提供在线阅读按钮</li>
+    </ul>
+</div>
+
+<div class="ext-box">
+    <h4>🔮 扩展模块（1）</h4>
+    <p>以下功能作为后续迭代扩展，不纳入第一期 MVP：</p>
+    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+        <li><span class="module-tag">模块4</span> <strong>94 AI 分析笔记（划线总结）</strong>：将一本书的所有划线文本（按 💡❓⭐📌 标签分组）发给 LLM，自动输出章节摘要、核心观点、启发整理；可拓展至更多 AI 辅助场景</li>
+    </ul>
+</div>
+
+<div class="info-card" style="background: #fef2f2; border-left: 4px solid var(--red);">
+    <h4 style="color: #991b1b; margin-bottom: 0.5rem;">❌ 已剔除功能（11）</h4>
+    <ul style="margin-left: 1.5rem;">
+        <li><strong>22</strong> 豆瓣爬虫（反爬严重，用 NeoDB/AI 粘贴替代）</li>
+        <li><strong>23</strong> AI 自动标签/摘要（成本高，不稳定）</li>
+        <li><strong>36</strong> 借阅管理（无实体书需求）</li>
+        <li><strong>50</strong> 双页模式（epub.js 支持不稳定，移动端无用）</li>
+        <li><strong>51</strong> 手势支持（转 OPDS 用第三方阅读器）</li>
+        <li><strong>54</strong> 漫画/CBZ 阅读（完全剔除）</li>
+        <li><strong>73</strong> OPDS 进度同步回传（协议复杂）</li>
+        <li><strong>85</strong> 阅读速度估算（字数统计不标准）</li>
+        <li><strong>86</strong> 阅读事件日志（数据量大，可简化）</li>
+        <li><strong>91</strong> 跨设备实时同步（WebSocket 复杂）</li>
+        <li><strong>92</strong> Notion/Obsidian 实时同步（维护成本高）</li>
+    </ul>
+</div>
+
+</body>
+</html>

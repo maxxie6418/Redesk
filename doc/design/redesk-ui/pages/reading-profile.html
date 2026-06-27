@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesk - 阅读档案</title>
+    <style id="theme-vars">
+/* Source: structured-spec */
+/* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
+   Poppins (compact UI) + Lora (reading). Mono kept for code/token surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,18..72,300;0,18..72,400;0,18..72,500;1,18..72,400&family=Geist+Mono:wght@400;500&display=swap');
+/* ============================================================
+   Token model
+   1) Primitives — 7 key color cards as 10-step scales (50→900).
+      These are the single source of truth (mirrored in the linshi
+      preview tool). The flagged "standard" step per group:
+        brand-500 · text-800 · bg-100 · icon-700 · border-300 · success-500 · error-500
+   2) Semantic tokens — reference the primitives above (no raw hex
+      duplicates). These are the API consumed by preview / ui_kits /
+      components.
+   3) Non-color tokens — font, spacing, radius, shadow, type.
+   ============================================================ */
+:root {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #c96442 */
+  --brand-50: #fbf2ed;
+  --brand-100: #f4e0d5;
+  --brand-200: #ebc6b6;
+  --brand-300: #e0a892;
+  --brand-400: #d6866a;
+  --brand-500: #c96442;
+  --brand-600: #b0562f;
+  --brand-700: #934828;
+  --brand-800: #753a22;
+  --brand-900: #582e1d;
+  /* text — standard: --text-800 #3d3929 */
+  --text-50: #f6f5f0;
+  --text-100: #ece9de;
+  --text-200: #dad9d4;
+  --text-300: #c2c0b6;
+  --text-400: #9b988c;
+  --text-500: #6e6d68;
+  --text-600: #535146;
+  --text-700: #46443b;
+  --text-800: #3d3929;
+  --text-900: #28261b;
+  /* background — standard: --bg-100 #faf9f5 */
+  --bg-50: #ffffff;
+  --bg-100: #faf9f5;
+  --bg-200: #f5f4ef;
+  --bg-300: #ede9de;
+  --bg-400: #e3e0d4;
+  --bg-500: #dad9d4;
+  --bg-600: #cdcabf;
+  --bg-700: #b4b2a7;
+  --bg-800: #8a887e;
+  --bg-900: #535146;
+  /* icon — standard: --icon-700 #3d3929 */
+  --icon-50: #ffffff;
+  --icon-100: #dad9d4;
+  --icon-200: #c2c0b6;
+  --icon-300: #9b988c;
+  --icon-400: #6e6d68;
+  --icon-500: #535146;
+  --icon-600: #46443b;
+  --icon-700: #3d3929;
+  --icon-800: #28261b;
+  --icon-900: #141413;
+  /* border — standard: --border-300 #dad9d4 */
+  --border-50: #f0efe9;
+  --border-100: #ebebeb;
+  --border-200: #e3e0d4;
+  --border-300: #dad9d4;
+  --border-400: #cdcabf;
+  --border-500: #b4b2a7;
+  --border-600: #9b988c;
+  --border-700: #6e6d68;
+  --border-800: #535146;
+  --border-900: #3d3929;
+  /* state · success — standard: --success-500 #788c5d */
+  --success-50: #f0f3ea;
+  --success-100: #e7ecdd;
+  --success-200: #d3dcc1;
+  --success-300: #b8c69e;
+  --success-400: #9aac79;
+  --success-500: #788c5d;
+  --success-600: #647649;
+  --success-700: #4f5d3a;
+  --success-800: #3d482d;
+  --success-900: #2b331f;
+  /* state · error — standard: --error-500 #d64545 */
+  --error-50: #fcecea;
+  --error-100: #f7dedb;
+  --error-200: #f3c4bf;
+  --error-300: #eb9d96;
+  --error-400: #e0716a;
+  --error-500: #d64545;
+  --error-600: #b83636;
+  --error-700: #962c2c;
+  --error-800: #732222;
+  --error-900: #531818;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-50);
+  --muted: var(--bg-300);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--icon-900);
+  --popover-foreground: var(--text-900);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--text-600);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: var(--text-900);
+  --destructive-foreground: #ffffff;
+  /* semantic */
+  --primary: var(--brand-500);
+  --secondary: #e9e6dc;
+  --accent: var(--secondary);
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #ffffff;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #ded8c4;
+  --chart-4: #dbd3f0;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #f5f4ee;
+  --sidebar-foreground: #3d3d3a;
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #e9e6dc;
+  --sidebar-accent-foreground: #343434;
+  --sidebar-border: var(--border-100);
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — display (Newsreader) for slogans/headlines, sans (Poppins) for compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* spacing */
+  --spacing: 0.25rem;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+  /* type */
+  --tracking-normal: 0em;
+}
+
+.dark {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #d97757 */
+  --brand-50: #3a2a22;
+  --brand-100: #4d3528;
+  --brand-200: #6b4533;
+  --brand-300: #8a5740;
+  --brand-400: #b0683f;
+  --brand-500: #d97757;
+  --brand-600: #e08d6f;
+  --brand-700: #e8a98f;
+  --brand-800: #f0c6b3;
+  --brand-900: #f8e3d8;
+  /* text — standard: --text-800 #f1f1ef */
+  --text-50: #1b1b19;
+  --text-100: #2c2c2b;
+  --text-200: #46443b;
+  --text-300: #6e6d68;
+  --text-400: #908e84;
+  --text-500: #b7b5a9;
+  --text-600: #c3c0b6;
+  --text-700: #d8d6cd;
+  --text-800: #f1f1ef;
+  --text-900: #faf9f5;
+  /* background — standard: --bg-100 #262624 */
+  --bg-50: #1b1b19;
+  --bg-100: #262624;
+  --bg-200: #2c2c2b;
+  --bg-300: #30302e;
+  --bg-400: #3e3e38;
+  --bg-500: #4a4a43;
+  --bg-600: #52514a;
+  --bg-700: #6e6d68;
+  --bg-800: #908e84;
+  --bg-900: #b7b5a9;
+  /* icon — standard: --icon-700 #f1f1ef */
+  --icon-50: #1b1b19;
+  --icon-100: #2c2c2b;
+  --icon-200: #46443b;
+  --icon-300: #6e6d68;
+  --icon-400: #908e84;
+  --icon-500: #b7b5a9;
+  --icon-600: #d8d6cd;
+  --icon-700: #f1f1ef;
+  --icon-800: #f8f8f6;
+  --icon-900: #ffffff;
+  /* border — standard: --border-300 #3e3e38 */
+  --border-50: #1f1e1d;
+  --border-100: #2c2c2b;
+  --border-200: #343430;
+  --border-300: #3e3e38;
+  --border-400: #4a4a43;
+  --border-500: #52514a;
+  --border-600: #6e6d68;
+  --border-700: #908e84;
+  --border-800: #b7b5a9;
+  --border-900: #d8d6cd;
+  /* state · success — standard: --success-500 #8ca06f */
+  --success-50: #232a1c;
+  --success-100: #2e3823;
+  --success-200: #3f4d30;
+  --success-300: #556640;
+  --success-400: #708353;
+  --success-500: #8ca06f;
+  --success-600: #a3b58a;
+  --success-700: #bccaa8;
+  --success-800: #d6dfc8;
+  --success-900: #edf2e4;
+  /* state · error — standard: --error-500 #ef4444 */
+  --error-50: #3a1f1f;
+  --error-100: #4d2424;
+  --error-200: #6e2c2c;
+  --error-300: #93302f;
+  --error-400: #c43a39;
+  --error-500: #ef4444;
+  --error-600: #f26b6b;
+  --error-700: #f59292;
+  --error-800: #f9b9b9;
+  --error-900: #fcdede;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-300);
+  --muted: var(--bg-50);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--text-900);
+  --popover-foreground: #e5e5e2;
+  --primary-foreground: #141413;
+  --secondary-foreground: var(--bg-300);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: #f5f4ee;
+  --destructive-foreground: #ffffff;
+  /* accent */
+  --primary: var(--brand-500);
+  --secondary: var(--text-900);
+  --accent: #1a1915;
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  /* border */
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #141413;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #1a1915;
+  --chart-4: #2f2b48;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #1f1e1d;
+  --sidebar-foreground: #c3c0b6;
+  --sidebar-primary: #343434;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #0f0f0e;
+  --sidebar-accent-foreground: #c3c0b6;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — sans (Poppins) for headings + compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Badge ─────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="badge filled">Essay</span> <span class="badge filled">Editorial</span> <span class="badge filled is-disabled" aria-disabled="true">Essay</span>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 calc(var(--spacing)*3.5);border-radius:var(--radius);font:600 12px/1 var(--font-sans);letter-spacing:.01em;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease,border-color .16s ease}
+.badge:hover{transform:translateY(-1px)}
+.filled{background:var(--primary);color:var(--primary-foreground);border:1px solid transparent;box-shadow:var(--shadow-xs)}
+.filled:hover{box-shadow:var(--shadow-sm)}
+.muted{background:var(--muted);color:var(--foreground);border:1px solid transparent}
+.outline{background:var(--popover);color:var(--foreground);border:1px solid var(--border)}
+.is-disabled{pointer-events:none;box-shadow:none}
+.filled.is-disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.muted.is-disabled{background:var(--card);color:var(--muted-foreground);border-color:transparent}
+.outline.is-disabled{background:var(--background);color:var(--muted-foreground)}
+
+/* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">Primary</span> <div class="examples"> <button class="btn primary" type="button">Start a new chat</button> <button class="btn primary" type="button" disabled>Start a new chat</button> </div>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.examples{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:center;padding:clamp(18px,3vw,24px);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);background:var(--popover);box-shadow:var(--shadow-xs)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--radius);box-shadow:var(--shadow-sm);background:transparent;color:var(--foreground);font:600 14px/1.1 var(--font-sans);white-space:nowrap;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.btn:hover,.btn:focus-visible{box-shadow:var(--shadow-md)}
+.btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.btn:disabled{cursor:not-allowed;box-shadow:none}
+.primary{background:var(--primary);color:var(--primary-foreground)}
+.primary:disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.secondary{background:var(--secondary);color:var(--foreground);border-color:var(--border)}
+.secondary:disabled{background:var(--background);color:var(--muted-foreground);border-color:var(--border)}
+.ghost{background:transparent;color:var(--foreground);box-shadow:none}
+.ghost:hover,.ghost:focus-visible{background:var(--muted)}
+.ghost:disabled{background:transparent;color:var(--muted-foreground);border-color:transparent}
+
+/* ── Card ──────────────────────────────────────────────────── */
+/* @anatomy
+   <article class="card"> <p class="eyebrow">Reading Card</p> <h2 class="title">Summarize this chapter</h2> <p class="body">Claude Design System frames long-form AI assistant reading with soft elevation, calm spacing, and editorial rhythm.</p> </article> <article class="card disabled" aria-disabled="true"> <p class="eyebrow">Reading Card</p> <h2 class="title">Context locked</h2> <p class="body">Th...
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.card{width:100%;height:100%;display:flex;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.eyebrow{margin:0 0 10px;font:600 10px/1.2 var(--font-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground)}
+.title{margin:0 0 10px;font:600 21px/1.18 var(--font-sans);color:var(--foreground)}
+.body{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--secondary-foreground)}
+.disabled{background:var(--card);box-shadow:none;border-color:var(--border);pointer-events:none}
+.disabled .eyebrow{color:var(--muted-foreground)}
+.disabled .title{color:var(--foreground)}
+.disabled .body{color:var(--muted-foreground)}
+.sunken{background:var(--card);box-shadow:none}
+.sunken .body{color:var(--foreground)}
+.emphasis{background:var(--foreground);color:var(--background);border-color:transparent;box-shadow:var(--shadow-xl)}
+.emphasis .eyebrow{color:var(--secondary)}
+.emphasis .body,.emphasis .title{color:var(--background)}
+
+/* ── Chat Bubble ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="bubble user"> <span class="meta">You · now</span> <p class="copy">Recommend a writer for light reading.</p>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.bubble{display:grid;gap:8px;max-width:280px;padding:calc(var(--spacing)*3.5) calc(var(--spacing)*4);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+.user{background:var(--primary);color:var(--primary-foreground)}
+.assistant{background:var(--popover);color:var(--card-foreground);border:1px solid var(--border)}
+.meta{display:block;font:500 11px/1.3 var(--font-sans);letter-spacing:.01em}
+.user .meta{color:var(--primary-foreground);opacity:.78}
+.assistant .meta{color:var(--muted-foreground)}
+.copy{margin:0;font-size:14px;line-height:1.6}
+.disabled{box-shadow:none}
+.user.disabled{background:var(--secondary);color:var(--secondary-foreground)}
+.user.disabled .meta{color:var(--secondary-foreground);opacity:1}
+.assistant.disabled{background:var(--card);color:var(--muted-foreground)}
+.thread{display:grid;gap:12px;width:min(100%,360px);padding:calc(var(--spacing)*4);background:var(--popover);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-sm)}
+
+/* ── Input ─────────────────────────────────────────────────── */
+/* @anatomy
+   <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input"> <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input disabled" disabled>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
+.field{padding:0 calc(var(--spacing)*3);color:var(--foreground);font:inherit}
+.field::placeholder,.bar input::placeholder{color:var(--muted-foreground)}
+.field:focus,.bar:focus-within{outline:none;border-color:var(--ring);box-shadow:var(--shadow-sm)}
+.field:disabled,.bar.disabled{background:var(--card);color:var(--muted-foreground);box-shadow:none}
+.bar{display:flex;align-items:center;gap:8px;padding:0 calc(var(--spacing)*3);background:var(--card);border-color:transparent}
+.bar input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--muted-foreground);opacity:.5}
+
+/* ── Navigation ────────────────────────────────────────────── */
+/* @anatomy
+   <nav class="tabs" aria-label="Navigation tabs"> <button class="tab active" type="button">Web</button> <button class="tab" type="button">Mobile</button> <button class="tab" type="button">Library</button> <button class="tab" type="button" disabled>Syncing</button> </nav>
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.tabs,.rail,.bottom-nav{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:100%;padding:6px;background:var(--card)}
+.tab,.item,.nav-item{appearance:none;border:1px solid transparent;background:transparent;color:var(--muted-foreground);font:600 13px/1.1 var(--font-sans);cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab{padding:11px 15px;border-radius:calc(var(--radius) - 6px)}
+.tab:hover,.nav-item:hover{background:var(--popover);color:var(--foreground)}
+.item:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.tab:focus-visible,.item:focus-visible,.nav-item:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tab.active,.nav-item.active{background:var(--popover);color:var(--foreground);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tab.active{box-shadow:var(--shadow-sm)}
+.tab:disabled,.item:disabled,.nav-item:disabled{cursor:not-allowed;box-shadow:none;background:transparent;color:var(--muted-foreground)}
+.brand{margin:0 0 12px;font:600 11px/1.2 var(--font-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-foreground)}
+.stack{display:grid;gap:8px}
+.item{width:100%;padding:12px 13px;border-radius:calc(var(--radius) - 8px);text-align:left;color:var(--sidebar-foreground);background:transparent}
+.item.active{background:var(--popover);color:var(--foreground);border-color:var(--sidebar-border);box-shadow:var(--shadow-xs)}
+.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);padding:8px;background:var(--popover)}
+.nav-item{display:grid;gap:4px;justify-items:center;padding:12px 10px;border-radius:calc(var(--radius) - 6px)}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--card-foreground);
+  }
+  @layer base {
+    body { background: var(--card-background); color: var(--card-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="shell-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="shell-sidebar" id="sidebar">
+    <div class="shell-sidebar-header">
+      <div class="shell-brand-mark">R</div>
+      <span class="shell-brand-name">Redesk</span>
+    </div>
+
+    <nav class="shell-nav" aria-label="主导航">
+      <p class="shell-nav-group-label">浏览</p>
+
+      <a class="shell-nav-item" data-dom-id="nav-bookshelf" hideEdge="true" href="#">
+        <span data-icon="house" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+        书架
+      </a>
+
+      <a class="shell-nav-item active" href="#" data-active="true">
+        <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+        阅读档案
+      </a>
+    </nav>
+
+    <div class="shell-sidebar-footer">
+      <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
+        <span data-icon="circle-play" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')"></span>
+        <span>深色模式</span>
+      </a>
+      <a class="shell-footer-row" href="#">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        <span>设置</span>
+      </a>
+      <div class="shell-footer-row" style="cursor:default">
+        <div class="shell-avatar">M</div>
+        <div class="shell-user-info">
+          <div class="shell-user-name">我的书房</div>
+          <div class="shell-user-role">个人空间</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Mobile Backdrop ──────────────────────────────────── -->
+  <div class="shell-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="shell-main">
+    <div class="rp-page">
+
+      <!-- PAGE TITLE AREA -->
+      <div class="rp-title-area">
+        <h1>阅读档案</h1>
+        <p>你的阅读旅程，一目了然</p>
+      </div>
+
+      <!-- TOP STATS CARDS ROW -->
+      <div class="rp-stats-grid">
+
+        <!-- Card 1: 累计阅读 -->
+        <div class="rp-stat-card">
+          <div class="rp-stat-label">累计阅读</div>
+          <div class="rp-stat-value">127</div>
+          <div class="rp-stat-unit">本</div>
+        </div>
+
+        <!-- Card 2: 高亮 -->
+        <div class="rp-stat-card">
+          <div class="rp-stat-label">高亮</div>
+          <div class="rp-stat-value accent">486</div>
+          <div class="rp-stat-unit">条</div>
+        </div>
+
+        <!-- Card 3: 笔记 -->
+        <div class="rp-stat-card">
+          <div class="rp-stat-label">笔记</div>
+          <div class="rp-stat-value">203</div>
+          <div class="rp-stat-unit">条</div>
+        </div>
+
+        <!-- Card 4: 连续阅读 -->
+        <div class="rp-stat-card">
+          <div class="rp-stat-label">连续阅读</div>
+          <div class="rp-stat-value accent">14 <span class="rp-stat-icon"><span data-icon="star" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span></span></div>
+          <div class="rp-stat-unit">天</div>
+        </div>
+
+        <!-- Card 5: 年度目标 -->
+        <div class="rp-stat-card">
+          <div class="rp-stat-label">年度目标</div>
+          <div class="rp-ring-container">
+            <svg class="rp-ring-svg" viewBox="0 0 48 48">
+              <circle class="rp-ring-bg" cx="24" cy="24" r="22"/>
+              <circle class="rp-ring-fill" cx="24" cy="24" r="22"/>
+              <text class="rp-ring-text" x="24" y="24" font-size="11">64%</text>
+            </svg>
+            <div class="rp-ring-meta">
+              <span class="count">32 / 50</span>
+              <span class="label">已完成</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- READING ACTIVITY SECTION -->
+      <div class="rp-section">
+        <h2 class="rp-section-heading">阅读活跃度</h2>
+        <div class="rp-two-col">
+
+          <!-- LEFT: Heatmap -->
+          <div class="rp-panel">
+            <h3 class="rp-panel-title">阅读热力图</h3>
+            <div class="rp-heatmap">
+              <div class="rp-heatmap-day-labels">
+                <span class="rp-heatmap-day-label">一</span>
+                <span class="rp-heatmap-day-label" style="visibility:hidden">三</span>
+                <span class="rp-heatmap-day-label">三</span>
+                <span class="rp-heatmap-day-label" style="visibility:hidden">五</span>
+                <span class="rp-heatmap-day-label">五</span>
+                <span class="rp-heatmap-day-label" style="visibility:hidden">日</span>
+                <span class="rp-heatmap-day-label">日</span>
+              </div>
+              <div class="rp-heatmap-grid-wrap">
+                <div class="rp-heatmap-months">
+                  <span class="rp-heatmap-month" style="width:56px">4月</span>
+                  <span class="rp-heatmap-month" style="width:112px">5月</span>
+                  <span class="rp-heatmap-month" style="width:140px">6月</span>
+                </div>
+                <div class="rp-heatmap-grid" title="近12周阅读热力图">
+                  <!-- Week 1 -->
+                  <div class="rp-heatmap-cell" title="4月7日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="4月8日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="4月9日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell" title="4月10日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="4月11日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="4月12日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell" title="4月13日 · 阅读 0 分钟"></div>
+                  <!-- Week 2 -->
+                  <div class="rp-heatmap-cell level-1" title="4月14日 · 阅读 15 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="4月15日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="4月16日 · 阅读 60 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="4月17日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell" title="4月18日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="4月19日 · 阅读 5 分钟"></div>
+                  <div class="rp-heatmap-cell" title="4月20日 · 阅读 0 分钟"></div>
+                  <!-- Week 3 -->
+                  <div class="rp-heatmap-cell level-2" title="4月21日 · 阅读 30 分钟"></div>
+                  <div class="rp-heatmap-cell" title="4月22日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="4月23日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="4月24日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="4月25日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="4月26日 · 阅读 55 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="4月27日 · 阅读 15 分钟"></div>
+                  <!-- Week 4 -->
+                  <div class="rp-heatmap-cell" title="4月28日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="4月29日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="4月30日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="5月1日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月2日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月3日 · 阅读 65 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月4日 · 阅读 20 分钟"></div>
+                  <!-- Week 5 -->
+                  <div class="rp-heatmap-cell level-3" title="5月5日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月6日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="5月7日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月8日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月9日 · 阅读 70 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月10日 · 阅读 15 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="5月11日 · 阅读 10 分钟"></div>
+                  <!-- Week 6 -->
+                  <div class="rp-heatmap-cell level-2" title="5月12日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月13日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月14日 · 阅读 55 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月15日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="5月16日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月17日 · 阅读 30 分钟"></div>
+                  <div class="rp-heatmap-cell" title="5月18日 · 阅读 0 分钟"></div>
+                  <!-- Week 7 -->
+                  <div class="rp-heatmap-cell level-4" title="5月19日 · 阅读 75 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月20日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月21日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月22日 · 阅读 60 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月23日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="5月24日 · 阅读 10 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月25日 · 阅读 20 分钟"></div>
+                  <!-- Week 8 -->
+                  <div class="rp-heatmap-cell level-3" title="5月26日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月27日 · 阅读 50 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="5月28日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月29日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="5月30日 · 阅读 65 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="5月31日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-1" title="6月1日 · 阅读 10 分钟"></div>
+                  <!-- Week 9 -->
+                  <div class="rp-heatmap-cell level-4" title="6月2日 · 阅读 60 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月3日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月4日 · 阅读 55 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="6月5日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月6日 · 阅读 70 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月7日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="6月8日 · 阅读 20 分钟"></div>
+                  <!-- Week 10 -->
+                  <div class="rp-heatmap-cell level-3" title="6月9日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月10日 · 阅读 55 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月11日 · 阅读 65 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月12日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月13日 · 阅读 60 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="6月14日 · 阅读 25 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月15日 · 阅读 45 分钟"></div>
+                  <!-- Week 11 -->
+                  <div class="rp-heatmap-cell level-4" title="6月16日 · 阅读 70 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月17日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月18日 · 阅读 50 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="6月19日 · 阅读 20 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月20日 · 阅读 65 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月21日 · 阅读 35 分钟"></div>
+                  <div class="rp-heatmap-cell level-2" title="6月22日 · 阅读 20 分钟"></div>
+                  <!-- Week 12 -->
+                  <div class="rp-heatmap-cell level-4" title="6月23日 · 阅读 60 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月24日 · 阅读 75 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月25日 · 阅读 45 分钟"></div>
+                  <div class="rp-heatmap-cell level-4" title="6月26日 · 阅读 55 分钟"></div>
+                  <div class="rp-heatmap-cell level-3" title="6月27日 · 阅读 40 分钟"></div>
+                  <div class="rp-heatmap-cell" title="6月28日 · 阅读 0 分钟"></div>
+                  <div class="rp-heatmap-cell" title="6月29日 · 阅读 0 分钟"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Bar Chart -->
+          <div class="rp-panel">
+            <h3 class="rp-panel-title">阅读趋势</h3>
+            <div class="rp-bar-chart">
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">45</span>
+                <div class="rp-bar level-3" style="height: 72px"></div>
+                <span class="rp-bar-label">周一</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">60</span>
+                <div class="rp-bar level-4" style="height: 96px"></div>
+                <span class="rp-bar-label">周二</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">30</span>
+                <div class="rp-bar level-2" style="height: 48px"></div>
+                <span class="rp-bar-label">周三</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">75</span>
+                <div class="rp-bar level-4" style="height: 120px"></div>
+                <span class="rp-bar-label">周四</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">55</span>
+                <div class="rp-bar level-3" style="height: 88px"></div>
+                <span class="rp-bar-label">周五</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">20</span>
+                <div class="rp-bar level-1" style="height: 32px"></div>
+                <span class="rp-bar-label">周六</span>
+              </div>
+              <div class="rp-bar-col">
+                <span class="rp-bar-value">40</span>
+                <div class="rp-bar level-3 today" style="height: 64px"></div>
+                <span class="rp-bar-label" style="color:var(--brand-500);font-weight:600">周日</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- BOOKSHELF STRUCTURE SECTION -->
+      <div class="rp-section">
+        <h2 class="rp-section-heading">书架结构</h2>
+        <div class="rp-two-col">
+
+          <!-- LEFT: Status Distribution -->
+          <div class="rp-panel">
+            <h3 class="rp-panel-title">状态分布</h3>
+            <div class="rp-stacked-bar-wrap">
+              <div class="rp-stacked-bar">
+                <div class="rp-stacked-bar-segment seg-1" style="width:58.5%">86</div>
+                <div class="rp-stacked-bar-segment seg-2" style="width:2%">3</div>
+                <div class="rp-stacked-bar-segment seg-3" style="width:10.2%">15</div>
+                <div class="rp-stacked-bar-segment seg-4" style="width:15.6%">23</div>
+              </div>
+              <div class="rp-stacked-legend">
+                <div class="rp-legend-item">
+                  <span class="rp-legend-dot" style="background:var(--brand-500)"></span>
+                  已读 86
+                </div>
+                <div class="rp-legend-item">
+                  <span class="rp-legend-dot" style="background:var(--brand-300)"></span>
+                  在读 3
+                </div>
+                <div class="rp-legend-item">
+                  <span class="rp-legend-dot" style="background:var(--brand-100)"></span>
+                  计划读 15
+                </div>
+                <div class="rp-legend-item">
+                  <span class="rp-legend-dot" style="background:var(--bg-400)"></span>
+                  收录 23
+                </div>
+                <div class="rp-legend-item">
+                  <span class="rp-legend-dot" style="background:var(--bg-500)"></span>
+                  存档 0
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Category Distribution -->
+          <div class="rp-panel">
+            <h3 class="rp-panel-title">类别分布</h3>
+            <div class="rp-cat-chart">
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">42</span>
+                <div class="rp-cat-bar cat-1" style="height: 151px"></div>
+                <span class="rp-cat-label">文学</span>
+              </div>
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">28</span>
+                <div class="rp-cat-bar cat-2" style="height: 101px"></div>
+                <span class="rp-cat-label">科技</span>
+              </div>
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">18</span>
+                <div class="rp-cat-bar cat-3" style="height: 65px"></div>
+                <span class="rp-cat-label">历史</span>
+              </div>
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">15</span>
+                <div class="rp-cat-bar cat-4" style="height: 54px"></div>
+                <span class="rp-cat-label">哲学</span>
+              </div>
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">12</span>
+                <div class="rp-cat-bar cat-5" style="height: 43px"></div>
+                <span class="rp-cat-label">商业</span>
+              </div>
+              <div class="rp-cat-col">
+                <span class="rp-cat-value">7</span>
+                <div class="rp-cat-bar cat-6" style="height: 25px"></div>
+                <span class="rp-cat-label">艺术</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- WANT vs ACTUAL COMPARISON -->
+      <div class="rp-section">
+        <div class="rp-panel">
+          <h3 class="rp-panel-title">想读 vs 已读</h3>
+          <div class="rp-compare-wrap">
+            <div class="rp-compare-row">
+              <span class="rp-compare-label">想读</span>
+              <div class="rp-compare-bar-track">
+                <div class="rp-compare-bar-fill want">124</div>
+              </div>
+            </div>
+            <div class="rp-compare-row">
+              <span class="rp-compare-label">已读</span>
+              <div class="rp-compare-bar-track">
+                <div class="rp-compare-bar-fill done">86</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT ACTIVITY SECTION -->
+      <div class="rp-section">
+        <h2 class="rp-section-heading">最近动态</h2>
+        <div class="rp-activity-grid">
+
+          <!-- 最近新增 -->
+          <div class="rp-activity-panel">
+            <h3 class="rp-activity-panel-title">最近新增</h3>
+            <ul class="rp-activity-list">
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">百年孤独</span>
+                <span class="rp-activity-item-meta">6月25日</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">人类简史</span>
+                <span class="rp-activity-item-meta">6月22日</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">设计心理学</span>
+                <span class="rp-activity-item-meta">6月20日</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">枪炮、病菌与钢铁</span>
+                <span class="rp-activity-item-meta">6月18日</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">小王子</span>
+                <span class="rp-activity-item-meta">6月15日</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 最近阅读 -->
+          <div class="rp-activity-panel">
+            <h3 class="rp-activity-panel-title">最近阅读</h3>
+            <ul class="rp-activity-list">
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">百年孤独</span>
+                <span class="rp-activity-item-meta">今天 · 40 分钟</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">思考，快与慢</span>
+                <span class="rp-activity-item-meta">昨天 · 55 分钟</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">月亮与六便士</span>
+                <span class="rp-activity-item-meta">6月24日 · 30 分钟</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">乡土中国</span>
+                <span class="rp-activity-item-meta">6月23日 · 45 分钟</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-title">三体</span>
+                <span class="rp-activity-item-meta">6月22日 · 60 分钟</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 最近笔记 -->
+          <div class="rp-activity-panel">
+            <h3 class="rp-activity-panel-title">最近笔记</h3>
+            <ul class="rp-activity-list">
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-excerpt">马尔克斯对时间的处理方式令人惊叹，循环往复的叙事结构...</span>
+                <span class="rp-activity-item-meta">百年孤独 · 今天</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-excerpt">系统一和系统二的区别本质上是对认知资源的分配策略...</span>
+                <span class="rp-activity-item-meta">思考，快与慢 · 昨天</span>
+              </li>
+              <li class="rp-activity-item">
+                <span class="rp-activity-item-excerpt">费孝通对差序格局的论述放到今天看依然有很强的解释力...</span>
+                <span class="rp-activity-item-meta">乡土中国 · 6月23日</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- READING HISTORY -->
+      <div class="rp-section">
+        <h2 class="rp-section-heading">阅读历史</h2>
+        <div class="rp-panel">
+          <ul class="rp-history-list">
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">百年孤独</span>
+                <span class="rp-history-date">6/10 - 6/25</span>
+                <span class="rp-history-time">12 小时 30 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">思考，快与慢</span>
+                <span class="rp-history-date">5/28 - 6/15</span>
+                <span class="rp-history-time">18 小时 45 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">月亮与六便士</span>
+                <span class="rp-history-date">5/15 - 5/27</span>
+                <span class="rp-history-time">8 小时 20 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">乡土中国</span>
+                <span class="rp-history-date">5/1 - 5/14</span>
+                <span class="rp-history-time">6 小时 10 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">三体</span>
+                <span class="rp-history-date">4/10 - 4/30</span>
+                <span class="rp-history-time">22 小时 5 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">苏菲的世界</span>
+                <span class="rp-history-date">3/20 - 4/9</span>
+                <span class="rp-history-time">14 小时 50 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">瓦尔登湖</span>
+                <span class="rp-history-date">3/1 - 3/19</span>
+                <span class="rp-history-time">9 小时 15 分</span>
+              </div>
+            </li>
+            <li class="rp-history-item">
+              <span class="rp-history-dot"></span>
+              <div class="rp-history-info">
+                <span class="rp-history-title">刻意练习</span>
+                <span class="rp-history-date">2/10 - 2/28</span>
+                <span class="rp-history-time">7 小时 40 分</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
+<nav class="shell-mobile-tabs" aria-label="移动端导航">
+  <div class="shell-mobile-tabs-inner">
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+      书架
+    </a>
+    <a class="shell-mobile-tab active" href="#">
+      <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+      阅读档案
+    </a>
+    <a class="shell-mobile-tab" href="#">
+      <span data-icon="circle-check" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
+      我的
+    </a>
+  </div>
+</nav>
+
+<script>
+  // ── Dark mode toggle ────────────────────────────────────
+  const themeToggle = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  function applyTheme(dark) {
+    html.classList.toggle('dark', dark);
+    localStorage.setItem('redesk-theme', dark ? 'dark' : 'light');
+    // Update toggle icon & label
+    const icon = themeToggle.querySelector('[data-icon]');
+    const label = themeToggle.querySelector('span:last-child');
+    if (dark) {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
+      label.textContent = '浅色模式';
+    } else {
+      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
+      label.textContent = '深色模式';
+    }
+  }
+
+  // Restore saved theme
+  const savedTheme = localStorage.getItem('redesk-theme');
+  if (savedTheme === 'dark') {
+    applyTheme(true);
+  }
+
+  themeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyTheme(!html.classList.contains('dark'));
+  });
+
+  // ── Mobile sidebar toggle ─────────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.remove('is-open');
+    backdrop.classList.remove('is-visible');
+  });
+</script>
+
+
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+
+      /* ── Redesk Shell Layout ───────────────────────────────── */
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-serif);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .shell-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ── Sidebar ────────────────────────────────────────────── */
+      .shell-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        width: 256px;
+        height: 100vh;
+        background: var(--sidebar);
+        border-right: 1px solid var(--sidebar-border);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .shell-sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 28px 24px 24px;
+        border-bottom: 1px solid var(--sidebar-border);
+      }
+
+      .shell-brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-foreground);
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .shell-brand-name {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 22px;
+        color: var(--sidebar-foreground);
+        letter-spacing: -0.01em;
+      }
+
+      .shell-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 20px 12px;
+        overflow-y: auto;
+      }
+
+      .shell-nav-group-label {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        padding: 8px 12px 8px;
+        margin-top: 8px;
+      }
+
+      .shell-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-nav-item:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-nav-item:focus-visible {
+        outline: 2px solid var(--sidebar-ring);
+        outline-offset: 2px;
+      }
+
+      .shell-nav-item.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: transparent;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .shell-nav-item [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      /* ── Sidebar Footer ─────────────────────────────────────── */
+      .shell-sidebar-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+
+      .shell-footer-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-footer-row:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-footer-row [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      .shell-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        background: var(--bg-300);
+        border: 2px solid var(--border-300);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .shell-user-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .shell-user-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--sidebar-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .shell-user-role {
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Main Content ──────────────────────────────────────── */
+      .shell-main {
+        flex: 1;
+        margin-left: 256px;
+        min-height: 100vh;
+        padding: 32px 40px;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
+      .shell-mobile-tabs {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        border-top: 1px solid var(--sidebar-border);
+        background: var(--sidebar);
+        box-shadow: 0 -1px 3px 0 rgba(0,0,0,0.06);
+      }
+
+      .shell-mobile-tabs-inner {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .shell-mobile-tab {
+        display: grid;
+        gap: 3px;
+        justify-items: center;
+        padding: 8px 4px;
+        border: none;
+        border-radius: calc(var(--radius) - 6px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+
+      .shell-mobile-tab [data-icon] {
+        width: 20px;
+        height: 20px;
+      }
+
+      .shell-mobile-tab:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+
+      .shell-mobile-tab.active {
+        color: var(--primary);
+      }
+
+      /* ── Responsive ───────────────────────────────────────── */
+      @media (max-width: 768px) {
+        .shell-sidebar {
+          transform: translateX(-100%);
+        }
+
+        .shell-sidebar.is-open {
+          transform: translateX(0);
+          box-shadow: var(--shadow-xl);
+        }
+
+        .shell-sidebar-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          z-index: 35;
+          background: rgba(0,0,0,0.3);
+        }
+
+        .shell-sidebar-backdrop.is-visible {
+          display: block;
+        }
+
+        .shell-main {
+          margin-left: 0;
+          padding: 20px 16px 88px;
+        }
+
+        .shell-mobile-tabs {
+          display: block;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         PAGE-SPECIFIC: 阅读档案 (Reading Profile)
+         ═══════════════════════════════════════════════════════════ */
+
+      .rp-page { max-width: 1080px; margin: 0 auto; }
+
+      /* Page Title */
+      .rp-title-area {
+        margin-bottom: 36px;
+      }
+      .rp-title-area h1 {
+        font-family: var(--font-display);
+        font-size: 36px;
+        font-weight: 400;
+        color: var(--foreground);
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+      }
+      .rp-title-area p {
+        font-family: var(--font-serif);
+        font-size: 15px;
+        color: var(--muted-foreground);
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      /* Top Stats Cards */
+      .rp-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+      .rp-stat-card {
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px 18px;
+        box-shadow: var(--shadow-xs);
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+      }
+      .rp-stat-card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+      }
+      .rp-stat-label {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        margin-bottom: 10px;
+        letter-spacing: 0.02em;
+      }
+      .rp-stat-value {
+        font-family: var(--font-sans);
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--foreground);
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      .rp-stat-value.accent {
+        color: var(--brand-500);
+      }
+      .rp-stat-unit {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .rp-stat-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 4px;
+        color: var(--brand-500);
+      }
+      .rp-stat-icon [data-icon] {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Progress ring */
+      .rp-ring-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 8px;
+      }
+      .rp-ring-svg {
+        width: 56px;
+        height: 56px;
+        transform: rotate(-90deg);
+      }
+      .rp-ring-bg {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 5;
+      }
+      .rp-ring-fill {
+        fill: none;
+        stroke: var(--brand-500);
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-dasharray: 138.23;
+        stroke-dashoffset: 49.76;
+      }
+      .rp-ring-text {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--brand-500);
+        fill: var(--brand-500);
+        text-anchor: middle;
+        dominant-baseline: central;
+        transform: rotate(90deg);
+        transform-origin: center;
+      }
+      .rp-ring-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .rp-ring-meta .count {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .rp-ring-meta .label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* Section Headings */
+      .rp-section-heading {
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 400;
+        color: var(--foreground);
+        margin: 0 0 20px;
+        letter-spacing: -0.01em;
+      }
+      .rp-section {
+        margin-bottom: 44px;
+      }
+
+      /* Two-column panels */
+      .rp-two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      /* Panel card */
+      .rp-panel {
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 24px;
+        box-shadow: var(--shadow-xs);
+      }
+      .rp-panel-title {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 20px;
+      }
+
+      /* ── Heatmap ────────────────────────────────────────────── */
+      .rp-heatmap {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+      }
+      .rp-heatmap-day-labels {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding-top: 24px;
+        flex-shrink: 0;
+      }
+      .rp-heatmap-day-label {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        color: var(--muted-foreground);
+        height: 14px;
+        line-height: 14px;
+        text-align: right;
+        width: 20px;
+      }
+      .rp-heatmap-grid-wrap {
+        flex: 1;
+        overflow-x: auto;
+      }
+      .rp-heatmap-months {
+        display: flex;
+        gap: 0;
+        margin-bottom: 6px;
+        padding-left: 0;
+      }
+      .rp-heatmap-month {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        color: var(--muted-foreground);
+      }
+      .rp-heatmap-grid {
+        display: grid;
+        grid-template-rows: repeat(7, 14px);
+        grid-auto-flow: column;
+        grid-auto-columns: 14px;
+        gap: 3px;
+      }
+      .rp-heatmap-cell {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--bg-300);
+      }
+      .rp-heatmap-cell.level-1 { background: var(--brand-100); }
+      .rp-heatmap-cell.level-2 { background: var(--brand-200); }
+      .rp-heatmap-cell.level-3 { background: var(--brand-400); }
+      .rp-heatmap-cell.level-4 { background: var(--brand-500); }
+
+      /* ── Bar Chart ─────────────────────────────────────────── */
+      .rp-bar-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        height: 180px;
+        padding-top: 8px;
+      }
+      .rp-bar-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+        justify-content: flex-end;
+      }
+      .rp-bar-value {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+      }
+      .rp-bar {
+        width: 100%;
+        max-width: 40px;
+        border-radius: var(--radius-sm) var(--radius-sm) 4px 4px;
+        background: var(--brand-100);
+        transition: background-color 0.2s ease;
+        min-height: 4px;
+      }
+      .rp-bar.level-1 { background: var(--brand-100); }
+      .rp-bar.level-2 { background: var(--brand-200); }
+      .rp-bar.level-3 { background: var(--brand-300); }
+      .rp-bar.level-4 { background: var(--brand-500); }
+      .rp-bar.today {
+        box-shadow: 0 0 0 2px var(--brand-500);
+      }
+      .rp-bar-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+      .rp-bar-y-hint {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        color: var(--muted-foreground);
+        writing-mode: vertical-lr;
+        transform: rotate(180deg);
+        position: absolute;
+        top: 8px;
+        left: -18px;
+      }
+
+      /* ── Stacked Horizontal Bar ────────────────────────────── */
+      .rp-stacked-bar-wrap {
+        margin-bottom: 16px;
+      }
+      .rp-stacked-bar {
+        display: flex;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        gap: 2px;
+      }
+      .rp-stacked-bar-segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 500;
+        color: #fff;
+        border-radius: 4px;
+        min-width: 0;
+      }
+      .rp-stacked-bar-segment.seg-1 { background: var(--brand-500); }
+      .rp-stacked-bar-segment.seg-2 { background: var(--brand-300); color: var(--text-900); }
+      .rp-stacked-bar-segment.seg-3 { background: var(--brand-100); color: var(--text-800); }
+      .rp-stacked-bar-segment.seg-4 { background: var(--bg-400); color: var(--text-700); }
+      .rp-stacked-bar-segment.seg-5 { background: var(--bg-500); color: var(--text-600); }
+      .rp-stacked-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .rp-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .rp-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+
+      /* ── Vertical Bar Chart (Categories) ────────────────────── */
+      .rp-cat-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+        height: 180px;
+        padding-top: 8px;
+      }
+      .rp-cat-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+        justify-content: flex-end;
+      }
+      .rp-cat-value {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .rp-cat-bar {
+        width: 100%;
+        max-width: 36px;
+        border-radius: var(--radius-sm) var(--radius-sm) 4px 4px;
+        min-height: 4px;
+      }
+      .rp-cat-bar.cat-1 { background: var(--brand-100); }
+      .rp-cat-bar.cat-2 { background: var(--brand-200); }
+      .rp-cat-bar.cat-3 { background: var(--brand-300); }
+      .rp-cat-bar.cat-4 { background: var(--bg-400); }
+      .rp-cat-bar.cat-5 { background: var(--bg-500); }
+      .rp-cat-bar.cat-6 { background: var(--bg-600); }
+      .rp-cat-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Want vs Actual ─────────────────────────────────────── */
+      .rp-compare-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .rp-compare-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .rp-compare-label {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--foreground);
+        width: 48px;
+        flex-shrink: 0;
+      }
+      .rp-compare-bar-track {
+        flex: 1;
+        height: 24px;
+        background: var(--muted);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+      .rp-compare-bar-fill {
+        height: 100%;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 10px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        transition: width 0.4s ease;
+      }
+      .rp-compare-bar-fill.want {
+        background: var(--brand-300);
+        width: 100%;
+      }
+      .rp-compare-bar-fill.done {
+        background: var(--brand-500);
+        width: 69.4%;
+      }
+
+      /* ── Recent Activity ────────────────────────────────────── */
+      .rp-activity-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .rp-activity-panel {
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        box-shadow: var(--shadow-xs);
+      }
+      .rp-activity-panel-title {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 16px;
+      }
+      .rp-activity-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .rp-activity-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      .rp-activity-item:last-child {
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+      .rp-activity-item-title {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--foreground);
+        line-height: 1.4;
+      }
+      .rp-activity-item-meta {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+      .rp-activity-item-excerpt {
+        font-family: var(--font-serif);
+        font-size: 12px;
+        color: var(--secondary-foreground);
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* ── Reading History Timeline ────────────────────────────── */
+      .rp-history-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .rp-history-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .rp-history-item:last-child {
+        border-bottom: none;
+      }
+      .rp-history-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--radius-full);
+        background: var(--brand-300);
+        flex-shrink: 0;
+      }
+      .rp-history-item:first-child .rp-history-dot {
+        background: var(--brand-500);
+        width: 10px;
+        height: 10px;
+      }
+      .rp-history-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+      }
+      .rp-history-title {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        color: var(--foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 1;
+      }
+      .rp-history-date {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+      }
+      .rp-history-time {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 1024px) {
+        .rp-stats-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .rp-two-col {
+          grid-template-columns: 1fr;
+        }
+        .rp-activity-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 768px) {
+        .rp-stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .rp-history-info {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+      }
+    </style>
+</body>
+</html>
