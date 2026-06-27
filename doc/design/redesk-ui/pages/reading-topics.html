@@ -593,6 +593,10 @@
           <span data-icon="search" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
           <input type="text" placeholder="搜索主题名称或描述..." aria-label="搜索主题">
         </div>
+        <div class="topics-search">
+          <span data-icon="search" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+          <input type="text" placeholder="在主题内搜索..." aria-label="在主题内搜索">
+        </div>
       </div>
 
       <!-- ── Topics List ──────────────────────────────────── -->
@@ -601,7 +605,17 @@
         <!-- ── Topic 1: 拉美文学研究 (most active) ──────────── -->
         <article class="topic-card topic-card--active">
           <div class="topic-card-header">
-            <h2 class="topic-card-title">拉美文学研究</h2>
+            <div class="topic-card-title-row">
+              <h2 class="topic-card-title">拉美文学研究</h2>
+              <div class="topic-card-actions">
+                <button class="topic-action-btn" title="编辑" aria-label="编辑主题">
+                  <span data-icon="pen-line" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+                </button>
+                <button class="topic-action-btn" title="删除" aria-label="删除主题">
+                  <span data-icon="trash-2" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+                </button>
+              </div>
+            </div>
             <p class="topic-card-desc">探索拉美文学的魔幻现实主义传统，从马尔克斯到博尔赫斯</p>
           </div>
 
@@ -651,6 +665,20 @@
             </div>
           </div>
 
+          <div class="topic-card-chapters">
+            <span class="topic-section-label">关联章节</span>
+            <div class="topic-chapters-list">
+              <div class="topic-chapter-row">
+                <span class="topic-chapter-text" style="font-family:var(--font-serif);font-size:13px;color:var(--foreground);">百年孤独 · 第3章 <em>"布恩迪亚家族"</em></span>
+                <span class="trace-type-badge">直接相关</span>
+              </div>
+              <div class="topic-chapter-row">
+                <span class="topic-chapter-text" style="font-family:var(--font-serif);font-size:13px;color:var(--foreground);">霍乱时期的爱情 · 第7章</span>
+                <span class="trace-type-badge trace-type-badge--note">比较参考</span>
+              </div>
+            </div>
+          </div>
+
           <details class="topic-details" open>
             <summary class="topic-summary">最近阅读痕迹</summary>
 
@@ -693,6 +721,14 @@
               <span class="topic-section-label">判断与洞察</span>
               <div class="judgment-card">
                 <p class="judgment-text">魔幻现实主义的本质是用日常化的语言描述超自然现象，让读者在恍惚中接受另一种真实</p>
+              </div>
+            </div>
+
+            <div class="topic-conclusion">
+              <span class="topic-section-label">比较结论</span>
+              <div class="conclusion-card">
+                <p class="conclusion-text">马尔克斯在《百年孤独》中用时间的循环性来表达孤独，而《霍乱时期的爱情》则用时间的线性流逝来表达等待。两部作品共同的主题是时间，但处理方式截然不同。</p>
+                <span class="conclusion-date">6月26日</span>
               </div>
             </div>
 
@@ -1714,6 +1750,103 @@
 
   .topics-empty-link:hover {
     color: var(--brand-600);
+  }
+
+  /* ── Topic card action buttons ────────────────────────────── */
+  .topic-card-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .topic-card-actions {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 1);
+    flex-shrink: 0;
+  }
+
+  .topic-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+    padding: 0;
+  }
+
+  .topic-action-btn:hover {
+    background: var(--muted);
+    color: var(--foreground);
+    border-color: var(--border);
+  }
+
+  .topic-action-btn:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* ── Related chapters ─────────────────────────────────────── */
+  .topic-card-chapters {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 1);
+  }
+
+  .topic-chapters-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .topic-chapter-row {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--background);
+  }
+
+  .topic-chapter-text em {
+    font-style: italic;
+    color: var(--brand-600);
+  }
+
+  /* ── Comparison conclusion ────────────────────────────────── */
+  .topic-conclusion {
+    padding: 8px 0 4px;
+  }
+
+  .conclusion-card {
+    padding: 16px 18px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-200);
+    border-left: 3px solid var(--brand-500);
+    border-top: 1px solid var(--border-200);
+    border-right: 1px solid var(--border-200);
+    border-bottom: 1px solid var(--border-200);
+  }
+
+  .conclusion-text {
+    margin: 0 0 calc(var(--spacing) * 2) 0;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--foreground);
+  }
+
+  .conclusion-date {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--muted-foreground);
   }
 
   /* ── Responsive adjustments ─────────────────────────────── */

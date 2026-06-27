@@ -1,0 +1,3706 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesk - 视觉标定</title>
+    <style id="theme-vars">
+/* Source: structured-spec */
+/* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
+   Poppins (compact UI) + Lora (reading). Mono kept for code/token surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,18..72,300;0,18..72,400;0,18..72,500;1,18..72,400&family=Geist+Mono:wght@400;500&display=swap');
+/* ============================================================
+   Token model
+   1) Primitives — 7 key color cards as 10-step scales (50→900).
+      These are the single source of truth (mirrored in the linshi
+      preview tool). The flagged "standard" step per group:
+        brand-500 · text-800 · bg-100 · icon-700 · border-300 · success-500 · error-500
+   2) Semantic tokens — reference the primitives above (no raw hex
+      duplicates). These are the API consumed by preview / ui_kits /
+      components.
+   3) Non-color tokens — font, spacing, radius, shadow, type.
+   ============================================================ */
+:root {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #c96442 */
+  --brand-50: #fbf2ed;
+  --brand-100: #f4e0d5;
+  --brand-200: #ebc6b6;
+  --brand-300: #e0a892;
+  --brand-400: #d6866a;
+  --brand-500: #c96442;
+  --brand-600: #b0562f;
+  --brand-700: #934828;
+  --brand-800: #753a22;
+  --brand-900: #582e1d;
+  /* text — standard: --text-800 #3d3929 */
+  --text-50: #f6f5f0;
+  --text-100: #ece9de;
+  --text-200: #dad9d4;
+  --text-300: #c2c0b6;
+  --text-400: #9b988c;
+  --text-500: #6e6d68;
+  --text-600: #535146;
+  --text-700: #46443b;
+  --text-800: #3d3929;
+  --text-900: #28261b;
+  /* background — standard: --bg-100 #faf9f5 */
+  --bg-50: #ffffff;
+  --bg-100: #faf9f5;
+  --bg-200: #f5f4ef;
+  --bg-300: #ede9de;
+  --bg-400: #e3e0d4;
+  --bg-500: #dad9d4;
+  --bg-600: #cdcabf;
+  --bg-700: #b4b2a7;
+  --bg-800: #8a887e;
+  --bg-900: #535146;
+  /* icon — standard: --icon-700 #3d3929 */
+  --icon-50: #ffffff;
+  --icon-100: #dad9d4;
+  --icon-200: #c2c0b6;
+  --icon-300: #9b988c;
+  --icon-400: #6e6d68;
+  --icon-500: #535146;
+  --icon-600: #46443b;
+  --icon-700: #3d3929;
+  --icon-800: #28261b;
+  --icon-900: #141413;
+  /* border — standard: --border-300 #dad9d4 */
+  --border-50: #f0efe9;
+  --border-100: #ebebeb;
+  --border-200: #e3e0d4;
+  --border-300: #dad9d4;
+  --border-400: #cdcabf;
+  --border-500: #b4b2a7;
+  --border-600: #9b988c;
+  --border-700: #6e6d68;
+  --border-800: #535146;
+  --border-900: #3d3929;
+  /* state · success — standard: --success-500 #788c5d */
+  --success-50: #f0f3ea;
+  --success-100: #e7ecdd;
+  --success-200: #d3dcc1;
+  --success-300: #b8c69e;
+  --success-400: #9aac79;
+  --success-500: #788c5d;
+  --success-600: #647649;
+  --success-700: #4f5d3a;
+  --success-800: #3d482d;
+  --success-900: #2b331f;
+  /* state · error — standard: --error-500 #d64545 */
+  --error-50: #fcecea;
+  --error-100: #f7dedb;
+  --error-200: #f3c4bf;
+  --error-300: #eb9d96;
+  --error-400: #e0716a;
+  --error-500: #d64545;
+  --error-600: #b83636;
+  --error-700: #962c2c;
+  --error-800: #732222;
+  --error-900: #531818;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-50);
+  --muted: var(--bg-300);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--icon-900);
+  --popover-foreground: var(--text-900);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--text-600);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: var(--text-900);
+  --destructive-foreground: #ffffff;
+  /* semantic */
+  --primary: var(--brand-500);
+  --secondary: #e9e6dc;
+  --accent: var(--secondary);
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #ffffff;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #ded8c4;
+  --chart-4: #dbd3f0;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #f5f4ee;
+  --sidebar-foreground: #3d3d3a;
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #e9e6dc;
+  --sidebar-accent-foreground: #343434;
+  --sidebar-border: var(--border-100);
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — display (Newsreader) for slogans/headlines, sans (Poppins) for compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* spacing */
+  --spacing: 0.25rem;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+  /* type */
+  --tracking-normal: 0em;
+}
+
+.dark {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #d97757 */
+  --brand-50: #3a2a22;
+  --brand-100: #4d3528;
+  --brand-200: #6b4533;
+  --brand-300: #8a5740;
+  --brand-400: #b0683f;
+  --brand-500: #d97757;
+  --brand-600: #e08d6f;
+  --brand-700: #e8a98f;
+  --brand-800: #f0c6b3;
+  --brand-900: #f8e3d8;
+  /* text — standard: --text-800 #f1f1ef */
+  --text-50: #1b1b19;
+  --text-100: #2c2c2b;
+  --text-200: #46443b;
+  --text-300: #6e6d68;
+  --text-400: #908e84;
+  --text-500: #b7b5a9;
+  --text-600: #c3c0b6;
+  --text-700: #d8d6cd;
+  --text-800: #f1f1ef;
+  --text-900: #faf9f5;
+  /* background — standard: --bg-100 #262624 */
+  --bg-50: #1b1b19;
+  --bg-100: #262624;
+  --bg-200: #2c2c2b;
+  --bg-300: #30302e;
+  --bg-400: #3e3e38;
+  --bg-500: #4a4a43;
+  --bg-600: #52514a;
+  --bg-700: #6e6d68;
+  --bg-800: #908e84;
+  --bg-900: #b7b5a9;
+  /* icon — standard: --icon-700 #f1f1ef */
+  --icon-50: #1b1b19;
+  --icon-100: #2c2c2b;
+  --icon-200: #46443b;
+  --icon-300: #6e6d68;
+  --icon-400: #908e84;
+  --icon-500: #b7b5a9;
+  --icon-600: #d8d6cd;
+  --icon-700: #f1f1ef;
+  --icon-800: #f8f8f6;
+  --icon-900: #ffffff;
+  /* border — standard: --border-300 #3e3e38 */
+  --border-50: #1f1e1d;
+  --border-100: #2c2c2b;
+  --border-200: #343430;
+  --border-300: #3e3e38;
+  --border-400: #4a4a43;
+  --border-500: #52514a;
+  --border-600: #6e6d68;
+  --border-700: #908e84;
+  --border-800: #b7b5a9;
+  --border-900: #d8d6cd;
+  /* state · success — standard: --success-500 #8ca06f */
+  --success-50: #232a1c;
+  --success-100: #2e3823;
+  --success-200: #3f4d30;
+  --success-300: #556640;
+  --success-400: #708353;
+  --success-500: #8ca06f;
+  --success-600: #a3b58a;
+  --success-700: #bccaa8;
+  --success-800: #d6dfc8;
+  --success-900: #edf2e4;
+  /* state · error — standard: --error-500 #ef4444 */
+  --error-50: #3a1f1f;
+  --error-100: #4d2424;
+  --error-200: #6e2c2c;
+  --error-300: #93302f;
+  --error-400: #c43a39;
+  --error-500: #ef4444;
+  --error-600: #f26b6b;
+  --error-700: #f59292;
+  --error-800: #f9b9b9;
+  --error-900: #fcdede;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-300);
+  --muted: var(--bg-50);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--text-900);
+  --popover-foreground: #e5e5e2;
+  --primary-foreground: #141413;
+  --secondary-foreground: var(--bg-300);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: #f5f4ee;
+  --destructive-foreground: #ffffff;
+  /* accent */
+  --primary: var(--brand-500);
+  --secondary: var(--text-900);
+  --accent: #1a1915;
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  /* border */
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #141413;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #1a1915;
+  --chart-4: #2f2b48;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #1f1e1d;
+  --sidebar-foreground: #c3c0b6;
+  --sidebar-primary: #343434;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #0f0f0e;
+  --sidebar-accent-foreground: #c3c0b6;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — sans (Poppins) for headings + compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Badge ─────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="badge filled">Essay</span> <span class="badge filled">Editorial</span> <span class="badge filled is-disabled" aria-disabled="true">Essay</span>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 calc(var(--spacing)*3.5);border-radius:var(--radius);font:600 12px/1 var(--font-sans);letter-spacing:.01em;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease,border-color .16s ease}
+.badge:hover{transform:translateY(-1px)}
+.filled{background:var(--primary);color:var(--primary-foreground);border:1px solid transparent;box-shadow:var(--shadow-xs)}
+.filled:hover{box-shadow:var(--shadow-sm)}
+.muted{background:var(--muted);color:var(--foreground);border:1px solid transparent}
+.outline{background:var(--popover);color:var(--foreground);border:1px solid var(--border)}
+.is-disabled{pointer-events:none;box-shadow:none}
+.filled.is-disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.muted.is-disabled{background:var(--card);color:var(--muted-foreground);border-color:transparent}
+.outline.is-disabled{background:var(--background);color:var(--muted-foreground)}
+
+/* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">Primary</span> <div class="examples"> <button class="btn primary" type="button">Start a new chat</button> <button class="btn primary" type="button" disabled>Start a new chat</button> </div>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.examples{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:center;padding:clamp(18px,3vw,24px);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);background:var(--popover);box-shadow:var(--shadow-xs)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--radius);box-shadow:var(--shadow-sm);background:transparent;color:var(--foreground);font:600 14px/1.1 var(--font-sans);white-space:nowrap;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.btn:hover,.btn:focus-visible{box-shadow:var(--shadow-md)}
+.btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.btn:disabled{cursor:not-allowed;box-shadow:none}
+.primary{background:var(--primary);color:var(--primary-foreground)}
+.primary:disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.secondary{background:var(--secondary);color:var(--foreground);border-color:var(--border)}
+.secondary:disabled{background:var(--background);color:var(--muted-foreground);border-color:var(--border)}
+.ghost{background:transparent;color:var(--foreground);box-shadow:none}
+.ghost:hover,.ghost:focus-visible{background:var(--muted)}
+.ghost:disabled{background:transparent;color:var(--muted-foreground);border-color:transparent}
+
+/* ── Card ──────────────────────────────────────────────────── */
+/* @anatomy
+   <article class="card"> <p class="eyebrow">Reading Card</p> <h2 class="title">Summarize this chapter</h2> <p class="body">Claude Design System frames long-form AI assistant reading with soft elevation, calm spacing, and editorial rhythm.</p> </article> <article class="card disabled" aria-disabled="true"> <p class="eyebrow">Reading Card</p> <h2 class="title">Context locked</h2> <p class="body">Th...
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.card{width:100%;height:100%;display:flex;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.eyebrow{margin:0 0 10px;font:600 10px/1.2 var(--font-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground)}
+.title{margin:0 0 10px;font:600 21px/1.18 var(--font-sans);color:var(--foreground)}
+.body{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--secondary-foreground)}
+.disabled{background:var(--card);box-shadow:none;border-color:var(--border);pointer-events:none}
+.disabled .eyebrow{color:var(--muted-foreground)}
+.disabled .title{color:var(--foreground)}
+.disabled .body{color:var(--muted-foreground)}
+.sunken{background:var(--card);box-shadow:none}
+.sunken .body{color:var(--foreground)}
+.emphasis{background:var(--foreground);color:var(--background);border-color:transparent;box-shadow:var(--shadow-xl)}
+.emphasis .eyebrow{color:var(--secondary)}
+.emphasis .body,.emphasis .title{color:var(--background)}
+
+/* ── Chat Bubble ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="bubble user"> <span class="meta">You · now</span> <p class="copy">Recommend a writer for light reading.</p>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.bubble{display:grid;gap:8px;max-width:280px;padding:calc(var(--spacing)*3.5) calc(var(--spacing)*4);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+.user{background:var(--primary);color:var(--primary-foreground)}
+.assistant{background:var(--popover);color:var(--card-foreground);border:1px solid var(--border)}
+.meta{display:block;font:500 11px/1.3 var(--font-sans);letter-spacing:.01em}
+.user .meta{color:var(--primary-foreground);opacity:.78}
+.assistant .meta{color:var(--muted-foreground)}
+.copy{margin:0;font-size:14px;line-height:1.6}
+.disabled{box-shadow:none}
+.user.disabled{background:var(--secondary);color:var(--secondary-foreground)}
+.user.disabled .meta{color:var(--secondary-foreground);opacity:1}
+.assistant.disabled{background:var(--card);color:var(--muted-foreground)}
+.thread{display:grid;gap:12px;width:min(100%,360px);padding:calc(var(--spacing)*4);background:var(--popover);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-sm)}
+
+/* ── Input ─────────────────────────────────────────────────── */
+/* @anatomy
+   <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input"> <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input disabled" disabled>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
+.field{padding:0 calc(var(--spacing)*3);color:var(--foreground);font:inherit}
+.field::placeholder,.bar input::placeholder{color:var(--muted-foreground)}
+.field:focus,.bar:focus-within{outline:none;border-color:var(--ring);box-shadow:var(--shadow-sm)}
+.field:disabled,.bar.disabled{background:var(--card);color:var(--muted-foreground);box-shadow:none}
+.bar{display:flex;align-items:center;gap:8px;padding:0 calc(var(--spacing)*3);background:var(--card);border-color:transparent}
+.bar input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--muted-foreground);opacity:.5}
+
+/* ── Navigation ────────────────────────────────────────────── */
+/* @anatomy
+   <nav class="tabs" aria-label="Navigation tabs"> <button class="tab active" type="button">Web</button> <button class="tab" type="button">Mobile</button> <button class="tab" type="button">Library</button> <button class="tab" type="button" disabled>Syncing</button> </nav>
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.tabs,.rail,.bottom-nav{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:100%;padding:6px;background:var(--card)}
+.tab,.item,.nav-item{appearance:none;border:1px solid transparent;background:transparent;color:var(--muted-foreground);font:600 13px/1.1 var(--font-sans);cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab{padding:11px 15px;border-radius:calc(var(--radius) - 6px)}
+.tab:hover,.nav-item:hover{background:var(--popover);color:var(--foreground)}
+.item:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.tab:focus-visible,.item:focus-visible,.nav-item:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tab.active,.nav-item.active{background:var(--popover);color:var(--foreground);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tab.active{box-shadow:var(--shadow-sm)}
+.tab:disabled,.item:disabled,.nav-item:disabled{cursor:not-allowed;box-shadow:none;background:transparent;color:var(--muted-foreground)}
+.brand{margin:0 0 12px;font:600 11px/1.2 var(--font-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-foreground)}
+.stack{display:grid;gap:8px}
+.item{width:100%;padding:12px 13px;border-radius:calc(var(--radius) - 8px);text-align:left;color:var(--sidebar-foreground);background:transparent}
+.item.active{background:var(--popover);color:var(--foreground);border-color:var(--sidebar-border);box-shadow:var(--shadow-xs)}
+.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);padding:8px;background:var(--popover)}
+.nav-item{display:grid;gap:4px;justify-items:center;padding:12px 10px;border-radius:calc(var(--radius) - 6px)}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--card-foreground);
+  }
+  @layer base {
+    body { background: var(--card-background); color: var(--card-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="shell-layout">
+
+  <!-- ── Sidebar (copied from bookshelf, no active item) ─────── -->
+  <aside class="shell-sidebar" id="sidebar">
+    <div class="shell-sidebar-header">
+      <div class="shell-brand-mark">R</div>
+      <span class="shell-brand-name">Redesk</span>
+    </div>
+
+    <div class="sidebar-search">
+      <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+      <input type="text" placeholder="搜索书名、作者..." aria-label="搜索书籍">
+    </div>
+
+    <nav class="shell-nav" aria-label="主导航">
+      <p class="shell-nav-group-label">浏览</p>
+
+      <a class="shell-nav-item" href="#">
+        <span data-icon="book-open" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+        书架
+      </a>
+
+      <a class="shell-nav-item" href="#">
+        <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+        阅读档案
+      </a>
+
+      <a class="shell-nav-item" href="#">
+        <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+        阅读记录
+      </a>
+
+      <a class="shell-nav-item" href="#">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        阅读主题
+      </a>
+    </nav>
+
+    <div class="sidebar-stats">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">127</span>
+        <span class="sidebar-stat-label">总藏书</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">15</span>
+        <span class="sidebar-stat-label">计划读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">3</span>
+        <span class="sidebar-stat-label">在读</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-num">86</span>
+        <span class="sidebar-stat-label">已读</span>
+      </div>
+    </div>
+
+    <div class="sidebar-recycle-link">
+      <a href="#" style="display:inline-flex;align-items:center;gap:4px;color:var(--muted-foreground);font:400 12px var(--font-sans);text-decoration:none;transition:color .16s ease">
+        <span data-icon="trash-2" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+        回收站
+      </a>
+    </div>
+
+    <div class="shell-sidebar-footer">
+      <a class="shell-footer-row" href="#" aria-label="深色模式">
+        <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+        <span>深色模式</span>
+      </a>
+      <a class="shell-footer-row" href="#">
+        <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+        <span>设置</span>
+      </a>
+      <div class="shell-footer-row" style="cursor:default">
+        <div class="shell-avatar">M</div>
+        <div class="shell-user-info">
+          <div class="shell-user-name">我的书房</div>
+          <div class="shell-user-role">个人空间</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Mobile Backdrop ──────────────────────────────────── -->
+  <div class="shell-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="shell-main">
+    <div class="sg-page">
+
+      <!-- ── Page Header ─────────────────────────────────── -->
+      <div class="sg-page-header">
+        <h1 class="sg-page-title">视觉标定</h1>
+        <p class="sg-page-subtitle">Redesk 组件与视觉规范</p>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           1. 色彩系统 (Color System)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">1. 色彩系统</h2>
+        <p class="sg-section-desc">Redesk 使用 terra-cotta 作为品牌主色，搭配温暖的纸面中性色调。所有色彩通过 CSS 自定义属性定义。</p>
+
+        <p class="sg-comp-label">品牌主色</p>
+        <div class="sg-swatch-row" style="margin-bottom:28px">
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-500)"></div>
+            <span class="sg-swatch-label">--brand-500</span>
+            <span class="sg-swatch-hex">#C96442</span>
+          </div>
+        </div>
+
+        <p class="sg-comp-label">品牌色阶</p>
+        <div class="sg-swatch-row" style="margin-bottom:28px">
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-50)"></div>
+            <span class="sg-swatch-label">brand-50</span>
+            <span class="sg-swatch-hex">#fbf2ed</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-100)"></div>
+            <span class="sg-swatch-label">brand-100</span>
+            <span class="sg-swatch-hex">#f4e0d5</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-200)"></div>
+            <span class="sg-swatch-label">brand-200</span>
+            <span class="sg-swatch-hex">#ebc6b6</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-400)"></div>
+            <span class="sg-swatch-label">brand-400</span>
+            <span class="sg-swatch-hex">#d6866a</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-600)"></div>
+            <span class="sg-swatch-label">brand-600</span>
+            <span class="sg-swatch-hex">#b0562f</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--brand-700)"></div>
+            <span class="sg-swatch-label">brand-700</span>
+            <span class="sg-swatch-hex">#934828</span>
+          </div>
+        </div>
+
+        <p class="sg-comp-label">中性色阶</p>
+        <div class="sg-swatch-row" style="margin-bottom:28px">
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--foreground)"></div>
+            <span class="sg-swatch-label">foreground</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--muted-foreground)"></div>
+            <span class="sg-swatch-label">muted-fg</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--muted)"></div>
+            <span class="sg-swatch-label">muted</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--border)"></div>
+            <span class="sg-swatch-label">border</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--input)"></div>
+            <span class="sg-swatch-label">input</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--ring)"></div>
+            <span class="sg-swatch-label">ring</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--bg-100)"></div>
+            <span class="sg-swatch-label">bg-100</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--bg-200)"></div>
+            <span class="sg-swatch-label">bg-200</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--bg-300)"></div>
+            <span class="sg-swatch-label">bg-300</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--bg-400)"></div>
+            <span class="sg-swatch-label">bg-400</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--bg-500)"></div>
+            <span class="sg-swatch-label">bg-500</span>
+          </div>
+        </div>
+
+        <p class="sg-comp-label">状态色</p>
+        <div class="sg-swatch-row">
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--success-500)"></div>
+            <span class="sg-swatch-label">success</span>
+            <span class="sg-swatch-hex">#788c5d</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--warning-500)"></div>
+            <span class="sg-swatch-label">warning</span>
+            <span class="sg-swatch-hex">#d4a017</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--error-500)"></div>
+            <span class="sg-swatch-label">error</span>
+            <span class="sg-swatch-hex">#d64545</span>
+          </div>
+          <div class="sg-swatch">
+            <div class="sg-swatch-circle" style="background:var(--info-500)"></div>
+            <span class="sg-swatch-label">info</span>
+            <span class="sg-swatch-hex">#3b82f6</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           2. 字体排版 (Typography)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">2. 字体排版</h2>
+        <p class="sg-section-desc">三种字体各有明确分工：Newsreader 用于标题，Poppins 用于界面元素，Lora 用于正文阅读。</p>
+
+        <div class="sg-type-group">
+          <p class="sg-type-label">Display / Newsreader</p>
+          <h3 class="sg-type-sample" style="font-family:var(--font-display);font-size:32px;font-weight:400">百年孤独</h3>
+          <p class="sg-type-meta">32px / weight 400 / Newsreader, Georgia, ui-serif, serif</p>
+          <hr class="sg-type-divider">
+          <h4 class="sg-type-sample" style="font-family:var(--font-display);font-size:24px;font-weight:400">章节标题</h4>
+          <p class="sg-type-meta">24px / weight 400</p>
+          <hr class="sg-type-divider">
+          <h5 class="sg-type-sample" style="font-family:var(--font-display);font-size:20px;font-weight:400">小节标题</h5>
+          <p class="sg-type-meta">20px / weight 400</p>
+          <hr class="sg-type-divider">
+          <p class="sg-type-sample" style="font-family:var(--font-display);font-size:16px;font-weight:400">正文段落</p>
+          <p class="sg-type-meta">16px / weight 400</p>
+        </div>
+
+        <div class="sg-type-group">
+          <p class="sg-type-label">UI / Poppins</p>
+          <p class="sg-type-sample" style="font-family:var(--font-sans);font-size:12px;font-weight:500">标签文本</p>
+          <p class="sg-type-meta">12px / weight 500 / Poppins, ui-sans-serif, system-ui, sans-serif</p>
+          <hr class="sg-type-divider">
+          <p class="sg-type-sample" style="font-family:var(--font-sans);font-size:14px;font-weight:500">按钮文字</p>
+          <p class="sg-type-meta">14px / weight 500</p>
+          <hr class="sg-type-divider">
+          <p class="sg-type-sample" style="font-family:var(--font-sans);font-size:14px;font-weight:600">导航项</p>
+          <p class="sg-type-meta">14px / weight 600</p>
+        </div>
+
+        <div class="sg-type-group">
+          <p class="sg-type-label">Reading / Lora</p>
+          <p class="sg-type-sample" style="font-family:var(--font-serif);font-size:18px;font-weight:400;line-height:1.7">在阅读器中展示的正文内容，使用衬线字体提供沉浸式阅读体验。</p>
+          <p class="sg-type-meta">18px / weight 400 / line-height 1.7 / Lora, Georgia, ui-serif, serif</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           3. 按钮 (Buttons)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">3. 按钮</h2>
+        <p class="sg-section-desc">按钮分为四个层级：主要、次要、幽灵和图标按钮。链接按钮用于行内导航。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">主要按钮</p>
+          <div class="sg-comp-row">
+            <button class="btn btn-primary">新建书籍</button>
+            <button class="btn btn-primary" disabled>新建书籍</button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">次要按钮</p>
+          <div class="sg-comp-row">
+            <button class="btn btn-secondary">编辑信息</button>
+            <button class="btn btn-secondary" disabled>编辑信息</button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">幽灵按钮</p>
+          <div class="sg-comp-row">
+            <button class="btn btn-ghost">删除</button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">图标按钮</p>
+          <div class="sg-comp-row">
+            <button class="btn-icon">
+              <span data-icon="circle-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg')"></span>
+            </button>
+            <button class="btn-icon">
+              <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            </button>
+            <button class="btn-icon">
+              <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+            </button>
+            <button class="btn-icon">
+              <span data-icon="settings" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">链接按钮</p>
+          <div class="sg-comp-row">
+            <a class="btn-link" href="#">
+              查看详情
+              <span data-icon="arrow-right" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-right.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-right.svg')"></span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           4. 输入控件 (Form Controls)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">4. 输入控件</h2>
+        <p class="sg-section-desc">表单控件遵循统一的边框、圆角和阴影规范，聚焦时以 ring 色高亮。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">文本输入</p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:360px">
+            <input class="field" type="text" placeholder="搜索书名、作者...">
+            <input class="field" type="text" value="百年孤独" style="border-color:var(--ring);box-shadow:0 0 0 2px var(--ring)">
+            <input class="field" type="text" placeholder="禁用状态" disabled>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:24px">
+          <p class="sg-comp-label">下拉选择</p>
+          <select class="select">
+            <option>所有分类</option>
+            <option>文学</option>
+            <option>技术</option>
+            <option>哲学</option>
+          </select>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:24px">
+          <p class="sg-comp-label">复选框</p>
+          <div style="display:flex;gap:20px;align-items:center">
+            <div class="sg-form-row">
+              <div class="sg-dropdown-check checked">
+                <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+              </div>
+              <span style="font-family:var(--font-sans);font-size:13px">显示高亮</span>
+            </div>
+            <div class="sg-form-row">
+              <div class="sg-dropdown-check"></div>
+              <span style="font-family:var(--font-sans);font-size:13px">显示笔记</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:24px">
+          <p class="sg-comp-label">开关</p>
+          <div style="display:flex;gap:28px;align-items:center">
+            <div class="sg-form-row">
+              <button class="toggle on"></button>
+              <span style="font-family:var(--font-sans);font-size:13px">公开</span>
+            </div>
+            <div class="sg-form-row">
+              <button class="toggle"></button>
+              <span style="font-family:var(--font-sans);font-size:13px">私有</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:24px">
+          <p class="sg-comp-label">搜索栏（侧边栏样式）</p>
+          <div class="bar" style="max-width:280px;border-radius:var(--radius-full);border-color:var(--border-200);background:var(--muted)">
+            <span data-icon="search" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+            <input type="text" placeholder="搜索书名、作者...">
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           5. 标签与徽章 (Tags & Badges)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">5. 标签与徽章</h2>
+        <p class="sg-section-desc">用于状态标识、分类标记、过滤器和元数据展示的各种小型标记组件。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">阅读状态徽章</p>
+          <div class="sg-badge-row">
+            <span class="badge badge-collected">收录</span>
+            <span class="badge badge-plan">计划读</span>
+            <span class="badge badge-reading">在读</span>
+            <span class="badge badge-done">已读</span>
+            <span class="badge badge-stored">存</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">标签</p>
+          <div class="sg-badge-row">
+            <span class="tag">文学</span>
+            <span class="tag">拉美</span>
+            <span class="tag">魔幻现实主义</span>
+            <button class="tag-add">
+              <span data-icon="circle-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg')"></span>
+              添加标签
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">用途徽章</p>
+          <div class="sg-badge-row">
+            <span class="badge-purpose">精读</span>
+            <span class="badge-purpose">泛读</span>
+            <span class="badge-purpose">参考</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">过滤器药丸</p>
+          <div class="sg-badge-row">
+            <button class="filter-pill active">全部</button>
+            <button class="filter-pill">收录</button>
+            <button class="filter-pill">计划读</button>
+            <button class="filter-pill">在读</button>
+            <button class="filter-pill">已读</button>
+            <button class="filter-pill">存</button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">元数据药丸</p>
+          <div class="sg-badge-row">
+            <span class="meta-pill">4 本</span>
+            <span class="meta-pill">12 高亮</span>
+            <span class="meta-pill">8 笔记</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">痕迹类型徽章</p>
+          <div class="sg-badge-row">
+            <span class="trace-badge trace-badge-highlight">高亮</span>
+            <span class="trace-badge trace-badge-note">笔记</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">标记标签</p>
+          <div class="sg-badge-row">
+            <span class="mark-tag">&#11088; 重要</span>
+            <span class="mark-tag">&#10067; 疑问</span>
+            <span class="mark-tag">&#128161; 启发</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           6. 卡片 (Cards)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">6. 卡片</h2>
+        <p class="sg-section-desc">卡片是信息展示的核心容器。根据使用场景分为多种变体。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">书籍卡片 — 网格视图</p>
+          <div class="sg-card-grid" style="max-width:560px">
+            <div class="book-card">
+              <div class="book-card-cover">
+                <span class="book-card-cover-text">百年孤独</span>
+              </div>
+              <div class="book-card-body">
+                <span class="book-card-title">百年孤独</span>
+                <span class="book-card-author">加西亚·马尔克斯</span>
+                <div class="book-card-meta">
+                  <span class="badge badge-reading" style="height:20px;font-size:10px;padding:0 8px">在读</span>
+                  <div class="star-row">
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                  </div>
+                </div>
+                <div class="book-card-progress-bar">
+                  <div class="book-card-progress-fill" style="width:75%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="book-card">
+              <div class="book-card-cover">
+                <span class="book-card-cover-text">人类简史</span>
+              </div>
+              <div class="book-card-body">
+                <span class="book-card-title">人类简史</span>
+                <span class="book-card-author">尤瓦尔·赫拉利</span>
+                <div class="book-card-meta">
+                  <span class="badge badge-done" style="height:20px;font-size:10px;padding:0 8px">已读</span>
+                  <div class="star-row">
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                    <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                  </div>
+                </div>
+                <div class="book-card-progress-bar">
+                  <div class="book-card-progress-fill" style="width:100%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">书籍卡片 — 列表视图</p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:520px">
+            <div class="book-card-list">
+              <div class="book-card-list-thumb"><span>百年<br>孤独</span></div>
+              <div class="book-card-list-body">
+                <span class="book-card-list-title">百年孤独</span>
+                <span class="book-card-list-author">加西亚·马尔克斯</span>
+              </div>
+              <div class="book-card-list-right">
+                <span class="badge badge-reading" style="height:20px;font-size:10px;padding:0 8px">在读</span>
+                <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground)">75%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">痕迹卡片</p>
+          <div style="display:grid;gap:12px;max-width:520px">
+            <div class="trace-card">
+              <div class="trace-card-header">
+                <span class="trace-badge trace-badge-highlight">高亮</span>
+                <span class="badge" style="background:var(--brand-50);color:var(--brand-600);font-size:10px;height:20px;padding:0 6px">第 3 章</span>
+              </div>
+              <div class="trace-card-quote">"多年以后，面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起父亲带他去见识冰块的那个遥远的下午。"</div>
+              <div class="trace-card-footer">
+                <span>百年孤独</span>
+                <span>2025-03-15</span>
+              </div>
+            </div>
+            <div class="trace-card trace-card-note">
+              <div class="trace-card-header">
+                <span class="trace-badge trace-badge-note">笔记</span>
+                <span class="badge" style="background:var(--brand-50);color:var(--brand-600);font-size:10px;height:20px;padding:0 6px">第 7 章</span>
+              </div>
+              <div class="trace-card-quote">马孔多的建立象征着人类文明的缩影，从纯真走向复杂。</div>
+              <div class="trace-card-footer">
+                <span>百年孤独</span>
+                <span>2025-03-18</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">主题卡片</p>
+          <div style="max-width:420px">
+            <div class="topic-card">
+              <h4 class="topic-card-title">拉美文学的魔幻现实主义</h4>
+              <p class="topic-card-desc">探讨拉美文学中魔幻现实主义的核心特征与代表作品</p>
+              <div class="sg-badge-row">
+                <span class="meta-pill">3 本</span>
+                <span class="meta-pill">12 高亮</span>
+                <span class="meta-pill">8 笔记</span>
+              </div>
+              <div class="topic-card-books">
+                <div class="topic-card-book-thumb"></div>
+                <div class="topic-card-book-thumb"></div>
+                <div class="topic-card-book-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">轻量统计</p>
+          <div class="sg-stat-row" style="gap:48px">
+            <div class="stat-light">
+              <span class="stat-light-num">127</span>
+              <span class="stat-light-label">总藏书</span>
+            </div>
+            <div class="stat-light">
+              <span class="stat-light-num">23</span>
+              <span class="stat-light-label">本月已读</span>
+            </div>
+            <div class="stat-light">
+              <span class="stat-light-num">4.2</span>
+              <span class="stat-light-label">平均评分</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">内容卡片</p>
+          <div style="max-width:380px">
+            <div class="content-card">
+              <h4 class="content-card-title">阅读设置</h4>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="sg-form-row" style="justify-content:space-between">
+                  <span style="font-family:var(--font-sans);font-size:13px;color:var(--foreground)">字体大小</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground)">18px</span>
+                </div>
+                <div class="sg-form-row" style="justify-content:space-between">
+                  <span style="font-family:var(--font-sans);font-size:13px;color:var(--foreground)">行间距</span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground)">1.8</span>
+                </div>
+                <div class="sg-form-row" style="justify-content:space-between">
+                  <span style="font-family:var(--font-sans);font-size:13px;color:var(--foreground)">主题</span>
+                  <span style="font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)">暖纸色</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           7. 评分 (Rating)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">7. 评分</h2>
+        <p class="sg-section-desc">使用星形图标表示评分，填充色为品牌色，空星为静音色。</p>
+        <div class="sg-rating-group">
+          <div class="sg-form-row">
+            <div class="star-row">
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <span style="font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)">1 星</span>
+          </div>
+          <div class="sg-form-row">
+            <div class="star-row">
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <span style="font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)">3 星</span>
+          </div>
+          <div class="sg-form-row">
+            <div class="star-row">
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <span style="font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)">4/5</span>
+          </div>
+          <div class="sg-form-row">
+            <div class="star-row">
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              <span data-icon="star" class="star filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            </div>
+            <span style="font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)">5 星</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           8. 进度指示 (Progress)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">8. 进度指示</h2>
+        <p class="sg-section-desc">进度条和进度环用于展示阅读完成度、章节进度等。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">进度条 — 阅读器工具栏（细线）</p>
+          <div style="max-width:480px">
+            <div class="progress-bar">
+              <div class="progress-bar-fill" style="width:25%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">进度条 — 书籍卡片（宽条）</p>
+          <div style="max-width:480px">
+            <div class="progress-bar progress-bar-wide">
+              <div class="progress-bar-fill" style="width:75%"></div>
+            </div>
+            <p class="progress-bar-label">75%</p>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">进度环 — 统计视图</p>
+          <div style="display:flex;gap:40px;align-items:center">
+            <div style="position:relative;width:64px;height:64px">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-400)" stroke-width="4"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="var(--primary)" stroke-width="4" stroke-dasharray="175.9" stroke-dashoffset="63.3" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+              </svg>
+              <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--foreground)">64%</span>
+            </div>
+            <div style="position:relative;width:80px;height:80px">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke="var(--bg-400)" stroke-width="6"/>
+                <circle cx="40" cy="40" r="34" fill="none" stroke="var(--primary)" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="68.4" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+              </svg>
+              <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-size:16px;font-weight:600;color:var(--foreground)">68%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           9. 导航组件 (Navigation)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">9. 导航组件</h2>
+        <p class="sg-section-desc">包括侧边栏导航、底部标签栏、面包屑和页签栏。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">侧边栏导航项</p>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div class="sg-nav-sidebar-sample">
+              <div class="sg-nav-label">浏览</div>
+              <a class="sg-nav-sample-item" href="#">
+                <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+                书架
+              </a>
+              <a class="sg-nav-sample-item active" href="#">
+                <span data-icon="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+                阅读档案
+              </a>
+              <a class="sg-nav-sample-item" href="#">
+                <span data-icon="message-circle-more" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+                阅读记录
+              </a>
+              <a class="sg-nav-sample-item" href="#">
+                <span data-icon="tag" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+                阅读主题
+              </a>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-family:var(--font-mono);font-size:10px;color:var(--muted-foreground);padding-top:8px">
+              <span>normal: sidebar-foreground</span>
+              <span>hover: sidebar-accent bg</span>
+              <span>active: primary bg, white text</span>
+              <span>radius: calc(radius - 8px)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">移动端底部标签栏</p>
+          <div class="sg-mobile-tabs-sample">
+            <button class="sg-mobile-tab-sample active">
+              <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+              书架
+            </button>
+            <button class="sg-mobile-tab-sample">
+              <span data-icon="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+              档案
+            </button>
+            <button class="sg-mobile-tab-sample">
+              <span data-icon="message-circle-more" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+              记录
+            </button>
+            <button class="sg-mobile-tab-sample">
+              <span data-icon="tag" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+              主题
+            </button>
+            <button class="sg-mobile-tab-sample">
+              <span data-icon="settings" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+              设置
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">面包屑</p>
+          <div class="sg-breadcrumb">
+            <a href="#">书架</a>
+            <span class="sg-breadcrumb-sep">
+              <span data-icon="chevron-right" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg')"></span>
+            </span>
+            <a href="#">百年孤独</a>
+            <span class="sg-breadcrumb-sep">
+              <span data-icon="chevron-right" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg')"></span>
+            </span>
+            <span class="sg-breadcrumb-current">阅读痕迹</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">页签栏</p>
+          <div class="sg-tab-bar">
+            <button class="sg-tab-item active">阅读痕迹</button>
+            <button class="sg-tab-item">文件管理</button>
+            <button class="sg-tab-item">关联与历史</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           10. 数据展示 (Data Display)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">10. 数据展示</h2>
+        <p class="sg-section-desc">统计数据行、文件列表、热力图和简单表格。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">统计行</p>
+          <div class="sg-stat-row">
+            <div class="sg-stat-row-item">
+              <span class="sg-stat-row-num">127</span>
+              <span class="sg-stat-row-label">总藏书</span>
+            </div>
+            <div class="sg-stat-row-item">
+              <span class="sg-stat-row-num">15</span>
+              <span class="sg-stat-row-label">计划读</span>
+            </div>
+            <div class="sg-stat-row-item">
+              <span class="sg-stat-row-num">3</span>
+              <span class="sg-stat-row-label">在读</span>
+            </div>
+            <div class="sg-stat-row-item">
+              <span class="sg-stat-row-num">86</span>
+              <span class="sg-stat-row-label">已读</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">文件列表行</p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-width:560px">
+            <div class="file-row">
+              <div class="file-row-icon">
+                <span data-icon="file" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
+              </div>
+              <span class="file-row-name">百年孤独.epub</span>
+              <span class="badge" style="background:var(--bg-300);color:var(--text-500);height:20px;font-size:9px;padding:0 6px">EPUB</span>
+              <span class="file-row-meta">2.4 MB</span>
+              <span class="file-row-meta">2025-01-10</span>
+              <div class="file-row-actions">
+                <button class="btn-icon">
+                  <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+                </button>
+                <button class="btn-icon">
+                  <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">热力图（阅读活动）</p>
+          <div class="sg-heatmap">
+            <div class="sg-heatmap-cell"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell l3"></div>
+            <div class="sg-heatmap-cell l2"></div>
+
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell l3"></div>
+            <div class="sg-heatmap-cell l4"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell"></div>
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell l3"></div>
+
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell l4"></div>
+            <div class="sg-heatmap-cell l3"></div>
+            <div class="sg-heatmap-cell l1"></div>
+
+            <div class="sg-heatmap-cell l3"></div>
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell l2"></div>
+            <div class="sg-heatmap-cell l1"></div>
+            <div class="sg-heatmap-cell"></div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">简单表格</p>
+          <div style="max-width:480px;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden">
+            <table class="sg-table">
+              <thead>
+                <tr>
+                  <th>章节</th>
+                  <th>高亮数</th>
+                  <th>笔记数</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>第一章 · 冰块的记忆</td>
+                  <td class="sg-table-num">8</td>
+                  <td class="sg-table-num">2</td>
+                </tr>
+                <tr>
+                  <td>第二章 · 吉普赛人的到来</td>
+                  <td class="sg-table-num">5</td>
+                  <td class="sg-table-num">1</td>
+                </tr>
+                <tr>
+                  <td>第三章 · 失眠症蔓延</td>
+                  <td class="sg-table-num">12</td>
+                  <td class="sg-table-num">4</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           11. 阅读器组件 (Reader Components)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">11. 阅读器组件</h2>
+        <p class="sg-section-desc">阅读器界面中的高亮、划线、书签、选择弹窗和笔记面板组件。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">高亮标注</p>
+          <div class="sg-reader-text">
+            <span class="sg-highlight">多年以后，面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起父亲带他去见识冰块的那个遥远的下午。</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">高亮标注（带附注弹窗）</p>
+          <div class="sg-reader-text" style="min-height:80px">
+            <span class="sg-highlight-annotation">
+              <span class="sg-highlight">世界新生伊始，许多事物还没有名字</span>
+              <span class="sg-highlight-popup">
+                <div class="sg-highlight-popup-text">开头即时间倒流叙事，暗示了整部小说的命运轮回主题。</div>
+                <div class="sg-highlight-popup-meta">第 1 章 · 2025-03-10</div>
+              </span>
+            </span>，提到的时候尚需用手指指点点。
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">下划线标注</p>
+          <div class="sg-reader-text">
+            每到夜间，<span class="sg-underline">他就沉迷于自己独自一人进行的实验</span>，那种坚持已不再是出于对死亡的恐惧。
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">书签指示器</p>
+          <div class="sg-reader-text">
+            <span class="sg-bookmark-edge">这时，马孔多的居民们终于理解了失眠症的真正含义。</span>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">选区弹窗</p>
+          <div class="sg-selection-popup">
+            <button>
+              <span data-icon="highlighter" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
+              高亮
+              <span class="sg-shortcut">H</span>
+            </button>
+            <button>
+              <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+              笔记
+              <span class="sg-shortcut">N</span>
+            </button>
+            <button>
+              <span data-icon="type" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/type.svg');mask-image:url('../assets/icons/dl-builtin-claude/type.svg')"></span>
+              划线
+              <span class="sg-shortcut">U</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:20px">
+          <p class="sg-comp-label">笔记面板项</p>
+          <div class="sg-note-item">
+            <div class="sg-note-text">马孔多的建立象征着人类文明的缩影，从纯真走向复杂。孤独是布恩迪亚家族的宿命。</div>
+            <div class="sg-note-footer">
+              <span>第 7 章 · 2025-03-18</span>
+              <div class="sg-note-actions">
+                <button class="btn-icon">
+                  <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+                </button>
+                <button class="btn-icon">
+                  <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           12. 反馈与叠加层 (Feedback & Overlays)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">12. 反馈与叠加层</h2>
+        <p class="sg-section-desc">Toast 通知、空状态、下拉面板、设置弹窗和确认对话框。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">Toast 通知</p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="sg-toast sg-toast-success">
+              <span data-icon="circle-check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
+              已保存
+            </div>
+            <div class="sg-toast sg-toast-error">
+              <span data-icon="circle-alert" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-alert.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-alert.svg')"></span>
+              保存失败
+            </div>
+            <div class="sg-toast sg-toast-warning">
+              <span data-icon="triangle-alert" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/triangle-alert.svg');mask-image:url('../assets/icons/dl-builtin-claude/triangle-alert.svg')"></span>
+              未找到匹配
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">空状态</p>
+          <div class="sg-empty-state">
+            <div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center">
+              <span data-icon="book-open" style="width:48px;height:48px;color:var(--text-300);opacity:0.5;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+            </div>
+            <p class="sg-empty-state-title">这里空空如也</p>
+            <p class="sg-empty-state-desc">还没有任何阅读痕迹，开始阅读后在章节上选中文字即可创建高亮或笔记。</p>
+            <button class="btn btn-primary" style="margin-top:4px">开始阅读</button>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">下拉面板（显示设置）</p>
+          <div style="display:flex;gap:20px;align-items:flex-start">
+            <div class="sg-dropdown-panel">
+              <div class="sg-dropdown-item">
+                <div class="sg-dropdown-check checked">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </div>
+                <span>高亮</span>
+              </div>
+              <div class="sg-dropdown-item">
+                <div class="sg-dropdown-check checked">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </div>
+                <span>笔记</span>
+              </div>
+              <div class="sg-dropdown-item">
+                <div class="sg-dropdown-check"></div>
+                <span>划线</span>
+              </div>
+              <div class="sg-dropdown-item">
+                <div class="sg-dropdown-check checked">
+                  <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+                </div>
+                <span>书签</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">设置弹窗（阅读器 Aa）</p>
+          <div class="sg-settings-popover">
+            <p class="sg-settings-popover-title">显示设置</p>
+            <div class="sg-setting-row">
+              <span class="sg-setting-label">字体大小</span>
+              <div class="sg-setting-control">
+                <button class="sg-setting-btn">A-</button>
+                <span class="sg-setting-value">18</span>
+                <button class="sg-setting-btn">A+</button>
+              </div>
+            </div>
+            <div class="sg-setting-row">
+              <span class="sg-setting-label">行间距</span>
+              <div class="sg-setting-control">
+                <button class="sg-setting-btn" style="font-size:10px;line-height:1">Aa</button>
+                <span class="sg-setting-value">1.8</span>
+                <button class="sg-setting-btn" style="font-size:16px;line-height:1">Aa</button>
+              </div>
+            </div>
+            <div class="sg-setting-row">
+              <span class="sg-setting-label">阅读主题</span>
+              <div class="sg-setting-control">
+                <div style="display:flex;gap:6px">
+                  <div style="width:24px;height:24px;border-radius:var(--radius-full);background:var(--bg-100);border:2px solid var(--primary)"></div>
+                  <div style="width:24px;height:24px;border-radius:var(--radius-full);background:var(--bg-50);border:2px solid var(--border)"></div>
+                  <div style="width:24px;height:24px;border-radius:var(--radius-full);background:var(--text-900);border:2px solid var(--border)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:28px">
+          <p class="sg-comp-label">确认对话框</p>
+          <div class="sg-dialog-overlay" style="width:fit-content">
+            <div class="sg-dialog">
+              <p class="sg-dialog-title">确定删除这本书？</p>
+              <p class="sg-dialog-body">删除后将移入回收站，30 天内可恢复。书中的高亮和笔记将一并保留。</p>
+              <div class="sg-dialog-actions">
+                <button class="btn btn-secondary">取消</button>
+                <button class="btn btn-danger">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           13. 图标集 (Icon Reference)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">13. 图标集</h2>
+        <p class="sg-section-desc">全部可用图标，使用 CSS mask + currentColor 渲染，尺寸和颜色通过容器控制。</p>
+
+        <div class="sg-icon-grid">
+          <div class="sg-icon-cell">
+            <span data-icon="house" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
+            <span class="sg-icon-name">house</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="star" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
+            <span class="sg-icon-name">star</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="tag" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
+            <span class="sg-icon-name">tag</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="funnel" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg');mask-image:url('../assets/icons/dl-builtin-claude/funnel.svg')"></span>
+            <span class="sg-icon-name">funnel</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="search" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
+            <span class="sg-icon-name">search</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="circle-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg')"></span>
+            <span class="sg-icon-name">circle-plus</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+            <span class="sg-icon-name">pen-line</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="trash-2" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+            <span class="sg-icon-name">trash-2</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="heart" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/heart.svg');mask-image:url('../assets/icons/dl-builtin-claude/heart.svg')"></span>
+            <span class="sg-icon-name">heart</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
+            <span class="sg-icon-name">check</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="chevron-down" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+            <span class="sg-icon-name">chevron-down</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="chevron-left" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-left.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-left.svg')"></span>
+            <span class="sg-icon-name">chevron-left</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="chevron-right" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-right.svg')"></span>
+            <span class="sg-icon-name">chevron-right</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="arrow-left" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg')"></span>
+            <span class="sg-icon-name">arrow-left</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="arrow-right" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-right.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-right.svg')"></span>
+            <span class="sg-icon-name">arrow-right</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="settings" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
+            <span class="sg-icon-name">settings</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="grip" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/grip.svg');mask-image:url('../assets/icons/dl-builtin-claude/grip.svg')"></span>
+            <span class="sg-icon-name">grip</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="external-link" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg')"></span>
+            <span class="sg-icon-name">external-link</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="eye" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/eye.svg');mask-image:url('../assets/icons/dl-builtin-claude/eye.svg')"></span>
+            <span class="sg-icon-name">eye</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="circle-check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-check.svg')"></span>
+            <span class="sg-icon-name">circle-check</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="file" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/file.svg');mask-image:url('../assets/icons/dl-builtin-claude/file.svg')"></span>
+            <span class="sg-icon-name">file</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
+            <span class="sg-icon-name">book-open</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="message-circle-more" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
+            <span class="sg-icon-name">message-circle-more</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="bookmark" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg');mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg')"></span>
+            <span class="sg-icon-name">bookmark</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="type" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/type.svg');mask-image:url('../assets/icons/dl-builtin-claude/type.svg')"></span>
+            <span class="sg-icon-name">type</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="highlighter" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
+            <span class="sg-icon-name">highlighter</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="circle-alert" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-alert.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-alert.svg')"></span>
+            <span class="sg-icon-name">circle-alert</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="triangle-alert" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/triangle-alert.svg');mask-image:url('../assets/icons/dl-builtin-claude/triangle-alert.svg')"></span>
+            <span class="sg-icon-name">triangle-alert</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="circle-question-mark" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-question-mark.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-question-mark.svg')"></span>
+            <span class="sg-icon-name">circle-question-mark</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="box" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/box.svg');mask-image:url('../assets/icons/dl-builtin-claude/box.svg')"></span>
+            <span class="sg-icon-name">box</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="folder" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/folder.svg');mask-image:url('../assets/icons/dl-builtin-claude/folder.svg')"></span>
+            <span class="sg-icon-name">folder</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="clock" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/clock.svg');mask-image:url('../assets/icons/dl-builtin-claude/clock.svg')"></span>
+            <span class="sg-icon-name">clock</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="send-horizontal" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/send-horizontal.svg');mask-image:url('../assets/icons/dl-builtin-claude/send-horizontal.svg')"></span>
+            <span class="sg-icon-name">send-horizontal</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="message-square-plus" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg')"></span>
+            <span class="sg-icon-name">message-square-plus</span>
+          </div>
+          <div class="sg-icon-cell">
+            <span data-icon="check-square" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check-square.svg');mask-image:url('../assets/icons/dl-builtin-claude/check-square.svg')"></span>
+            <span class="sg-icon-name">check-square</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           14. 间距与圆角 (Spacing & Radius)
+           ═══════════════════════════════════════════════════════ -->
+      <section class="sg-section">
+        <h2 class="sg-section-title">14. 间距与圆角</h2>
+        <p class="sg-section-desc">间距尺度和圆角 token 是布局一致性的基础。阴影从安静到明显逐级递增。</p>
+
+        <div class="sg-comp-group">
+          <p class="sg-comp-label">间距尺度</p>
+          <div class="sg-spacing-row">
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:4px;height:32px"></div>
+              <span class="sg-spacing-label">4px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:8px;height:32px"></div>
+              <span class="sg-spacing-label">8px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:12px;height:32px"></div>
+              <span class="sg-spacing-label">12px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:16px;height:32px"></div>
+              <span class="sg-spacing-label">16px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:24px;height:32px"></div>
+              <span class="sg-spacing-label">24px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:32px;height:32px"></div>
+              <span class="sg-spacing-label">32px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:48px;height:32px"></div>
+              <span class="sg-spacing-label">48px</span>
+            </div>
+            <div class="sg-spacing-item">
+              <div class="sg-spacing-block" style="width:64px;height:32px"></div>
+              <span class="sg-spacing-label">64px</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:32px">
+          <p class="sg-comp-label">圆角 token</p>
+          <div class="sg-radius-row">
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:4px"></div>
+              <span class="sg-spacing-label">4px</span>
+            </div>
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:8px"></div>
+              <span class="sg-spacing-label">8px (sm)</span>
+            </div>
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:12px"></div>
+              <span class="sg-spacing-label">12px (md)</span>
+            </div>
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:16px"></div>
+              <span class="sg-spacing-label">16px</span>
+            </div>
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:20px"></div>
+              <span class="sg-spacing-label">20px (xl)</span>
+            </div>
+            <div class="sg-radius-item">
+              <div class="sg-radius-block" style="border-radius:24px"></div>
+              <span class="sg-spacing-label">24px (2xl)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sg-comp-group" style="margin-top:32px">
+          <p class="sg-comp-label">阴影等级</p>
+          <div class="sg-shadow-row">
+            <div class="sg-shadow-item">
+              <div class="sg-shadow-card" style="box-shadow:var(--shadow-xs)"></div>
+              <span class="sg-shadow-label">shadow-xs</span>
+            </div>
+            <div class="sg-shadow-item">
+              <div class="sg-shadow-card" style="box-shadow:var(--shadow-sm)"></div>
+              <span class="sg-shadow-label">shadow-sm</span>
+            </div>
+            <div class="sg-shadow-item">
+              <div class="sg-shadow-card" style="box-shadow:var(--shadow-md)"></div>
+              <span class="sg-shadow-label">shadow-md</span>
+            </div>
+            <div class="sg-shadow-item">
+              <div class="sg-shadow-card" style="box-shadow:var(--shadow-lg)"></div>
+              <span class="sg-shadow-label">shadow-lg</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.sg-page -->
+  </main>
+</div><!-- /.shell-layout -->
+
+
+    <style>
+/* ── Shared base from Claude Design Library ───────────────── */
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
+.field{padding:0 calc(var(--spacing)*3);color:var(--foreground);font:inherit}
+.field::placeholder,.bar input::placeholder{color:var(--muted-foreground)}
+.field:focus,.bar:focus-within{outline:none;border-color:var(--ring);box-shadow:var(--shadow-sm)}
+.field:disabled,.bar.disabled{background:var(--card);color:var(--muted-foreground);box-shadow:none}
+.bar{display:flex;align-items:center;gap:8px;padding:0 calc(var(--spacing)*3);background:var(--card);border-color:transparent}
+.bar input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.tab,.item,.nav-item{appearance:none;border:1px solid transparent;background:transparent;color:var(--muted-foreground);font:600 13px/1.1 var(--font-sans);cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab{padding:11px 15px;border-radius:calc(var(--radius) - 6px)}
+.tab:hover,.nav-item:hover{background:var(--popover);color:var(--foreground)}
+.item:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.tab:focus-visible,.item:focus-visible,.nav-item:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tab.active,.nav-item.active{background:var(--popover);color:var(--foreground);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tab.active{box-shadow:var(--shadow-sm)}
+.tab:disabled,.item:disabled,.nav-item:disabled{cursor:not-allowed;box-shadow:none;background:transparent;color:var(--muted-foreground)}
+.brand{margin:0 0 12px;font:600 11px/1.2 var(--font-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-foreground)}
+.stack{display:grid;gap:8px}
+.item{width:100%;padding:12px 13px;border-radius:calc(var(--radius) - 8px);text-align:left;color:var(--sidebar-foreground);background:transparent}
+.item.active{background:var(--popover);color:var(--foreground);border-color:var(--sidebar-border);box-shadow:var(--shadow-xs)}
+.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);padding:8px;background:var(--popover)}
+.nav-item{display:grid;gap:4px;justify-items:center;padding:12px 10px;border-radius:calc(var(--radius) - 6px)}
+    </style>
+    <style>
+      /* ═══════════════════════════════════════════════════════
+         Style Guide Page Styles
+         ═══════════════════════════════════════════════════════ */
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-serif);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .shell-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* ── Sidebar (same as bookshelf) ────────────────────────── */
+      .shell-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        width: 256px;
+        height: 100vh;
+        background: var(--sidebar);
+        border-right: 1px solid var(--sidebar-border);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .shell-sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 28px 24px 24px;
+        border-bottom: 1px solid var(--sidebar-border);
+      }
+      .shell-brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-foreground);
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .shell-brand-name {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 22px;
+        color: var(--sidebar-foreground);
+        letter-spacing: -0.01em;
+      }
+      .sidebar-search {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1.5);
+        margin: 12px 12px 4px;
+        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+        background: var(--muted);
+        border: 1px solid transparent;
+        border-radius: var(--radius-full);
+        transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      }
+      .sidebar-search:focus-within {
+        border-color: var(--ring);
+        box-shadow: var(--shadow-xs);
+        background: var(--popover);
+      }
+      .sidebar-search [data-icon] {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+      }
+      .sidebar-search input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        outline: none;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+      }
+      .sidebar-search input::placeholder {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+      .shell-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 16px 12px;
+        overflow-y: auto;
+      }
+      .shell-nav-group-label {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        padding: 8px 12px 8px;
+        margin-top: 8px;
+      }
+      .shell-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        text-decoration: none;
+      }
+      .shell-nav-item:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+      .shell-nav-item:focus-visible {
+        outline: 2px solid var(--sidebar-ring);
+        outline-offset: 2px;
+      }
+      .shell-nav-item.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: transparent;
+        box-shadow: var(--shadow-xs);
+      }
+      .shell-nav-item [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      .sidebar-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(var(--spacing) * 2);
+        padding: 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+      .sidebar-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .sidebar-stat-num {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.2;
+        color: var(--sidebar-foreground);
+        font-variant-numeric: tabular-nums;
+      }
+      .sidebar-stat-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--muted-foreground);
+      }
+      .sidebar-recycle-link {
+        padding: 4px 20px 0;
+      }
+      .sidebar-recycle-link a:hover {
+        color: var(--foreground) !important;
+      }
+      .shell-sidebar-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 12px 20px;
+        border-top: 1px solid var(--sidebar-border);
+      }
+      .shell-footer-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+      .shell-footer-row:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+      .shell-footer-row [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      .shell-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-full);
+        background: var(--bg-300);
+        border: 2px solid var(--border-300);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .shell-user-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .shell-user-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--sidebar-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .shell-user-role {
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Main Content ──────────────────────────────────────── */
+      .shell-main {
+        flex: 1;
+        margin-left: 256px;
+        min-height: 100vh;
+        padding: 32px 40px;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
+      .shell-mobile-tabs {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        border-top: 1px solid var(--sidebar-border);
+        background: var(--sidebar);
+        box-shadow: 0 -1px 3px 0 rgba(0,0,0,0.06);
+      }
+      .shell-mobile-tabs-inner {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+      .shell-mobile-tab {
+        display: grid;
+        gap: 3px;
+        justify-items: center;
+        padding: 8px 4px;
+        border: none;
+        border-radius: calc(var(--radius) - 6px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease;
+        text-decoration: none;
+      }
+      .shell-mobile-tab [data-icon] {
+        width: 20px;
+        height: 20px;
+      }
+      .shell-mobile-tab:hover {
+        background: var(--sidebar-accent);
+        color: var(--sidebar-accent-foreground);
+      }
+      .shell-mobile-tab.active {
+        color: var(--primary);
+      }
+
+      /* ── Responsive ─────────────────────────────────────────── */
+      @media (max-width: 768px) {
+        .shell-sidebar {
+          transform: translateX(-100%);
+        }
+        .shell-sidebar.is-open {
+          transform: translateX(0);
+          box-shadow: var(--shadow-xl);
+        }
+        .shell-sidebar-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          z-index: 35;
+          background: rgba(0,0,0,0.3);
+        }
+        .shell-sidebar-backdrop.is-visible {
+          display: block;
+        }
+        .shell-main {
+          margin-left: 0;
+          padding: 20px 16px 88px;
+        }
+        .shell-mobile-tabs {
+          display: block;
+        }
+        .sidebar-search {
+          margin: 8px 8px 4px;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════════════
+         Style Guide Content Styles
+         ═══════════════════════════════════════════════════════ */
+      .sg-page {
+        max-width: 960px;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .sg-page-header {
+        margin-bottom: 48px;
+      }
+      .sg-page-title {
+        margin: 0 0 6px;
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 24px;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        color: var(--foreground);
+      }
+      .sg-page-subtitle {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--muted-foreground);
+      }
+
+      /* ── Section ──────────────────────────────────────────── */
+      .sg-section {
+        padding: 48px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .sg-section:last-child {
+        border-bottom: none;
+      }
+      .sg-section-title {
+        margin: 0 0 6px;
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 1.3;
+        color: var(--foreground);
+      }
+      .sg-section-desc {
+        margin: 0 0 32px;
+        font-family: var(--font-serif);
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+
+      /* ── Swatch grid ─────────────────────────────────────── */
+      .sg-swatch-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: flex-start;
+      }
+      .sg-swatch {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .sg-swatch-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-200);
+        flex-shrink: 0;
+      }
+      .sg-swatch-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--muted-foreground);
+        text-align: center;
+        line-height: 1.4;
+        white-space: nowrap;
+      }
+      .sg-swatch-hex {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        color: var(--text-400);
+      }
+
+      /* ── Typography samples ──────────────────────────────── */
+      .sg-type-group {
+        margin-bottom: 32px;
+      }
+      .sg-type-group:last-child {
+        margin-bottom: 0;
+      }
+      .sg-type-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0 0 16px;
+      }
+      .sg-type-sample {
+        margin: 0 0 4px;
+        line-height: 1.4;
+      }
+      .sg-type-meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-400);
+        margin: 0;
+      }
+      .sg-type-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 24px 0;
+        border: none;
+      }
+
+      /* ── Component row ────────────────────────────────────── */
+      .sg-comp-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      .sg-comp-group {
+        margin-bottom: 24px;
+      }
+      .sg-comp-group:last-child {
+        margin-bottom: 0;
+      }
+      .sg-comp-label {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0 0 12px;
+      }
+
+      /* ── Buttons ─────────────────────────────────────────── */
+      .btn {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 16px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: var(--primary);
+      }
+      .btn-primary:hover {
+        background: var(--brand-600);
+        border-color: var(--brand-600);
+      }
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--primary);
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--foreground);
+        border-color: var(--border);
+      }
+      .btn-secondary:hover {
+        background: var(--accent);
+      }
+      .btn-secondary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted-foreground);
+        border-color: transparent;
+        padding: 0 8px;
+      }
+      .btn-ghost:hover {
+        color: var(--destructive);
+        background: var(--error-50);
+      }
+      .btn-icon {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--foreground);
+        cursor: pointer;
+        transition: background-color .16s ease, color .16s ease, border-color .16s ease;
+      }
+      .btn-icon:hover {
+        background: var(--accent);
+        border-color: var(--border);
+      }
+      .btn-icon [data-icon] {
+        width: 16px;
+        height: 16px;
+      }
+      .btn-link {
+        background: none;
+        border: none;
+        padding: 0;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+      }
+      .btn-link:hover {
+        color: var(--brand-600);
+      }
+      .btn-link [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* ── Badges & Tags ───────────────────────────────────── */
+      .sg-badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 10px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        border: 1px solid transparent;
+      }
+      .badge-collected {
+        background: var(--info-50);
+        color: var(--info-600);
+        border-color: var(--info-200);
+      }
+      .badge-plan {
+        background: var(--warning-50);
+        color: var(--warning-600);
+        border-color: var(--warning-200);
+      }
+      .badge-reading {
+        background: var(--brand-50);
+        color: var(--brand-600);
+        border-color: var(--brand-200);
+      }
+      .badge-done {
+        background: var(--success-50);
+        color: var(--success-600);
+        border-color: var(--success-200);
+      }
+      .badge-stored {
+        background: var(--bg-300);
+        color: var(--text-500);
+        border-color: var(--border-200);
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 400;
+        background: var(--bg-300);
+        color: var(--foreground);
+        border: 1px solid transparent;
+      }
+      .tag-add {
+        background: transparent;
+        color: var(--muted-foreground);
+        border: 1px dashed var(--border-400);
+        cursor: pointer;
+        padding: 0 10px;
+        height: 26px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .tag-add:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      .tag-add [data-icon] {
+        width: 12px;
+        height: 12px;
+      }
+      .badge-purpose {
+        background: var(--bg-300);
+        color: var(--text-600);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: var(--radius-full);
+        display: inline-flex;
+        align-items: center;
+      }
+      .filter-pill {
+        height: 30px;
+        padding: 0 14px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: all .16s ease;
+        display: inline-flex;
+        align-items: center;
+      }
+      .filter-pill:hover {
+        background: var(--accent);
+        color: var(--foreground);
+      }
+      .filter-pill.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding: 0 10px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        background: var(--bg-300);
+        color: var(--text-600);
+      }
+      .trace-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .trace-badge-highlight {
+        background: var(--brand-100);
+        color: var(--brand-700);
+      }
+      .trace-badge-note {
+        background: var(--success-100);
+        color: var(--success-700);
+      }
+      .mark-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 400;
+        background: var(--bg-200);
+        color: var(--text-600);
+      }
+
+      /* ── Cards ───────────────────────────────────────────── */
+      .sg-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+      }
+      .book-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-xs);
+        transition: box-shadow .16s ease;
+      }
+      .book-card:hover {
+        box-shadow: var(--shadow-sm);
+      }
+      .book-card-cover {
+        width: 100%;
+        aspect-ratio: 3/4;
+        background: var(--bg-400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      .book-card-cover-text {
+        font-family: var(--font-display);
+        font-size: 16px;
+        color: var(--text-500);
+      }
+      .book-card-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .book-card-title {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .book-card-author {
+        font-family: var(--font-serif);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .book-card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .book-card-progress-bar {
+        width: 100%;
+        height: 4px;
+        background: var(--bg-400);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+      }
+      .book-card-progress-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: var(--radius-full);
+      }
+
+      /* Book card list view */
+      .book-card-list {
+        display: flex;
+        gap: 14px;
+        padding: 12px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xs);
+        align-items: center;
+      }
+      .book-card-list-thumb {
+        width: 48px;
+        height: 64px;
+        border-radius: 4px;
+        background: var(--bg-400);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .book-card-list-thumb span {
+        font-family: var(--font-display);
+        font-size: 10px;
+        color: var(--text-400);
+      }
+      .book-card-list-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .book-card-list-title {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+      .book-card-list-author {
+        font-family: var(--font-serif);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .book-card-list-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      /* Trace card */
+      .trace-card {
+        padding: 16px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        border-left: 3px solid var(--primary);
+        box-shadow: var(--shadow-xs);
+      }
+      .trace-card-note {
+        border-left-color: var(--success-500);
+      }
+      .trace-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .trace-card-quote {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--foreground);
+        margin-bottom: 10px;
+        font-style: italic;
+      }
+      .trace-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+
+      /* Topic card */
+      .topic-card {
+        padding: 16px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xs);
+      }
+      .topic-card-title {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 6px;
+      }
+      .topic-card-desc {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--muted-foreground);
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+      .topic-card-books {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .topic-card-book-thumb {
+        width: 32px;
+        height: 42px;
+        border-radius: 3px;
+        background: var(--bg-400);
+        border: 1px solid var(--border-200);
+      }
+
+      /* Stat card (lightweight) */
+      .stat-light {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 80px;
+      }
+      .stat-light-num {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 28px;
+        color: var(--foreground);
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+      }
+      .stat-light-label {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      /* Content card */
+      .content-card {
+        padding: 20px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xs);
+      }
+      .content-card-title {
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 16px;
+      }
+
+      /* ── Stars / Rating ──────────────────────────────────── */
+      .star-row {
+        display: flex;
+        gap: 2px;
+      }
+      .star {
+        width: 16px;
+        height: 16px;
+        color: var(--muted-foreground);
+      }
+      .star.filled {
+        color: var(--primary);
+      }
+      .sg-rating-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      /* ── Progress ────────────────────────────────────────── */
+      .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: var(--bg-400);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: var(--radius-full);
+        transition: width .3s ease;
+      }
+      .progress-bar-wide {
+        height: 6px;
+      }
+      .progress-bar-wide .progress-bar-fill {
+        height: 100%;
+      }
+      .progress-bar-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        margin-top: 4px;
+      }
+
+      /* ── Nav samples ────────────────────────────────────── */
+      .sg-nav-sidebar-sample {
+        width: 256px;
+        background: var(--sidebar);
+        border: 1px solid var(--sidebar-border);
+        border-radius: var(--radius-md);
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .sg-nav-sidebar-sample .sg-nav-label {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        padding: 8px 12px 4px;
+      }
+      .sg-nav-sidebar-sample .sg-nav-sample-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: calc(var(--radius) - 8px);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--sidebar-foreground);
+        text-decoration: none;
+      }
+      .sg-nav-sidebar-sample .sg-nav-sample-item:hover {
+        background: var(--sidebar-accent);
+      }
+      .sg-nav-sidebar-sample .sg-nav-sample-item.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: var(--shadow-xs);
+      }
+      .sg-nav-sidebar-sample .sg-nav-sample-item [data-icon] {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      /* Mobile bottom tab sample */
+      .sg-mobile-tabs-sample {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+        width: min(100%, 320px);
+        padding: 8px;
+        background: var(--sidebar);
+        border: 1px solid var(--sidebar-border);
+        border-radius: var(--radius-md);
+      }
+      .sg-mobile-tab-sample {
+        display: grid;
+        gap: 3px;
+        justify-items: center;
+        padding: 8px 4px;
+        border: none;
+        border-radius: calc(var(--radius) - 6px);
+        background: transparent;
+        color: var(--sidebar-foreground);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .sg-mobile-tab-sample.active {
+        color: var(--primary);
+      }
+      .sg-mobile-tab-sample [data-icon] {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* Breadcrumb */
+      .sg-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      .sg-breadcrumb a {
+        color: var(--muted-foreground);
+        text-decoration: none;
+      }
+      .sg-breadcrumb a:hover {
+        color: var(--primary);
+      }
+      .sg-breadcrumb .sg-breadcrumb-sep {
+        color: var(--text-400);
+      }
+      .sg-breadcrumb .sg-breadcrumb-current {
+        color: var(--foreground);
+        font-weight: 500;
+      }
+      .sg-breadcrumb-sep [data-icon] {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* Tab bar */
+      .sg-tab-bar {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0;
+      }
+      .sg-tab-item {
+        padding: 10px 16px;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        border: none;
+        background: none;
+        cursor: pointer;
+        position: relative;
+      }
+      .sg-tab-item:hover {
+        color: var(--foreground);
+      }
+      .sg-tab-item.active {
+        color: var(--primary);
+      }
+      .sg-tab-item.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--primary);
+        border-radius: 1px;
+      }
+
+      /* ── Data display ───────────────────────────────────── */
+      .sg-stat-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        align-items: center;
+      }
+      .sg-stat-row-item {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .sg-stat-row-num {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 20px;
+        color: var(--foreground);
+        font-variant-numeric: tabular-nums;
+      }
+      .sg-stat-row-label {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      /* File list row */
+      .file-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+      }
+      .file-row-icon [data-icon] {
+        width: 20px;
+        height: 20px;
+        color: var(--muted-foreground);
+      }
+      .file-row-name {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--foreground);
+        flex: 1;
+      }
+      .file-row-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+      .file-row-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .file-row-actions .btn-icon {
+        width: 30px;
+        height: 30px;
+      }
+      .file-row-actions .btn-icon [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* Heatmap */
+      .sg-heatmap {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        width: fit-content;
+      }
+      .sg-heatmap-cell {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        background: var(--bg-400);
+      }
+      .sg-heatmap-cell.l1 { background: var(--brand-100); }
+      .sg-heatmap-cell.l2 { background: var(--brand-200); }
+      .sg-heatmap-cell.l3 { background: var(--brand-400); }
+      .sg-heatmap-cell.l4 { background: var(--brand-600); }
+
+      /* Table */
+      .sg-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--font-sans);
+        font-size: 13px;
+      }
+      .sg-table th {
+        text-align: left;
+        padding: 10px 14px;
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-200);
+      }
+      .sg-table td {
+        padding: 10px 14px;
+        color: var(--foreground);
+        border-bottom: 1px solid var(--border-100);
+      }
+      .sg-table tr:last-child td {
+        border-bottom: none;
+      }
+      .sg-table .sg-table-num {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ── Reader components ─────────────────────────────── */
+      .sg-reader-text {
+        font-family: var(--font-serif);
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--foreground);
+        max-width: 520px;
+      }
+      .sg-highlight {
+        background: var(--brand-100);
+        border-radius: 2px;
+        padding: 1px 3px;
+        position: relative;
+      }
+      .sg-highlight-annotation {
+        position: relative;
+        display: inline;
+      }
+      .sg-highlight-popup {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        box-shadow: var(--shadow-md);
+        width: 240px;
+        z-index: 10;
+      }
+      .sg-highlight-popup-text {
+        font-family: var(--font-serif);
+        font-size: 12px;
+        color: var(--foreground);
+        line-height: 1.5;
+        margin-bottom: 6px;
+      }
+      .sg-highlight-popup-meta {
+        font-family: var(--font-sans);
+        font-size: 10px;
+        color: var(--muted-foreground);
+      }
+      .sg-underline {
+        text-decoration: underline;
+        text-decoration-color: var(--brand-400);
+        text-underline-offset: 3px;
+      }
+      .sg-bookmark-edge {
+        position: relative;
+        display: inline-block;
+      }
+      .sg-bookmark-edge::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        right: -16px;
+        width: 10px;
+        height: 20px;
+        background: var(--primary);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%);
+      }
+
+      /* Selection popup */
+      .sg-selection-popup {
+        display: inline-flex;
+        gap: 2px;
+        padding: 4px;
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        box-shadow: var(--shadow-md);
+      }
+      .sg-selection-popup button {
+        height: 30px;
+        padding: 0 14px;
+        border: none;
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--foreground);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .sg-selection-popup button:hover {
+        background: var(--accent);
+      }
+      .sg-selection-popup button [data-icon] {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* Note panel item */
+      .sg-note-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 14px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-xs);
+        max-width: 380px;
+      }
+      .sg-note-text {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--foreground);
+    }
+      .sg-note-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--font-sans);
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+      .sg-note-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .sg-note-actions .btn-icon {
+        width: 26px;
+        height: 26px;
+        border: none;
+      }
+      .sg-note-actions .btn-icon [data-icon] {
+        width: 13px;
+        height: 13px;
+      }
+
+      /* Shortcut hint */
+      .sg-shortcut {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--muted-foreground);
+        background: var(--bg-300);
+        border: 1px solid var(--border-200);
+        border-radius: 4px;
+        padding: 1px 5px;
+        margin-top: 2px;
+      }
+
+      /* ── Toast / Feedback ────────────────────────────────── */
+      .sg-toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: var(--radius-md);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: var(--shadow-md);
+        max-width: 320px;
+      }
+      .sg-toast-success {
+        background: var(--success-500);
+        color: var(--success-foreground);
+      }
+      .sg-toast-error {
+        background: var(--error-500);
+        color: var(--error-foreground);
+      }
+      .sg-toast-warning {
+        background: var(--warning-500);
+        color: var(--bg-50);
+      }
+      .sg-toast [data-icon] {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      /* Empty state */
+      .sg-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 48px 24px;
+        text-align: center;
+        max-width: 320px;
+        margin: 0 auto;
+      }
+      .sg-empty-state-icon {
+        width: 64px;
+        height: 64px;
+        color: var(--text-400);
+        opacity: 0.4;
+      }
+      .sg-empty-state-title {
+        font-family: var(--font-sans);
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--foreground);
+        margin: 0;
+      }
+      .sg-empty-state-desc {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--muted-foreground);
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      /* Dropdown panel */
+      .sg-dropdown-panel {
+        width: 220px;
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        padding: 6px;
+      }
+      .sg-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: calc(var(--radius-sm) - 2px);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+        cursor: pointer;
+      }
+      .sg-dropdown-item:hover {
+        background: var(--accent);
+      }
+      .sg-dropdown-check {
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--border-400);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .sg-dropdown-check.checked {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+      .sg-dropdown-check.checked [data-icon] {
+        width: 10px;
+        height: 10px;
+        color: var(--primary-foreground);
+      }
+
+      /* Settings popover */
+      .sg-settings-popover {
+        width: 280px;
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        padding: 16px;
+      }
+      .sg-settings-popover-title {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 16px;
+      }
+      .sg-setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-100);
+      }
+      .sg-setting-row:last-child {
+        border-bottom: none;
+      }
+      .sg-setting-label {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--foreground);
+      }
+      .sg-setting-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .sg-setting-btn {
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--card);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sg-setting-btn:hover {
+        background: var(--accent);
+      }
+      .sg-setting-value {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+        min-width: 24px;
+        text-align: center;
+      }
+
+      /* Confirm dialog */
+      .sg-dialog-overlay {
+        background: rgba(0, 0, 0, 0.25);
+        padding: 32px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sg-dialog {
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: 24px;
+        width: 340px;
+      }
+      .sg-dialog-title {
+        font-family: var(--font-sans);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--foreground);
+        margin: 0 0 8px;
+      }
+      .sg-dialog-body {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--muted-foreground);
+        line-height: 1.5;
+        margin: 0 0 20px;
+      }
+      .sg-dialog-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .btn-danger {
+        background: var(--destructive);
+        color: var(--destructive-foreground);
+        border-color: var(--destructive);
+      }
+      .btn-danger:hover {
+        background: var(--error-600);
+        border-color: var(--error-600);
+      }
+
+      /* ── Icon grid ───────────────────────────────────────── */
+      .sg-icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 16px;
+      }
+      .sg-icon-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        transition: background .16s ease;
+      }
+      .sg-icon-cell:hover {
+        background: var(--bg-200);
+      }
+      .sg-icon-cell [data-icon] {
+        width: 24px;
+        height: 24px;
+        color: var(--foreground);
+      }
+      .sg-icon-name {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        color: var(--muted-foreground);
+        text-align: center;
+        word-break: break-all;
+        line-height: 1.3;
+      }
+
+      /* ── Spacing / Radius ────────────────────────────────── */
+      .sg-spacing-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-end;
+      }
+      .sg-spacing-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+      .sg-spacing-block {
+        background: var(--brand-200);
+        border-radius: 2px;
+      }
+      .sg-spacing-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--muted-foreground);
+      }
+      .sg-radius-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-end;
+      }
+      .sg-radius-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+      .sg-radius-block {
+        width: 56px;
+        height: 56px;
+        background: var(--brand-100);
+        border: 1.5px solid var(--brand-300);
+      }
+      .sg-shadow-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: center;
+      }
+      .sg-shadow-card {
+        width: 120px;
+        height: 80px;
+        background: var(--card);
+        border: 1px solid var(--border-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sg-shadow-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--muted-foreground);
+        margin-top: 6px;
+        text-align: center;
+      }
+      .sg-shadow-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* ── Toggle switch ─────────────────────────────────── */
+      .toggle {
+        position: relative;
+        width: 40px;
+        height: 22px;
+        border-radius: var(--radius-full);
+        background: var(--border-400);
+        cursor: pointer;
+        transition: background-color .2s ease;
+        border: none;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .toggle.on {
+        background: var(--primary);
+      }
+      .toggle::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--radius-full);
+        background: white;
+        box-shadow: var(--shadow-sm);
+        transition: transform .2s ease;
+      }
+      .toggle.on::after {
+        transform: translateX(18px);
+      }
+
+      /* ── Select ─────────────────────────────────────────── */
+      .select {
+        appearance: none;
+        height: 40px;
+        padding: 0 calc(var(--spacing)*3) 0 calc(var(--spacing)*3);
+        padding-right: 36px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--background);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6d68' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        transition: border-color .16s ease, box-shadow .16s ease;
+      }
+      .select:focus {
+        outline: none;
+        border-color: var(--ring);
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* ── Form group ─────────────────────────────────────── */
+      .sg-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sg-form-label {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--foreground);
+      }
+      .sg-form-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+    </style>
+</body>
+</html>

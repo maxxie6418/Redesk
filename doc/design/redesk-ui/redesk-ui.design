@@ -1,6 +1,22 @@
 {
   "data": [
     {
+      "id": "page-style-guide",
+      "title": "视觉标定",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1719902400000,
+      "canvasData": {
+        "x": 0,
+        "y": 989,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/style-guide.html",
+        "interactions": []
+      }
+    },
+    {
       "id": "page-bookshelf",
       "title": "书架",
       "type": "page",
@@ -37,6 +53,12 @@
             "hideEdge": true
           },
           {
+            "domId": "nav-recycle-bin",
+            "targetPageId": null,
+            "label": "回收站",
+            "hideEdge": true
+          },
+          {
             "domId": "nav-reading-profile",
             "targetPageId": "page-reading-profile",
             "label": "阅读档案",
@@ -53,7 +75,7 @@
       "createdAt": 1719816000000,
       "canvasData": {
         "x": 620,
-        "y": 0,
+        "y": 556,
         "group": 0
       },
       "devMetadata": {
@@ -99,8 +121,8 @@
       "version": 1,
       "createdAt": 1719729600000,
       "canvasData": {
-        "x": 1240,
-        "y": 0,
+        "x": 620,
+        "y": 989,
         "group": 0
       },
       "devMetadata": {
@@ -128,8 +150,8 @@
       "version": 1,
       "createdAt": 1719729600000,
       "canvasData": {
-        "x": 1860,
-        "y": 0,
+        "x": 1240,
+        "y": 989,
         "group": 0
       },
       "devMetadata": {
@@ -163,7 +185,7 @@
       "version": 1,
       "createdAt": 1719470400000,
       "canvasData": {
-        "x": 2480,
+        "x": 620,
         "y": 0,
         "group": 0
       },
@@ -192,8 +214,8 @@
       "version": 1,
       "createdAt": 1719470400000,
       "canvasData": {
-        "x": 3100,
-        "y": 0,
+        "x": 1860,
+        "y": 989,
         "group": 0
       },
       "devMetadata": {
@@ -220,6 +242,10 @@
       "scope": "built-in-global",
       "path": "c:\\Users\\Maxxie\\.trae-cn\\design_libraries\\dl_builtin_claude",
       "versionSource": null
+    },
+    "windowSize": {
+      "width": 800,
+      "height": 600
     }
   }
 }

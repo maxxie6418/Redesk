@@ -641,6 +641,27 @@
           <span class="bd-info-value">文学</span>
         </div>
 
+        <!-- ISBN -->
+        <div class="bd-info-row">
+          <span class="bd-info-label">ISBN</span>
+          <span class="bd-info-value">978-7-5442-6420-5</span>
+        </div>
+
+        <!-- Publisher -->
+        <div class="bd-info-row">
+          <span class="bd-info-label">出版社</span>
+          <span class="bd-info-value">南海出版公司</span>
+        </div>
+
+        <!-- Source -->
+        <div class="bd-info-row">
+          <span class="bd-info-label">来源</span>
+          <a href="https://book.douban.com/" class="bd-source-link" target="_blank" rel="noopener noreferrer">
+            豆瓣链接
+            <span data-icon="external-link" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');mask-image:url('../assets/icons/dl-builtin-claude/external-link.svg');opacity:0.6;"></span>
+          </a>
+        </div>
+
         <!-- Visibility Toggle -->
         <div class="bd-toggle-row">
           <button class="bd-toggle is-on" aria-label="切换可见性"></button>
@@ -652,6 +673,14 @@
           <span data-icon="check" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check.svg');mask-image:url('../assets/icons/dl-builtin-claude/check.svg')"></span>
           <span class="bd-info-label">阅读方式</span>
           <span class="bd-reading-purpose">精读</span>
+        </div>
+
+        <!-- Import via link -->
+        <div class="bd-import-link-row">
+          <a href="#" class="bd-import-link">
+            <span data-icon="link" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/link.svg');mask-image:url('../assets/icons/dl-builtin-claude/link.svg')"></span>
+            通过链接导入
+          </a>
         </div>
 
         <!-- Action Buttons -->
@@ -677,9 +706,23 @@
 
         <!-- Tab Bar -->
         <div class="bd-tab-bar">
-          <button class="bd-tab-btn active" data-tab="reading-traces">阅读痕迹</button>
-          <button class="bd-tab-btn" data-tab="file-management">文件管理</button>
-          <button class="bd-tab-btn" data-tab="relations">关联与历史</button>
+          <div class="bd-tab-bar-tabs">
+            <button class="bd-tab-btn active" data-tab="reading-traces">阅读痕迹</button>
+            <button class="bd-tab-btn" data-tab="file-management">文件管理</button>
+            <button class="bd-tab-btn" data-tab="relations">关联与历史</button>
+          </div>
+          <div class="bd-export-wrap">
+            <button class="btn btn-outline bd-export-btn">
+              <span data-icon="download" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/download.svg');mask-image:url('../assets/icons/dl-builtin-claude/download.svg')"></span>
+              导出
+              <span data-icon="chevron-down" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg')"></span>
+            </button>
+            <div class="bd-export-dropdown">
+              <button class="bd-export-item" href="#">导出笔记 (Markdown)</button>
+              <button class="bd-export-item" href="#">导出高亮</button>
+              <button class="bd-export-item" href="#">导出元数据</button>
+            </div>
+          </div>
         </div>
 
         <!-- TAB 1: 阅读痕迹 -->
@@ -873,17 +916,21 @@
           <!-- Status History -->
           <h3 class="bd-section-heading">状态历史</h3>
           <div class="bd-timeline">
-            <div class="bd-timeline-item">
-              <p class="bd-timeline-date">2026-06-10</p>
-              <p class="bd-timeline-text">计划读 <span class="arrow">→</span> 在读</p>
+            <div class="bd-timeline-item bd-timeline-current">
+              <p class="bd-timeline-date">2026-06-22</p>
+              <p class="bd-timeline-text">在读 <span class="bd-timeline-badge">当前</span></p>
             </div>
             <div class="bd-timeline-item">
-              <p class="bd-timeline-date">2026-06-05</p>
-              <p class="bd-timeline-text">收录 <span class="arrow">→</span> 计划读</p>
+              <p class="bd-timeline-date">2026-06-20</p>
+              <p class="bd-timeline-text">计划读 <span class="arrow">&rarr;</span> 在读</p>
             </div>
             <div class="bd-timeline-item">
-              <p class="bd-timeline-date">2026-06-01</p>
-              <p class="bd-timeline-text">录入 <span class="arrow">→</span> 收录</p>
+              <p class="bd-timeline-date">2026-06-19</p>
+              <p class="bd-timeline-text">收录 <span class="arrow">&rarr;</span> 计划读</p>
+            </div>
+            <div class="bd-timeline-item">
+              <p class="bd-timeline-date">2026-06-18</p>
+              <p class="bd-timeline-text">录入 <span class="arrow">&rarr;</span> 收录</p>
             </div>
           </div>
 
@@ -898,13 +945,22 @@
           </div>
 
           <!-- Related Books -->
-          <h3 class="bd-section-heading" style="margin-top:8px;">相关书籍</h3>
+          <h3 class="bd-section-heading" style="margin-top:8px;">关联书籍</h3>
           <div class="bd-related-section">
             <div class="bd-related-book-card">
               <div class="bd-related-book-cover"></div>
               <div class="bd-related-book-info">
                 <span class="bd-related-book-title">霍乱时期的爱情</span>
                 <span class="bd-related-book-author">加西亚·马尔克斯</span>
+                <span class="bd-related-book-relation">同一作者</span>
+              </div>
+            </div>
+            <div class="bd-related-book-card">
+              <div class="bd-related-book-cover" style="background: linear-gradient(145deg, var(--bg-400) 0%, var(--text-400) 100%);"></div>
+              <div class="bd-related-book-info">
+                <span class="bd-related-book-title">佩德罗·巴拉莫</span>
+                <span class="bd-related-book-author">胡安·鲁尔福</span>
+                <span class="bd-related-book-relation">相关推荐</span>
               </div>
             </div>
           </div>
@@ -2255,6 +2311,147 @@
           width: 160px;
           height: 224px;
         }
+      }
+
+      /* ── Source Link ─────────────────────────────────────────── */
+      .bd-source-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--brand-500);
+        text-decoration: none;
+        transition: color 0.16s ease;
+      }
+      .bd-source-link:hover {
+        color: var(--brand-600);
+        text-decoration: underline;
+      }
+
+      /* ── Import Link ─────────────────────────────────────────── */
+      .bd-import-link-row {
+        margin-bottom: 8px;
+      }
+      .bd-import-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        color: var(--muted-foreground);
+        text-decoration: none;
+        transition: color 0.16s ease;
+      }
+      .bd-import-link:hover {
+        color: var(--brand-500);
+      }
+
+      /* ── Timeline Enhancements ───────────────────────────────── */
+      .bd-timeline-current::before {
+        background: var(--brand-500) !important;
+        box-shadow: 0 0 0 3px var(--brand-200);
+      }
+      .bd-timeline-badge {
+        display: inline-flex;
+        padding: 1px 8px;
+        border-radius: var(--radius-full);
+        background: var(--brand-50);
+        color: var(--brand-600);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 8px;
+        border: 1px solid var(--brand-200);
+      }
+
+      /* ── Related Book Relation Badge ────────────────────────── */
+      .bd-related-book-relation {
+        display: inline-flex;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        background: var(--secondary);
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 11px;
+        font-weight: 500;
+        margin-top: 2px;
+        width: fit-content;
+      }
+
+      /* ── Export Dropdown ──────────────────────────────────────── */
+      .bd-tab-bar-tabs {
+        display: flex;
+        gap: 0;
+      }
+      .bd-tab-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .bd-export-wrap {
+        position: relative;
+        flex-shrink: 0;
+        margin-left: auto;
+      }
+      .bd-export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: var(--radius-sm);
+        background: var(--popover);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+      .bd-export-btn:hover {
+        border-color: var(--brand-300);
+        box-shadow: var(--shadow-sm);
+      }
+      .bd-export-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        min-width: 180px;
+        padding: 4px;
+        background: var(--popover);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+        z-index: 20;
+      }
+      .bd-export-wrap:hover .bd-export-dropdown,
+      .bd-export-wrap:focus-within .bd-export-dropdown {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+      .bd-export-item {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+        text-align: left;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.12s ease;
+      }
+      .bd-export-item:hover {
+        background: var(--muted);
       }
     </style>
 </body>

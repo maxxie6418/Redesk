@@ -5,7 +5,467 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redesk - 阅读器 - v4</title>
     <style id="theme-vars">
-/* PLACEHOLDER_THEME_VARS */
+/* Source: structured-spec */
+/* Brand fonts — Anthropic official: Newsreader (editorial display/slogan) +
+   Poppins (compact UI) + Lora (reading). Mono kept for code/token surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,18..72,300;0,18..72,400;0,18..72,500;1,18..72,400&family=Geist+Mono:wght@400;500&display=swap');
+/* ============================================================
+   Token model
+   1) Primitives — 7 key color cards as 10-step scales (50→900).
+      These are the single source of truth (mirrored in the linshi
+      preview tool). The flagged "standard" step per group:
+        brand-500 · text-800 · bg-100 · icon-700 · border-300 · success-500 · error-500
+   2) Semantic tokens — reference the primitives above (no raw hex
+      duplicates). These are the API consumed by preview / ui_kits /
+      components.
+   3) Non-color tokens — font, spacing, radius, shadow, type.
+   ============================================================ */
+:root {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #c96442 */
+  --brand-50: #fbf2ed;
+  --brand-100: #f4e0d5;
+  --brand-200: #ebc6b6;
+  --brand-300: #e0a892;
+  --brand-400: #d6866a;
+  --brand-500: #c96442;
+  --brand-600: #b0562f;
+  --brand-700: #934828;
+  --brand-800: #753a22;
+  --brand-900: #582e1d;
+  /* text — standard: --text-800 #3d3929 */
+  --text-50: #f6f5f0;
+  --text-100: #ece9de;
+  --text-200: #dad9d4;
+  --text-300: #c2c0b6;
+  --text-400: #9b988c;
+  --text-500: #6e6d68;
+  --text-600: #535146;
+  --text-700: #46443b;
+  --text-800: #3d3929;
+  --text-900: #28261b;
+  /* background — standard: --bg-100 #faf9f5 */
+  --bg-50: #ffffff;
+  --bg-100: #faf9f5;
+  --bg-200: #f5f4ef;
+  --bg-300: #ede9de;
+  --bg-400: #e3e0d4;
+  --bg-500: #dad9d4;
+  --bg-600: #cdcabf;
+  --bg-700: #b4b2a7;
+  --bg-800: #8a887e;
+  --bg-900: #535146;
+  /* icon — standard: --icon-700 #3d3929 */
+  --icon-50: #ffffff;
+  --icon-100: #dad9d4;
+  --icon-200: #c2c0b6;
+  --icon-300: #9b988c;
+  --icon-400: #6e6d68;
+  --icon-500: #535146;
+  --icon-600: #46443b;
+  --icon-700: #3d3929;
+  --icon-800: #28261b;
+  --icon-900: #141413;
+  /* border — standard: --border-300 #dad9d4 */
+  --border-50: #f0efe9;
+  --border-100: #ebebeb;
+  --border-200: #e3e0d4;
+  --border-300: #dad9d4;
+  --border-400: #cdcabf;
+  --border-500: #b4b2a7;
+  --border-600: #9b988c;
+  --border-700: #6e6d68;
+  --border-800: #535146;
+  --border-900: #3d3929;
+  /* state · success — standard: --success-500 #788c5d */
+  --success-50: #f0f3ea;
+  --success-100: #e7ecdd;
+  --success-200: #d3dcc1;
+  --success-300: #b8c69e;
+  --success-400: #9aac79;
+  --success-500: #788c5d;
+  --success-600: #647649;
+  --success-700: #4f5d3a;
+  --success-800: #3d482d;
+  --success-900: #2b331f;
+  /* state · error — standard: --error-500 #d64545 */
+  --error-50: #fcecea;
+  --error-100: #f7dedb;
+  --error-200: #f3c4bf;
+  --error-300: #eb9d96;
+  --error-400: #e0716a;
+  --error-500: #d64545;
+  --error-600: #b83636;
+  --error-700: #962c2c;
+  --error-800: #732222;
+  --error-900: #531818;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-50);
+  --muted: var(--bg-300);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--icon-900);
+  --popover-foreground: var(--text-900);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--text-600);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: var(--text-900);
+  --destructive-foreground: #ffffff;
+  /* semantic */
+  --primary: var(--brand-500);
+  --secondary: #e9e6dc;
+  --accent: var(--secondary);
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #ffffff;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #ded8c4;
+  --chart-4: #dbd3f0;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #f5f4ee;
+  --sidebar-foreground: #3d3d3a;
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #e9e6dc;
+  --sidebar-accent-foreground: #343434;
+  --sidebar-border: var(--border-100);
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — display (Newsreader) for slogans/headlines, sans (Poppins) for compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* spacing */
+  --spacing: 0.25rem;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+  /* type */
+  --tracking-normal: 0em;
+}
+
+.dark {
+  /* ===== 1) Primitive scales · key color cards (10 steps, 50→900) ===== */
+  /* brand — standard: --brand-500 #d97757 */
+  --brand-50: #3a2a22;
+  --brand-100: #4d3528;
+  --brand-200: #6b4533;
+  --brand-300: #8a5740;
+  --brand-400: #b0683f;
+  --brand-500: #d97757;
+  --brand-600: #e08d6f;
+  --brand-700: #e8a98f;
+  --brand-800: #f0c6b3;
+  --brand-900: #f8e3d8;
+  /* text — standard: --text-800 #f1f1ef */
+  --text-50: #1b1b19;
+  --text-100: #2c2c2b;
+  --text-200: #46443b;
+  --text-300: #6e6d68;
+  --text-400: #908e84;
+  --text-500: #b7b5a9;
+  --text-600: #c3c0b6;
+  --text-700: #d8d6cd;
+  --text-800: #f1f1ef;
+  --text-900: #faf9f5;
+  /* background — standard: --bg-100 #262624 */
+  --bg-50: #1b1b19;
+  --bg-100: #262624;
+  --bg-200: #2c2c2b;
+  --bg-300: #30302e;
+  --bg-400: #3e3e38;
+  --bg-500: #4a4a43;
+  --bg-600: #52514a;
+  --bg-700: #6e6d68;
+  --bg-800: #908e84;
+  --bg-900: #b7b5a9;
+  /* icon — standard: --icon-700 #f1f1ef */
+  --icon-50: #1b1b19;
+  --icon-100: #2c2c2b;
+  --icon-200: #46443b;
+  --icon-300: #6e6d68;
+  --icon-400: #908e84;
+  --icon-500: #b7b5a9;
+  --icon-600: #d8d6cd;
+  --icon-700: #f1f1ef;
+  --icon-800: #f8f8f6;
+  --icon-900: #ffffff;
+  /* border — standard: --border-300 #3e3e38 */
+  --border-50: #1f1e1d;
+  --border-100: #2c2c2b;
+  --border-200: #343430;
+  --border-300: #3e3e38;
+  --border-400: #4a4a43;
+  --border-500: #52514a;
+  --border-600: #6e6d68;
+  --border-700: #908e84;
+  --border-800: #b7b5a9;
+  --border-900: #d8d6cd;
+  /* state · success — standard: --success-500 #8ca06f */
+  --success-50: #232a1c;
+  --success-100: #2e3823;
+  --success-200: #3f4d30;
+  --success-300: #556640;
+  --success-400: #708353;
+  --success-500: #8ca06f;
+  --success-600: #a3b58a;
+  --success-700: #bccaa8;
+  --success-800: #d6dfc8;
+  --success-900: #edf2e4;
+  /* state · error — standard: --error-500 #ef4444 */
+  --error-50: #3a1f1f;
+  --error-100: #4d2424;
+  --error-200: #6e2c2c;
+  --error-300: #93302f;
+  --error-400: #c43a39;
+  --error-500: #ef4444;
+  --error-600: #f26b6b;
+  --error-700: #f59292;
+  --error-800: #f9b9b9;
+  --error-900: #fcdede;
+
+  /* ===== 2) Semantic tokens (reference the primitives above) ===== */
+  /* bg */
+  --background: var(--bg-100);
+  --card: var(--bg-200);
+  --popover: var(--bg-300);
+  --muted: var(--bg-50);
+  /* text */
+  --foreground: var(--text-800);
+  --card-foreground: var(--text-900);
+  --popover-foreground: #e5e5e2;
+  --primary-foreground: #141413;
+  --secondary-foreground: var(--bg-300);
+  --muted-foreground: var(--text-500);
+  --accent-foreground: #f5f4ee;
+  --destructive-foreground: #ffffff;
+  /* accent */
+  --primary: var(--brand-500);
+  --secondary: var(--text-900);
+  --accent: #1a1915;
+  --input: var(--border-500);
+  --ring: var(--brand-500);
+  /* border */
+  --border: var(--border-300);
+  /* status */
+  --destructive: var(--error-500);
+  --success: var(--success-500);
+  --success-foreground: #141413;
+  --error: var(--error-500);
+  --error-foreground: #ffffff;
+  /* chart */
+  --chart-1: #b05730;
+  --chart-2: #9c87f5;
+  --chart-3: #1a1915;
+  --chart-4: #2f2b48;
+  --chart-5: #b4552d;
+  /* sidebar */
+  --sidebar: #1f1e1d;
+  --sidebar-foreground: #c3c0b6;
+  --sidebar-primary: #343434;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #0f0f0e;
+  --sidebar-accent-foreground: #c3c0b6;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #b5b5b5;
+
+  /* ===== 3) Non-color tokens ===== */
+  /* font — sans (Poppins) for headings + compact UI, serif (Lora) for reading surfaces */
+  --font-display: Newsreader, Georgia, ui-serif, serif;
+  --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Lora, Georgia, ui-serif, serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 1rem;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  /* shadow */
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: #000000;
+  --shadow-2xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 3px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 1px 3px 0px rgba(0, 0, 0, 0.1), 0 8px 10px -1px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 1px 3px 0px rgba(0, 0, 0, 0.25);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Badge ─────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="badge filled">Essay</span> <span class="badge filled">Editorial</span> <span class="badge filled is-disabled" aria-disabled="true">Essay</span>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 calc(var(--spacing)*3.5);border-radius:var(--radius);font:600 12px/1 var(--font-sans);letter-spacing:.01em;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,color .16s ease,border-color .16s ease}
+.badge:hover{transform:translateY(-1px)}
+.filled{background:var(--primary);color:var(--primary-foreground);border:1px solid transparent;box-shadow:var(--shadow-xs)}
+.filled:hover{box-shadow:var(--shadow-sm)}
+.muted{background:var(--muted);color:var(--foreground);border:1px solid transparent}
+.outline{background:var(--popover);color:var(--foreground);border:1px solid var(--border)}
+.is-disabled{pointer-events:none;box-shadow:none}
+.filled.is-disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.muted.is-disabled{background:var(--card);color:var(--muted-foreground);border-color:transparent}
+.outline.is-disabled{background:var(--background);color:var(--muted-foreground)}
+
+/* ── Button ────────────────────────────────────────────────── */
+/* @anatomy
+   <span class="label">Primary</span> <div class="examples"> <button class="btn primary" type="button">Start a new chat</button> <button class="btn primary" type="button" disabled>Start a new chat</button> </div>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.examples{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:center;padding:clamp(18px,3vw,24px);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);background:var(--popover);box-shadow:var(--shadow-xs)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--radius);box-shadow:var(--shadow-sm);background:transparent;color:var(--foreground);font:600 14px/1.1 var(--font-sans);white-space:nowrap;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.btn:hover,.btn:focus-visible{box-shadow:var(--shadow-md)}
+.btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.btn:disabled{cursor:not-allowed;box-shadow:none}
+.primary{background:var(--primary);color:var(--primary-foreground)}
+.primary:disabled{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border)}
+.secondary{background:var(--secondary);color:var(--foreground);border-color:var(--border)}
+.secondary:disabled{background:var(--background);color:var(--muted-foreground);border-color:var(--border)}
+.ghost{background:transparent;color:var(--foreground);box-shadow:none}
+.ghost:hover,.ghost:focus-visible{background:var(--muted)}
+.ghost:disabled{background:transparent;color:var(--muted-foreground);border-color:transparent}
+
+/* ── Card ──────────────────────────────────────────────────── */
+/* @anatomy
+   <article class="card"> <p class="eyebrow">Reading Card</p> <h2 class="title">Summarize this chapter</h2> <p class="body">Claude Design System frames long-form AI assistant reading with soft elevation, calm spacing, and editorial rhythm.</p> </article> <article class="card disabled" aria-disabled="true"> <p class="eyebrow">Reading Card</p> <h2 class="title">Context locked</h2> <p class="body">Th...
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.card{width:100%;height:100%;display:flex;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);box-shadow:var(--shadow-sm);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.eyebrow{margin:0 0 10px;font:600 10px/1.2 var(--font-serif);letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground)}
+.title{margin:0 0 10px;font:600 21px/1.18 var(--font-sans);color:var(--foreground)}
+.body{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--secondary-foreground)}
+.disabled{background:var(--card);box-shadow:none;border-color:var(--border);pointer-events:none}
+.disabled .eyebrow{color:var(--muted-foreground)}
+.disabled .title{color:var(--foreground)}
+.disabled .body{color:var(--muted-foreground)}
+.sunken{background:var(--card);box-shadow:none}
+.sunken .body{color:var(--foreground)}
+.emphasis{background:var(--foreground);color:var(--background);border-color:transparent;box-shadow:var(--shadow-xl)}
+.emphasis .eyebrow{color:var(--secondary)}
+.emphasis .body,.emphasis .title{color:var(--background)}
+
+/* ── Chat Bubble ───────────────────────────────────────────── */
+/* @anatomy
+   <div class="bubble user"> <span class="meta">You · now</span> <p class="copy">Recommend a writer for light reading.</p>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.bubble{display:grid;gap:8px;max-width:280px;padding:calc(var(--spacing)*3.5) calc(var(--spacing)*4);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+.user{background:var(--primary);color:var(--primary-foreground)}
+.assistant{background:var(--popover);color:var(--card-foreground);border:1px solid var(--border)}
+.meta{display:block;font:500 11px/1.3 var(--font-sans);letter-spacing:.01em}
+.user .meta{color:var(--primary-foreground);opacity:.78}
+.assistant .meta{color:var(--muted-foreground)}
+.copy{margin:0;font-size:14px;line-height:1.6}
+.disabled{box-shadow:none}
+.user.disabled{background:var(--secondary);color:var(--secondary-foreground)}
+.user.disabled .meta{color:var(--secondary-foreground);opacity:1}
+.assistant.disabled{background:var(--card);color:var(--muted-foreground)}
+.thread{display:grid;gap:12px;width:min(100%,360px);padding:calc(var(--spacing)*4);background:var(--popover);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-sm)}
+
+/* ── Input ─────────────────────────────────────────────────── */
+/* @anatomy
+   <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input"> <input class="field" type="text" placeholder="Search components…" aria-label="Claude Design System search input disabled" disabled>
+*/
+.preview{width:min(100%,760px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.field,.bar{flex:1 1 280px;min-width:220px;height:40px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background);box-shadow:var(--shadow-sm)}
+.field{padding:0 calc(var(--spacing)*3);color:var(--foreground);font:inherit}
+.field::placeholder,.bar input::placeholder{color:var(--muted-foreground)}
+.field:focus,.bar:focus-within{outline:none;border-color:var(--ring);box-shadow:var(--shadow-sm)}
+.field:disabled,.bar.disabled{background:var(--card);color:var(--muted-foreground);box-shadow:none}
+.bar{display:flex;align-items:center;gap:8px;padding:0 calc(var(--spacing)*3);background:var(--card);border-color:transparent}
+.bar input{flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:none}
+.dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--muted-foreground);opacity:.5}
+
+/* ── Navigation ────────────────────────────────────────────── */
+/* @anatomy
+   <nav class="tabs" aria-label="Navigation tabs"> <button class="tab active" type="button">Web</button> <button class="tab" type="button">Mobile</button> <button class="tab" type="button">Library</button> <button class="tab" type="button" disabled>Syncing</button> </nav>
+*/
+.preview{width:min(100%,860px);margin:0 auto;display:grid;gap:clamp(24px,4vw,32px)}
+.section{display:grid;gap:14px}
+.tabs,.rail,.bottom-nav{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:100%;padding:6px;background:var(--card)}
+.tab,.item,.nav-item{appearance:none;border:1px solid transparent;background:transparent;color:var(--muted-foreground);font:600 13px/1.1 var(--font-sans);cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.tab{padding:11px 15px;border-radius:calc(var(--radius) - 6px)}
+.tab:hover,.nav-item:hover{background:var(--popover);color:var(--foreground)}
+.item:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.tab:focus-visible,.item:focus-visible,.nav-item:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tab.active,.nav-item.active{background:var(--popover);color:var(--foreground);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tab.active{box-shadow:var(--shadow-sm)}
+.tab:disabled,.item:disabled,.nav-item:disabled{cursor:not-allowed;box-shadow:none;background:transparent;color:var(--muted-foreground)}
+.brand{margin:0 0 12px;font:600 11px/1.2 var(--font-serif);letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-foreground)}
+.stack{display:grid;gap:8px}
+.item{width:100%;padding:12px 13px;border-radius:calc(var(--radius) - 8px);text-align:left;color:var(--sidebar-foreground);background:transparent}
+.item.active{background:var(--popover);color:var(--foreground);border-color:var(--sidebar-border);box-shadow:var(--shadow-xs)}
+.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);padding:8px;background:var(--popover)}
+.nav-item{display:grid;gap:4px;justify-items:center;padding:12px 10px;border-radius:calc(var(--radius) - 6px)}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--card-foreground);
+  }
+  @layer base {
+    body { background: var(--card-background); color: var(--card-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
     </style>
     <style>
       .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -25,7 +485,6 @@
     </style>
 </head>
 <body>
-
 <div class="shell-layout">
 
   <!-- ── Sidebar (copy from bookshelf, "书架" active) ───────── -->
@@ -42,22 +501,18 @@
 
     <nav class="shell-nav" aria-label="主导航">
       <p class="shell-nav-group-label">浏览</p>
-
       <a class="shell-nav-item active" href="#" data-active="true">
         <span data-icon="book-open" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
         书架
       </a>
-
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-profile" data-hideedge="true">
         <span data-icon="star" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
         阅读档案
       </a>
-
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-records" data-hideedge="true">
         <span data-icon="message-circle-more" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
         阅读记录
       </a>
-
       <a class="shell-nav-item" href="#" data-dom-id="nav-reading-topics" data-hideedge="true">
         <span data-icon="tag" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
         阅读主题
@@ -65,22 +520,10 @@
     </nav>
 
     <div class="sidebar-stats">
-      <div class="sidebar-stat">
-        <span class="sidebar-stat-num">127</span>
-        <span class="sidebar-stat-label">总藏书</span>
-      </div>
-      <div class="sidebar-stat">
-        <span class="sidebar-stat-num">15</span>
-        <span class="sidebar-stat-label">计划读</span>
-      </div>
-      <div class="sidebar-stat">
-        <span class="sidebar-stat-num">3</span>
-        <span class="sidebar-stat-label">在读</span>
-      </div>
-      <div class="sidebar-stat">
-        <span class="sidebar-stat-num">86</span>
-        <span class="sidebar-stat-label">已读</span>
-      </div>
+      <div class="sidebar-stat"><span class="sidebar-stat-num">127</span><span class="sidebar-stat-label">总藏书</span></div>
+      <div class="sidebar-stat"><span class="sidebar-stat-num">15</span><span class="sidebar-stat-label">计划读</span></div>
+      <div class="sidebar-stat"><span class="sidebar-stat-num">3</span><span class="sidebar-stat-label">在读</span></div>
+      <div class="sidebar-stat"><span class="sidebar-stat-num">86</span><span class="sidebar-stat-label">已读</span></div>
     </div>
 
     <div class="shell-sidebar-footer">
@@ -94,42 +537,27 @@
       </a>
       <div class="shell-footer-row" style="cursor:default">
         <div class="shell-avatar">M</div>
-        <div class="shell-user-info">
-          <div class="shell-user-name">我的书房</div>
-          <div class="shell-user-role">个人空间</div>
-        </div>
+        <div class="shell-user-info"><div class="shell-user-name">我的书房</div><div class="shell-user-role">个人空间</div></div>
       </div>
     </div>
   </aside>
 
-  <!-- ── Mobile Backdrop ──────────────────────────────────── -->
   <div class="shell-sidebar-backdrop" id="sidebar-backdrop"></div>
 
-  <!-- ── Main Content ─────────────────────────────────────── -->
   <main class="shell-main reader-shell-main">
-
-    <!-- ═══════════════════════════════════════════════════════
-         阅读器 — Reader Page
-         ═══════════════════════════════════════════════════════ -->
     <div class="reader-page">
 
       <!-- ── 1. Top Toolbar ─────────────────────────────── -->
       <div class="reader-toolbar">
-        <!-- Left: Book info -->
         <div class="reader-toolbar-left">
           <span class="reader-toolbar-title">百年孤独</span>
           <span class="reader-toolbar-chapter">第3章 · 布恩迪亚家族</span>
         </div>
-
-        <!-- Center: Progress -->
         <div class="reader-toolbar-center">
-          <div class="reader-progress-bar">
-            <div class="reader-progress-fill" style="width:25%"></div>
-          </div>
+          <div class="reader-progress-bar"><div class="reader-progress-fill" style="width:25%"></div></div>
           <span class="reader-progress-text">第 87 / 345 页 · 25%</span>
+          <span class="reader-timer"><span data-icon="clock" style="width:11px;height:11px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/clock.svg');mask-image:url('../assets/icons/dl-builtin-claude/clock.svg')"></span>本次 23 分钟</span>
         </div>
-
-        <!-- Right: Actions -->
         <div class="reader-toolbar-right">
           <a class="reader-toolbar-link" href="#" data-dom-id="reader-back-bookshelf">
             <span data-icon="arrow-left" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg');mask-image:url('../assets/icons/dl-builtin-claude/arrow-left.svg')"></span>
@@ -139,30 +567,25 @@
             <span data-icon="eye" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/eye.svg');mask-image:url('../assets/icons/dl-builtin-claude/eye.svg')"></span>
             详情
           </a>
-
           <div class="reader-toolbar-divider"></div>
-
-          <!-- Toggle buttons -->
           <button class="reader-tool-toggle is-active" type="button" title="高亮">
             <span data-icon="highlighter" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
+            <span class="reader-shortcut-hint">H</span>
           </button>
           <button class="reader-tool-toggle" type="button" title="笔记">
             <span data-icon="message-square-plus" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-square-plus.svg')"></span>
+            <span class="reader-shortcut-hint">N</span>
           </button>
           <button class="reader-tool-toggle" type="button" title="书签">
             <span data-icon="bookmark" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg');mask-image:url('../assets/icons/dl-builtin-claude/bookmark.svg')"></span>
+            <span class="reader-shortcut-hint">B</span>
           </button>
-
           <div class="reader-toolbar-divider"></div>
-
-          <!-- Typography settings trigger -->
           <div class="reader-settings-wrapper">
             <input type="checkbox" id="reader-settings-toggle" class="reader-settings-checkbox" checked>
             <label for="reader-settings-toggle" class="reader-tool-toggle" title="排版设置">
               <span data-icon="type" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/type.svg');mask-image:url('../assets/icons/dl-builtin-claude/type.svg')"></span>
             </label>
-
-            <!-- Typography Popover -->
             <div class="reader-settings-popover">
               <div class="reader-settings-group">
                 <span class="reader-settings-label">字体大小</span>
@@ -191,10 +614,11 @@
               </div>
             </div>
           </div>
-
-          <!-- Fullscreen toggle -->
           <button class="reader-tool-toggle" type="button" title="全屏">
             <span data-icon="grip" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/grip.svg');mask-image:url('../assets/icons/dl-builtin-claude/grip.svg')"></span>
+          </button>
+          <button class="reader-tool-toggle" type="button" title="全文搜索" data-dom-id="reader-fulltext-search">
+            <span data-icon="search" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/search.svg');mask-image:url('../assets/icons/dl-builtin-claude/search.svg')"></span>
           </button>
         </div>
       </div>
@@ -202,26 +626,20 @@
       <!-- ── 2. Reading Content Area ────────────────────── -->
       <div class="reader-content">
         <div class="reader-column">
-
           <h2 class="reader-chapter-heading">第三章</h2>
-
           <p class="reader-paragraph">
-            <span class="reader-highlight" data-annotation="✦ 家族的记忆是循环的">面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起</span>父亲带他去见识冰块的那个遥远的下午。那时的马孔多是一个二十户人家的村落，泥巴和芦苇盖成的屋子沿河岸排开，湍急的河水清澈见底，河床里卵石洁白光滑宛如史前巨蛋。
+            <span class="reader-highlight" data-annotation="✦ 家族的记忆是循环的"><span class="reader-highlight-tag" title="⭐ 重要">⭐ 重要</span>面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起</span>父亲带他去见识冰块的那个遥远的下午。那时的马孔多是一个二十户人家的村落，泥巴和芦苇盖成的屋子沿河岸排开，湍急的河水清澈见底，河床里卵石洁白光滑宛如史前巨蛋。
           </p>
-
           <p class="reader-paragraph">
-            <span class="reader-highlight">世界新生伊始，许多事物还没有名字</span>，提到的时候尚需用手指指点点。每年三月前后，一家衣衫褴褛的吉卜赛人都会来到村边搭起帐篷，在笛鼓的喧嚣中，向马孔多的居民介绍科学家们的最新发明。
+            <span class="reader-highlight">世界新生伊始，许多事物还没有名字</span>，提到的时候尚需用手指指点点。<span class="reader-underline" data-tooltip="划线标注">每年三月前后，一家衣衫褴褛的吉卜赛人都会来到村边搭起帐篷</span>，在笛鼓的喧嚣中，向马孔多的居民介绍科学家们的最新发明。
           </p>
-
-          <p class="reader-paragraph">
+          <p class="reader-paragraph reader-paragraph--bookmarked">
+            <span class="reader-bookmark-indicator" title="已添加书签"></span>
             他们首先带来的是磁铁。一个身躯粗壮的吉卜赛人，自称梅尔基亚德斯，满脸络腮胡子，手指瘦得像鸟的爪子，向公众展示了他所谓的马其顿炼金术士创造的第八大奇迹。他挨家串户地拖着两块磁铁，大伙儿惊异地看见铁锅、铁盆、铁钳、铁炉纷纷从原地落下，木板因铁钉和螺钉没命地挣脱出来而嘎嘎作响，甚至连那些遗失很久的东西也从找过多次的地方兀然出现，乱七八糟地跟在梅尔基亚德斯的魔铁后面。
           </p>
-
           <p class="reader-paragraph">
             "万物皆有生命，"吉卜赛人用刺耳的语调说道，"只要唤醒它们的灵魂。"何塞·阿尔卡蒂奥·布恩迪亚的想象力一向超越自然的能力，甚至超越了魔术和妖术。他认为这种无用的发明可以用来开采地下的金子。
           </p>
-
-          <!-- ── Highlight Selection Popup (floating) ───────── -->
           <div class="reader-selection-popup">
             <button class="reader-popup-btn is-active" type="button" title="高亮">
               <span data-icon="highlighter" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg');mask-image:url('../assets/icons/dl-builtin-claude/highlighter.svg')"></span>
@@ -233,13 +651,11 @@
               <span data-icon="pen-line" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
             </button>
           </div>
-
         </div>
       </div>
 
       <!-- ── 3. Bottom Note Panel ────────────────────────── -->
       <div class="reader-note-panel">
-        <!-- Panel Header -->
         <div class="reader-note-header">
           <div class="reader-note-header-left">
             <span data-icon="pen-line" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
@@ -251,30 +667,17 @@
           </label>
           <input type="checkbox" id="reader-note-toggle" class="reader-note-checkbox" checked>
         </div>
-
-        <!-- Panel Body (expanded by default) -->
         <div class="reader-note-body">
           <div class="reader-note-list">
-            <!-- Note 1 -->
             <div class="reader-note-item">
               <div class="reader-note-text">家族的孤独是一个循环，每个新成员都在重复前人的命运，但又不完全相同。马尔克斯用时间的螺旋来构建这个家族的叙事。</div>
-              <div class="reader-note-meta">
-                <span>第3章</span>
-                <span>6月25日</span>
-              </div>
+              <div class="reader-note-meta"><span>第3章</span><span>6月25日</span></div>
             </div>
-
-            <!-- Note 2 -->
             <div class="reader-note-item">
               <div class="reader-note-text">吉卜赛人的到来象征着外部世界对马孔多的入侵，也是魔幻现实主义元素的引入。</div>
-              <div class="reader-note-meta">
-                <span>第3章</span>
-                <span>6月23日</span>
-              </div>
+              <div class="reader-note-meta"><span>第3章</span><span>6月23日</span></div>
             </div>
           </div>
-
-          <!-- Note Input -->
           <div class="reader-note-input">
             <input type="text" placeholder="添加笔记..." class="reader-note-input-field" aria-label="添加笔记">
             <button class="reader-note-send" type="button" title="发送">
@@ -285,706 +688,326 @@
       </div>
 
     </div>
-
   </main>
 </div>
 
-<!-- ── Mobile Bottom Tab Bar ──────────────────────────────── -->
 <nav class="shell-mobile-tabs" aria-label="移动端导航">
   <div class="shell-mobile-tabs-inner">
-    <a class="shell-mobile-tab active" href="#">
-      <span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>
-      书架
-    </a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile">
-      <span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
-      阅读档案
-    </a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records">
-      <span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>
-      阅读记录
-    </a>
-    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics">
-      <span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>
-      主题
-    </a>
-    <a class="shell-mobile-tab" href="#">
-      <span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
-      我的
-    </a>
+    <a class="shell-mobile-tab active" href="#"><span data-icon="house" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/house.svg');mask-image:url('../assets/icons/dl-builtin-claude/house.svg')"></span>书架</a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-profile"><span data-icon="star" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>阅读档案</a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-records"><span data-icon="message-circle-more" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg');mask-image:url('../assets/icons/dl-builtin-claude/message-circle-more.svg')"></span>阅读记录</a>
+    <a class="shell-mobile-tab" href="#" data-dom-id="nav-reading-topics"><span data-icon="tag" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/tag.svg');mask-image:url('../assets/icons/dl-builtin-claude/tag.svg')"></span>主题</a>
+    <a class="shell-mobile-tab" href="#"><span data-icon="settings" style="width:20px;height:20px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>我的</a>
   </div>
 </nav>
 
 <script>
-  // ── Dark mode toggle ────────────────────────────────────
   const themeToggle = document.getElementById('theme-toggle');
   const html = document.documentElement;
-
   function applyTheme(dark) {
     html.classList.toggle('dark', dark);
     localStorage.setItem('redesk-theme', dark ? 'dark' : 'light');
     const icon = themeToggle.querySelector('[data-icon]');
     const label = themeToggle.querySelector('span:last-child');
-    if (dark) {
-      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')";
-      label.textContent = '浅色模式';
-    } else {
-      icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')";
-      label.textContent = '深色模式';
-    }
+    if (dark) { icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-play.svg')"; label.textContent = '浅色模式'; }
+    else { icon.style.cssText = "width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-pause.svg')"; label.textContent = '深色模式'; }
   }
+  if (localStorage.getItem('redesk-theme') === 'dark') applyTheme(true);
+  themeToggle.addEventListener('click', (e) => { e.preventDefault(); applyTheme(!html.classList.contains('dark')); });
 
-  const savedTheme = localStorage.getItem('redesk-theme');
-  if (savedTheme === 'dark') {
-    applyTheme(true);
-  }
-
-  themeToggle.addEventListener('click', (e) => {
-    e.preventDefault();
-    applyTheme(!html.classList.contains('dark'));
-  });
-
-  // ── Mobile sidebar toggle ─────────────────────────────────
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
+  backdrop.addEventListener('click', () => { sidebar.classList.remove('is-open'); backdrop.classList.remove('is-visible'); });
 
-  backdrop.addEventListener('click', () => {
-    sidebar.classList.remove('is-open');
-    backdrop.classList.remove('is-visible');
-  });
-
-  // ── Close settings popover when clicking outside ─────
-  document.addEventListener('click', (e) => {
-    const toggle = document.getElementById('reader-settings-toggle');
-    const wrapper = document.querySelector('.reader-settings-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-      toggle.checked = false;
-    }
-  });
-
-  // ── Typography settings button interaction ────────────
-  document.querySelectorAll('.reader-settings-options .reader-settings-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const group = btn.closest('.reader-settings-options');
-      group.querySelectorAll('.reader-settings-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
-
-  // ── Theme dot selection ────────────────────────────────
-  document.querySelectorAll('.reader-theme-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      document.querySelectorAll('.reader-theme-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-    });
-  });
-
-  // ── Reader tool toggles ────────────────────────────────
-  document.querySelectorAll('.reader-tool-toggle:not([for])').forEach(btn => {
-    btn.addEventListener('click', () => {
-      btn.classList.toggle('is-active');
-    });
-  });
-
-  // ── Note panel collapse ───────────────────────────────
+  document.addEventListener('click', (e) => { const t = document.getElementById('reader-settings-toggle'); const w = document.querySelector('.reader-settings-wrapper'); if (w && !w.contains(e.target)) t.checked = false; });
+  document.querySelectorAll('.reader-settings-options .reader-settings-btn').forEach(btn => { btn.addEventListener('click', () => { const g = btn.closest('.reader-settings-options'); g.querySelectorAll('.reader-settings-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }); });
+  document.querySelectorAll('.reader-theme-dot').forEach(dot => { dot.addEventListener('click', () => { document.querySelectorAll('.reader-theme-dot').forEach(d => d.classList.remove('active')); dot.classList.add('active'); }); });
+  document.querySelectorAll('.reader-tool-toggle:not([for])').forEach(btn => { btn.addEventListener('click', () => { btn.classList.toggle('is-active'); }); });
   const noteCheckbox = document.getElementById('reader-note-toggle');
   const noteBody = document.querySelector('.reader-note-body');
-  noteCheckbox.addEventListener('change', () => {
-    noteBody.style.display = noteCheckbox.checked ? 'block' : 'none';
-  });
+  noteCheckbox.addEventListener('change', () => { noteBody.style.display = noteCheckbox.checked ? 'block' : 'none'; });
 </script>
 
 <style>
-  /* ═══════════════════════════════════════════════════════
-     Redesk Shell Layout (shared with bookshelf)
-     ═══════════════════════════════════════════════════════ */
-
-  body {
-    margin: 0;
-    background: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-serif);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-serif);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  .shell-layout{display:flex;min-height:100vh}
+  .shell-sidebar{position:fixed;top:0;left:0;z-index:40;display:flex;flex-direction:column;width:256px;height:100vh;background:var(--sidebar);border-right:1px solid var(--sidebar-border);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .4s ease;opacity:.55}
+  .shell-sidebar:hover{opacity:1}
+  .shell-sidebar-header{display:flex;align-items:center;gap:12px;padding:28px 24px 24px;border-bottom:1px solid var(--sidebar-border)}
+  .shell-brand-mark{width:32px;height:32px;border-radius:var(--radius-sm);background:var(--primary);display:flex;align-items:center;justify-content:center;color:var(--primary-foreground);font-family:var(--font-display);font-weight:500;font-size:18px;flex-shrink:0}
+  .shell-brand-name{font-family:var(--font-display);font-weight:400;font-size:22px;color:var(--sidebar-foreground);letter-spacing:-.01em}
+  .sidebar-search{display:flex;align-items:center;gap:calc(var(--spacing)*1.5);margin:12px 12px 4px;padding:calc(var(--spacing)*2) calc(var(--spacing)*3);background:var(--muted);border:1px solid transparent;border-radius:var(--radius-full);transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+  .sidebar-search:focus-within{border-color:var(--ring);box-shadow:var(--shadow-xs);background:var(--popover)}
+  .sidebar-search [data-icon]{width:14px;height:14px;flex-shrink:0;color:var(--muted-foreground)}
+  .sidebar-search input{flex:1;min-width:0;border:none;background:transparent;outline:none;color:var(--foreground);font-family:var(--font-sans);font-size:12px}
+  .sidebar-search input::placeholder{color:var(--muted-foreground);font-size:12px}
+  .shell-nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:16px 12px;overflow-y:auto}
+  .shell-nav-group-label{font-family:var(--font-sans);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground);padding:8px 12px 8px;margin-top:8px}
+  .shell-nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid transparent;border-radius:calc(var(--radius)-8px);background:transparent;color:var(--sidebar-foreground);font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease;text-decoration:none}
+  .shell-nav-item:hover{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+  .shell-nav-item:focus-visible{outline:2px solid var(--sidebar-ring);outline-offset:2px}
+  .shell-nav-item.active{background:var(--primary);color:var(--primary-foreground);border-color:transparent;box-shadow:var(--shadow-xs)}
+  .shell-nav-item [data-icon]{width:18px;height:18px;flex-shrink:0}
+  .sidebar-stats{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--spacing)*2);padding:12px 20px;border-top:1px solid var(--sidebar-border)}
+  .sidebar-stat{display:flex;flex-direction:column;gap:1px}
+  .sidebar-stat-num{font-family:var(--font-sans);font-weight:600;font-size:16px;line-height:1.2;color:var(--sidebar-foreground);font-variant-numeric:tabular-nums}
+  .sidebar-stat-label{font-family:var(--font-sans);font-size:11px;font-weight:400;color:var(--muted-foreground)}
+  .shell-sidebar-footer{display:flex;flex-direction:column;gap:2px;padding:12px 12px 20px;border-top:1px solid var(--sidebar-border)}
+  .shell-footer-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid transparent;border-radius:calc(var(--radius)-8px);background:transparent;color:var(--sidebar-foreground);font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer;transition:background-color .16s ease,color .16s ease;text-decoration:none}
+  .shell-footer-row:hover{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+  .shell-footer-row [data-icon]{width:18px;height:18px;flex-shrink:0}
+  .shell-avatar{width:28px;height:28px;border-radius:var(--radius-full);background:var(--bg-300);border:2px solid var(--border-300);display:flex;align-items:center;justify-content:center;color:var(--muted-foreground);font-family:var(--font-sans);font-size:12px;font-weight:600}
+  .shell-user-info{flex:1;min-width:0}
+  .shell-user-name{font-size:13px;font-weight:500;color:var(--sidebar-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .shell-user-role{font-size:11px;color:var(--muted-foreground)}
+  .shell-main{flex:1;margin-left:256px;min-height:100vh;max-width:100%;overflow-x:hidden}
+  .reader-shell-main{padding:0;display:flex;flex-direction:column}
+  .shell-mobile-tabs{display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;border-top:1px solid var(--sidebar-border);background:var(--sidebar);box-shadow:0 -1px 3px 0 rgba(0,0,0,.06)}
+  .shell-mobile-tabs-inner{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+  .shell-mobile-tab{display:grid;gap:3px;justify-items:center;padding:8px 4px;border:none;border-radius:calc(var(--radius)-6px);background:transparent;color:var(--sidebar-foreground);font-family:var(--font-sans);font-size:11px;font-weight:500;cursor:pointer;transition:background-color .16s ease,color .16s ease;text-decoration:none}
+  .shell-mobile-tab [data-icon]{width:20px;height:20px}
+  .shell-mobile-tab:hover{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+  .shell-mobile-tab.active{color:var(--primary)}
+  .reader-page{display:flex;flex-direction:column;min-height:100vh;width:100%}
+  .reader-toolbar{display:flex;align-items:center;gap:20px;padding:0 32px;height:44px;min-height:44px;background:var(--popover);border-bottom:1px solid var(--border);z-index:10}
+  .reader-toolbar-left{display:flex;align-items:baseline;gap:10px;flex-shrink:0;min-width:0}
+  .reader-toolbar-title{font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reader-toolbar-chapter{font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground);white-space:nowrap}
+  .reader-toolbar-center{display:flex;align-items:center;gap:12px;flex:1;justify-content:center;min-width:0}
+  .reader-progress-bar{width:120px;height:3px;background:var(--muted);border-radius:var(--radius-full);overflow:hidden;flex-shrink:0}
+  .reader-progress-fill{height:100%;background:var(--primary);border-radius:var(--radius-full);transition:width .4s ease}
+  .reader-progress-text{font-family:var(--font-sans);font-size:11px;color:var(--muted-foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .reader-toolbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .reader-toolbar-link{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:none;border-radius:calc(var(--radius-sm)-2px);background:transparent;color:var(--muted-foreground);font-family:var(--font-sans);font-size:12px;font-weight:500;cursor:pointer;transition:color .16s ease,background-color .16s ease;text-decoration:none;white-space:nowrap}
+  .reader-toolbar-link:hover{color:var(--foreground);background:var(--muted)}
+  .reader-toolbar-divider{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 4px}
+  .reader-tool-toggle{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:calc(var(--radius-sm)-2px);background:transparent;color:var(--muted-foreground);cursor:pointer;transition:color .16s ease,background-color .16s ease,border-color .16s ease;flex-shrink:0}
+  .reader-tool-toggle:hover{color:var(--foreground);background:var(--muted)}
+  .reader-tool-toggle.is-active{color:var(--primary);background:rgba(201,100,66,.08)}
+  .reader-tool-toggle.is-active:hover{background:rgba(201,100,66,.14)}
+  .reader-settings-wrapper{position:relative}
+  .reader-settings-checkbox{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .reader-settings-popover{position:absolute;top:calc(100% + 6px);right:0;width:240px;padding:16px;background:var(--popover);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);z-index:20;display:none}
+  .reader-settings-checkbox:checked ~ .reader-settings-popover{display:block}
+  .reader-settings-group{display:flex;flex-direction:column;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .reader-settings-group:last-child{padding-bottom:0;border-bottom:none}
+  .reader-settings-label{font-family:var(--font-sans);font-size:11px;font-weight:600;color:var(--muted-foreground);letter-spacing:.04em;text-transform:uppercase}
+  .reader-settings-options{display:flex;gap:6px}
+  .reader-settings-btn{display:inline-flex;align-items:center;justify-content:center;width:56px;height:32px;border:1px solid var(--border);border-radius:var(--radius-full);background:transparent;color:var(--muted-foreground);font-family:var(--font-sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .16s ease}
+  .reader-settings-btn:hover{border-color:var(--foreground);color:var(--foreground)}
+  .reader-settings-btn.active{background:var(--foreground);border-color:var(--foreground);color:var(--popover)}
+  .reader-settings-themes{display:flex;gap:10px}
+  .reader-theme-dot{width:24px;height:24px;border-radius:var(--radius-full);border:2px solid var(--border);cursor:pointer;transition:all .16s ease;box-shadow:var(--shadow-xs)}
+  .reader-theme-dot:hover{transform:scale(1.15)}
+  .reader-theme-dot.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(201,100,66,.25)}
+  .reader-content{flex:1;display:flex;justify-content:center;padding:48px 32px 32px;overflow-y:auto;background:var(--background)}
+  .reader-column{max-width:680px;width:100%}
+  .reader-chapter-heading{font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--foreground);margin:0 0 32px;padding-bottom:20px;border-bottom:1px solid var(--border);letter-spacing:-.01em}
+  .reader-paragraph{font-family:var(--font-serif);font-size:18px;line-height:1.8;color:var(--foreground);margin:0 0 28px;text-align:justify}
+  .reader-highlight{background:rgba(201,100,66,.15);border-radius:3px;padding:1px 2px;position:relative;cursor:pointer;transition:background-color .2s ease}
+  .reader-highlight:hover{background:rgba(201,100,66,.25)}
+  .reader-highlight[data-annotation]::after{content:attr(data-annotation);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);padding:8px 14px;background:var(--popover);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);font-family:var(--font-sans);font-size:12px;color:var(--secondary-foreground);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;transform:translateX(-50%) translateY(4px);z-index:15}
+  .reader-highlight[data-annotation]::before{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:15}
+  .reader-highlight[data-annotation]:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
+  .reader-highlight[data-annotation]:hover::before{opacity:1}
+  .reader-selection-popup{position:relative;display:inline-flex;align-items:center;gap:2px;padding:4px;margin:-8px 0 24px 120px;background:var(--popover);border:1px solid var(--border);border-radius:var(--radius-full);box-shadow:var(--shadow-lg);z-index:12}
+  .reader-selection-popup::before{content:'';position:absolute;top:-6px;left:40px;border:6px solid transparent;border-bottom-color:var(--popover);filter:drop-shadow(0 -1px 0 var(--border))}
+  .reader-popup-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:var(--radius-full);background:transparent;color:var(--muted-foreground);cursor:pointer;transition:all .16s ease}
+  .reader-popup-btn:hover{background:var(--muted);color:var(--foreground)}
+  .reader-popup-btn.is-active{background:rgba(201,100,66,.12);color:var(--primary)}
+  .reader-note-panel{background:var(--popover);border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04);z-index:10}
+  .reader-note-header{display:flex;align-items:center;justify-content:space-between;padding:10px 32px;cursor:pointer;user-select:none}
+  .reader-note-checkbox{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .reader-note-header-left{display:flex;align-items:center;gap:8px;color:var(--muted-foreground)}
+  .reader-note-header-left [data-icon]{flex-shrink:0}
+  .reader-note-header-title{font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--foreground)}
+  .reader-note-header-count{font-family:var(--font-sans);font-size:12px;color:var(--muted-foreground)}
+  .reader-note-chevron{display:inline-flex;align-items:center;color:var(--muted-foreground);cursor:pointer;transition:transform .2s ease}
+  .reader-note-checkbox:checked ~ .reader-note-header .reader-note-chevron{transform:rotate(180deg)}
+  .reader-note-body{padding:0 32px 16px}
+  .reader-note-list{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;max-height:140px;overflow-y:auto}
+  .reader-note-item{padding:12px 16px;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border)}
+  .reader-note-text{font-family:var(--font-serif);font-size:13px;line-height:1.7;color:var(--foreground);margin-bottom:8px}
+  .reader-note-meta{display:flex;gap:12px;font-family:var(--font-sans);font-size:11px;color:var(--muted-foreground)}
+  .reader-note-input{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-full);transition:border-color .16s ease,box-shadow .16s ease}
+  .reader-note-input:focus-within{border-color:var(--ring);box-shadow:var(--shadow-xs)}
+  .reader-note-input-field{flex:1;min-width:0;border:none;background:transparent;outline:none;font-family:var(--font-sans);font-size:13px;color:var(--foreground)}
+  .reader-note-input-field::placeholder{color:var(--muted-foreground)}
+  .reader-note-send{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:var(--radius-full);background:var(--primary);color:var(--primary-foreground);cursor:pointer;transition:opacity .16s ease;flex-shrink:0}
+  .reader-note-send:hover{opacity:.85}
+  @media (max-width:768px) {
+    .shell-sidebar{transform:translateX(-100%);opacity:1}
+    .shell-sidebar.is-open{transform:translateX(0);box-shadow:var(--shadow-xl)}
+    .shell-sidebar-backdrop{display:none;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.3)}
+    .shell-sidebar-backdrop.is-visible{display:block}
+    .shell-main{margin-left:0;padding:0}
+    .shell-mobile-tabs{display:block}
+    .sidebar-search{margin:8px 8px 4px}
+    .reader-toolbar{padding:0 16px;gap:12px}
+    .reader-toolbar-chapter{display:none}
+    .reader-progress-bar{width:60px}
+    .reader-toolbar-link span:not([data-icon]){display:none}
+    .reader-content{padding:32px 20px 20px}
+    .reader-paragraph{font-size:16px}
+    .reader-note-header{padding:10px 16px}
+    .reader-note-body{padding:0 16px 16px}
+    .reader-selection-popup{margin-left:60px}
   }
 
-  .shell-layout {
-    display: flex;
-    min-height: 100vh;
-  }
+  /* ── Feature additions ── */
 
-  /* ── Sidebar ────────────────────────────────────────────── */
-  .shell-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 40;
-    display: flex;
-    flex-direction: column;
-    width: 256px;
-    height: 100vh;
-    background: var(--sidebar);
-    border-right: 1px solid var(--sidebar-border);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0.55;
-  }
-
-  .shell-sidebar:hover {
-    opacity: 1;
-    transition: opacity 0.4s ease;
-  }
-
-  .shell-sidebar-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 28px 24px 24px;
-    border-bottom: 1px solid var(--sidebar-border);
-  }
-
-  .shell-brand-mark {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
-    background: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--primary-foreground);
-    font-family: var(--font-display);
-    font-weight: 500;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-
-  .shell-brand-name {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: 22px;
-    color: var(--sidebar-foreground);
-    letter-spacing: -0.01em;
-  }
-
-  .sidebar-search {
-    display: flex;
-    align-items: center;
-    gap: calc(var(--spacing) * 1.5);
-    margin: 12px 12px 4px;
-    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-    background: var(--muted);
-    border: 1px solid transparent;
-    border-radius: var(--radius-full);
-    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
-  }
-
-  .sidebar-search:focus-within {
-    border-color: var(--ring);
-    box-shadow: var(--shadow-xs);
-    background: var(--popover);
-  }
-
-  .sidebar-search [data-icon] {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    color: var(--muted-foreground);
-  }
-
-  .sidebar-search input {
-    flex: 1;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    outline: none;
-    color: var(--foreground);
-    font-family: var(--font-sans);
-    font-size: 12px;
-  }
-
-  .sidebar-search input::placeholder {
-    color: var(--muted-foreground);
-    font-size: 12px;
-  }
-
-  .shell-nav {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 16px 12px;
-    overflow-y: auto;
-  }
-
-  .shell-nav-group-label {
-    font-family: var(--font-sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted-foreground);
-    padding: 8px 12px 8px;
-    margin-top: 8px;
-  }
-
-  .shell-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid transparent;
-    border-radius: calc(var(--radius) - 8px);
-    background: transparent;
-    color: var(--sidebar-foreground);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
+  /* 3.05 — Underline / 划线 style */
+  .reader-underline {
+    text-decoration: underline;
+    text-decoration-color: var(--brand-400);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
     cursor: pointer;
-    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
-    text-decoration: none;
-  }
-
-  .shell-nav-item:hover {
-    background: var(--sidebar-accent);
-    color: var(--sidebar-accent-foreground);
-  }
-
-  .shell-nav-item:focus-visible {
-    outline: 2px solid var(--sidebar-ring);
-    outline-offset: 2px;
-  }
-
-  .shell-nav-item.active {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-color: transparent;
-    box-shadow: var(--shadow-xs);
-  }
-
-  .shell-nav-item [data-icon] {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-
-  .sidebar-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: calc(var(--spacing) * 2);
-    padding: 12px 20px;
-    border-top: 1px solid var(--sidebar-border);
-  }
-
-  .sidebar-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .sidebar-stat-num {
-    font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 16px;
-    line-height: 1.2;
-    color: var(--sidebar-foreground);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .sidebar-stat-label {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--muted-foreground);
-  }
-
-  .shell-sidebar-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 12px 12px 20px;
-    border-top: 1px solid var(--sidebar-border);
-  }
-
-  .shell-footer-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border: 1px solid transparent;
-    border-radius: calc(var(--radius) - 8px);
-    background: transparent;
-    color: var(--sidebar-foreground);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.16s ease, color 0.16s ease;
-    text-decoration: none;
-  }
-
-  .shell-footer-row:hover {
-    background: var(--sidebar-accent);
-    color: var(--sidebar-accent-foreground);
-  }
-
-  .shell-footer-row [data-icon] {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-
-  .shell-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-full);
-    background: var(--bg-300);
-    border: 2px solid var(--border-300);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted-foreground);
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .shell-user-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .shell-user-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--sidebar-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .shell-user-role {
-    font-size: 11px;
-    color: var(--muted-foreground);
-  }
-
-  /* ── Main Content ──────────────────────────────────────── */
-  .shell-main {
-    flex: 1;
-    margin-left: 256px;
-    min-height: 100vh;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  /* Reader-specific main: no padding, full bleed */
-  .reader-shell-main {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Mobile Bottom Tab Bar ──────────────────────────────── */
-  .shell-mobile-tabs {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 40;
-    border-top: 1px solid var(--sidebar-border);
-    background: var(--sidebar);
-    box-shadow: 0 -1px 3px 0 rgba(0,0,0,0.06);
-  }
-
-  .shell-mobile-tabs-inner {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .shell-mobile-tab {
-    display: grid;
-    gap: 3px;
-    justify-items: center;
-    padding: 8px 4px;
-    border: none;
-    border-radius: calc(var(--radius) - 6px);
-    background: transparent;
-    color: var(--sidebar-foreground);
-    font-family: var(--font-sans);
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.16s ease, color 0.16s ease;
-    text-decoration: none;
-  }
-
-  .shell-mobile-tab [data-icon] {
-    width: 20px;
-    height: 20px;
-  }
-
-  .shell-mobile-tab:hover {
-    background: var(--sidebar-accent);
-    color: var(--sidebar-accent-foreground);
-  }
-
-  .shell-mobile-tab.active {
-    color: var(--primary);
-  }
-
-  /* ── Responsive ─────────────────────────────────────────── */
-  @media (max-width: 768px) {
-    .shell-sidebar {
-      transform: translateX(-100%);
-    }
-
-    .shell-sidebar.is-open {
-      transform: translateX(0);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .shell-sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 35;
-      background: rgba(0,0,0,0.3);
-    }
-
-    .shell-sidebar-backdrop.is-visible {
-      display: block;
-    }
-
-    .shell-main {
-      margin-left: 0;
-      padding: 0;
-    }
-
-    .shell-mobile-tabs {
-      display: block;
-    }
-
-    .sidebar-search {
-      margin: 8px 8px 4px;
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     READER — Page-specific Styles
-     ═══════════════════════════════════════════════════════ */
-
-  .reader-page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    width: 100%;
-  }
-
-  /* ── 1. Top Toolbar ─────────────────────────────────────── */
-  .reader-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 32px;
-    height: 44px;
-    min-height: 44px;
-    background: var(--popover);
-    border-bottom: 1px solid var(--border);
-    z-index: 10;
-  }
-
-  .reader-toolbar-left {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    flex-shrink: 0;
-    min-width: 0;
-  }
-
-  .reader-toolbar-title {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .reader-toolbar-chapter {
-    font-family: var(--font-sans);
-    font-size: 12px;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-  }
-
-  .reader-toolbar-center {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    justify-content: center;
-    min-width: 0;
-  }
-
-  .reader-progress-bar {
-    width: 120px;
-    height: 3px;
-    background: var(--muted);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-
-  .reader-progress-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: var(--radius-full);
-    transition: width 0.4s ease;
-  }
-
-  .reader-progress-text {
-    font-family: var(--font-sans);
-    font-size: 11px;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .reader-toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .reader-toolbar-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border: none;
-    border-radius: calc(var(--radius-sm) - 2px);
-    background: transparent;
-    color: var(--muted-foreground);
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color 0.16s ease, background-color 0.16s ease;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .reader-toolbar-link:hover {
-    color: var(--foreground);
-    background: var(--muted);
-  }
-
-  .reader-toolbar-divider {
-    width: 1px;
-    height: 16px;
-    background: var(--border);
-    flex-shrink: 0;
-    margin: 0 4px;
-  }
-
-  .reader-tool-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid transparent;
-    border-radius: calc(var(--radius-sm) - 2px);
-    background: transparent;
-    color: var(--muted-foreground);
-    cursor: pointer;
-    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
-    flex-shrink: 0;
-  }
-
-  .reader-tool-toggle:hover {
-    color: var(--foreground);
-    background: var(--muted);
-  }
-
-  .reader-tool-toggle.is-active {
-    color: var(--primary);
-    background: rgba(201, 100, 66, 0.08);
-  }
-
-  .reader-tool-toggle.is-active:hover {
-    background: rgba(201, 100, 66, 0.14);
-  }
-
-  /* ── Typography Settings Popover ────────────────────────── */
-  .reader-settings-wrapper {
     position: relative;
   }
-
-  .reader-settings-checkbox {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
+  .reader-underline:hover {
+    text-decoration-color: var(--brand-500);
   }
-
-  .reader-settings-popover {
+  .reader-underline::after {
+    content: attr(data-tooltip);
     position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    width: 240px;
-    padding: 16px;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    padding: 4px 10px;
     background: var(--popover);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 20;
-    display: none;
-  }
-
-  .reader-settings-checkbox:checked ~ .reader-settings-popover {
-    display: block;
-  }
-
-  .reader-settings-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .reader-settings-group:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
-  }
-
-  .reader-settings-label {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
     font-family: var(--font-sans);
     font-size: 11px;
+    color: var(--secondary-foreground);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 15;
+  }
+  .reader-underline::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100%);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--border);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 15;
+  }
+  .reader-underline:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .reader-underline:hover::before {
+    opacity: 1;
+  }
+
+  /* 3.17/3.18 — Highlight tag badge */
+  .reader-highlight {
+    position: relative;
+  }
+  .reader-highlight-tag {
+    position: absolute;
+    top: -10px;
+    right: -6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--brand-100);
+    color: var(--brand-700);
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: 9px;
     font-weight: 600;
-    color: var(--muted-foreground);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    white-space: nowrap;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow: var(--shadow-xs);
   }
 
-  .reader-settings-options {
-    display: flex;
-    gap: 6px;
+  /* 3.02 — Bookmark indicator on paragraph */
+  .reader-paragraph--bookmarked {
+    position: relative;
   }
-
-  .reader-settings-btn {
+  .reader-bookmark-indicator {
+    position: absolute;
+    right: -28px;
+    top: 6px;
+    width: 16px;
+    height: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 32px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background: transparent;
+    color: var(--primary);
+    transform: rotate(15deg);
+    cursor: pointer;
+    transition: transform .16s ease;
+    opacity: .7;
+  }
+  .reader-bookmark-indicator:hover {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  .reader-bookmark-indicator::after {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 16px;
+    background: var(--primary);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 75%, 0 100%);
+  }
+
+  /* 3.23 — Keyboard shortcut hints */
+  .reader-tool-toggle {
+    position: relative;
+    flex-direction: column;
+    gap: 0;
+  }
+  .reader-shortcut-hint {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 500;
     color: var(--muted-foreground);
+    opacity: .5;
+    line-height: 1;
+    pointer-events: none;
+    letter-spacing: .02em;
+  }
+  .reader-tool-toggle.is-active .reader-shortcut-hint {
+    color: var(--primary);
+    opacity: .45;
+  }
+
+  /* 3.29 — Reading timer */
+  .reader-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    opacity: .7;
+  }
+  .reader-timer [data-icon] {
+    flex-shrink: 0;
+  }
+
+  /* 3.25 — Full-text search button (no extra style needed, uses reader-tool-toggle) */
+</style>
+</body>
+</html>

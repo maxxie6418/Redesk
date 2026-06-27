@@ -545,6 +545,13 @@
       </div>
     </div>
 
+    <div class="sidebar-recycle-link">
+      <a href="#" data-dom-id="nav-recycle-bin" style="display:inline-flex;align-items:center;gap:4px;color:var(--muted-foreground);font:400 12px var(--font-sans);text-decoration:none;transition:color .16s ease">
+        <span data-icon="trash-2" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg');mask-image:url('../assets/icons/dl-builtin-claude/trash-2.svg')"></span>
+        回收站
+      </a>
+    </div>
+
     <div class="shell-sidebar-footer">
       <a class="shell-footer-row" href="#" id="theme-toggle" aria-label="切换深色模式">
         <span data-icon="settings" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/settings.svg');mask-image:url('../assets/icons/dl-builtin-claude/settings.svg')"></span>
@@ -597,6 +604,28 @@
           <button class="filter-pill">在读</button>
           <button class="filter-pill">已读</button>
           <button class="filter-pill">存</button>
+        </div>
+        <div class="bookshelf-filter-selects">
+          <div class="filter-select-pill">
+            <select>
+              <option>所有分类</option>
+            </select>
+            <span data-icon="chevron-down" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');color:var(--muted-foreground);pointer-events:none"></span>
+          </div>
+          <div class="filter-select-pill">
+            <select>
+              <option>所有标签</option>
+            </select>
+            <span data-icon="chevron-down" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');color:var(--muted-foreground);pointer-events:none"></span>
+          </div>
+          <div class="filter-select-pill">
+            <select>
+              <option>全部</option>
+              <option>公开</option>
+              <option>私有</option>
+            </select>
+            <span data-icon="chevron-down" style="width:12px;height:12px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');color:var(--muted-foreground);pointer-events:none"></span>
+          </div>
         </div>
         <div class="bookshelf-sort-view">
 
@@ -668,6 +697,9 @@
             </select>
             <span data-icon="chevron-down" style="width:14px;height:14px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');mask-image:url('../assets/icons/dl-builtin-claude/chevron-down.svg');color:var(--muted-foreground)"></span>
           </div>
+          <button class="batch-toggle-btn" id="batch-toggle" aria-label="批量操作" title="批量操作">
+            <span data-icon="check-square" style="width:16px;height:16px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/check-square.svg');mask-image:url('../assets/icons/dl-builtin-claude/check-square.svg')"></span>
+          </button>
           <div class="view-toggle">
             <button class="view-toggle-btn active" id="btn-grid-view" aria-label="网格视图">
               <span data-icon="grip" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/grip.svg');mask-image:url('../assets/icons/dl-builtin-claude/grip.svg')"></span>
@@ -735,6 +767,7 @@
             <p class="book-author field-author">尤瓦尔·赫拉利</p>
             <div class="book-meta field-status">
               <span class="status-pill status-completed">已读</span>
+              <span class="purpose-badge purpose-intensive">精读</span>
             </div>
             <div class="star-rating field-rating">
               <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
@@ -893,6 +926,7 @@
             <p class="book-author field-author">唐纳德·诺曼</p>
             <div class="book-meta field-status">
               <span class="status-pill status-stored">存</span>
+              <span class="purpose-badge purpose-extensive">泛读</span>
             </div>
             <div class="star-rating field-rating">
               <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
@@ -993,6 +1027,7 @@
             <p class="book-author field-author">王小波</p>
             <div class="book-meta field-status">
               <span class="status-pill status-reading">在读</span>
+              <span class="purpose-badge purpose-intensive">精读</span>
             </div>
             <div class="star-rating field-rating">
               <span data-icon="star" class="star-filled" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/star.svg');mask-image:url('../assets/icons/dl-builtin-claude/star.svg')"></span>
@@ -1015,12 +1050,12 @@
       <!-- end .book-grid -->
 
       <!-- ── Empty State (hidden by default) ──────────────── -->
-      <div class="empty-state">
+      <div class="empty-state" id="empty-state">
         <div class="empty-illustration">
-          <span data-icon="pen-line" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg');mask-image:url('../assets/icons/dl-builtin-claude/pen-line.svg')"></span>
+          <span data-icon="book-open" style="-webkit-mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg');mask-image:url('../assets/icons/dl-builtin-claude/book-open.svg')"></span>
         </div>
-        <h2 class="empty-title">书架还是空的</h2>
-        <p class="empty-desc">开始录入你的第一本书</p>
+        <h2 class="empty-title">这里空空如也</h2>
+        <p class="empty-desc">导入第一本书，开始你的阅读之旅</p>
         <button class="btn primary" style="display:inline-flex;align-items:center;gap:calc(var(--spacing)*2)">
           <span data-icon="circle-plus" style="width:18px;height:18px;-webkit-mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');mask-image:url('../assets/icons/dl-builtin-claude/circle-plus.svg');color:var(--primary-foreground)"></span>
           新建书籍
@@ -2391,6 +2426,128 @@
         line-height: 1.5;
       }
 
+      /* ── V4: Filter select pills (category / tag / visibility) ── */
+      .bookshelf-filter-selects {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1.5);
+        flex-wrap: wrap;
+      }
+
+      .filter-select-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing) * 1);
+        padding: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        background: var(--popover);
+        color: var(--muted-foreground);
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+        position: relative;
+      }
+
+      .filter-select-pill:hover {
+        border-color: var(--border-500);
+        color: var(--foreground);
+      }
+
+      .filter-select-pill:focus-within {
+        outline: 2px solid var(--ring);
+        outline-offset: 1px;
+      }
+
+      .filter-select-pill select {
+        appearance: none;
+        -webkit-appearance: none;
+        border: none;
+        background: transparent;
+        font: inherit;
+        font-size: inherit;
+        color: inherit;
+        cursor: pointer;
+        padding: 0;
+        outline: none;
+        min-width: 48px;
+      }
+
+      .filter-select-pill select option {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--foreground);
+        background: var(--popover);
+      }
+
+      /* ── Batch toggle button ─────────────────────────────── */
+      .batch-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 34px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--popover);
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .batch-toggle-btn:hover {
+        color: var(--foreground);
+        border-color: var(--border-500);
+      }
+
+      .batch-toggle-btn[aria-pressed="true"],
+      .batch-toggle-btn.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: var(--primary);
+      }
+
+      .batch-toggle-btn:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      /* ── Sidebar recycle-bin link ────────────────────────── */
+      .sidebar-recycle-link {
+        padding: 8px 16px 4px;
+      }
+
+      .sidebar-recycle-link a:hover {
+        color: var(--foreground);
+      }
+
+      /* ── Reading purpose badges ──────────────────────────── */
+      .purpose-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 1px calc(var(--spacing) * 2);
+        border-radius: var(--radius-full);
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        line-height: 1.6;
+        white-space: nowrap;
+      }
+
+      .purpose-badge.purpose-intensive {
+        background: var(--bg-200);
+        color: var(--muted-foreground);
+      }
+
+      .purpose-badge.purpose-extensive {
+        background: var(--bg-200);
+        color: var(--muted-foreground);
+      }
+
       /* ── V4 Responsive bookshelf ──────────────────────────── */
       @media (max-width: 1280px) {
         .book-grid {
@@ -2410,6 +2567,10 @@
         .bookshelf-controls {
           flex-direction: column;
           align-items: flex-start;
+        }
+
+        .bookshelf-filter-selects {
+          width: 100%;
         }
 
         .bookshelf-sort-view {
