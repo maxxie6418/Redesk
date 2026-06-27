@@ -1,5 +1,16 @@
 import { useMemo, useState } from 'react';
-import { BookPlus, Grid3X3, LayoutList, Search, X } from 'lucide-react';
+import {
+  Archive,
+  BookOpen,
+  BookPlus,
+  Grid3X3,
+  LayoutGrid,
+  LayoutList,
+  Search,
+  Settings,
+  User,
+  X,
+} from 'lucide-react';
 import { BOOK_STATUS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -8,8 +19,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useShellUser } from '@/components/shell-user-context';
 
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'card' | 'grid' | 'list';
+type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
 
 const BOOK_STATUS_LABELS: Record<string, string> = {
   [BOOK_STATUS.COLLECTED]: '收录',
@@ -34,6 +47,12 @@ const VISIBILITY_OPTIONS = [
   { value: VISIBILITY.PUBLIC, label: '公开' },
 ] as const;
 
+const SORT_OPTIONS = [
+  { value: 'updated_desc', label: '按最近更新排序' },
+  { value: 'title_asc', label: '按书名排序' },
+  { value: 'rating_desc', label: '按评分排序' },
+] as const;
+
 const COVER_TONES = [
   'bg-[#d8c6b7] text-[#3d2f28]',
   'bg-[#cfd8c8] text-[#26301f]',
@@ -51,12 +70,12 @@ function statusClass(status: string) {
   if (status === BOOK_STATUS.READING) return 'border-transparent bg-success/12 text-success';
   if (status === BOOK_STATUS.PLANNED) return 'border-transparent bg-primary/10 text-primary';
   if (status === BOOK_STATUS.STORED) return 'border-border bg-muted text-muted-foreground';
+  if (status === BOOK_STATUS.READ) return 'border-transparent bg-[#dfe7d7] text-[#536843]';
   return 'border-border bg-background text-muted-foreground';
 }
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(new Date(value));
@@ -75,7 +94,7 @@ function BookCover({ book, index, compact = false }: { book: BookSummary; index:
     <div
       className={cn(
         'flex shrink-0 flex-col justify-between rounded-md px-2.5 py-2 font-display shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]',
-        compact ? 'h-16 w-11 text-base' : 'h-24 w-16 text-2xl',
+        compact ? 'h-14 w-10 text-base' : 'h-[86px] w-[58px] text-xl',
         COVER_TONES[index % COVER_TONES.length],
       )}
     >
@@ -85,9 +104,9 @@ function BookCover({ book, index, compact = false }: { book: BookSummary; index:
   );
 }
 
-function BookGridCard({ book, index }: { book: BookSummary; index: number }) {
+function BookCard({ book, index }: { book: BookSummary; index: number }) {
   return (
-    <article className="group flex min-h-[168px] gap-3 rounded-lg border border-border bg-popover p-3 transition-colors hover:border-foreground/18 hover:bg-card">
+    <article className="group flex min-h-[142px] gap-3 rounded-xl border border-border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card">
       <BookCover book={book} index={index} />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="min-w-0">
@@ -95,7 +114,7 @@ function BookGridCard({ book, index }: { book: BookSummary; index: number }) {
           <p className="mt-1 truncate text-xs text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-medium', statusClass(book.status))}>
             {statusLabel(book.status)}
           </span>
@@ -107,27 +126,40 @@ function BookGridCard({ book, index }: { book: BookSummary; index: number }) {
         </div>
 
         {book.tag_names.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 flex gap-1 overflow-hidden text-[11px] text-muted-foreground">
             {book.tag_names.slice(0, 2).map((tag) => (
-              <span key={`${book.id}-${tag}`} className="text-[11px] text-muted-foreground">
+              <span key={`${book.id}-${tag}`} className="truncate">
                 #{tag}
               </span>
             ))}
           </div>
         )}
 
-        <div className="mt-auto flex items-center justify-between pt-3 text-[11px] text-muted-foreground">
+        <div className="mt-auto flex items-center justify-between pt-2 text-[11px] text-muted-foreground">
           <span>{ratingText(book.rating)}</span>
-          <span>{formatDate(book.updated_at)}</span>
+          <span>更新 {formatDate(book.updated_at)}</span>
         </div>
       </div>
     </article>
   );
 }
 
+function BookGridTile({ book, index }: { book: BookSummary; index: number }) {
+  return (
+    <article className="rounded-xl border border-border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card">
+      <BookCover book={book} index={index} />
+      <h2 className="mt-3 line-clamp-2 text-sm font-semibold leading-5 text-foreground">{book.title}</h2>
+      <p className="mt-1 truncate text-xs text-muted-foreground">{book.author || '未填写作者'}</p>
+      <span className={cn('mt-3 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium', statusClass(book.status))}>
+        {statusLabel(book.status)}
+      </span>
+    </article>
+  );
+}
+
 function BookListRow({ book, index }: { book: BookSummary; index: number }) {
   return (
-    <article className="grid grid-cols-[minmax(0,1fr)_120px_90px_86px] items-center gap-4 border-t border-border px-4 py-3 text-sm first:border-t-0 hover:bg-card max-lg:grid-cols-[minmax(0,1fr)_88px]">
+    <article className="grid grid-cols-[minmax(0,1fr)_120px_90px_76px] items-center gap-4 border-t border-border px-4 py-3 text-sm first:border-t-0 hover:bg-card max-lg:grid-cols-[minmax(0,1fr)_72px]">
       <div className="flex min-w-0 items-center gap-3">
         <BookCover book={book} index={index} compact />
         <div className="min-w-0">
@@ -135,15 +167,12 @@ function BookListRow({ book, index }: { book: BookSummary; index: number }) {
           <p className="truncate text-xs text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
         </div>
       </div>
-
       <div className="truncate text-xs text-muted-foreground max-lg:hidden">{book.category_name ?? '未分类'}</div>
-
       <div className="max-lg:hidden">
         <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-medium', statusClass(book.status))}>
           {statusLabel(book.status)}
         </span>
       </div>
-
       <div className="text-right text-xs text-muted-foreground">{formatDate(book.updated_at)}</div>
     </article>
   );
@@ -207,12 +236,14 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
 }
 
 export function Bookshelf() {
+  const user = useShellUser();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
   const [visibility, setVisibility] = useState('ALL');
   const [category, setCategory] = useState('ALL');
   const [tag, setTag] = useState('ALL');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sort, setSort] = useState<SortMode>('updated_desc');
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [showCreate, setShowCreate] = useState(false);
 
   const booksQuery = useBooks({
@@ -221,7 +252,6 @@ export function Bookshelf() {
   });
 
   const rawBooks = useMemo(() => booksQuery.data?.data ?? [], [booksQuery.data?.data]);
-  const pagination = booksQuery.data?.pagination;
 
   const categoryOptions = useMemo(
     () => ['ALL', ...new Set(rawBooks.map((book) => book.category_name).filter((value): value is string => Boolean(value)))],
@@ -230,10 +260,18 @@ export function Bookshelf() {
 
   const tagOptions = useMemo(() => ['ALL', ...new Set(rawBooks.flatMap((book) => book.tag_names))], [rawBooks]);
 
+  const stats = useMemo(() => {
+    return {
+      total: rawBooks.length,
+      reading: rawBooks.filter((book) => book.status === BOOK_STATUS.READING).length,
+      read: rawBooks.filter((book) => book.status === BOOK_STATUS.READ).length,
+      topics: new Set(rawBooks.flatMap((book) => book.tag_names)).size,
+    };
+  }, [rawBooks]);
+
   const books = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-
-    return rawBooks.filter((book) => {
+    const filtered = rawBooks.filter((book) => {
       if (status !== 'ALL' && book.status !== status) return false;
       if (visibility !== 'ALL' && book.visibility !== visibility) return false;
       if (category !== 'ALL' && book.category_name !== category) return false;
@@ -253,38 +291,89 @@ export function Bookshelf() {
 
       return haystack.includes(keyword);
     });
-  }, [rawBooks, search, status, visibility, category, tag]);
+
+    return [...filtered].sort((a, b) => {
+      if (sort === 'title_asc') return a.title.localeCompare(b.title, 'zh-CN');
+      if (sort === 'rating_desc') return (b.rating ?? 0) - (a.rating ?? 0);
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }, [rawBooks, search, status, visibility, category, tag, sort]);
 
   const hasFilter = search || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL';
 
   return (
-    <div className="pb-10">
-      <header className="mb-5 flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="flex min-h-screen bg-background">
+      <aside className="flex w-[280px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-5 py-5">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">书架</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {booksQuery.isLoading ? '正在加载' : `显示 ${books.length} / ${pagination?.total ?? rawBooks.length} 本`}
-          </p>
-        </div>
-        <Button className="w-fit rounded-md" onClick={() => setShowCreate(true)}>
-          <BookPlus className="h-4 w-4" />
-          添加书籍
-        </Button>
-      </header>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-medium text-primary-foreground">
+              R
+            </div>
+            <div className="font-display text-xl text-sidebar-foreground">Redesk</div>
+          </div>
 
-      <section className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-popover p-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="relative w-full lg:max-w-sm">
+          <div className="relative mt-6">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="h-9 rounded-md border-border bg-background pl-9 text-sm"
+              className="h-10 rounded-lg border-border bg-background pl-9 text-sm"
               placeholder="搜索书名、作者、标签"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <nav className="mt-6 space-y-1">
+            <SidebarItem active icon={<BookOpen className="h-4 w-4" />} label="书架" />
+            <SidebarItem icon={<Archive className="h-4 w-4" />} label="档案" />
+            <SidebarItem icon={<LayoutList className="h-4 w-4" />} label="记录" />
+            <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" />
+          </nav>
+        </div>
+
+        <div className="mt-14 w-full rounded-xl border border-border bg-popover p-3">
+          <div className="grid grid-cols-2 gap-2">
+            <StatCell label="总数" value={stats.total} />
+            <StatCell label="在读" value={stats.reading} />
+            <StatCell label="已读" value={stats.read} />
+            <StatCell label="话题数" value={stats.topics} />
+          </div>
+        </div>
+
+        <div className="mt-auto space-y-3 border-t border-sidebar-border pt-4">
+          <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent">
+            <Settings className="h-4 w-4" />
+            设置
+          </button>
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">
+                {user?.display_name ?? user?.username ?? 'Maxxie'}
+              </div>
+              <div className="text-xs text-muted-foreground">个人空间</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 px-6 py-6 lg:px-8">
+        <header className="mb-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">书架</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {booksQuery.isLoading ? '正在加载' : `显示 ${books.length} 本书`}
+            </p>
+          </div>
+          <Button className="rounded-lg" onClick={() => setShowCreate(true)}>
+            <BookPlus className="h-4 w-4" />
+            添加书籍
+          </Button>
+        </header>
+
+        <section className="mb-5 flex items-center gap-2 rounded-xl border border-border bg-popover p-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <FilterSelect value={status} onChange={setStatus} options={STATUS_OPTIONS.map((item) => [item.value, item.label])} />
             <FilterSelect
               value={category}
@@ -297,66 +386,107 @@ export function Bookshelf() {
               onChange={setVisibility}
               options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])}
             />
+            <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label])} />
           </div>
-        </div>
 
-        <div className="flex w-fit items-center rounded-md border border-border bg-background p-0.5">
-          <ViewButton active={viewMode === 'grid'} label="网格视图" onClick={() => setViewMode('grid')}>
-            <Grid3X3 className="h-4 w-4" />
-          </ViewButton>
-          <ViewButton active={viewMode === 'list'} label="列表视图" onClick={() => setViewMode('list')}>
-            <LayoutList className="h-4 w-4" />
-          </ViewButton>
-        </div>
-      </section>
+          <div className="flex-1" />
 
-      {booksQuery.isLoading && (
-        <div className="rounded-lg border border-dashed border-border bg-popover px-6 py-16 text-center text-sm text-muted-foreground">
-          正在整理书架...
-        </div>
-      )}
-
-      {booksQuery.isError && (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-6 py-12 text-center">
-          <p className="font-medium text-foreground">书架加载失败</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {booksQuery.error instanceof ApiError ? booksQuery.error.message : '请检查本地 API 是否正常启动。'}
-          </p>
-        </div>
-      )}
-
-      {!booksQuery.isLoading && !booksQuery.isError && books.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-popover px-6 py-16 text-center">
-          <p className="font-medium text-foreground">{hasFilter ? '没有匹配的书籍' : '书架为空'}</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {hasFilter ? '可以放宽筛选条件，或清空搜索关键词。' : '添加一本书后，这里会显示书籍列表。'}
-          </p>
-        </div>
-      )}
-
-      {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'grid' && (
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {books.map((book, index) => (
-            <BookGridCard key={book.id} book={book} index={index} />
-          ))}
-        </section>
-      )}
-
-      {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'list' && (
-        <section className="overflow-hidden rounded-lg border border-border bg-popover">
-          <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_86px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
-            <span>书籍</span>
-            <span>分类</span>
-            <span>状态</span>
-            <span className="text-right">更新</span>
+          <div className="flex shrink-0 items-center rounded-lg border border-border bg-background p-0.5">
+            <ViewButton active={viewMode === 'card'} label="卡片显示" onClick={() => setViewMode('card')}>
+              <LayoutGrid className="h-4 w-4" />
+              卡片
+            </ViewButton>
+            <ViewButton active={viewMode === 'grid'} label="网格显示" onClick={() => setViewMode('grid')}>
+              <Grid3X3 className="h-4 w-4" />
+              网格
+            </ViewButton>
+            <ViewButton active={viewMode === 'list'} label="列表显示" onClick={() => setViewMode('list')}>
+              <LayoutList className="h-4 w-4" />
+              列表
+            </ViewButton>
           </div>
-          {books.map((book, index) => (
-            <BookListRow key={book.id} book={book} index={index} />
-          ))}
         </section>
-      )}
+
+        {booksQuery.isLoading && (
+          <div className="rounded-xl border border-dashed border-border bg-popover px-6 py-16 text-center text-sm text-muted-foreground">
+            正在整理书架...
+          </div>
+        )}
+
+        {booksQuery.isError && (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-6 py-12 text-center">
+            <p className="font-medium text-foreground">书架加载失败</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {booksQuery.error instanceof ApiError ? booksQuery.error.message : '请检查本地 API 是否正常启动。'}
+            </p>
+          </div>
+        )}
+
+        {!booksQuery.isLoading && !booksQuery.isError && books.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-popover px-6 py-16 text-center">
+            <p className="font-medium text-foreground">{hasFilter ? '没有匹配的书籍' : '书架为空'}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {hasFilter ? '可以放宽筛选条件，或清空搜索关键词。' : '添加一本书后，这里会显示书籍列表。'}
+            </p>
+          </div>
+        )}
+
+        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'card' && (
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+            {books.map((book, index) => (
+              <BookCard key={book.id} book={book} index={index} />
+            ))}
+          </section>
+        )}
+
+        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'grid' && (
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {books.map((book, index) => (
+              <BookGridTile key={book.id} book={book} index={index} />
+            ))}
+          </section>
+        )}
+
+        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'list' && (
+          <section className="overflow-hidden rounded-xl border border-border bg-popover">
+            <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_76px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
+              <span>书籍</span>
+              <span>分类</span>
+              <span>状态</span>
+              <span className="text-right">更新</span>
+            </div>
+            {books.map((book, index) => (
+              <BookListRow key={book.id} book={book} index={index} />
+            ))}
+          </section>
+        )}
+      </main>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
+    </div>
+  );
+}
+
+function SidebarItem({ active, icon, label }: { active?: boolean; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
+        active && 'bg-sidebar-accent font-medium text-foreground',
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function StatCell({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-background px-3 py-2">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold leading-none text-foreground">{value}</div>
     </div>
   );
 }
@@ -372,7 +502,7 @@ function FilterSelect({
 }) {
   return (
     <select
-      className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors hover:border-foreground/20 focus:border-primary"
+      className="h-8 rounded-md border border-border bg-background px-2.5 text-xs text-foreground outline-none transition-colors hover:border-foreground/20 focus:border-primary"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -400,7 +530,7 @@ function ViewButton({
     <button
       type="button"
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:text-foreground',
+        'flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground',
         active && 'bg-popover text-foreground shadow-sm',
       )}
       onClick={onClick}
