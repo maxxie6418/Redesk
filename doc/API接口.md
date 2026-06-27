@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.1 |
+| 当前版本 | v1.0.2 |
 | 文档状态 | 待评审 |
 | 最后更新 | 2026-06-27 |
 | 适用范围 | 全项目实现期 |
@@ -17,6 +17,7 @@
 | --- | --- | --- | --- |
 | v1.0.0 | 2026-06-27 | 建立 API 接口初始框架：通用约定、Step1 详细端点、Step2/3 预留端点清单 | — |
 | v1.0.1 | 2026-06-27 | 补充版本号规范引用；版本号改为三段式（主.次.修订） | — |
+| v1.0.2 | 2026-06-27 | 补充元数据链接预填接口、书籍弹性字段、配置密钥脱敏规则与主题软删除说明 | — |
 
 ## 文档说明
 
@@ -150,6 +151,7 @@
 | GET | /books/{id} | 书籍详情 | 1.06/1.20 |
 | PATCH | /books/{id} | 编辑元数据 | 1.05 |
 | DELETE | /books/{id} | 移入回收站（软删除） | 1.07 |
+| POST | /books/metadata/preview | 通过链接预填元数据 | 1.03/1.04 |
 | POST | /books/batch | 批量操作 | 1.28 |
 | GET | /books/duplicates | 重复检测（规则版） | 1.27 |
 
@@ -170,7 +172,10 @@
   "visibility": "PRIVATE",
   "reading_purpose": "精读",
   "rating": null,
-  "tag_ids": [5, 12]
+  "tag_ids": [5, 12],
+  "custom_attributes": {
+    "edition_note": "精装"
+  }
 }
 ```
 响应 201：`{ "data": { /* book 对象 */ } }`
@@ -180,6 +185,34 @@
 请求：任意可更新字段子集（含 status、visibility、category_id、rating、tag_ids 等）。
 状态变更同步写 status_history（见 §6）。
 响应 200：`{ "data": { /* book */ } }`
+
+### POST /books/metadata/preview
+
+请求：
+```json
+{ "source_url": "https://neodb.social/book/..." }
+```
+
+响应 200：
+```json
+{
+  "data": {
+    "source": "neodb",
+    "confidence": 0.92,
+    "metadata": {
+      "title": "如何阅读一本书",
+      "author": "莫提默·J. 艾德勒",
+      "isbn": "9787100040945",
+      "publisher": "商务印书馆",
+      "publish_year": 2004,
+      "description": "..."
+    },
+    "warnings": []
+  }
+}
+```
+
+说明：该端点只做预填，不创建书籍；自动回填失败时返回可读错误或低置信度结果，前端允许用户手动补齐后再调用 `POST /books` 保存。
 
 ### GET /books
 
@@ -341,7 +374,9 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | GET | /settings | 读取配置 | — |
 | PATCH | /settings | 更新配置 | — |
 
-配置项示例：`recycle_retention_days`、`theme`、`ai_provider`、`oss_config`、`tts_config`（后两者 S1 仅存配置，功能后置）。
+配置项示例：`recycle_retention_days`、`theme`、`ai_provider`、`oss_config`、`rclone_config`、`tts_config`（后三者 S1 仅存配置，功能后置）。
+
+密钥规则：`api_key`、`secret_key`、`access_token`、`password` 等敏感字段写入时接收明文，持久化时按实现方案加密或本地保护；读取配置时必须脱敏返回，例如 `sk-***abcd`。日志、错误响应和导出文件不得包含明文 secret。
 
 ---
 
@@ -386,7 +421,7 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
 | GET / POST | /topics | 主题列表/新建 | 4.01/4.04/4.05/4.06 |
-| GET / PATCH / DELETE | /topics/{id} | 主题详情/编辑/删除 | 4.02/4.03 |
+| GET / PATCH / DELETE | /topics/{id} | 主题详情/编辑/软删除 | 4.02/4.03 |
 | POST / DELETE | /topics/{id}/books | 关联/移除书籍 | 4.07/4.08 |
 | POST / DELETE | /topics/{id}/highlights | 关联/移除高亮（软引用） | 4.10 |
 | POST / DELETE | /topics/{id}/notes | 关联/移除笔记 | 4.11 |
@@ -395,8 +430,8 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | GET | /topics/{id}/traces | 主题内痕迹汇总 | 4.15 |
 | GET | /topics/{id}/search?q= | 主题内检索 | 4.17 |
 
-> 删主题级联清引用，不动原始书籍/高亮/笔记（数据模型 `ON DELETE CASCADE`）。
+> 删除主题为软删除：仅设置 `topics.deleted_at` 并隐藏主题及其引用，不动原始书籍/高亮/笔记，也不物理清空引用表。原始高亮/笔记被物理删除时，对应引用按数据模型自动摘除。
 
 ---
 
-> 本文档为 Redesk API 接口 v1.0，待评审。S1 端点可直接进入实现；S2/S3/P2 端点清单作为预留，进场时补全字段。
+> 本文档为 Redesk API 接口 v1.0.2，待评审。S1 端点可直接进入实现；S2/S3/P2 端点清单作为预留，进场时补全字段。

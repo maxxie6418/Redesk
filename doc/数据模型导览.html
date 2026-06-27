@@ -173,7 +173,7 @@
       <span class="pill">共 19 张表</span>
       <span class="pill">分 4 个阶段引入</span>
       <span class="pill">配套《数据模型.md》</span>
-      <span class="pill">v1.0 · 2026-06-27</span>
+      <span class="pill">v1.0.2 · 2026-06-27</span>
     </div>
   </div>
 
@@ -254,7 +254,7 @@
         <div class="ic">3</div>
         <div>
           <h4>阅读痕迹归原书，主题只"引用"</h4>
-          <p>高亮、笔记直接属于原书；主题只是把它们"框过来看"，不占有原件。删主题不动原始数据，原件删了主题侧的引用自动消失（级联）。</p>
+          <p>高亮、笔记直接属于原书；主题只是把它们"框过来看"，不占有原件。主题删除走软删除，只隐藏主题和引用；原件被物理删除时，主题侧引用自动消失。</p>
         </div>
       </div>
       <div class="decision">
@@ -274,8 +274,8 @@
       <div class="decision">
         <div class="ic">6</div>
         <div>
-          <h4>所有数据带 owner_id，为多人留口子</h4>
-          <p>现在只有你一个人用，但每条数据都盖了"归属章"。将来要开到 ≤5 人，<b>不用改表结构，只加登录</b>就行。</p>
+          <h4>根实体带 owner_id，为多人留口子</h4>
+          <p>书籍、分类、标签、笔记、主题等用户拥有的根实体盖"归属章"；关联表和历史表通过父表继承归属。将来要开到 ≤5 人，重点是补登录和查询边界。</p>
         </div>
       </div>
     </div>
@@ -571,7 +571,7 @@
         <div class="tbl-body">
           <div class="field"><div class="fn">topics</div><div class="ft">主表</div><div class="fd">主题对象本身：名称 + 说明。<b>是独立对象，不是标签</b>。</div></div>
           <div class="field"><div class="fn">topic_books</div><div class="ft">关联表</div><div class="fd">主题关联了哪些书（多对多）。</div></div>
-          <div class="field"><div class="fn">topic_highlights / notes</div><div class="ft">引用表</div><div class="fd">主题"框"了哪些高亮/笔记来看。<b>原件删了，引用自动消失（级联）；删主题不动原件</b>。<span class="why">见决策3</span></div></div>
+          <div class="field"><div class="fn">topic_highlights / notes</div><div class="ft">引用表</div><div class="fd">主题"框"了哪些高亮/笔记来看。<b>主题软删除不清引用；原件物理删除时引用自动消失</b>。<span class="why">见决策3</span></div></div>
           <div class="field"><div class="fn">topic_segments</div><div class="ft">引用表</div><div class="fd">主题引用的章节片段，复用阅读器的 CFI 机制。</div></div>
           <div class="field"><div class="fn">topic_entries</div><div class="ft">主表</div><div class="fd">主题自己的沉淀：待探索问题 / 阶段判断 / 比较结论。</div></div>
         </div>
