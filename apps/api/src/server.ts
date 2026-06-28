@@ -17,6 +17,7 @@ import { categoryRoutes } from './routes/categories';
 import { tagRoutes } from './routes/tags';
 import { relationRoutes } from './routes/relations';
 import { fileRoutes } from './routes/files';
+import { exportRoutes } from './routes/export';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -71,6 +72,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     await api.register(tagRoutes, { prefix: '/api/v1' });
     await api.register(relationRoutes, { prefix: '/api/v1' });
     await api.register(fileRoutes, { prefix: '/api/v1' });
+    await api.register(exportRoutes, { prefix: '/api/v1' });
   });
 
   const spaExists = existsSync(config.spaDir);

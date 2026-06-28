@@ -168,3 +168,13 @@ export const updateFileSchema = z.object({
   original_filename: z.string().max(500).optional(),
 });
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
+
+export const exportQuerySchema = z.object({
+  format: z.enum(['json', 'csv']).optional().default('json'),
+  ids: z.string().optional(),
+});
+
+export const importNotesSchema = z.object({
+  dry_run: z.coerce.boolean().optional().default(false),
+});
+export type ImportNotesInput = z.output<typeof importNotesSchema>;
