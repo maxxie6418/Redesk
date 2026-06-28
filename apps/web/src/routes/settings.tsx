@@ -22,6 +22,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
+import { useTheme } from '@/components/theme-provider';
 import {
   useUserList,
   useCreateUser,
@@ -142,23 +143,33 @@ export function SettingsPage() {
 
 function GeneralTab({ settings }: { settings: Record<string, string> }) {
   const updateSettings = useUpdateSettings();
+  const themeCtx = useTheme();
   const [recycleDays, setRecycleDays] = useState(settings.recycle_retention_days ?? '30');
   const [multiUser, setMultiUser] = useState(settings.multi_user === 'true');
-  const [theme, setTheme] = useState(settings.theme ?? 'system');
   const [message, setMessage] = useState<StatusMessage>(null);
+
+  const handleThemeChange = useCallback((value: string) => {
+    if (value === 'dark') themeCtx.setTheme('dark');
+    else if (value === 'light') themeCtx.setTheme('light');
+    else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      themeCtx.setTheme(prefersDark ? 'dark' : 'light');
+    }
+  }, [themeCtx]);
+
+  const theme = themeCtx.theme === 'dark' ? 'dark' : 'light';
 
   const handleSave = useCallback(async () => {
     try {
       await updateSettings.mutateAsync({
         recycle_retention_days: recycleDays,
         multi_user: multiUser ? 'true' : 'false',
-        theme,
       });
       setMessage({ type: 'success', text: '设置已保存' });
     } catch {
       setMessage({ type: 'error', text: '保存失败' });
     }
-  }, [recycleDays, multiUser, theme, updateSettings]);
+  }, [recycleDays, multiUser, updateSettings]);
 
   return (
     <div className="space-y-6">
@@ -207,11 +218,11 @@ function GeneralTab({ settings }: { settings: Record<string, string> }) {
                   type="button"
                   className={cn(
                     'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors',
-                    theme === value
+                    (value === 'system' || theme === value)
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
-                  onClick={() => setTheme(value)}
+                  onClick={() => handleThemeChange(value)}
                 >
                   {icon}
                   {label}

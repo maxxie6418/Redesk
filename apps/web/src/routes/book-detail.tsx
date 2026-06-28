@@ -12,6 +12,7 @@ import {
   X,
   Check,
   BookOpen,
+  MessageSquare,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { useBook, useUpdateBook } from '@/hooks/use-books';
@@ -108,6 +109,7 @@ export function BookDetailPage() {
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editReadingPurpose, setEditReadingPurpose] = useState('');
   const [editTagIds, setEditTagIds] = useState<number[]>([]);
+  const [editCustomAttributes, setEditCustomAttributes] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openEdit = useCallback(() => {
@@ -120,6 +122,7 @@ export function BookDetailPage() {
     setEditRating(book.data.rating);
     setEditReadingPurpose(book.data.reading_purpose ?? '');
     setEditTagIds(book.data.tag_ids);
+    setEditCustomAttributes(book.data.custom_attributes ?? '');
     setEditingMeta(true);
   }, [book.data]);
 
@@ -135,13 +138,14 @@ export function BookDetailPage() {
         rating: editRating,
         reading_purpose: editReadingPurpose || null,
         tag_ids: editTagIds,
+        custom_attributes: editCustomAttributes || null,
       });
       setMessage({ type: 'success', text: '已更新' });
       setEditingMeta(false);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
     }
-  }, [bookId, editTitle, editAuthor, editStatus, editVisibility, editCategoryId, editRating, editReadingPurpose, editTagIds, updateBook]);
+  }, [bookId, editTitle, editAuthor, editStatus, editVisibility, editCategoryId, editRating, editReadingPurpose, editTagIds, editCustomAttributes, updateBook]);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +224,10 @@ export function BookDetailPage() {
         <Button variant="outline" size="sm" onClick={openEdit}>
           编辑信息
         </Button>
+        <Button size="sm" disabled title="阅读器将在 M2 上线">
+          <BookOpen className="mr-1.5 h-4 w-4" />
+          阅读
+        </Button>
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-6">
@@ -288,6 +296,14 @@ export function BookDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="mb-6 border-dashed">
+          <CardContent className="py-6 text-center">
+            <MessageSquare className="mx-auto h-6 w-6 text-muted-foreground/40" />
+            <p className="mt-2 text-sm text-muted-foreground">阅读痕迹</p>
+            <p className="text-xs text-muted-foreground/70">笔记、高亮、标注 — 阅读器上线后（M2）自动记录</p>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -476,6 +492,15 @@ export function BookDetailPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>自定义属性</Label>
+                <Input
+                  placeholder={'JSON 格式，如 {"来源":"朋友推荐"}'}
+                  value={editCustomAttributes}
+                  onChange={(e) => setEditCustomAttributes(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">存储自定义收藏信息，需为合法 JSON</p>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

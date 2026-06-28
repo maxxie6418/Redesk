@@ -19,7 +19,7 @@ export interface BookSummary {
   publisher: string | null;
   language: string | null;
   reading_purpose: string | null;
-  custom_attributes: Record<string, unknown> | null;
+  custom_attributes: string | null;
   metadata_source: string | null;
   deleted_at: string | null;
   created_at: string;
@@ -65,7 +65,7 @@ export interface CreateBookInput {
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
-  custom_attributes?: Record<string, unknown> | null;
+  custom_attributes?: string | null;
 }
 
 export interface UpdateBookInput {
@@ -82,7 +82,7 @@ export interface UpdateBookInput {
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
-  custom_attributes?: Record<string, unknown> | null;
+  custom_attributes?: string | null;
 }
 
 function buildQuery(params?: BookQueryParams): string {

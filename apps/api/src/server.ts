@@ -18,6 +18,8 @@ import { tagRoutes } from './routes/tags';
 import { relationRoutes } from './routes/relations';
 import { fileRoutes } from './routes/files';
 import { exportRoutes } from './routes/export';
+import { opdsRoutes } from './routes/opds';
+import { overviewRoutes } from './routes/overview';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -73,7 +75,10 @@ export async function buildServer(): Promise<FastifyInstance> {
     await api.register(relationRoutes, { prefix: '/api/v1' });
     await api.register(fileRoutes, { prefix: '/api/v1' });
     await api.register(exportRoutes, { prefix: '/api/v1' });
+    await api.register(overviewRoutes, { prefix: '/api/v1' });
   });
+
+  app.register(opdsRoutes);
 
   const spaExists = existsSync(config.spaDir);
   if (spaExists) {

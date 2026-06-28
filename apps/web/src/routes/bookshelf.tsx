@@ -12,6 +12,9 @@ import {
   Trash2,
   User,
   X,
+  Home,
+  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 import { BOOK_STATUS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -538,6 +541,29 @@ export function Bookshelf() {
         </div>
 
         <div className="mt-auto space-y-3 border-t border-sidebar-border pt-4">
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            onClick={() => navigate('/overview')}
+          >
+            <Home className="h-4 w-4" />
+            概览
+          </button>
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/60 cursor-not-allowed"
+            disabled
+          >
+            <Sparkles className="h-4 w-4" />
+            AI 助手
+            <span className="ml-auto text-[10px] text-muted-foreground/40">S3</span>
+          </button>
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/60 cursor-not-allowed"
+            disabled
+          >
+            <Lightbulb className="h-4 w-4" />
+            主题阅读
+            <span className="ml-auto text-[10px] text-muted-foreground/40">S2</span>
+          </button>
           <button
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
             onClick={() => navigate('/settings')}
