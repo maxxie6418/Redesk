@@ -1,0 +1,3 @@
+undefined
+D:\verySync\Git\Redesk\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: node -e "import('./dist-test-does-not-exist').catch(()="

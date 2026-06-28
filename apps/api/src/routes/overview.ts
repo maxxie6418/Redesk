@@ -19,7 +19,7 @@ export async function overviewRoutes(app: FastifyInstance): Promise<void> {
       .get()?.c ?? 0;
 
     const statusCounts: Record<string, number> = {};
-    for (const status of [BOOK_STATUS.READING, BOOK_STATUS.PLANNED, BOOK_STATUS.READ, BOOK_STATUS.STORED]) {
+    for (const status of [BOOK_STATUS.COLLECTED, BOOK_STATUS.READING, BOOK_STATUS.PLANNED, BOOK_STATUS.READ, BOOK_STATUS.STORED]) {
       const count = db
         .select({ c: sql<number>`count(*)` })
         .from(books)

@@ -154,8 +154,8 @@ export function OverviewPage() {
         <Card className="border-dashed">
           <CardContent className="py-6 text-center space-y-3">
             <Lightbulb className="mx-auto h-6 w-6 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">主题阅读</p>
-            <p className="text-xs text-muted-foreground/70">围绕一个主题组织多本书的深度阅读 — 即将上线</p>
+            <p className="text-sm text-muted-foreground">阅读话题</p>
+            <p className="text-xs text-muted-foreground/70">围绕一个话题组织多本书的深度阅读 — 即将上线</p>
             <Button variant="ghost" size="sm" disabled>
               <Lightbulb className="mr-1.5 h-3.5 w-3.5" />
               即将推出

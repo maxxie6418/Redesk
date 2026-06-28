@@ -6,7 +6,7 @@ import { getDb } from '../db';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 
-const SENSITIVE_KEYS = new Set(['oss_secret_key', 'oss_access_key']);
+const SENSITIVE_KEYS = new Set(['oss_secret_key', 'oss_access_key', 'llm_api_key']);
 
 const SETTINGS_OWNER_ID = 1;
 

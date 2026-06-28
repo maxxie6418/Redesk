@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.7 |
+| 当前版本 | v1.0.8 |
 | 文档状态 | 待评审 |
 | 最后更新 | 2026-06-28 |
 | 适用范围 | 全项目实现期 |
@@ -23,6 +23,7 @@
 | v1.0.5 | 2026-06-28 | M1-D 完成：multipart 文件上传/替换/下载（Range）/删除全部落地；EPUB 封面自动抽取并挂载 `/books/{id}/cover` 端点；文件元信息增改（设主/改文件名）；非 EPUB 文件全格式支持 | — |
 | v1.0.6 | 2026-06-28 | M1-E 完成：元数据导出 JSON/CSV 全部落地；全量备份 ZIP 流式打包（archiver，DB+文件+Markdown）；自动备份 VACUUM（保留7份）含列表/触发端点；笔记/高亮/标记导出预留空实现（S2 激活）；外部笔记导入 Markdown 解析+书名模糊匹配 | — |
 | v1.0.7 | 2026-06-28 | M1-F/G/H 闭环：OPDS 1.2（catalog/by-status/by-tag/search/download + HTTP Basic）；概览端点 GET /overview；暗色模式全局开关；回收站保留期；自定义属性 custom_attributes；灰置阅读按钮+阅读痕迹占位 | — |
+| v1.0.8 | 2026-06-28 | M1 复查修正：概览端点合并为 GET /overview（含 total/status_counts/recent_added/recent_reading）；OPDS download 说明改为 acquisition 链接复用文件端点；metadata/preview 标注未落地；设置配置项补充 llm_provider/llm_api_key/llm_model/llm_base_url；密钥脱敏新增 llm_api_key | — |
 
 ## 文档说明
 
@@ -153,7 +154,7 @@
 | GET | /books/{id} | 书籍详情 | 1.06/1.20 |
 | PATCH | /books/{id} | 编辑元数据 | 1.05 |
 | DELETE | /books/{id} | 移入回收站（软删除） | 1.07 |
-| POST | /books/metadata/preview | 通过链接预填元数据 | 1.03/1.04 |
+| POST | /books/metadata/preview | 通过链接预填元数据（S1 接口预留，M1 后端暂未落地） | 1.03/1.04 |
 | POST | /books/batch | 批量操作 | 1.28 |
 | GET | /books/duplicates | 重复检测（规则版） | 1.27 |
 
@@ -353,13 +354,12 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
-| GET | /opds/catalog | 根目录 acquisition feed | 8.01 |
-| GET | /opds/by-status?status=READING | 按状态筛选 | 8.02 |
+| GET | /opds/catalog | 根目录 acquisition feed（导航链接 + 搜索描述） | 8.01 |
+| GET | /opds/by-status?status=READING | 按状态筛选（READ/PLANNED/READ/STORED/COLLECTED） | 8.02 |
 | GET | /opds/by-tag?tag=方法论 | 按标签筛选 | 8.02 |
-| GET | /opds/search?q={query} | 搜索接口 | 8.03 |
-| GET | /opds/book/{id}/file | 下载链接（复用文件端点） | 8.04 |
+| GET | /opds/search?q={query} | 搜索接口（无 q 时返回 OpenSearch Description） | 8.03 |
 
-> KOReader 兼容性需实测；内容协商：`Accept: application/atom+xml` 返回 OPDS，否则 JSON。
+> 下载链接（8.04）不在 OPDS 独立路径下，每个 entry 的 `http://opds-spec.org/acquisition` 链接直接指向已有文件下载端点 `/api/v1/books/{id}/files/{fileId}/download`，由 OPDS 客户端自动获取。封面链接指向 `/api/v1/books/{id}/cover`。OPDS 认证使用 HTTP Basic，复用系统用户账号密码。
 
 ---
 
@@ -392,16 +392,31 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
-| GET | /overview/summary | 书架总数、各状态数量 | 5.02/5.03 |
-| GET | /overview/recent?type=added\|reading | 最近新增/最近阅读 | 5.04/5.05 |
-| GET | /overview/stats | 高亮数、笔记数（S2 激活前为 0） | 5.06/5.07 |
+| GET | /overview | 书架概览（总数、各状态数量、最近新增、最近在读） | 5.01–5.05 |
 
-### GET /overview/summary
+### GET /overview
 ```json
-{ "data": { "total": 142, "by_status": { "COLLECTED": 30, "PLANNED": 20, "READING": 5, "READ": 80, "STORED": 7 } } }
+{
+  "data": {
+    "total": 142,
+    "status_counts": {
+      "COLLECTED": 30,
+      "PLANNED": 20,
+      "READING": 5,
+      "READ": 80,
+      "STORED": 7
+    },
+    "recent_added": [
+      { "id": 1, "title": "...", "author": "...", "status": "COLLECTED", "created_at": "..." }
+    ],
+    "recent_reading": [
+      { "id": 2, "title": "...", "author": "...", "status": "READING", "updated_at": "..." }
+    ]
+  }
+}
 ```
 
-> 阅读统计增强（5.09–5.17）属待定位，本期不做。
+> 概览端点合并返回全部数据（总数 + 状态分布 + 最近列表），前端一次请求即可渲染概览页。高亮/笔记数量（5.06/5.07）随 S2 激活后在同一端点追加 `reading_stats` 字段。阅读统计增强（5.09–5.17）属待定位，本期不做。
 
 ---
 
@@ -419,13 +434,17 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | recycle_retention_days | string | 回收站保留天数，默认 `"30"` |
 | theme | string | 界面主题：`"light"` / `"dark"` / `"system"` |
 | multi_user | string | 多用户开关：`"true"` 开启、`"false"` 关闭 |
+| llm_provider | string | LLM 提供商：`""` / `"openai"` / `"anthropic"` / `"deepseek"` / `"ollama"` |
+| llm_api_key | string | LLM API Key（回读脱敏） |
+| llm_model | string | LLM 模型名，如 `"gpt-4o"` / `"claude-3.5-sonnet"` |
+| llm_base_url | string | LLM 自定义 API 地址（可选，留空用默认） |
 | oss_provider | string | OSS 提供商：`""` / `"aliyun"` / `"s3"` / `"minio"` |
 | oss_endpoint | string | OSS Endpoint |
 | oss_bucket | string | OSS Bucket |
 | oss_access_key | string | OSS Access Key（回读脱敏） |
 | oss_secret_key | string | OSS Secret Key（回读脱敏） |
 
-密钥规则：`oss_access_key`、`oss_secret_key` 等敏感字段写入时接收明文，读取时脱敏返回（如 `LTA****abcd`）。日志、错误响应和导出文件不得包含明文 secret。
+密钥规则：`llm_api_key`、`oss_access_key`、`oss_secret_key` 等敏感字段写入时接收明文，读取时脱敏返回（如 `sk-****abcd`）。日志、错误响应和导出文件不得包含明文 secret。AI 功能（录入辅助、阅读辅助、RAG）在各里程碑激活后读取这些配置；配置可提前保存但不立即生效。
 
 ---
 
