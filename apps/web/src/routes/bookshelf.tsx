@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Archive,
   BookOpen,
@@ -8,13 +9,23 @@ import {
   LayoutList,
   Search,
   Settings,
+  Trash2,
   User,
   X,
 } from 'lucide-react';
 import { BOOK_STATUS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useBooks, useCreateBook, type BookSummary } from '@/hooks/use-books';
+import {
+  useBooks,
+  useCreateBook,
+  useDeleteBook,
+  useTrash,
+  useRestoreBook,
+  usePermanentDeleteBook,
+  useEmptyTrash,
+  type BookSummary,
+} from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +34,13 @@ import { useShellUser } from '@/components/shell-user-context';
 
 type ViewMode = 'card' | 'grid' | 'list';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
+type PageView = 'bookshelf' | 'trash';
+
+const SORT_API_MAP: Record<SortMode, string> = {
+  updated_desc: '-updated_at',
+  title_asc: 'title',
+  rating_desc: '-rating',
+};
 
 const BOOK_STATUS_LABELS: Record<string, string> = {
   [BOOK_STATUS.COLLECTED]: '收录',
@@ -104,13 +122,31 @@ function BookCover({ book, index, compact = false }: { book: BookSummary; index:
   );
 }
 
-function BookCard({ book, index }: { book: BookSummary; index: number }) {
+function BookCard({ book, index, selected, onToggleSelect, isTrash, onRestore, onPermanentDelete }: {
+  book: BookSummary;
+  index: number;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  isTrash?: boolean;
+  onRestore?: () => void;
+  onPermanentDelete?: () => void;
+}) {
   return (
-    <article className="group flex min-h-[142px] gap-3 rounded-xl border border-border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card">
-      <BookCover book={book} index={index} />
+    <article
+      className={cn(
+        'group flex min-h-[142px] gap-3 rounded-xl border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card cursor-pointer',
+        selected ? 'border-primary ring-1 ring-primary' : 'border-border',
+      )}
+      onClick={onToggleSelect}
+    >
+      <Link to={`/books/${book.id}`} onClick={(e) => e.stopPropagation()}>
+        <BookCover book={book} index={index} />
+      </Link>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="min-w-0">
-          <h2 className="line-clamp-2 text-[15px] font-semibold leading-5 text-foreground">{book.title}</h2>
+          <Link to={`/books/${book.id}`} onClick={(e) => e.stopPropagation()}>
+            <h2 className="line-clamp-2 text-[15px] font-semibold leading-5 text-foreground hover:text-primary transition-colors">{book.title}</h2>
+          </Link>
           <p className="mt-1 truncate text-xs text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
         </div>
 
@@ -139,27 +175,80 @@ function BookCard({ book, index }: { book: BookSummary; index: number }) {
           <span>{ratingText(book.rating)}</span>
           <span>更新 {formatDate(book.updated_at)}</span>
         </div>
+
+        {isTrash && (
+          <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onRestore}>
+              恢复
+            </Button>
+            <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={onPermanentDelete}>
+              彻底删除
+            </Button>
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function BookGridTile({ book, index }: { book: BookSummary; index: number }) {
+function BookGridTile({ book, index, selected, onToggleSelect, isTrash, onRestore, onPermanentDelete }: {
+  book: BookSummary;
+  index: number;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  isTrash?: boolean;
+  onRestore?: () => void;
+  onPermanentDelete?: () => void;
+}) {
   return (
-    <article className="rounded-xl border border-border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card">
-      <BookCover book={book} index={index} />
-      <h2 className="mt-3 line-clamp-2 text-sm font-semibold leading-5 text-foreground">{book.title}</h2>
+    <article
+      className={cn(
+        'rounded-xl border bg-popover p-3 transition-colors hover:border-foreground/20 hover:bg-card cursor-pointer',
+        selected ? 'border-primary ring-1 ring-primary' : 'border-border',
+      )}
+      onClick={onToggleSelect}
+    >
+      <Link to={`/books/${book.id}`} onClick={(e) => e.stopPropagation()}>
+        <BookCover book={book} index={index} />
+      </Link>
+      <Link to={`/books/${book.id}`} onClick={(e) => e.stopPropagation()}>
+        <h2 className="mt-3 line-clamp-2 text-sm font-semibold leading-5 text-foreground hover:text-primary transition-colors">{book.title}</h2>
+      </Link>
       <p className="mt-1 truncate text-xs text-muted-foreground">{book.author || '未填写作者'}</p>
       <span className={cn('mt-3 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium', statusClass(book.status))}>
         {statusLabel(book.status)}
       </span>
+      {isTrash && (
+        <div className="mt-2 flex gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onRestore}>
+            恢复
+          </Button>
+          <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={onPermanentDelete}>
+            删除
+          </Button>
+        </div>
+      )}
     </article>
   );
 }
 
-function BookListRow({ book, index }: { book: BookSummary; index: number }) {
+function BookListRow({ book, index, selected, onToggleSelect, isTrash, onRestore, onPermanentDelete }: {
+  book: BookSummary;
+  index: number;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  isTrash?: boolean;
+  onRestore?: () => void;
+  onPermanentDelete?: () => void;
+}) {
   return (
-    <article className="grid grid-cols-[minmax(0,1fr)_120px_90px_76px] items-center gap-4 border-t border-border px-4 py-3 text-sm first:border-t-0 hover:bg-card max-lg:grid-cols-[minmax(0,1fr)_72px]">
+    <article
+      className={cn(
+        'grid grid-cols-[minmax(0,1fr)_120px_90px_76px] items-center gap-4 border-t border-border px-4 py-3 text-sm first:border-t-0 hover:bg-card max-lg:grid-cols-[minmax(0,1fr)_72px] cursor-pointer',
+        selected && 'bg-primary/5',
+      )}
+      onClick={onToggleSelect}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <BookCover book={book} index={index} compact />
         <div className="min-w-0">
@@ -173,7 +262,20 @@ function BookListRow({ book, index }: { book: BookSummary; index: number }) {
           {statusLabel(book.status)}
         </span>
       </div>
-      <div className="text-right text-xs text-muted-foreground">{formatDate(book.updated_at)}</div>
+      <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+        {isTrash ? (
+          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onRestore}>
+              恢复
+            </Button>
+            <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={onPermanentDelete}>
+              删除
+            </Button>
+          </div>
+        ) : (
+          formatDate(book.updated_at)
+        )}
+      </div>
     </article>
   );
 }
@@ -237,6 +339,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
 
 export function Bookshelf() {
   const user = useShellUser();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
   const [visibility, setVisibility] = useState('ALL');
@@ -245,13 +348,61 @@ export function Bookshelf() {
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [showCreate, setShowCreate] = useState(false);
+  const [pageView, setPageView] = useState<PageView>('bookshelf');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const booksQuery = useBooks({
-    page_size: 100,
-    sort: '-updated_at',
-  });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const rawBooks = useMemo(() => booksQuery.data?.data ?? [], [booksQuery.data?.data]);
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [search]);
+
+  const booksQueryParams = useMemo(() => ({
+    page_size: 200,
+    sort: SORT_API_MAP[sort],
+    ...(debouncedSearch ? { q: debouncedSearch } : {}),
+    ...(status !== 'ALL' ? { status } : {}),
+    ...(visibility !== 'ALL' ? { visibility } : {}),
+    ...(category !== 'ALL' ? { category_id: Number(category) } : {}),
+    ...(tag !== 'ALL' ? { tag_id: tag } : {}),
+  }), [debouncedSearch, status, visibility, category, tag, sort]);
+
+  const trashQueryParams = useMemo(() => ({
+    page_size: 200,
+    sort: '-deleted_at',
+    ...(debouncedSearch ? { q: debouncedSearch } : {}),
+  }), [debouncedSearch]);
+
+  const booksQuery = useBooks(booksQueryParams);
+  const trashQuery = useTrash(trashQueryParams);
+  const deleteBook = useDeleteBook();
+  const restoreBook = useRestoreBook();
+  const permanentDeleteBook = usePermanentDeleteBook();
+  const emptyTrash = useEmptyTrash();
+
+  const rawBooks = useMemo(() => {
+    if (pageView === 'trash') {
+      return trashQuery.data?.data ?? [];
+    }
+    return booksQuery.data?.data ?? [];
+  }, [pageView, booksQuery.data?.data, trashQuery.data?.data]);
+
+  const isLoading = pageView === 'trash' ? trashQuery.isLoading : booksQuery.isLoading;
+  const isError = pageView === 'trash' ? trashQuery.isError : booksQuery.isError;
+  const error = pageView === 'trash' ? trashQuery.error : booksQuery.error;
+  const retryRefetch = pageView === 'trash' ? () => trashQuery.refetch() : () => booksQuery.refetch();
+  const total = pageView === 'trash' ? trashQuery.data?.pagination.total : booksQuery.data?.pagination.total;
 
   const categoryOptions = useMemo(
     () => ['ALL', ...new Set(rawBooks.map((book) => book.category_name).filter((value): value is string => Boolean(value)))],
@@ -261,45 +412,81 @@ export function Bookshelf() {
   const tagOptions = useMemo(() => ['ALL', ...new Set(rawBooks.flatMap((book) => book.tag_names))], [rawBooks]);
 
   const stats = useMemo(() => {
+    const allBooks = booksQuery.data?.data ?? [];
     return {
-      total: rawBooks.length,
-      reading: rawBooks.filter((book) => book.status === BOOK_STATUS.READING).length,
-      read: rawBooks.filter((book) => book.status === BOOK_STATUS.READ).length,
-      topics: new Set(rawBooks.flatMap((book) => book.tag_names)).size,
+      total: booksQuery.data?.pagination.total ?? 0,
+      reading: allBooks.filter((book) => book.status === BOOK_STATUS.READING).length,
+      read: allBooks.filter((book) => book.status === BOOK_STATUS.READ).length,
+      topics: new Set(allBooks.flatMap((book) => book.tag_names)).size,
     };
-  }, [rawBooks]);
+  }, [booksQuery.data]);
 
-  const books = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    const filtered = rawBooks.filter((book) => {
-      if (status !== 'ALL' && book.status !== status) return false;
-      if (visibility !== 'ALL' && book.visibility !== visibility) return false;
-      if (category !== 'ALL' && book.category_name !== category) return false;
-      if (tag !== 'ALL' && !book.tag_names.includes(tag)) return false;
-      if (!keyword) return true;
+  const books = rawBooks;
 
-      const haystack = [
-        book.title,
-        book.author,
-        book.description ?? '',
-        book.publisher ?? '',
-        book.category_name ?? '',
-        ...book.tag_names,
-      ]
-        .join(' ')
-        .toLowerCase();
+  const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL';
 
-      return haystack.includes(keyword);
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
     });
+  }, []);
 
-    return [...filtered].sort((a, b) => {
-      if (sort === 'title_asc') return a.title.localeCompare(b.title, 'zh-CN');
-      if (sort === 'rating_desc') return (b.rating ?? 0) - (a.rating ?? 0);
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
-  }, [rawBooks, search, status, visibility, category, tag, sort]);
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
-  const hasFilter = search || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL';
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      if (pageView === 'trash') {
+        for (const id of selectedIds) {
+          await permanentDeleteBook.mutateAsync(id);
+        }
+      } else {
+        for (const id of selectedIds) {
+          await deleteBook.mutateAsync(id);
+        }
+      }
+      clearSelection();
+    } catch {
+      // handled by mutation
+    }
+  }, [selectedIds, pageView, deleteBook, permanentDeleteBook, clearSelection]);
+
+  const handleRestore = useCallback(async (id: number) => {
+    try {
+      await restoreBook.mutateAsync(id);
+    } catch {
+      // handled by mutation
+    }
+  }, [restoreBook]);
+
+  const handlePermanentDelete = useCallback(async (id: number) => {
+    try {
+      await permanentDeleteBook.mutateAsync(id);
+    } catch {
+      // handled by mutation
+    }
+  }, [permanentDeleteBook]);
+
+  const handleEmptyTrash = useCallback(async () => {
+    try {
+      await emptyTrash.mutateAsync();
+    } catch {
+      // handled by mutation
+    }
+  }, [emptyTrash]);
+
+  const handleSwitchView = useCallback((view: PageView) => {
+    setPageView(view);
+    clearSelection();
+  }, [clearSelection]);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -323,10 +510,21 @@ export function Bookshelf() {
           </div>
 
           <nav className="mt-6 space-y-1">
-            <SidebarItem active icon={<BookOpen className="h-4 w-4" />} label="书架" />
+            <SidebarItem
+              active={pageView === 'bookshelf'}
+              icon={<BookOpen className="h-4 w-4" />}
+              label="书架"
+              onClick={() => handleSwitchView('bookshelf')}
+            />
             <SidebarItem icon={<Archive className="h-4 w-4" />} label="档案" />
             <SidebarItem icon={<LayoutList className="h-4 w-4" />} label="记录" />
             <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" />
+            <SidebarItem
+              active={pageView === 'trash'}
+              icon={<Trash2 className="h-4 w-4" />}
+              label="回收站"
+              onClick={() => handleSwitchView('trash')}
+            />
           </nav>
         </div>
 
@@ -340,7 +538,10 @@ export function Bookshelf() {
         </div>
 
         <div className="mt-auto space-y-3 border-t border-sidebar-border pt-4">
-          <button className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent">
+          <button
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            onClick={() => navigate('/settings')}
+          >
             <Settings className="h-4 w-4" />
             设置
           </button>
@@ -361,93 +562,162 @@ export function Bookshelf() {
       <main className="min-w-0 flex-1 px-6 py-6 lg:px-8">
         <header className="mb-5 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">书架</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {pageView === 'trash' ? '回收站' : '书架'}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {booksQuery.isLoading ? '正在加载' : `显示 ${books.length} 本书`}
+              {isLoading ? '正在加载' : `显示 ${books.length} 本书`}
+              {total != null && total > books.length && `（共 ${total} 本）`}
             </p>
           </div>
-          <Button className="rounded-lg" onClick={() => setShowCreate(true)}>
-            <BookPlus className="h-4 w-4" />
-            添加书籍
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">已选 {selectedIds.size} 本</span>
+                {pageView === 'trash' ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      for (const id of selectedIds) handleRestore(id);
+                    }}>
+                      批量恢复
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
+                      批量彻底删除
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
+                    移入回收站
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  取消选择
+                </Button>
+              </div>
+            )}
+            {selectedIds.size === 0 && pageView === 'trash' && books.length > 0 && (
+              <Button variant="destructive" size="sm" onClick={handleEmptyTrash}>
+                清空回收站
+              </Button>
+            )}
+            {selectedIds.size === 0 && pageView === 'bookshelf' && (
+              <Button className="rounded-lg" onClick={() => setShowCreate(true)}>
+                <BookPlus className="h-4 w-4" />
+                添加书籍
+              </Button>
+            )}
+          </div>
         </header>
 
-        <section className="mb-5 flex items-center gap-2 rounded-xl border border-border bg-popover p-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <FilterSelect value={status} onChange={setStatus} options={STATUS_OPTIONS.map((item) => [item.value, item.label])} />
-            <FilterSelect
-              value={category}
-              onChange={setCategory}
-              options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item])}
-            />
-            <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item])} />
-            <FilterSelect
-              value={visibility}
-              onChange={setVisibility}
-              options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])}
-            />
-            <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label])} />
-          </div>
+        {pageView === 'bookshelf' && (
+          <section className="mb-5 flex items-center gap-2 rounded-xl border border-border bg-popover p-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <FilterSelect value={status} onChange={setStatus} options={STATUS_OPTIONS.map((item) => [item.value, item.label])} />
+              <FilterSelect
+                value={category}
+                onChange={setCategory}
+                options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item])}
+              />
+              <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item])} />
+              <FilterSelect
+                value={visibility}
+                onChange={setVisibility}
+                options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])}
+              />
+              <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label])} />
+            </div>
 
-          <div className="flex-1" />
+            <div className="flex-1" />
 
-          <div className="flex shrink-0 items-center rounded-lg border border-border bg-background p-0.5">
-            <ViewButton active={viewMode === 'card'} label="卡片显示" onClick={() => setViewMode('card')}>
-              <LayoutGrid className="h-4 w-4" />
-              卡片
-            </ViewButton>
-            <ViewButton active={viewMode === 'grid'} label="网格显示" onClick={() => setViewMode('grid')}>
-              <Grid3X3 className="h-4 w-4" />
-              网格
-            </ViewButton>
-            <ViewButton active={viewMode === 'list'} label="列表显示" onClick={() => setViewMode('list')}>
-              <LayoutList className="h-4 w-4" />
-              列表
-            </ViewButton>
-          </div>
-        </section>
+            <div className="flex shrink-0 items-center rounded-lg border border-border bg-background p-0.5">
+              <ViewButton active={viewMode === 'card'} label="卡片显示" onClick={() => setViewMode('card')}>
+                <LayoutGrid className="h-4 w-4" />
+                卡片
+              </ViewButton>
+              <ViewButton active={viewMode === 'grid'} label="网格显示" onClick={() => setViewMode('grid')}>
+                <Grid3X3 className="h-4 w-4" />
+                网格
+              </ViewButton>
+              <ViewButton active={viewMode === 'list'} label="列表显示" onClick={() => setViewMode('list')}>
+                <LayoutList className="h-4 w-4" />
+                列表
+              </ViewButton>
+            </div>
+          </section>
+        )}
 
-        {booksQuery.isLoading && (
+        {isLoading && (
           <div className="rounded-xl border border-dashed border-border bg-popover px-6 py-16 text-center text-sm text-muted-foreground">
             正在整理书架...
           </div>
         )}
 
-        {booksQuery.isError && (
+        {isError && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-6 py-12 text-center">
             <p className="font-medium text-foreground">书架加载失败</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {booksQuery.error instanceof ApiError ? booksQuery.error.message : '请检查本地 API 是否正常启动。'}
+              {error instanceof ApiError ? error.message : '请检查本地 API 是否正常启动。'}
             </p>
+            <button
+              type="button"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              onClick={() => retryRefetch()}
+            >
+              重新加载
+            </button>
           </div>
         )}
 
-        {!booksQuery.isLoading && !booksQuery.isError && books.length === 0 && (
+        {!isLoading && !isError && books.length === 0 && (
           <div className="rounded-xl border border-dashed border-border bg-popover px-6 py-16 text-center">
-            <p className="font-medium text-foreground">{hasFilter ? '没有匹配的书籍' : '书架为空'}</p>
+            <p className="font-medium text-foreground">
+              {pageView === 'trash' ? '回收站为空' : hasFilter ? '没有匹配的书籍' : '书架为空'}
+            </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {hasFilter ? '可以放宽筛选条件，或清空搜索关键词。' : '添加一本书后，这里会显示书籍列表。'}
+              {pageView === 'trash'
+                ? '删除的书籍会出现在这里。'
+                : hasFilter
+                  ? '可以放宽筛选条件，或清空搜索关键词。'
+                  : '添加一本书后，这里会显示书籍列表。'}
             </p>
           </div>
         )}
 
-        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'card' && (
+        {!isLoading && !isError && books.length > 0 && viewMode === 'card' && (
           <section className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
             {books.map((book, index) => (
-              <BookCard key={book.id} book={book} index={index} />
+              <BookCard
+                key={book.id}
+                book={book}
+                index={index}
+                selected={selectedIds.has(book.id)}
+                onToggleSelect={() => toggleSelect(book.id)}
+                isTrash={pageView === 'trash'}
+                onRestore={() => handleRestore(book.id)}
+                onPermanentDelete={() => handlePermanentDelete(book.id)}
+              />
             ))}
           </section>
         )}
 
-        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'grid' && (
+        {!isLoading && !isError && books.length > 0 && viewMode === 'grid' && (
           <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {books.map((book, index) => (
-              <BookGridTile key={book.id} book={book} index={index} />
+              <BookGridTile
+                key={book.id}
+                book={book}
+                index={index}
+                selected={selectedIds.has(book.id)}
+                onToggleSelect={() => toggleSelect(book.id)}
+                isTrash={pageView === 'trash'}
+                onRestore={() => handleRestore(book.id)}
+                onPermanentDelete={() => handlePermanentDelete(book.id)}
+              />
             ))}
           </section>
         )}
 
-        {!booksQuery.isLoading && !booksQuery.isError && books.length > 0 && viewMode === 'list' && (
+        {!isLoading && !isError && books.length > 0 && viewMode === 'list' && (
           <section className="overflow-hidden rounded-xl border border-border bg-popover">
             <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_76px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground max-lg:hidden">
               <span>书籍</span>
@@ -456,7 +726,16 @@ export function Bookshelf() {
               <span className="text-right">更新</span>
             </div>
             {books.map((book, index) => (
-              <BookListRow key={book.id} book={book} index={index} />
+              <BookListRow
+                key={book.id}
+                book={book}
+                index={index}
+                selected={selectedIds.has(book.id)}
+                onToggleSelect={() => toggleSelect(book.id)}
+                isTrash={pageView === 'trash'}
+                onRestore={() => handleRestore(book.id)}
+                onPermanentDelete={() => handlePermanentDelete(book.id)}
+              />
             ))}
           </section>
         )}
@@ -467,7 +746,7 @@ export function Bookshelf() {
   );
 }
 
-function SidebarItem({ active, icon, label }: { active?: boolean; icon: React.ReactNode; label: string }) {
+function SidebarItem({ active, icon, label, onClick }: { active?: boolean; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
     <button
       type="button"
@@ -475,6 +754,7 @@ function SidebarItem({ active, icon, label }: { active?: boolean; icon: React.Re
         'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
         active && 'bg-sidebar-accent font-medium text-foreground',
       )}
+      onClick={onClick}
     >
       {icon}
       {label}

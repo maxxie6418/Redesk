@@ -1,29 +1,39 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { eq, sql } from 'drizzle-orm';
+import type { FastifyInstance } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { users } from '@redesk/db';
 import { loginSchema, setupSchema, ERROR_CODE } from '@redesk/shared';
 import { getDb } from '../db';
 import { validate } from '../lib/zod';
 import { AppError, unauthorized } from '../lib/errors';
-import { hashPassword, verifyPassword } from '../lib/auth';
-import { setSessionUserId, clearSession, getSessionUserId } from '../lib/session';
-
-function requireUserId(req: FastifyRequest): number {
-  const userId = getSessionUserId(req);
-  if (!userId) throw unauthorized();
-  return userId;
-}
-
-function userCount(): number {
-  return getDb().select({ c: sql<number>`count(*)` }).from(users).get()?.c ?? 0;
-}
+import {
+  hashPassword,
+  verifyPassword,
+  requireUserId,
+  userCount,
+  tryLoginAsAdmin,
+  isMultiUserEnabled,
+} from '../lib/auth';
+import { setSessionUserId, clearSession } from '../lib/session';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.get('/auth/status', async () => {
+    if (!isMultiUserEnabled()) {
+      return { data: { needs_setup: false } };
+    }
     return { data: { needs_setup: userCount() === 0 } };
   });
 
   app.post('/auth/setup', async (req) => {
+    if (!isMultiUserEnabled()) {
+      const loggedIn = tryLoginAsAdmin(req);
+      if (!loggedIn) {
+        throw new AppError(ERROR_CODE.BUSINESS_ERROR, '管理员账户未就绪');
+      }
+      const user = getDb().select().from(users).limit(1).get()!;
+      return {
+        data: { id: user.id, username: user.username, display_name: user.display_name },
+      };
+    }
     if (userCount() > 0) {
       throw new AppError(ERROR_CODE.BUSINESS_ERROR, '初始账户已存在，无法重复创建');
     }
@@ -51,6 +61,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/auth/login', async (req) => {
+    if (!isMultiUserEnabled()) {
+      const loggedIn = tryLoginAsAdmin(req);
+      if (!loggedIn) {
+        throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '管理员账户未就绪');
+      }
+      const user = getDb().select().from(users).limit(1).get()!;
+      return {
+        data: { id: user.id, username: user.username, display_name: user.display_name },
+      };
+    }
     const input = validate(loginSchema, req.body);
     const user = getDb().select().from(users).where(eq(users.username, input.username)).get();
     if (!user) {

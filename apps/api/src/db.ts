@@ -15,3 +15,10 @@ export function getDb(): AppDatabase {
   }
   return handle.db;
 }
+
+export function getSqlite() {
+  if (!handle) {
+    throw new Error('数据库未初始化');
+  }
+  return handle.sqlite;
+}

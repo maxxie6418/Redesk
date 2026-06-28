@@ -147,3 +147,92 @@ export function useDeleteBook() {
     },
   });
 }
+
+export interface BatchBooksInput {
+  ids: number[];
+  action: 'set_status' | 'set_category' | 'set_tags' | 'set_visibility' | 'delete';
+  params?: Record<string, unknown>;
+}
+
+export function useBatchBooks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BatchBooksInput) =>
+      api.post<{ affected: number }>('/books/batch', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export interface StatusHistoryEntry {
+  id: number;
+  from_status: string | null;
+  to_status: string;
+  changed_at: string;
+}
+
+export function useStatusHistory(bookId: number) {
+  return useQuery({
+    queryKey: ['books', bookId, 'status-history'],
+    queryFn: () => api.get<StatusHistoryEntry[]>(`/books/${bookId}/status-history`),
+    enabled: bookId > 0,
+  });
+}
+
+export interface TrashQueryParams {
+  page?: number;
+  page_size?: number;
+  sort?: string;
+  q?: string;
+}
+
+export function useTrash(params?: TrashQueryParams) {
+  return useQuery({
+    queryKey: ['trash', params],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      if (params?.page) sp.set('page', String(params.page));
+      if (params?.page_size) sp.set('page_size', String(params.page_size));
+      if (params?.sort) sp.set('sort', params.sort);
+      if (params?.q) sp.set('q', params.q);
+      const qs = sp.toString();
+      return api.getBody<PaginatedBooks>(`/trash${qs ? `?${qs}` : ''}`);
+    },
+  });
+}
+
+export function useRestoreBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: number) =>
+      api.post<{ id: number; restored: boolean }>(`/trash/${bookId}/restore`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trash'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function usePermanentDeleteBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: number) =>
+      api.delete<{ id: number; deleted: boolean }>(`/trash/${bookId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trash'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useEmptyTrash() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<{ affected: number }>('/trash'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trash'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}

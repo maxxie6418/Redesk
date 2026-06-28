@@ -3,12 +3,20 @@ import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import session from '@fastify/session';
 import fastifyStatic from '@fastify/static';
+import fastifyMultipart from '@fastify/multipart';
 import { existsSync } from 'node:fs';
 import { config } from './config';
 import { errorHandler } from './plugins/error-handler';
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
 import { bookRoutes } from './routes/books';
+import { settingsRoutes } from './routes/settings';
+import { userRoutes } from './routes/users';
+import { systemRoutes } from './routes/system';
+import { categoryRoutes } from './routes/categories';
+import { tagRoutes } from './routes/tags';
+import { relationRoutes } from './routes/relations';
+import { fileRoutes } from './routes/files';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -34,6 +42,11 @@ export async function buildServer(): Promise<FastifyInstance> {
     origin: [config.webUrl],
     credentials: true,
   });
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 200 * 1024 * 1024,
+    },
+  });
   await app.register(session, {
     secret: config.sessionSecret,
     cookieName: 'sid',
@@ -51,6 +64,13 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(async (api) => {
     await api.register(authRoutes, { prefix: '/api/v1' });
     await api.register(bookRoutes, { prefix: '/api/v1' });
+    await api.register(settingsRoutes, { prefix: '/api/v1' });
+    await api.register(userRoutes, { prefix: '/api/v1' });
+    await api.register(systemRoutes, { prefix: '/api/v1' });
+    await api.register(categoryRoutes, { prefix: '/api/v1' });
+    await api.register(tagRoutes, { prefix: '/api/v1' });
+    await api.register(relationRoutes, { prefix: '/api/v1' });
+    await api.register(fileRoutes, { prefix: '/api/v1' });
   });
 
   const spaExists = existsSync(config.spaDir);

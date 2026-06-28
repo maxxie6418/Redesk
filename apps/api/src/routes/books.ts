@@ -1,12 +1,19 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
-import { bookTags, books, categories, statusHistory, tags, users } from '@redesk/db';
-import { ERROR_CODE, bookQuerySchema, createBookSchema, updateBookSchema } from '@redesk/shared';
-import type { BookQueryInput } from '@redesk/shared';
-import { config } from '../config';
+import type { FastifyInstance } from 'fastify';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { bookRelations, bookTags, books, categories, statusHistory, tags } from '@redesk/db';
+import {
+  ERROR_CODE,
+  bookQuerySchema,
+  createBookSchema,
+  updateBookSchema,
+  batchBooksSchema,
+  trashQuerySchema,
+  duplicateQuerySchema,
+} from '@redesk/shared';
+import type { BookQueryInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
-import { AppError, notFound, unauthorized } from '../lib/errors';
-import { getSessionUserId } from '../lib/session';
+import { AppError, notFound, businessError } from '../lib/errors';
+import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 interface RawBookRow {
@@ -32,29 +39,28 @@ interface RawBookRow {
   updated_at: string;
 }
 
-function requireUserId(req: FastifyRequest): number {
-  const userId = getSessionUserId(req);
-  if (!userId) {
-    if (config.isDev && config.devAuthDisabled) {
-      const localUser = getDb()
-        .select({ id: users.id })
-        .from(users)
-        .orderBy(users.id)
-        .limit(1)
-        .get();
-
-      if (localUser) {
-        return localUser.id;
-      }
-    }
-
-    throw unauthorized();
-  }
-  return userId;
-}
-
 function now(): string {
   return new Date().toISOString();
+}
+
+function longestCommonSubstring(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  let maxLen = 0;
+  let prev = new Array(n + 1).fill(0);
+
+  for (let i = 1; i <= m; i++) {
+    const curr = new Array(n + 1).fill(0);
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        curr[j] = prev[j - 1] + 1;
+        if (curr[j] > maxLen) maxLen = curr[j];
+      }
+    }
+    prev = curr;
+  }
+
+  return maxLen;
 }
 
 function bookSelect() {
@@ -187,8 +193,9 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
   }
 
   if (input.q) {
-    const q = `%${input.q}%`;
-    conditions.push(or(like(books.title, q), like(books.author, q), like(books.isbn, q))!);
+    conditions.push(
+      sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
+    );
   }
 
   if (input.status) {
@@ -434,5 +441,353 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .run();
 
     return { data: { id: bookId, deleted: true } };
+  });
+
+  app.post('/books/batch', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(batchBooksSchema, req.body);
+    const db = getDb();
+    const timestamp = now();
+
+    const ownedBooks = db
+      .select({ id: books.id, status: books.status })
+      .from(books)
+      .where(and(eq(books.owner_id, userId), inArray(books.id, input.ids)))
+      .all();
+
+    if (ownedBooks.length === 0) {
+      throw notFound('未找到可操作的书籍');
+    }
+
+    const ownedIds = ownedBooks.map((b) => b.id);
+
+    switch (input.action) {
+      case 'set_status': {
+        const newStatus = input.params?.status as string | undefined;
+        if (!newStatus) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 status 参数');
+        }
+        db.update(books)
+          .set({ status: newStatus, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+
+        for (const book of ownedBooks) {
+          if (book.status !== newStatus) {
+            recordStatusChange(book.id, book.status, newStatus);
+          }
+        }
+        break;
+      }
+      case 'set_category': {
+        const categoryId = input.params?.category_id as number | null | undefined;
+        if (categoryId === undefined) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 category_id 参数');
+        }
+        db.update(books)
+          .set({ category_id: categoryId, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+        break;
+      }
+      case 'set_tags': {
+        const tagIds = input.params?.tag_ids as number[] | undefined;
+        if (!tagIds) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 tag_ids 参数');
+        }
+        for (const bookId of ownedIds) {
+          syncBookTags(bookId, tagIds);
+        }
+        db.update(books)
+          .set({ updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+        break;
+      }
+      case 'set_visibility': {
+        const visibility = input.params?.visibility as string | undefined;
+        if (!visibility) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 visibility 参数');
+        }
+        db.update(books)
+          .set({ visibility, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+        break;
+      }
+      case 'delete': {
+        const deletable = ownedBooks.filter((b) => b.status !== 'STORED');
+        if (deletable.length === 0) {
+          throw businessError('所选书籍均为存档状态，不能移入回收站。');
+        }
+        const deletableIds = deletable.map((b) => b.id);
+        db.update(books)
+          .set({ deleted_at: timestamp, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, deletableIds)))
+          .run();
+        break;
+      }
+    }
+
+    return { data: { affected: ownedIds.length } };
+  });
+
+  app.get('/books/:id/status-history', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+
+    if (Number.isNaN(bookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    }
+
+    const db = getDb();
+    const book = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+
+    if (!book) {
+      throw notFound('书籍不存在');
+    }
+
+    const history = db
+      .select({
+        id: statusHistory.id,
+        from_status: statusHistory.from_status,
+        to_status: statusHistory.to_status,
+        changed_at: statusHistory.changed_at,
+      })
+      .from(statusHistory)
+      .where(eq(statusHistory.book_id, bookId))
+      .orderBy(desc(statusHistory.changed_at))
+      .all();
+
+    return { data: history };
+  });
+
+  app.get('/books/duplicates', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(duplicateQuerySchema, req.query) as DuplicateQueryInput;
+    const threshold = input.threshold ?? 0.6;
+    const db = getDb();
+
+    const allBooks = db
+      .select({
+        id: books.id,
+        title: books.title,
+        author: books.author,
+      })
+      .from(books)
+      .where(and(eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    if (allBooks.length < 2) {
+      return { data: [] };
+    }
+
+    const results: { book_id: number; duplicates: number[]; score: number }[] = [];
+    const processed = new Set<number>();
+
+    for (let i = 0; i < allBooks.length; i++) {
+      const bookA = allBooks[i];
+      if (processed.has(bookA.id)) continue;
+
+      const duplicates: number[] = [];
+
+      for (let j = i + 1; j < allBooks.length; j++) {
+        const bookB = allBooks[j];
+        if (processed.has(bookB.id)) continue;
+
+        const titleA = bookA.title.toLowerCase().replace(/\s+/g, '');
+        const titleB = bookB.title.toLowerCase().replace(/\s+/g, '');
+        const authorA = bookA.author.toLowerCase().replace(/\s+/g, '');
+        const authorB = bookB.author.toLowerCase().replace(/\s+/g, '');
+
+        let titleScore = 0;
+        if (titleA === titleB) {
+          titleScore = 1;
+        } else if (titleA.includes(titleB) || titleB.includes(titleA)) {
+          titleScore = 0.85;
+        } else {
+          const common = longestCommonSubstring(titleA, titleB);
+          const maxLen = Math.max(titleA.length, titleB.length);
+          titleScore = maxLen > 0 ? common / maxLen : 0;
+        }
+
+        let authorScore = 0;
+        if (authorA === authorB) {
+          authorScore = 1;
+        } else if (authorA.includes(authorB) || authorB.includes(authorA)) {
+          authorScore = 0.85;
+        } else {
+          const common = longestCommonSubstring(authorA, authorB);
+          const maxLen = Math.max(authorA.length, authorB.length);
+          authorScore = maxLen > 0 ? common / maxLen : 0;
+        }
+
+        const score = titleScore * 0.7 + authorScore * 0.3;
+
+        if (score >= threshold) {
+          duplicates.push(bookB.id);
+          processed.add(bookB.id);
+        }
+      }
+
+      if (duplicates.length > 0) {
+        results.push({
+          book_id: bookA.id,
+          duplicates,
+          score: Math.round(Math.min(1, 0.7 + duplicates.length * 0.1) * 100) / 100,
+        });
+        processed.add(bookA.id);
+      }
+    }
+
+    return { data: results };
+  });
+
+  app.get('/trash', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(trashQuerySchema, req.query) as TrashQueryInput;
+    const db = getDb();
+    const page = input.page ?? 1;
+    const pageSize = input.page_size ?? 20;
+
+    const conditions: ReturnType<typeof and>[] = [
+      eq(books.owner_id, userId),
+      sql`${books.deleted_at} IS NOT NULL`,
+    ];
+
+    if (input.q) {
+      conditions.push(
+        sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
+      );
+    }
+
+    const where = and(...conditions);
+    const total = db.select({ value: count() }).from(books).where(where).get()?.value ?? 0;
+
+    let orderBy = desc(books.deleted_at);
+    if (input.sort) {
+      const descending = input.sort.startsWith('-');
+      const field = descending ? input.sort.slice(1) : input.sort;
+      if (field === 'updated_at') {
+        orderBy = descending ? desc(books.updated_at) : asc(books.updated_at);
+      } else if (field === 'title') {
+        orderBy = descending ? desc(books.title) : asc(books.title);
+      }
+    }
+
+    const offset = (page - 1) * pageSize;
+    const rows = db
+      .select(bookSelect())
+      .from(books)
+      .where(where)
+      .orderBy(orderBy)
+      .limit(pageSize)
+      .offset(offset)
+      .all();
+
+    return {
+      data: serializeBooks(rows, userId),
+      pagination: { page, page_size: pageSize, total },
+    };
+  });
+
+  app.post('/trash/:bookId/restore', async (req) => {
+    const userId = requireUserId(req);
+    const { bookId: bookIdStr } = req.params as { bookId: string };
+    const bookId = Number(bookIdStr);
+
+    if (Number.isNaN(bookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    }
+
+    const db = getDb();
+    const book = db
+      .select({ id: books.id, deleted_at: books.deleted_at })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+
+    if (!book) {
+      throw notFound('书籍不存在');
+    }
+
+    if (!book.deleted_at) {
+      throw businessError('该书籍不在回收站中');
+    }
+
+    db.update(books)
+      .set({ deleted_at: null, updated_at: now() })
+      .where(eq(books.id, bookId))
+      .run();
+
+    return { data: { id: bookId, restored: true } };
+  });
+
+  app.delete('/trash/:bookId', async (req) => {
+    const userId = requireUserId(req);
+    const { bookId: bookIdStr } = req.params as { bookId: string };
+    const bookId = Number(bookIdStr);
+
+    if (Number.isNaN(bookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    }
+
+    const db = getDb();
+    const book = db
+      .select({ id: books.id, deleted_at: books.deleted_at })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+
+    if (!book) {
+      throw notFound('书籍不存在');
+    }
+
+    if (!book.deleted_at) {
+      throw businessError('只能彻底删除回收站中的书籍');
+    }
+
+    db.delete(bookTags).where(eq(bookTags.book_id, bookId)).run();
+    db.delete(bookRelations).where(
+      or(eq(bookRelations.source_book_id, bookId), eq(bookRelations.target_book_id, bookId)),
+    ).run();
+    db.delete(statusHistory).where(eq(statusHistory.book_id, bookId)).run();
+    db.delete(books).where(eq(books.id, bookId)).run();
+
+    return { data: { id: bookId, deleted: true } };
+  });
+
+  app.delete('/trash', async (req) => {
+    const userId = requireUserId(req);
+    const db = getDb();
+
+    const trashedBooks = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.owner_id, userId), sql`${books.deleted_at} IS NOT NULL`))
+      .all();
+
+    if (trashedBooks.length === 0) {
+      return { data: { affected: 0 } };
+    }
+
+    const trashedIds = trashedBooks.map((b) => b.id);
+
+    db.delete(bookTags).where(inArray(bookTags.book_id, trashedIds)).run();
+    db.delete(bookRelations).where(
+      or(
+        inArray(bookRelations.source_book_id, trashedIds),
+        inArray(bookRelations.target_book_id, trashedIds),
+      ),
+    ).run();
+    db.delete(statusHistory).where(inArray(statusHistory.book_id, trashedIds)).run();
+    db.delete(books).where(and(eq(books.owner_id, userId), inArray(books.id, trashedIds))).run();
+
+    return { data: { affected: trashedBooks.length } };
   });
 }

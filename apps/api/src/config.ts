@@ -21,6 +21,7 @@ const envSchema = z.object({
   SPA_DIR: z.string().default('./apps/web/dist'),
   LOG_LEVEL: z.string().default('info'),
   VITE_AUTH_DISABLED: z.string().optional(),
+  AUTH_DISABLED: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -33,6 +34,14 @@ const env = parsed.data;
 
 function resolvePath(p: string): string {
   return isAbsolute(p) ? p : join(MONOREPO_ROOT, p);
+}
+
+function readAuthDisabled(): boolean {
+  const raw =
+    env.AUTH_DISABLED ??
+    env.VITE_AUTH_DISABLED ??
+    (env.NODE_ENV === 'development' ? 'true' : 'false');
+  return String(raw).toLowerCase() === 'true';
 }
 
 export const config = {
@@ -48,8 +57,11 @@ export const config = {
   isDefaultSessionSecret: env.SESSION_SECRET === DEFAULT_SESSION_SECRET,
   webUrl: env.WEB_URL,
   logLevel: env.LOG_LEVEL,
-  devAuthDisabled:
-    String(env.VITE_AUTH_DISABLED ?? (env.NODE_ENV === 'development' ? 'true' : 'false')).toLowerCase() === 'true',
+  authDisabled: readAuthDisabled(),
+  devAuthDisabled: readAuthDisabled(),
 };
+
+export const DEFAULT_ADMIN_USERNAME = 'admin';
+export const DEFAULT_ADMIN_PASSWORD = 'redesk';
 
 export type AppConfig = typeof config;

@@ -5,9 +5,9 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.2 |
+| 当前版本 | v1.0.5 |
 | 文档状态 | 待评审 |
-| 最后更新 | 2026-06-27 |
+| 最后更新 | 2026-06-28 |
 | 适用范围 | 全项目实现期 |
 | 关联文档 | 数据模型.md、技术方案.md、功能清单.md |
 
@@ -18,6 +18,9 @@
 | v1.0.0 | 2026-06-27 | 建立 API 接口初始框架：通用约定、Step1 详细端点、Step2/3 预留端点清单 | — |
 | v1.0.1 | 2026-06-27 | 补充版本号规范引用；版本号改为三段式（主.次.修订） | — |
 | v1.0.2 | 2026-06-27 | 补充元数据链接预填接口、书籍弹性字段、配置密钥脱敏规则与主题软删除说明 | — |
+| v1.0.3 | 2026-06-28 | M1-B 完成：FTS5 搜索、批量操作、状态历史、回收站全部落地；新增设置/用户管理/系统端点；鉴权动态化（多用户开关） | — |
+| v1.0.4 | 2026-06-28 | M1-C 完成：分类 CRUD、标签 CRUD、书籍关联管理、规则版重复检测全部落地；彻底删除时同步清理 book_relations | — |
+| v1.0.5 | 2026-06-28 | M1-D 完成：multipart 文件上传/替换/下载（Range）/删除全部落地；EPUB 封面自动抽取并挂载 `/books/{id}/cover` 端点；文件元信息增改（设主/改文件名）；非 EPUB 文件全格式支持 | — |
 
 ## 文档说明
 
@@ -39,9 +42,11 @@
 8. [导出与备份（S1）](#8-导出与备份s1)
 9. [概览（S1）](#9-概览s1)
 10. [设置（S1）](#10-设置s1)
-11. [阅读器与笔记（S2 预留）](#11-阅读器与笔记s2-预留)
-12. [AI 能力（S3 预留）](#12-ai-能力s3-预留)
-13. [主题阅读（P2 预留）](#13-主题阅读p2-预留)
+11. [用户管理（S1）](#11-用户管理s1)
+12. [系统管理（S1）](#12-系统管理s1)
+13. [阅读器与笔记（S2 预留）](#13-阅读器与笔记s2-预留)
+14. [AI 能力（S3 预留）](#14-ai-能力s3-预留)
+15. [主题阅读（P2 预留）](#15-主题阅读p2-预留)
 
 ---
 
@@ -60,7 +65,7 @@
 | 参数 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
 | page | int | 1 | 页码，从 1 起 |
-| page_size | int | 20 | 每页条数，上限 100 |
+| page_size | int | 20 | 每页条数，上限 500 |
 | sort | string | | 排序字段，前缀 `-` 降序，如 `-updated_at` |
 
 响应包装：
@@ -82,7 +87,7 @@
 
 | 参数 | 说明 | 对应功能 |
 | --- | --- | --- |
-| q | 全文关键词（命中 title/author/isbn） | 1.13 |
+| q | 全文关键词（FTS5 全文检索，命中 title/author/isbn） | 1.13 |
 | status | 状态，逗号分隔多值 | 1.15 |
 | category_id | 分类 | 1.16 |
 | tag_id | 标签，逗号分隔（AND 关系） | 1.17 |
@@ -125,20 +130,15 @@
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
+| GET | /auth/status | 查询系统初始化状态（是否需要首次设置） |
+| POST | /auth/setup | 首次初始化管理员账户（仅当用户数为 0 时可用） |
 | POST | /auth/login | 登录，成功设会话 Cookie |
 | POST | /auth/logout | 登出，清除会话 |
 | GET | /auth/me | 当前用户信息 |
 
-### POST /auth/login
-
-请求：
-```json
-{ "username": "string", "password": "string" }
-```
-响应 200：`{ "data": { "id": 1, "username": "...", "display_name": "..." } }`
-错误：401 `INVALID_CREDENTIALS`
-
-> 当前单账户；初始账户在首次启动或环境变量引导创建。多用户注册端点为 P2 预留。
+> 鉴权模式由 settings 表中的 `multi_user` 键动态控制：`"true"` 时需密码登录（多用户模式）；`"false"` 或不存时自动以默认管理员身份免登录（单用户模式）。免登录模式下 `/auth/status` 返回 `needs_setup: false`，`/auth/login` 直接登入。
+>
+> 单用户模式下默认管理员账户由后端首次启动时自动创建（用户名 `admin`，密码 `redesk`），无需手动 setup。
 
 ---
 
@@ -256,11 +256,47 @@
 ```json
 { "name": "工作能力提升", "parent_id": null }
 ```
+响应 201：`{ "data": { "id": 1, "name": "工作能力提升", "book_count": 0, ... } }`
+
+### GET /categories
+响应：`{ "data": [ { "id": 1, "name": "工作能力提升", "book_count": 3, ... } ] }`
+> 每条分类附带 `book_count` 字段表示归属该分类的书籍数。
 
 ### POST /tags
 ```json
 { "name": "方法论" }
 ```
+响应 201：`{ "data": { "id": 1, "name": "方法论", "book_count": 0, ... } }`
+
+### GET /tags
+响应：`{ "data": [ { "id": 1, "name": "方法论", "book_count": 5, ... } ] }`
+> 每条标签附带 `book_count` 字段表示使用该标签的书籍数。
+
+### GET /books/{id}/relations
+响应：
+```json
+{
+  "data": {
+    "outgoing": [ { "id": 1, "target_book_id": 5, "target_title": "...", "target_author": "...", "relation_type": "续集", ... } ],
+    "incoming": [ { "id": 2, "source_book_id": 3, "source_title": "...", "source_author": "...", "relation_type": "同主题", ... } ]
+  }
+}
+```
+> outgoing 是本书记录的主动关联，incoming 是其他书关联到本书的记录。
+
+### POST /books/{id}/relations
+```json
+{ "target_book_id": 5, "relation_type": "续集", "note": "第二部" }
+```
+响应 201：`{ "data": { "id": 1, "source_book_id": 1, "target_book_id": 5, ... } }`
+
+### GET /books/duplicates
+query：`threshold`（可选，默认 0.6，0–1 之间）
+响应：
+```json
+{ "data": [ { "book_id": 1, "duplicates": [2, 3], "score": 0.92 } ] }
+```
+> 规则版重复检测：基于作者（权重 0.3）+ 标题（权重 0.7）的最长公共子串相似度。score 为综合置信度。
 
 ---
 
@@ -371,16 +407,79 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
-| GET | /settings | 读取配置 | — |
-| PATCH | /settings | 更新配置 | — |
+| GET | /settings | 读取全部配置（脱敏） | — |
+| PATCH | /settings | 批量更新配置（upsert） | — |
 
-配置项示例：`recycle_retention_days`、`theme`、`ai_provider`、`oss_config`、`rclone_config`、`tts_config`（后三者 S1 仅存配置，功能后置）。
+配置项（当前已实现）：
 
-密钥规则：`api_key`、`secret_key`、`access_token`、`password` 等敏感字段写入时接收明文，持久化时按实现方案加密或本地保护；读取配置时必须脱敏返回，例如 `sk-***abcd`。日志、错误响应和导出文件不得包含明文 secret。
+| 键 | 类型 | 说明 |
+| --- | --- | --- |
+| recycle_retention_days | string | 回收站保留天数，默认 `"30"` |
+| theme | string | 界面主题：`"light"` / `"dark"` / `"system"` |
+| multi_user | string | 多用户开关：`"true"` 开启、`"false"` 关闭 |
+| oss_provider | string | OSS 提供商：`""` / `"aliyun"` / `"s3"` / `"minio"` |
+| oss_endpoint | string | OSS Endpoint |
+| oss_bucket | string | OSS Bucket |
+| oss_access_key | string | OSS Access Key（回读脱敏） |
+| oss_secret_key | string | OSS Secret Key（回读脱敏） |
+
+密钥规则：`oss_access_key`、`oss_secret_key` 等敏感字段写入时接收明文，读取时脱敏返回（如 `LTA****abcd`）。日志、错误响应和导出文件不得包含明文 secret。
 
 ---
 
-## 11. 阅读器与笔记（S2 预留）
+## 11. 用户管理（S1）
+
+仅多用户模式（`multi_user: "true"`）下可用；单用户模式下返回 422。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | /users | 用户列表 |
+| POST | /users | 创建用户（用户名唯一） |
+| PATCH | /users/{id} | 编辑用户昵称 |
+| DELETE | /users/{id} | 删除用户（不能删自己） |
+| POST | /users/{id}/reset-password | 重置密码 |
+
+### POST /users
+```json
+{ "username": "newuser", "password": "123456", "display_name": "新用户" }
+```
+响应 201：`{ "data": { "id": 2, "username": "newuser", "display_name": "新用户", "created_at": "..." } }`
+
+### POST /users/{id}/reset-password
+```json
+{ "password": "newpassword" }
+```
+响应 200：`{ "data": { "id": 2, "reset": true } }`
+
+---
+
+## 12. 系统管理（S1）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | /system/stats | 系统统计（DB 大小/存储/书籍/文件数） |
+| POST | /system/backup | 手动备份（VACUUM INTO） |
+| POST | /system/fts-rebuild | 重建 FTS5 全文索引 |
+| POST | /system/clear-cache | 清理缓存（占位） |
+
+### GET /system/stats
+```json
+{
+  "data": {
+    "db_size_bytes": 2457600,
+    "storage_size_bytes": 47185920,
+    "book_count": 142,
+    "file_count": 35
+  }
+}
+```
+
+### POST /system/backup
+响应 200：`{ "data": { "path": "/storage/backups/redesk-backup-1719568800000.db", "success": true } }`
+
+---
+
+## 13. 阅读器与笔记（S2 预留）
 
 进场后细化字段。端点清单：
 
@@ -399,7 +498,7 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 ---
 
-## 12. AI 能力（S3 预留）
+## 14. AI 能力（S3 预留）
 
 阶段一进场后细化。端点清单（均 SSE 流式或 JSON）：
 
@@ -416,7 +515,7 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 ---
 
-## 13. 主题阅读（P2 预留）
+## 15. 主题阅读（P2 预留）
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |

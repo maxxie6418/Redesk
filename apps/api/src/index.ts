@@ -1,6 +1,7 @@
 import { buildServer } from './server';
 import { initDatabase } from './db';
 import { config } from './config';
+import { ensureDefaultAdmin } from './lib/auth';
 
 async function main(): Promise<void> {
   if (config.isProd && config.isDefaultSessionSecret) {
@@ -8,6 +9,7 @@ async function main(): Promise<void> {
   }
 
   initDatabase();
+  await ensureDefaultAdmin();
 
   const app = await buildServer();
 
