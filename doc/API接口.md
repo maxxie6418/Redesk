@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.9 |
+| 当前版本 | v1.0.11 |
 | 文档状态 | 待评审 |
 | 最后更新 | 2026-06-29 |
 | 适用范围 | 全项目实现期 |
@@ -26,6 +26,7 @@
 | v1.0.8 | 2026-06-28 | M1 复查修正：概览端点合并为 GET /overview（含 total/status_counts/recent_added/recent_reading）；OPDS download 说明改为 acquisition 链接复用文件端点；metadata/preview 标注未落地；设置配置项补充 llm_provider/llm_api_key/llm_model/llm_base_url；密钥脱敏新增 llm_api_key | — |
 | v1.0.9 | 2026-06-29 | M1 书架数据层与文件管理增强（P1/P2）：POST /books author 改可选，补充 subtitle/translator/original_title/page_count/source_url 等全字段；筛选新增 favorited/has_files/genre_category_id；新增书库文件端点 GET /files、未关联文件池 POST/GET/DELETE /files/unassociated、文件匹配书籍 POST /files/{id}/match | — |
 | v1.0.10 | 2026-06-29 | 文件管理风险收口：书库文件与未关联文件池按 owner_id 隔离；checksum 去重范围明确为当前用户书库；彻底删除书籍同步清理关联文件记录与物理文件；匹配接口以 POST /files/{fileId}/match 为准 | AI |
+| v1.0.11 | 2026-06-29 | 新增书籍元数据批量导入：提供 CSV 模板下载 GET /books/import/template，支持 multipart CSV 导入 POST /books/import；导入仅创建书籍元数据，不包含文件 | AI |
 
 ## 文档说明
 
@@ -403,10 +404,42 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | GET | /backup/list | 列出自动备份副本 | 6.09 |
 | POST | /backup/trigger | 手动触发一次自动备份 | 6.09 |
 | POST | /import/notes | 导入外部笔记（multipart Markdown） | 6.10 |
+| GET | /books/import/template | 下载书籍元数据 CSV 导入模板 | 6.12 |
+| POST | /books/import | 批量导入书籍元数据（multipart CSV，不含文件） | 6.12 |
 
 ### GET /export/books
 query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 响应：文件下载。
+
+### GET /books/import/template
+响应：`text/csv; charset=utf-8` 文件下载。
+
+模板字段：`title` 必填；`subtitle`、`author`、`translator`、`original_title`、`isbn`、`publisher`、`publish_year`、`page_count`、`language`、`status`、`visibility`、`rating`、`reading_purpose`、`category_name`、`genre_category_name`、`tag_names`、`source_url`、`cover_url`、`description` 可选。
+
+### POST /books/import
+请求：`multipart/form-data`，字段 `file` 为 CSV 文件；仅导入书籍元数据，不上传或关联书籍文件。
+
+导入规则：
+- `title` 必填；`status` 支持 `COLLECTED/PLANNED/READING/READ/STORED` 或中文别名；`visibility` 支持 `PUBLIC/PRIVATE` 或中文别名。
+- `category_name`、`genre_category_name`、`tag_names` 按名称匹配，不存在时自动创建；`tag_names` 支持用 `;`、`；`、`、`、`|`、`/`、`，` 分隔。
+- 已存在相同 ISBN 或相同「书名+作者」的书籍时跳过该行；其他校验失败仅影响当前行，不回滚整批。
+
+响应 200：
+```json
+{
+  "data": {
+    "dry_run": false,
+    "total": 10,
+    "created": 8,
+    "valid": 8,
+    "skipped": 1,
+    "failed": 1,
+    "rows": [
+      { "row": 2, "title": "如何阅读一本书", "success": true, "skipped": false, "book_id": 12, "error": null }
+    ]
+  }
+}
+```
 
 ### POST /backup/full
 响应：`application/zip` 流（DB + 原始文件 + Markdown 副本）。
