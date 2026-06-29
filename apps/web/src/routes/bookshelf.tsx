@@ -6,19 +6,20 @@ import {
   BookOpen,
   BookPlus,
   Bookmark,
+  Check,
   Grid3X3,
   LayoutGrid,
   LayoutList,
+  Lightbulb,
+  Loader2,
   Search,
   Settings,
+  Star,
   Trash2,
   User,
   X,
   Sparkles,
   NotebookPen,
-  Star,
-  Loader2,
-  Lightbulb,
   Heart,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
@@ -440,11 +441,38 @@ interface CreateBookFormProps {
 
 function CreateBookForm({ onClose }: CreateBookFormProps) {
   const qc = useQueryClient();
+  const personalCategories = useCategories('PERSONAL');
+  const genreCategories = useCategories('GENRE');
+  const tags = useTags();
+
   const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [author, setAuthor] = useState('');
+  const [translator, setTranslator] = useState('');
+  const [originalTitle, setOriginalTitle] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [publisher, setPublisher] = useState('');
+  const [publishYear, setPublishYear] = useState('');
+  const [description, setDescription] = useState('');
+  const [language, setLanguage] = useState('');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [genreCategoryId, setGenreCategoryId] = useState<number | null>(null);
+  const [status, setStatus] = useState<string>(BOOK_STATUS.COLLECTED);
+  const [visibility, setVisibility] = useState<string>(VISIBILITY.PRIVATE);
+  const [rating, setRating] = useState<number | null>(null);
+  const [readingPurpose, setReadingPurpose] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [pageCount, setPageCount] = useState('');
+  const [tagIds, setTagIds] = useState<number[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleTag = useCallback((tagId: number) => {
+    setTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+    );
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -452,10 +480,36 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
     setSubmitting(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        title,
+        subtitle: subtitle || null,
+        author: author || null,
+        translator: translator || null,
+        original_title: originalTitle || null,
+        isbn: isbn || null,
+        publisher: publisher || null,
+        publish_year: publishYear ? Number(publishYear) : null,
+        description: description || null,
+        language: language || null,
+        category_id: categoryId,
+        genre_category_id: genreCategoryId,
+        status,
+        visibility,
+        reading_purpose: readingPurpose || null,
+        rating,
+        source_url: sourceUrl || null,
+        page_count: pageCount ? Number(pageCount) : null,
+        tag_ids: tagIds.length > 0 ? tagIds : null,
+      };
+
       if (selectedFile) {
         const form = new FormData();
         form.append('title', title);
-        if (author) form.append('author', author);
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value != null) {
+            form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+          }
+        });
         form.append('file', selectedFile);
 
         const res = await fetch('/api/v1/books', {
@@ -470,7 +524,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
           throw new Error(err?.message ?? '创建失败');
         }
       } else {
-        await api.post('/books', { title, author: author || null });
+        await api.post('/books', payload);
       }
 
       qc.invalidateQueries({ queryKey: ['books'] });
@@ -483,23 +537,169 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4" onClick={onClose}>
-      <Card className="w-full max-w-md border-border bg-card shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-8" onClick={onClose}>
+      <Card className="w-full max-w-lg border-border bg-card shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="font-serif text-xl">添加书籍</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="关闭">
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">书名</Label>
-              <Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} required />
+              <Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="必填" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="author">作者</Label>
-              <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="可选" />
+              <Label htmlFor="subtitle">副标题</Label>
+              <Input id="subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="可选" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="author">作者</Label>
+                <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="可选" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="translator">译者</Label>
+                <Input id="translator" value={translator} onChange={(event) => setTranslator(event.target.value)} placeholder="可选" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="originalTitle">原作名</Label>
+              <Input id="originalTitle" value={originalTitle} onChange={(event) => setOriginalTitle(event.target.value)} placeholder="可选" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="isbn">ISBN</Label>
+                <Input id="isbn" value={isbn} onChange={(event) => setIsbn(event.target.value)} placeholder="可选" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="language">语言</Label>
+                <Input id="language" value={language} onChange={(event) => setLanguage(event.target.value)} placeholder="可选" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="publisher">出版社</Label>
+                <Input id="publisher" value={publisher} onChange={(event) => setPublisher(event.target.value)} placeholder="可选" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="publishYear">出版年</Label>
+                <Input id="publishYear" type="number" min="0" max="2100" value={publishYear} onChange={(event) => setPublishYear(event.target.value)} placeholder="可选" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>个人分类</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  value={categoryId ?? ''}
+                  onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">未分类</option>
+                  {personalCategories.data?.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>常规分类</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  value={genreCategoryId ?? ''}
+                  onChange={(e) => setGenreCategoryId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">未分类</option>
+                  {genreCategories.data?.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>状态</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pageCount">页数</Label>
+                <Input id="pageCount" type="number" min="0" value={pageCount} onChange={(event) => setPageCount(event.target.value)} placeholder="可选" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>可见性</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  value={visibility}
+                  onChange={(e) => setVisibility(e.target.value)}
+                >
+                  <option value={VISIBILITY.PRIVATE}>私密</option>
+                  <option value={VISIBILITY.PUBLIC}>公开</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>评分</Label>
+                <div className="flex items-center gap-1 pt-1">
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRating(rating === r ? null : r)}
+                      className={cn(r <= (rating ?? 0) ? 'text-yellow-500' : 'text-muted-foreground/30')}
+                    >
+                      <Star className="h-5 w-5 fill-current" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sourceUrl">书籍介绍链接</Label>
+              <Input id="sourceUrl" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://douban.com/...（可选）" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="readingPurpose">阅读目的</Label>
+              <Input id="readingPurpose" value={readingPurpose} onChange={(event) => setReadingPurpose(event.target.value)} placeholder="泛读/精读/参考…（可选）" />
+            </div>
+            <div className="space-y-2">
+              <Label>标签</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.data?.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={cn(
+                      'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                      tagIds.includes(t.id)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-foreground/20',
+                    )}
+                    onClick={() => toggleTag(t.id)}
+                  >
+                    {tagIds.includes(t.id) ? <Check className="mr-1 inline h-3 w-3" /> : null}
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>书籍简介</Label>
+              <textarea
+                className="min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="可选"
+              />
             </div>
             <div className="space-y-2">
               <Label>上传文件（可选）</Label>
