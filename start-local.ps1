@@ -26,6 +26,8 @@ if ($nodeMajor -lt 20 -or $nodeMajor -ge 25) {
 }
 Write-Info "Node.js $currentNodeVersion - OK"
 
+$pnpmVersion = '11.9.0'
+
 function Find-Pnpm {
   $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
   if ($cmd) {
@@ -40,14 +42,48 @@ function Find-Pnpm {
   return $null
 }
 
-$pnpm = Find-Pnpm
+function Ensure-Pnpm {
+  $found = Find-Pnpm
+  if ($found) {
+    return $found
+  }
+
+  Write-Info 'pnpm was not found in PATH. Trying corepack first...'
+  $corepack = Get-Command corepack -ErrorAction SilentlyContinue
+  if ($corepack) {
+    & $corepack.Source enable pnpm 2>$null
+    if ($LASTEXITCODE -eq 0) {
+      & $corepack.Source prepare "pnpm@$pnpmVersion" --activate 2>$null
+    }
+    $found = Find-Pnpm
+    if ($found) {
+      return $found
+    }
+  }
+
+  Write-Info 'corepack did not put pnpm on PATH (likely needs admin). Falling back to npm install -g...'
+  $npm = Get-Command npm -ErrorAction SilentlyContinue
+  if ($npm) {
+    & $npm.Source install -g "pnpm@$pnpmVersion" 2>$null
+    $found = Find-Pnpm
+    if ($found) {
+      return $found
+    }
+  }
+
+  return $null
+}
+
+$pnpm = Ensure-Pnpm
 if (-not $pnpm) {
-  Write-Host '[Redesk] pnpm was not found in PATH.'
-  Write-Host 'Install pnpm first, or run this once in a terminal with Node.js 20+:'
+  Write-Host '[Redesk] pnpm was not found in PATH and could not be installed automatically.'
+  Write-Host 'Run this once in a terminal (no admin needed):'
+  Write-Host "  npm install -g pnpm@$pnpmVersion"
+  Write-Host 'Or, in an admin terminal:'
   Write-Host '  corepack enable'
-  Write-Host '  corepack prepare pnpm@11.9.0 --activate'
   exit 1
 }
+Write-Info "using pnpm: $pnpm"
 
 if (-not (Test-Path (Join-Path $root 'node_modules'))) {
   Write-Info 'node_modules was not found. Installing dependencies first...'

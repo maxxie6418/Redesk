@@ -3,7 +3,7 @@
 # ---- Stage 1: 构建前端 ----
 FROM node:20-bookworm-slim AS web-builder
 WORKDIR /app
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.9.0
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
@@ -15,7 +15,7 @@ RUN pnpm --filter @redesk/web build
 # ---- Stage 2: 运行时 ----
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.9.0
 ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8787
