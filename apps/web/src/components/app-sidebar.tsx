@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Library, Moon, Settings, Sun } from 'lucide-react';
+import { BarChart3, FolderOpen, Library, Moon, Settings, Sun } from 'lucide-react';
 import type { AuthUser } from '@/lib/api';
 import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,18 @@ export function AppSidebar({ user }: AppSidebarProps) {
         >
           <Library className="h-4 w-4" />
           书架
+        </NavLink>
+        <NavLink
+          to="/files"
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
+              isActive && 'bg-sidebar-accent font-medium',
+            )
+          }
+        >
+          <FolderOpen className="h-4 w-4" />
+          书库文件
         </NavLink>
         <div className="mt-1 flex cursor-not-allowed items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted-foreground/50">
           <BarChart3 className="h-4 w-4" />

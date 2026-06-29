@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq, count } from 'drizzle-orm';
+import { and, eq, count, isNull, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, createReadStream, renameSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, createReadStream, renameSync, unlinkSync, statSync, copyFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { createWriteStream } from 'node:fs';
@@ -25,7 +25,7 @@ const MIME_MAP: Record<string, string> = {
   '.fb2': 'application/x-fictionbook+xml',
 };
 
-const EXTENSION_FORMAT: Record<string, string> = {
+export const EXTENSION_FORMAT: Record<string, string> = {
   '.epub': 'EPUB',
   '.pdf': 'PDF',
   '.mobi': 'MOBI',
@@ -65,6 +65,12 @@ function detectMime(filename: string): string {
 
 function bookDir(bookId: number): string {
   const dir = join(config.storageDir, 'books', String(bookId));
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function unassociatedDir(): string {
+  const dir = join(config.storageDir, 'unassociated');
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -133,13 +139,13 @@ async function extractEpubCover(filePath: string, bookId: number): Promise<strin
     zip.extractEntryTo(fullCoverPath, targetDir, false, true, false, `cover${coverExt}`);
 
     return targetPath;
-  } catch {
+  } catch { /* ignore */
     return null;
   }
 }
 
-async function saveUploadedFile(
-  bookId: number,
+export async function saveUploadedFile(
+  bookId: number | null,
   originalFilename: string,
   sourcePath: string,
   isPrimary: boolean,
@@ -149,23 +155,39 @@ async function saveUploadedFile(
   const mimeType = detectMime(originalFilename);
   const ext = extname(originalFilename).toLowerCase();
   const safeName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-  const targetDir = bookDir(bookId);
+  const targetDir = bookId != null ? bookDir(bookId) : unassociatedDir();
   const targetPath = join(targetDir, safeName);
 
   renameSync(sourcePath, targetPath);
 
-  const fileSize = (await import('node:fs')).statSync(targetPath).size;
+  const fileSize = statSync(targetPath).size;
   const checksum = await computeHash(targetPath);
 
   const db = getDb();
   const timestamp = now();
 
+  if (bookId != null) {
+    const dup = db
+      .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.checksum, checksum)))
+      .get();
+    if (dup && dup.id !== replaceFileId) {
+      try { unlinkSync(targetPath); } catch { /* ignore */ }
+      throw new AppError(
+        ERROR_CODE.DUPLICATE_FILE,
+        `已存在相同文件: ${dup.original_filename ?? '未知'}`,
+        [{ field: 'existing_file_id', issue: String(dup.id) }],
+      );
+    }
+  }
+
   let coverPath: string | null = null;
-  if (fileFormat === 'EPUB') {
+  if (fileFormat === 'EPUB' && bookId != null) {
     coverPath = await extractEpubCover(targetPath, bookId);
   }
 
-  if (replaceFileId) {
+  if (replaceFileId && bookId != null) {
     const existing = db
       .select()
       .from(bookFiles)
@@ -173,7 +195,7 @@ async function saveUploadedFile(
       .get();
 
     if (existing) {
-      try { unlinkSync(existing.file_path); } catch { /* ignore */ }
+      try { unlinkSync(resolveStoragePath(existing.file_path)); } catch { /* ignore */ }
 
       db.update(bookFiles)
         .set({
@@ -189,7 +211,7 @@ async function saveUploadedFile(
         .where(eq(bookFiles.id, replaceFileId))
         .run();
 
-      if (coverPath && bookId) {
+      if (coverPath) {
         db.update(books)
           .set({ cover_path: relativePath(coverPath), updated_at: timestamp })
           .where(eq(books.id, bookId))
@@ -204,7 +226,7 @@ async function saveUploadedFile(
     }
   }
 
-  if (isPrimary) {
+  if (isPrimary && bookId != null) {
     db.update(bookFiles)
       .set({ is_primary: 0 })
       .where(eq(bookFiles.book_id, bookId))
@@ -228,7 +250,7 @@ async function saveUploadedFile(
     .returning()
     .get();
 
-  if (coverPath) {
+  if (coverPath && bookId != null) {
     db.update(books)
       .set({ cover_path: relativePath(coverPath), updated_at: timestamp })
       .where(eq(books.id, bookId))
@@ -325,7 +347,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const absPath = resolveStoragePath(file.file_path);
     if (!existsSync(absPath)) throw notFound('文件已被移除');
 
-    const fileSize = (await import('node:fs')).statSync(absPath).size;
+    const fileSize = statSync(absPath).size;
     const mime = file.mime_type ?? 'application/octet-stream';
     const filename = file.original_filename ?? basename(absPath);
 
@@ -461,13 +483,13 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       );
     }
 
-    const tmpDir = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-    const tmpPath = join(tmpDir, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    const tmpDirPath = join(config.storageDir, 'tmp');
+    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
+    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
 
     try {
       await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
+    } catch { /* ignore */
       try { unlinkSync(tmpPath); } catch { /* ignore */ }
       throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
     }
@@ -510,13 +532,13 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       );
     }
 
-    const tmpDir = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-    const tmpPath = join(tmpDir, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    const tmpDirPath = join(config.storageDir, 'tmp');
+    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
+    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
 
     try {
       await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
+    } catch { /* ignore */
       try { unlinkSync(tmpPath); } catch { /* ignore */ }
       throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
     }
@@ -530,6 +552,198 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     );
 
     return { data: r };
+  });
+
+  app.post('/files/unassociated', async (req, reply) => {
+    requireUserId(req);
+
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
+
+    const originalFilename = data.filename || 'unknown';
+    const ext = extname(originalFilename).toLowerCase();
+    if (!EXTENSION_FORMAT[ext]) {
+      throw new AppError(
+        ERROR_CODE.VALIDATION_ERROR,
+        `不支持的文件格式: ${ext || '未知'}`,
+      );
+    }
+
+    const tmpDirPath = join(config.storageDir, 'tmp');
+    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
+    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+
+    try {
+      await pipeline(data.file, createWriteStream(tmpPath));
+    } catch { /* ignore */
+      try { unlinkSync(tmpPath); } catch { /* ignore */ }
+      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
+    }
+
+    const r = await saveUploadedFile(null, originalFilename, tmpPath, false);
+    reply.code(201);
+    return { data: r };
+  });
+
+  app.get('/files/unassociated', async (req) => {
+    requireUserId(req);
+    const db = getDb();
+
+    const rows = db
+      .select()
+      .from(bookFiles)
+      .where(isNull(bookFiles.book_id))
+      .all();
+
+    return { data: rows };
+  });
+
+  app.post('/files/unassociated/:fileId/match', async (req) => {
+    const userId = requireUserId(req);
+    const { fileId } = req.params as { fileId: string };
+    const fid = Number(fileId);
+    if (Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+
+    const body = req.body as { book_id?: number };
+    const targetBookId = body.book_id;
+    if (!targetBookId || Number.isNaN(targetBookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少有效的 book_id');
+    }
+
+    ownerBookCheck(targetBookId, userId);
+
+    const db = getDb();
+    const file = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, fid), isNull(bookFiles.book_id)))
+      .get();
+
+    if (!file) throw notFound('文件不存在或已关联书籍');
+
+    if (file.checksum) {
+      const dup = db
+        .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
+        .from(bookFiles)
+        .where(and(eq(bookFiles.book_id, targetBookId), eq(bookFiles.checksum, file.checksum)))
+        .get();
+      if (dup) {
+        throw new AppError(
+          ERROR_CODE.DUPLICATE_FILE,
+          `目标书籍已存在相同文件: ${dup.original_filename ?? '未知'}`,
+          [{ field: 'existing_file_id', issue: String(dup.id) }],
+        );
+      }
+    }
+
+    const srcAbsPath = resolveStoragePath(file.file_path);
+    const dstDir = bookDir(targetBookId);
+    const dstPath = join(dstDir, basename(srcAbsPath));
+
+    if (existsSync(srcAbsPath)) {
+      copyFileSync(srcAbsPath, dstPath);
+      try { unlinkSync(srcAbsPath); } catch { /* ignore */ }
+    }
+
+    const timestamp = now();
+    const newPath = relativePath(dstPath);
+
+    db.update(bookFiles)
+      .set({
+        book_id: targetBookId,
+        file_path: newPath,
+        updated_at: timestamp,
+      })
+      .where(eq(bookFiles.id, fid))
+      .run();
+
+    if (file.file_format === 'EPUB') {
+      const coverPath = await extractEpubCover(dstPath, targetBookId);
+      if (coverPath) {
+        db.update(books)
+          .set({ cover_path: relativePath(coverPath), updated_at: timestamp })
+          .where(eq(books.id, targetBookId))
+          .run();
+      }
+    }
+
+    const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get();
+    return { data: updated };
+  });
+
+  app.delete('/files/unassociated/:fileId', async (req) => {
+    requireUserId(req);
+    const { fileId } = req.params as { fileId: string };
+    const fid = Number(fileId);
+    if (Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+
+    const db = getDb();
+    const file = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, fid), isNull(bookFiles.book_id)))
+      .get();
+
+    if (!file) throw notFound('文件不存在或已关联书籍');
+
+    try { unlinkSync(resolveStoragePath(file.file_path)); } catch { /* ignore */ }
+
+    db.delete(bookFiles).where(eq(bookFiles.id, fid)).run();
+
+    return { data: { id: fid, deleted: true } };
+  });
+
+  app.get('/files', async (req) => {
+    const userId = requireUserId(req);
+    const query = req.query as Record<string, string>;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(500, Math.max(1, Number(query.page_size) || 20));
+
+    const db = getDb();
+    const conditions: ReturnType<typeof and>[] = [];
+
+    if (query.format) {
+      conditions.push(eq(bookFiles.file_format, query.format.toUpperCase()));
+    }
+
+    if (query.associated === 'true') {
+      conditions.push(sql`${bookFiles.book_id} IS NOT NULL`);
+      conditions.push(eq(books.owner_id, userId));
+    } else if (query.associated === 'false') {
+      conditions.push(isNull(bookFiles.book_id));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const totalResult = db
+      .select({ value: count() })
+      .from(bookFiles)
+      .leftJoin(books, eq(bookFiles.book_id, books.id))
+      .where(where)
+      .get();
+
+    const total = totalResult?.value ?? 0;
+
+    const rows = db
+      .select({
+        file: bookFiles,
+        book_title: books.title,
+      })
+      .from(bookFiles)
+      .leftJoin(books, eq(bookFiles.book_id, books.id))
+      .where(where)
+      .orderBy(sql`${bookFiles.created_at} DESC`)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .all();
+
+    return {
+      data: rows.map((r) => ({
+        ...r.file,
+        book_title: r.book_title,
+      })),
+      pagination: { page, page_size: pageSize, total },
+    };
   });
 
   app.get('/books/:id/cover', async (req, reply) => {
@@ -555,7 +769,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const ext = extname(absPath).toLowerCase();
-    const mimeMap: Record<string, string> = {
+    const mimeMapCover: Record<string, string> = {
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
@@ -565,7 +779,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     };
 
     return reply
-      .header('Content-Type', mimeMap[ext] ?? 'image/jpeg')
+      .header('Content-Type', mimeMapCover[ext] ?? 'image/jpeg')
       .header('Cache-Control', 'public, max-age=86400')
       .send(createReadStream(absPath));
   });

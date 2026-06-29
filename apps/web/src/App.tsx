@@ -6,6 +6,7 @@ import { Bookshelf } from '@/routes/bookshelf';
 import { BookDetailPage } from '@/routes/book-detail';
 import { OverviewPage } from '@/routes/overview';
 import { SettingsPage } from '@/routes/settings';
+import { FileLibraryPage } from '@/routes/file-library';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/" element={<Bookshelf />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/books/:id" element={<BookDetailPage />} />
+        <Route path="/files" element={<FileLibraryPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

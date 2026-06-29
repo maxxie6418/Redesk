@@ -22,6 +22,7 @@ export function errorHandler(
         code: error.code,
         message: error.message,
         ...(error.details ? { details: error.details } : {}),
+        ...(error.extra ? { extra: error.extra } : {}),
       },
     });
     return;

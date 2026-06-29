@@ -4,13 +4,20 @@ export class AppError extends Error {
   readonly code: ErrorCode;
   readonly statusCode: number;
   readonly details?: ErrorDetail[];
+  readonly extra?: Record<string, unknown>;
 
-  constructor(code: ErrorCode, message: string, details?: ErrorDetail[]) {
+  constructor(code: ErrorCode, message: string, details?: ErrorDetail[] | Record<string, unknown>) {
     super(message);
     this.name = 'AppError';
     this.code = code;
     this.statusCode = STATUS_BY_CODE[code];
-    this.details = details;
+    if (details) {
+      if (Array.isArray(details)) {
+        this.details = details;
+      } else {
+        this.extra = details;
+      }
+    }
   }
 }
 

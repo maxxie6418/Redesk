@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 
 export interface BookFileItem {
   id: number;
-  book_id: number;
+  book_id: number | null;
   file_path: string;
   original_filename: string | null;
   file_format: string;
@@ -13,6 +13,7 @@ export interface BookFileItem {
   is_primary: number;
   created_at: string;
   updated_at: string;
+  book_title?: string | null;
 }
 
 export function useBookFiles(bookId: number) {
@@ -100,6 +101,88 @@ export function useDeleteFile() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export interface FileLibraryParams {
+  page?: number;
+  page_size?: number;
+  format?: string;
+  associated?: 'true' | 'false';
+}
+
+export function useFileLibrary(params?: FileLibraryParams) {
+  return useQuery({
+    queryKey: ['file-library', params],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      if (params?.page) sp.set('page', String(params.page));
+      if (params?.page_size) sp.set('page_size', String(params.page_size));
+      if (params?.format) sp.set('format', params.format);
+      if (params?.associated) sp.set('associated', params.associated);
+      const qs = sp.toString();
+      return api.get<{ data: BookFileItem[]; pagination: { page: number; page_size: number; total: number } }>(`/files${qs ? `?${qs}` : ''}`);
+    },
+  });
+}
+
+export function useUnassociatedFiles() {
+  return useQuery({
+    queryKey: ['unassociated-files'],
+    queryFn: () => api.get<BookFileItem[]>('/files/unassociated'),
+  });
+}
+
+export function useUploadUnassociatedFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await fetch('/api/v1/files/unassociated', {
+        method: 'POST',
+        credentials: 'include',
+        body: form,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const err = (body as { error?: { message?: string } } | null)?.error;
+        throw new Error(err?.message ?? '上传失败');
+      }
+
+      return (await res.json()) as { data: { id: number; file_format: string } };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['unassociated-files'] });
+      qc.invalidateQueries({ queryKey: ['file-library'] });
+    },
+  });
+}
+
+export function useMatchFileToBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fileId, bookId }: { fileId: number; bookId: number }) =>
+      api.post<BookFileItem>(`/files/unassociated/${fileId}/match`, { book_id: bookId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['unassociated-files'] });
+      qc.invalidateQueries({ queryKey: ['file-library'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useDeleteUnassociatedFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fileId: number) =>
+      api.delete<{ id: number; deleted: boolean }>(`/files/unassociated/${fileId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['unassociated-files'] });
+      qc.invalidateQueries({ queryKey: ['file-library'] });
     },
   });
 }

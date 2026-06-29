@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   BookOpen,
@@ -21,11 +22,10 @@ import {
   Heart,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
-import { ApiError } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useBooks,
-  useCreateBook,
   useTrash,
   useRestoreBook,
   usePermanentDeleteBook,
@@ -439,20 +439,46 @@ interface CreateBookFormProps {
 }
 
 function CreateBookForm({ onClose }: CreateBookFormProps) {
-  const createBook = useCreateBook();
+  const qc = useQueryClient();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    setSubmitting(true);
 
     try {
-      await createBook.mutateAsync({ title, author });
+      if (selectedFile) {
+        const form = new FormData();
+        form.append('title', title);
+        if (author) form.append('author', author);
+        form.append('file', selectedFile);
+
+        const res = await fetch('/api/v1/books', {
+          method: 'POST',
+          credentials: 'include',
+          body: form,
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const err = (body as { error?: { message?: string } } | null)?.error;
+          throw new Error(err?.message ?? '创建失败');
+        }
+      } else {
+        await api.post('/books', { title, author: author || null });
+      }
+
+      qc.invalidateQueries({ queryKey: ['books'] });
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '创建失败，请稍后重试。');
+      setError(err instanceof Error ? err.message : '创建失败，请稍后重试。');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -473,15 +499,27 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="author">作者</Label>
-              <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} required />
+              <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="可选" />
+            </div>
+            <div className="space-y-2">
+              <Label>上传文件（可选）</Label>
+              <input
+                type="file"
+                accept=".epub,.pdf,.mobi,.txt,.azw3,.azw,.djvu,.docx,.fb2"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary hover:file:bg-primary/20"
+              />
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground">已选择: {selectedFile.name}</p>
+              )}
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 取消
               </Button>
-              <Button type="submit" disabled={createBook.isPending}>
-                {createBook.isPending ? '创建中...' : '创建'}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? '创建中...' : '创建'}
               </Button>
             </div>
           </form>

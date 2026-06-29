@@ -15,6 +15,12 @@ import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
+import { saveUploadedFile, EXTENSION_FORMAT } from './files';
+import { existsSync, mkdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
+import { createWriteStream } from 'node:fs';
+import { config } from '../config';
 
 interface RawBookRow {
   id: number;
@@ -195,7 +201,7 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
     .where(inArray(bookFiles.book_id, bookIds))
     .all();
   for (const f of fileRows) {
-    fileMap.set(f.book_id, true);
+    if (f.book_id != null) fileMap.set(f.book_id, true);
   }
 
   return rows.map((row) => {
@@ -332,9 +338,67 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
 export async function bookRoutes(app: FastifyInstance): Promise<void> {
   app.post('/books', async (req) => {
     const userId = requireUserId(req);
-    const input = validate(createBookSchema, req.body);
     const timestamp = now();
     const db = getDb();
+
+    const contentType = req.headers['content-type'] ?? '';
+
+    let input;
+    let uploadedFile: { filepath: string; filename: string } | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const data = await req.file();
+      if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供数据');
+
+      const fieldVal = (key: string): string | undefined => {
+        const v = data.fields[key];
+        if (typeof v === 'string') return v;
+        if (v && typeof v === 'object' && 'value' in v) return v.value as string;
+        if (Array.isArray(v) && v.length > 0) {
+          const first = v[0];
+          if (typeof first === 'string') return first;
+          if (first && typeof first === 'object' && 'value' in first) return first.value as string;
+        }
+        return undefined;
+      };
+
+      input = validate(createBookSchema, {
+        title: fieldVal('title') ?? '',
+        author: fieldVal('author') ?? null,
+        subtitle: fieldVal('subtitle') ?? null,
+        isbn: fieldVal('isbn') ?? null,
+        publisher: fieldVal('publisher') ?? null,
+        publish_year: fieldVal('publish_year') ? Number(fieldVal('publish_year')) : null,
+        description: fieldVal('description') ?? null,
+        language: fieldVal('language') ?? null,
+        category_id: fieldVal('category_id') ? Number(fieldVal('category_id')) : null,
+        genre_category_id: fieldVal('genre_category_id') ? Number(fieldVal('genre_category_id')) : null,
+        status: fieldVal('status') ?? undefined,
+        visibility: fieldVal('visibility') ?? undefined,
+        reading_purpose: fieldVal('reading_purpose') ?? null,
+        rating: fieldVal('rating') ? Number(fieldVal('rating')) : null,
+        tag_ids: fieldVal('tag_ids') ? JSON.parse(fieldVal('tag_ids')!) : undefined,
+        custom_attributes: fieldVal('custom_attributes') ? JSON.parse(fieldVal('custom_attributes')!) : null,
+        metadata_source: fieldVal('metadata_source') ?? undefined,
+        source_url: fieldVal('source_url') ?? null,
+        translator: fieldVal('translator') ?? null,
+        original_title: fieldVal('original_title') ?? null,
+        page_count: fieldVal('page_count') ? Number(fieldVal('page_count')) : null,
+      });
+
+      if (data.file && data.filename) {
+        const ext = extname(data.filename).toLowerCase();
+        if (EXTENSION_FORMAT[ext]) {
+          const tmpDir = join(config.storageDir, 'tmp');
+          if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+          const tmpPath = join(tmpDir, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+          await pipeline(data.file, createWriteStream(tmpPath));
+          uploadedFile = { filepath: tmpPath, filename: data.filename };
+        }
+      }
+    } else {
+      input = validate(createBookSchema, req.body);
+    }
 
     const book = db
       .insert(books)
@@ -368,6 +432,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
     syncBookTags(book.id, input.tag_ids);
     recordStatusChange(book.id, null, book.status);
+
+    if (uploadedFile) {
+      await saveUploadedFile(book.id, uploadedFile.filename, uploadedFile.filepath, true);
+    }
 
     return { data: serializeBooks([book], userId)[0] };
   });

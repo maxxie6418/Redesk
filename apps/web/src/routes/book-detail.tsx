@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { useBook, useUpdateBook, useFavoriteBook, useUnfavoriteBook } from '@/hooks/use-books';
-import { useBookFiles, useUploadFile, useDeleteFile, useUpdateFile } from '@/hooks/use-files';
+import { useBookFiles, useUploadFile, useDeleteFile, useUpdateFile, useReplaceFile } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { ApiError } from '@/lib/api';
@@ -99,6 +99,7 @@ export function BookDetailPage() {
   const uploadFile = useUploadFile();
   const deleteFile = useDeleteFile();
   const updateFile = useUpdateFile();
+  const replaceFile = useReplaceFile();
   const personalCategories = useCategories('PERSONAL');
   const genreCategories = useCategories('GENRE');
   const tags = useTags();
@@ -175,6 +176,8 @@ export function BookDetailPage() {
     }
   }, [bookId, editTitle, editAuthor, editSubtitle, editStatus, editVisibility, editCategoryId, editGenreCategoryId, editRating, editReadingPurpose, editTagIds, editCustomAttributes, editSourceUrl, editTranslator, editOriginalTitle, editPageCount, editStartedAt, editFinishedAt, updateBook]);
 
+  const [confirmOverwrite, setConfirmOverwrite] = useState<{ fileId: number; file: File } | null>(null);
+
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -183,12 +186,33 @@ export function BookDetailPage() {
         await uploadFile.mutateAsync({ bookId, file, isPrimary: (files.data?.length ?? 0) === 0 });
         setMessage({ type: 'success', text: '文件已上传' });
       } catch (err) {
-        setMessage({ type: 'error', text: err instanceof Error ? err.message : '上传失败' });
+        if (err instanceof Error && err.message.includes('已存在相同文件')) {
+          const match = err.message.match(/existing_file_id.*?(\d+)/);
+          const existingId = match ? Number(match[1]) : null;
+          if (existingId) {
+            setConfirmOverwrite({ fileId: existingId, file });
+          } else {
+            setMessage({ type: 'error', text: err.message });
+          }
+        } else {
+          setMessage({ type: 'error', text: err instanceof Error ? err.message : '上传失败' });
+        }
       }
       if (fileInputRef.current) fileInputRef.current.value = '';
     },
     [bookId, files.data, uploadFile],
   );
+
+  const handleOverwrite = useCallback(async () => {
+    if (!confirmOverwrite) return;
+    try {
+      await replaceFile.mutateAsync({ bookId, fileId: confirmOverwrite.fileId, file: confirmOverwrite.file });
+      setMessage({ type: 'success', text: '文件已替换' });
+    } catch {
+      setMessage({ type: 'error', text: '替换失败' });
+    }
+    setConfirmOverwrite(null);
+  }, [confirmOverwrite, bookId, replaceFile]);
 
   const handleDeleteFile = useCallback(
     async (fileId: number) => {
@@ -283,6 +307,16 @@ export function BookDetailPage() {
 
       <div className="mx-auto max-w-3xl px-6 py-6">
         <StatusBanner message={message} />
+
+        {confirmOverwrite && (
+          <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-destructive">已存在相同文件，是否覆盖？</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={handleOverwrite}>覆盖</Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmOverwrite(null)}>取消</Button>
+            </div>
+          </div>
+        )}
 
         <div className="mb-6 flex gap-6">
           <div className="shrink-0">
