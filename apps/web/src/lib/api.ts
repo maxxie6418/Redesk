@@ -30,7 +30,8 @@ export class ApiError extends Error {
 
 async function requestBody(path: string, init?: RequestInit): Promise<unknown> {
   const headers = new Headers(init?.headers);
-  if (init?.body && !headers.has('Content-Type')) {
+  const isFormData = init?.body instanceof FormData;
+  if (init?.body && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -64,6 +65,8 @@ export const api = {
   getBody: <T>(path: string) => requestBody(path) as Promise<T>,
   post: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) }),
+  postForm: <T>(path: string, form: FormData) =>
+    request<T>(path, { method: 'POST', body: form }),
   patch: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: 'PATCH', body: data === undefined ? undefined : JSON.stringify(data) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

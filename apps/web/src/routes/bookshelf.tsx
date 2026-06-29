@@ -1,29 +1,22 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
-  Archive,
   BookOpen,
   BookPlus,
   Bookmark,
   FileUp,
-  FolderOpen,
   Grid3X3,
   LayoutGrid,
   LayoutList,
   Lightbulb,
   Loader2,
-  Search,
-  Settings,
   Star,
-  Trash2,
-  User,
   X,
-  Sparkles,
   NotebookPen,
   Heart,
 } from 'lucide-react';
-import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY, type ImportBooksResult } from '@redesk/shared';
 import { ApiError, api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -40,8 +33,8 @@ import { useBookFiles } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useShellUser } from '@/components/shell-user-context';
+import { AppSidebar } from '@/components/app-sidebar';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -92,6 +85,73 @@ const COVER_TONES = [
 ];
 
 const COVER_URL_BASE = '/api/v1';
+
+interface ParsedBookMetadata {
+  title?: string;
+  author?: string;
+  translator?: string;
+  publisher?: string;
+  publishYear?: string;
+  isbn?: string;
+  pageCount?: string;
+  originalTitle?: string;
+  description?: string;
+  coverUrl?: string;
+  doubanRating?: string;
+}
+
+interface LinkBookMetadata {
+  title?: string;
+  author?: string;
+  translator?: string;
+  publisher?: string;
+  publish_year?: number;
+  isbn?: string;
+  page_count?: number;
+  original_title?: string;
+  description?: string;
+  cover_url?: string;
+  douban_rating?: number;
+  source_url: string;
+  metadata_source: 'douban' | 'neodb' | 'manual';
+}
+
+function cleanDoubanValue(value: string): string {
+  return value
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\u3010([^\u3011]+)\u3011/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseDoubanMetadata(raw: string): ParsedBookMetadata {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const data: ParsedBookMetadata = {};
+
+  const firstTitle = lines.find((line) => !line.includes(':') && !line.includes('\uff1a'));
+  if (firstTitle) data.title = cleanDoubanValue(firstTitle);
+
+  for (const line of lines) {
+    const match = line.match(/^([^:\uff1a]+)[:\uff1a]\s*(.+)$/);
+    if (!match) continue;
+    const key = match[1].trim();
+    const value = cleanDoubanValue(match[2]);
+
+    if (key.includes('\u4f5c\u8005')) data.author = value;
+    if (key.includes('\u8bd1\u8005')) data.translator = value;
+    if (key.includes('\u51fa\u7248\u793e')) data.publisher = value;
+    if (key.includes('\u51fa\u7248\u5e74')) data.publishYear = value.match(/\d{4}/)?.[0] ?? value;
+    if (key.toUpperCase().includes('ISBN')) data.isbn = value.replace(/[^\dXx]/g, '');
+    if (key.includes('\u9875\u6570')) data.pageCount = value.match(/\d+/)?.[0] ?? value;
+    if (key.includes('\u539f\u4f5c\u540d')) data.originalTitle = value;
+    if (key.includes('\u8c46\u74e3\u8bc4\u5206') || key.includes('\u8bc4\u5206')) data.doubanRating = value.match(/\d+(?:\.\d+)?/)?.[0];
+  }
+
+  return data;
+}
 
 function statusLabel(status: string) {
   return BOOK_STATUS_LABELS_LOCAL[status] ?? status;
@@ -450,7 +510,12 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   const [isbn, setIsbn] = useState('');
   const [publisher, setPublisher] = useState('');
   const [publishYear, setPublishYear] = useState('');
+  const [translator, setTranslator] = useState('');
+  const [originalTitle, setOriginalTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [doubanRating, setDoubanRating] = useState('');
+  const [metadataSource, setMetadataSource] = useState<'douban' | 'neodb' | 'manual'>('manual');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [genreCategoryId, setGenreCategoryId] = useState<number | null>(null);
   const [status, setStatus] = useState<string>(BOOK_STATUS.COLLECTED);
@@ -463,6 +528,9 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
+  const [metadataPasteOpen, setMetadataPasteOpen] = useState(false);
+  const [metadataPasteText, setMetadataPasteText] = useState('');
 
   const toggleTag = useCallback((tagId: number) => {
     setTagIds((prev) =>
@@ -470,12 +538,65 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
     );
   }, []);
 
+  const applyPastedMetadata = useCallback(() => {
+    const parsed = parseDoubanMetadata(metadataPasteText);
+    if (parsed.title) setTitle(parsed.title);
+    if (parsed.author) setAuthor(parsed.author);
+    if (parsed.translator) setTranslator(parsed.translator);
+    if (parsed.publisher) setPublisher(parsed.publisher);
+    if (parsed.publishYear) setPublishYear(parsed.publishYear);
+    if (parsed.isbn) setIsbn(parsed.isbn);
+    if (parsed.pageCount) setPageCount(parsed.pageCount);
+    if (parsed.originalTitle) setOriginalTitle(parsed.originalTitle);
+    if (parsed.description) setDescription(parsed.description);
+    if (parsed.coverUrl) setCoverUrl(parsed.coverUrl);
+    if (parsed.doubanRating) setDoubanRating(parsed.doubanRating);
+    setMetadataSource('douban');
+    setMetadataPasteOpen(false);
+  }, [metadataPasteText]);
+
+  const applyLinkMetadata = useCallback((metadata: LinkBookMetadata) => {
+    if (metadata.title) setTitle(metadata.title);
+    if (metadata.author) setAuthor(metadata.author);
+    if (metadata.translator) setTranslator(metadata.translator);
+    if (metadata.publisher) setPublisher(metadata.publisher);
+    if (metadata.publish_year != null) setPublishYear(String(metadata.publish_year));
+    if (metadata.isbn) setIsbn(metadata.isbn);
+    if (metadata.page_count != null) setPageCount(String(metadata.page_count));
+    if (metadata.original_title) setOriginalTitle(metadata.original_title);
+    if (metadata.description) setDescription(metadata.description);
+    if (metadata.cover_url) setCoverUrl(metadata.cover_url);
+    if (metadata.douban_rating != null) setDoubanRating(String(metadata.douban_rating));
+    setMetadataSource(metadata.metadata_source);
+    setSourceUrl(metadata.source_url);
+  }, []);
+
+  const fetchMetadataFromLink = useCallback(async () => {
+    if (!sourceUrl.trim()) {
+      setMetadataPasteOpen(true);
+      return;
+    }
+    setError('');
+    setFetchingMetadata(true);
+    try {
+      const metadata = await api.post<LinkBookMetadata>('/books/metadata/fetch', { source_url: sourceUrl.trim() });
+      applyLinkMetadata(metadata);
+    } catch (err) {
+      setError(err instanceof ApiError ? `${err.message}。也可以粘贴豆瓣文本导入。` : '获取失败，也可以粘贴豆瓣文本导入。');
+      setMetadataPasteOpen(true);
+    } finally {
+      setFetchingMetadata(false);
+    }
+  }, [applyLinkMetadata, sourceUrl]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setSubmitting(true);
 
     try {
+      const parsedDoubanRating = doubanRating ? Number(doubanRating) : null;
+      const externalRatingKey = metadataSource === 'neodb' ? 'neodb_rating' : 'douban_rating';
       const payload: Record<string, unknown> = {
         title,
         subtitle: subtitle || null,
@@ -483,6 +604,8 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         isbn: isbn || null,
         publisher: publisher || null,
         publish_year: publishYear ? Number(publishYear) : null,
+        translator: translator || null,
+        original_title: originalTitle || null,
         description: description || null,
         category_id: categoryId,
         genre_category_id: genreCategoryId,
@@ -490,7 +613,10 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         visibility,
         reading_purpose: readingPurpose || null,
         rating,
+        metadata_source: metadataSource,
         source_url: sourceUrl || null,
+        cover_url: coverUrl || null,
+        custom_attributes: parsedDoubanRating != null && Number.isFinite(parsedDoubanRating) ? { [externalRatingKey]: parsedDoubanRating } : null,
         page_count: pageCount ? Number(pageCount) : null,
         tag_ids: tagIds.length > 0 ? tagIds : null,
       };
@@ -613,11 +739,25 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                   placeholder="https://douban.com/..."
                   className="flex-1 h-9 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
                 />
-                <button type="button" className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] text-[12px] font-medium text-muted-foreground transition-all hover:border-[#d97757] hover:text-[#d97757] hover:bg-[rgba(217,119,87,0.08)]">
+                <button type="button" onClick={fetchMetadataFromLink} disabled={fetchingMetadata} className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] text-[12px] font-medium text-muted-foreground transition-all hover:border-[#d97757] hover:text-[#d97757] hover:bg-[rgba(217,119,87,0.08)] disabled:opacity-50">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                  一键获取
+                  {fetchingMetadata ? '获取中' : '一键获取'}
                 </button>
               </div>
+              {(coverUrl || doubanRating) && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-2 py-2">
+                  {coverUrl ? (
+                    <img src={coverUrl} alt="封面预览" className="h-14 w-10 rounded object-cover" />
+                  ) : (
+                    <div className="flex h-14 w-10 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">封面</div>
+                  )}
+                  <div className="min-w-0 text-xs text-muted-foreground">
+                    <div className="font-medium text-foreground">已获取元数据</div>
+                    {doubanRating && <div>{metadataSource === 'neodb' ? 'NeoDB 评分' : '豆瓣评分'}：{doubanRating}</div>}
+                    {coverUrl && <div className="truncate">{coverUrl}</div>}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="col-span-2 space-y-1">
@@ -828,6 +968,60 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
           </button>
         </div>
       </div>
+      {metadataPasteOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+          onClick={(event) => {
+            event.stopPropagation();
+            setMetadataPasteOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-xl rounded-xl border border-[#e0ddd4] bg-card shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#e0ddd4] px-5 py-4">
+              <div>
+                <h3 className="font-display text-lg font-medium text-foreground">粘贴豆瓣书籍信息</h3>
+                <p className="mt-1 text-xs text-muted-foreground">会自动识别书名、作者、出版社、出版年、ISBN、页数等字段。</p>
+              </div>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+                onClick={() => setMetadataPasteOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <textarea
+                value={metadataPasteText}
+                onChange={(event) => setMetadataPasteText(event.target.value)}
+                rows={12}
+                placeholder="粘贴豆瓣条目信息，例如：&#10;邓小平时代&#10;作者: [【美】傅高义](...)&#10;出版社: 生活·读书·新知三联书店&#10;出版年: 2013-1-18&#10;ISBN: 9787108041531&#10;页数: 754"
+                className="w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+            <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setMetadataPasteOpen(false)}
+                className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-black/3"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={applyPastedMetadata}
+                disabled={!metadataPasteText.trim()}
+                className="h-9 rounded-lg bg-[#d97757] px-4 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+              >
+                填入表单
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -880,7 +1074,139 @@ function ReadModeBadge({ mode }: { mode: string }) {
   );
 }
 
+function ImportBooksDialog({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<ImportBooksResult | null>(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
+
+  const importCsv = async () => {
+    if (!file) {
+      setError('请先选择 CSV 文件');
+      return;
+    }
+
+    setError('');
+    setSubmitting(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const data = await api.postForm<ImportBooksResult>(`/books/import${dryRun ? '?dry_run=true' : ''}`, form);
+      setResult(data);
+      if (!dryRun) {
+        qc.invalidateQueries({ queryKey: ['books'] });
+        qc.invalidateQueries({ queryKey: ['categories'] });
+        qc.invalidateQueries({ queryKey: ['tags'] });
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : '导入失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const problemRows = result?.rows.filter((row) => !row.success) ?? [];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl overflow-hidden rounded-xl bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[#e0ddd4] px-6 py-4">
+          <h2 className="font-display text-xl font-medium text-foreground">批量导入书籍</h2>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-5 px-6 py-5">
+          <div className="rounded-lg border border-[#e0ddd4] bg-[#faf9f5] p-4">
+            <div className="text-sm font-medium text-foreground">CSV 模板</div>
+            <div className="mt-1 text-sm leading-6 text-muted-foreground">
+              模板包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建书籍元数据，不包含文件。
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => { window.location.href = '/api/v1/books/import/template'; }}
+            >
+              下载参考 CSV
+            </Button>
+          </div>
+
+          <label className="block space-y-2">
+            <span className="text-xs font-medium text-foreground">选择已填写的 CSV</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              className="block w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
+            />
+          </label>
+
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={dryRun}
+              onChange={(e) => setDryRun(e.target.checked)}
+              className="h-4 w-4 rounded border-[#d6d2c6] text-primary focus:ring-primary"
+            />
+            <span>仅校验不导入（预览模式）</span>
+          </label>
+
+          {error && (
+            <div className="rounded-md bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <div className="rounded-lg border border-[#e0ddd4] bg-white p-4">
+              <div className="text-sm font-medium text-foreground">
+                {result.dry_run
+                  ? `预览通过 ${result.valid} 行，跳过 ${result.skipped} 行，失败 ${result.failed} 行`
+                  : `已创建 ${result.created} 本，跳过 ${result.skipped} 行，失败 ${result.failed} 行`}
+              </div>
+              {problemRows.length > 0 && (
+                <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-[#eee]">
+                  {problemRows.slice(0, 20).map((row) => (
+                    <div key={row.row} className="border-b border-[#f2f2f2] px-3 py-2 text-xs last:border-b-0">
+                      <span className="font-medium text-foreground">第 {row.row} 行</span>
+                      <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
+                      <div className="mt-1 text-red-700">{row.error}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] pt-5">
+            <Button type="button" variant="outline" onClick={onClose}>关闭</Button>
+            <Button type="button" onClick={importCsv} disabled={submitting}>
+              {submitting ? (dryRun ? '校验中...' : '导入中...') : (dryRun ? '开始校验' : '开始导入')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
   const updateBook = useUpdateBook();
   const files = useBookFiles(bookId ?? 0);
@@ -941,13 +1267,17 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
   const b = book.data;
   const hasCover = Boolean(b?.cover_path);
   const progress = b ? bookProgress(b) : 0;
+  const primaryEpub = files.data?.find((f) => f.is_primary === 1 && f.file_format === 'EPUB');
 
   const customAttrs = useMemo(() => {
     if (!b?.custom_attributes) return [];
     try {
       const parsed = JSON.parse(b.custom_attributes);
       if (typeof parsed === 'object' && parsed !== null) {
-        return Object.entries(parsed).map(([k, v]) => `${k}: ${String(v)}`);
+        return Object.entries(parsed).map(([k, v]) => {
+          const label = k === 'douban_rating' ? '豆瓣评分' : k === 'neodb_rating' ? 'NeoDB 评分' : k;
+          return `${label}: ${String(v)}`;
+        });
       }
     } catch {
       // ignore
@@ -955,11 +1285,12 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
     return [];
   }, [b?.custom_attributes]);
 
-  // Full-page layout, shown when open=true
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-background">
+    <>
+    <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
+    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(760px,calc(100vw-256px))] min-w-[560px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
       {/* Topbar */}
       <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-[#e0ddd4] px-5">
         <button
@@ -988,8 +1319,12 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
           </button>
           <button
             type="button"
-            disabled
-            title="阅读器将在 M2 上线"
+            disabled={!primaryEpub}
+            title={primaryEpub ? '开始阅读' : '请先上传 EPUB 主阅读文件'}
+            onClick={() => {
+              if (!bookId || !primaryEpub) return;
+              navigate(`/books/${bookId}/read`);
+            }}
             className="flex h-8 items-center gap-1.5 rounded-lg bg-[#d97757] px-3 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -1302,12 +1637,12 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
         )}
       </div>
     </div>
+    </>
   );
 }
 
-export function Bookshelf() {
+export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const user = useShellUser();
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
   const [visibility, setVisibility] = useState('ALL');
@@ -1317,11 +1652,16 @@ export function Bookshelf() {
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
-  const [pageView, setPageView] = useState<PageView>('bookshelf');
+  const [showImport, setShowImport] = useState(false);
+  const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    setPageView(initialPageView);
+  }, [initialPageView]);
 
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -1418,97 +1758,20 @@ export function Bookshelf() {
     }
   }, [emptyTrash]);
 
-  const handleSwitchView = useCallback((view: PageView) => {
-    setPageView(view);
-  }, []);
-
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-[256px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-5 py-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-medium text-primary-foreground">
-              R
-            </div>
-            <div className="font-display text-xl text-sidebar-foreground">Redesk</div>
-            <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground/50">v{__APP_VERSION__}</span>
-          </div>
-
-          <div className="relative mt-5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-9 rounded-full border-sidebar-border bg-background pl-9 text-sm"
-              placeholder="搜索书名、作者、标签"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-
-          <nav className="mt-5 space-y-0.5">
-            <SidebarItem
-              icon={<Archive className="h-4 w-4" />}
-              label="档案"
-              onClick={() => navigate('/overview')}
-            />
-            <SidebarItem
-              active={pageView === 'bookshelf'}
-              icon={<BookOpen className="h-4 w-4" />}
-              label="书架"
-              onClick={() => handleSwitchView('bookshelf')}
-            />
-            <SidebarItem
-              icon={<FolderOpen className="h-4 w-4" />}
-              label="书库文件"
-              onClick={() => navigate('/files')}
-            />
-            <SidebarItem icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" onClick={() => navigate('/reading-notes')} hint="M2" />
-            <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" onClick={() => navigate('/reading-topics')} hint="M4" />
-            <SidebarItem
-              active={pageView === 'trash'}
-              icon={<Trash2 className="h-4 w-4" />}
-              label="回收站"
-              onClick={() => handleSwitchView('trash')}
-            />
-          </nav>
-        </div>
-
-        <div className="mt-10 w-full">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <StatCell label="总数" value={stats.total} valueClass="text-foreground" />
-            <StatCell label="在读" value={stats.reading} valueClass="text-success" />
-            <StatCell label="已读" value={stats.read} valueClass="text-primary" />
-            <StatCell label="话题" value={stats.topics} valueClass="text-muted-foreground" />
-          </div>
-        </div>
-
-        <div className="mt-auto space-y-1 border-t border-sidebar-border pt-4">
-          <button
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/50 cursor-not-allowed"
-            disabled
-          >
-            <Sparkles className="h-4 w-4" />
-            AI 助手
-            <span className="ml-auto text-[10px] text-muted-foreground/30">M3</span>
-          </button>
-          <button
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            onClick={() => navigate('/settings')}
-          >
-            <Settings className="h-4 w-4" />
-            设置
-          </button>
-          <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 mt-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <User className="h-3.5 w-3.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-foreground">
-                {user?.display_name ?? user?.username ?? 'Maxxie'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <AppSidebar
+        activeKey={pageView === 'trash' ? 'trash' : 'bookshelf'}
+        user={user}
+        searchValue={search}
+        onSearchChange={setSearch}
+        stats={[
+          { label: '总数', value: stats.total, valueClass: 'text-foreground' },
+          { label: '在读', value: stats.reading, valueClass: 'text-success' },
+          { label: '已读', value: stats.read, valueClass: 'text-primary' },
+          { label: '话题', value: stats.topics, valueClass: 'text-muted-foreground' },
+        ]}
+      />
 
       <main className="min-w-0 flex-1 px-6 py-6 lg:px-8">
         <header className="mb-5 flex items-center justify-between">
@@ -1528,10 +1791,16 @@ export function Bookshelf() {
               </Button>
             )}
             {pageView === 'bookshelf' && (
-              <Button className="rounded-full" onClick={() => setShowCreate(true)}>
-                <BookPlus className="h-4 w-4" />
-                添加书籍
-              </Button>
+              <>
+                <Button variant="outline" className="rounded-full" onClick={() => setShowImport(true)}>
+                  <FileUp className="h-4 w-4" />
+                  批量导入
+                </Button>
+                <Button className="rounded-full" onClick={() => setShowCreate(true)}>
+                  <BookPlus className="h-4 w-4" />
+                  添加书籍
+                </Button>
+              </>
             )}
           </div>
         </header>
@@ -1693,48 +1962,8 @@ export function Bookshelf() {
       </main>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
+      {showImport && <ImportBooksDialog onClose={() => setShowImport(false)} />}
       <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
-    </div>
-  );
-}
-
-function SidebarItem({ active, icon, label, onClick, disabled, hint }: { active?: boolean; icon: React.ReactNode; label: string; onClick?: () => void; disabled?: boolean; hint?: string }) {
-  const isPending = Boolean(hint) && !active;
-  if (disabled) {
-    return (
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
-        disabled
-      >
-        {icon}
-        {label}
-        {hint && <span className="ml-auto text-[10px] text-muted-foreground/30">{hint}</span>}
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={cn(
-        'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
-        active && 'bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary',
-        isPending && 'text-muted-foreground/50 cursor-not-allowed hover:bg-transparent',
-      )}
-      onClick={isPending ? undefined : onClick}
-    >
-      {icon}
-      {label}
-      {hint && <span className={cn('ml-auto text-[10px]', active ? 'text-sidebar-primary-foreground/60' : 'text-muted-foreground/30')}>{hint}</span>}
-    </button>
-  );
-}
-
-function StatCell({ label, value, valueClass }: { label: string; value: number; valueClass?: string }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn('mt-0.5 text-lg font-semibold tabular-nums leading-none', valueClass)}>{value}</div>
     </div>
   );
 }

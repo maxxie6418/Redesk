@@ -71,6 +71,7 @@ export const createBookSchema = z.object({
   custom_attributes: z.record(z.unknown()).optional().nullable(),
   metadata_source: metadataSourceSchema.optional(),
   source_url: z.string().max(2000).optional().nullable(),
+  cover_url: z.string().max(2000).optional().nullable(),
   translator: z.string().max(500).optional().nullable(),
   original_title: z.string().max(500).optional().nullable(),
   page_count: z.number().int().min(0).optional().nullable(),
@@ -207,3 +208,29 @@ export const importNotesSchema = z.object({
   dry_run: z.coerce.boolean().optional().default(false),
 });
 export type ImportNotesInput = z.output<typeof importNotesSchema>;
+
+export const importBooksRowSchema = z.object({
+  row: z.number().int(),
+  title: z.string().nullable(),
+  success: z.boolean(),
+  skipped: z.boolean(),
+  book_id: z.number().int().nullable(),
+  error: z.string().nullable(),
+});
+export type ImportBooksResultRow = z.infer<typeof importBooksRowSchema>;
+
+export const importBooksResultSchema = z.object({
+  dry_run: z.boolean(),
+  total: z.number().int(),
+  created: z.number().int(),
+  valid: z.number().int(),
+  skipped: z.number().int(),
+  failed: z.number().int(),
+  rows: z.array(importBooksRowSchema),
+});
+export type ImportBooksResult = z.infer<typeof importBooksResultSchema>;
+
+export const importBooksQuerySchema = z.object({
+  dry_run: z.coerce.boolean().optional().default(false),
+});
+export type ImportBooksQuery = z.output<typeof importBooksQuerySchema>;

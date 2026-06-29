@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { MultipartFile } from '@fastify/multipart';
 import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
 import { bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags } from '@redesk/db';
 import {
@@ -10,17 +11,33 @@ import {
   trashQuerySchema,
   duplicateQuerySchema,
 } from '@redesk/shared';
-import type { BookQueryInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
+import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT } from './files';
 import { existsSync, mkdirSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { extname, join, relative } from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, writeFileSync } from 'node:fs';
 import { config } from '../config';
+
+interface LinkMetadata {
+  title?: string;
+  author?: string;
+  translator?: string;
+  publisher?: string;
+  publish_year?: number;
+  isbn?: string;
+  page_count?: number;
+  original_title?: string;
+  description?: string;
+  cover_url?: string;
+  douban_rating?: number;
+  source_url: string;
+  metadata_source: 'douban' | 'neodb' | 'manual';
+}
 
 interface RawBookRow {
   id: number;
@@ -56,6 +73,273 @@ interface RawBookRow {
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripHtml(value: string): string {
+  return decodeHtmlEntities(value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+}
+
+function stripLeadingMetadataLabel(value: string): string {
+  return value
+    .replace(/^(?:作者|译者|出版社|出版年|页数|原作名|ISBN|publishing house)\s*[:：]\s*/i, '')
+    .replace(/^[:：]\s*/, '')
+    .trim();
+}
+
+function pickMeta(html: string, property: string): string | undefined {
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+name=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${escaped}["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${escaped}["'][^>]*>`, 'i'),
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return stripHtml(match[1]);
+  }
+  return undefined;
+}
+
+function pickDoubanInfo(html: string, label: string): string | undefined {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = html.match(new RegExp(`<span[^>]+class=["'][^"']*\\bpl\\b[^"']*["'][^>]*>\\s*${escaped}:?\\s*</span>\\s*([\\s\\S]*?)(?=<br\\s*/?>|<span[^>]+class=["'][^"']*\\bpl\\b[^"']*["']|</div>)`, 'i'));
+  if (!match?.[1]) return undefined;
+  return stripLeadingMetadataLabel(stripHtml(match[1]));
+}
+
+function pickDoubanCover(html: string): string | undefined {
+  const metaCover = pickMeta(html, 'og:image');
+  if (metaCover) return metaCover;
+  const mainPic = html.match(/<div[^>]+id=["']mainpic["'][\s\S]*?<img[^>]+src=["']([^"']+)["']/i)?.[1];
+  if (mainPic) return decodeHtmlEntities(mainPic.trim());
+  return html.match(/<img[^>]+rel=["']v:photo["'][^>]+src=["']([^"']+)["']/i)?.[1];
+}
+
+function pickDoubanRating(html: string): number | undefined {
+  const raw =
+    html.match(/<strong[^>]+class=["'][^"']*rating_num[^"']*["'][^>]*>\s*([\d.]+)\s*<\/strong>/i)?.[1] ??
+    html.match(/property=["']v:average["'][^>]*>\s*([\d.]+)\s*</i)?.[1];
+  if (!raw) return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function parseJsonLdObjects(html: string): unknown[] {
+  const matches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  const result: unknown[] = [];
+  for (const match of matches) {
+    try {
+      result.push(JSON.parse(decodeHtmlEntities(match[1].trim())) as unknown);
+    } catch {
+      // ignore invalid structured data
+    }
+  }
+  return result;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function readText(value: unknown): string | undefined {
+  if (typeof value === 'string') return stripHtml(value);
+  const record = asRecord(value);
+  const name = record?.name;
+  return typeof name === 'string' ? stripHtml(name) : undefined;
+}
+
+function readPersonList(value: unknown): string | undefined {
+  const items = Array.isArray(value) ? value : value ? [value] : [];
+  const names = items.map(readText).filter((item): item is string => Boolean(item));
+  return names.length > 0 ? names.join(' / ') : undefined;
+}
+
+function pickNeoDBField(html: string, labelPattern: string): string | undefined {
+  const match = html.match(new RegExp(`${labelPattern}:\\s*([\\s\\S]*?)(?=<\\/div>|<br\\s*/?>)`, 'i'));
+  return match?.[1] ? stripHtml(match[1]) : undefined;
+}
+
+function pickNeoDBRating(html: string): number | undefined {
+  if (/评分人数不足/.test(html)) return undefined;
+  const ratingBlock = html.match(/<div[^>]+class=["'][^"']*\brating\b[^"']*["'][\s\S]*?<h3[^>]*>\s*([\d.]+)\s*<small>\s*\/\s*10/i)?.[1];
+  if (!ratingBlock) return undefined;
+  const value = Number(ratingBlock);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function parseNeoDBHtml(html: string, sourceUrl: string): LinkMetadata {
+  const jsonLd = parseJsonLdObjects(html)
+    .map(asRecord)
+    .find((item) => item?.['@type'] === 'Book');
+  const publisher = asRecord(jsonLd?.publisher);
+  const publishDate = readText(jsonLd?.datePublished) ?? pickNeoDBField(html, '\u53d1\u884c\u65f6\u95f4');
+  const pageCountRaw = jsonLd?.numberOfPages ?? pickNeoDBField(html, '\u9875\u6570');
+  const pageCount = typeof pageCountRaw === 'number' ? pageCountRaw : String(pageCountRaw ?? '').match(/\d+/)?.[0];
+  const rating = pickNeoDBRating(html);
+
+  return {
+    title: readText(jsonLd?.name) ?? pickMeta(html, 'og:title') ?? undefined,
+    author: readPersonList(jsonLd?.author) ?? pickNeoDBField(html, '\u4f5c\u8005'),
+    translator: pickNeoDBField(html, '\u8bd1\u8005'),
+    publisher: readText(publisher?.name) ?? pickNeoDBField(html, '(?:publishing house|\u51fa\u7248\u793e)'),
+    publish_year: publishDate?.match(/\d{4}/) ? Number(publishDate.match(/\d{4}/)?.[0]) : undefined,
+    isbn: readText(jsonLd?.isbn)?.replace(/[^\dXx]/g, '') ?? pickNeoDBField(html, 'ISBN')?.replace(/[^\dXx]/g, ''),
+    page_count: pageCount ? Number(pageCount) : undefined,
+    original_title: readText(jsonLd?.alternateName),
+    description: readText(jsonLd?.description) ?? pickMeta(html, 'og:description'),
+    cover_url: readText(jsonLd?.image) ?? pickMeta(html, 'og:image'),
+    douban_rating: rating,
+    source_url: sourceUrl,
+    metadata_source: 'neodb',
+  };
+}
+
+function parseDoubanHtml(html: string, sourceUrl: string): LinkMetadata {
+  const title =
+    pickMeta(html, 'og:title') ??
+    stripHtml(html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] ?? '').replace(/\(豆瓣\)$/, '').trim();
+
+  const author = pickDoubanInfo(html, '\u4f5c\u8005');
+  const publisher = pickDoubanInfo(html, '\u51fa\u7248\u793e');
+  const publishDate = pickDoubanInfo(html, '\u51fa\u7248\u5e74');
+  const isbn = pickDoubanInfo(html, 'ISBN')?.replace(/[^\dXx]/g, '');
+  const pageCountText = pickDoubanInfo(html, '\u9875\u6570');
+  const translator = pickDoubanInfo(html, '\u8bd1\u8005');
+  const originalTitle = pickDoubanInfo(html, '\u539f\u4f5c\u540d');
+  const description =
+    pickMeta(html, 'og:description') ??
+    stripHtml(html.match(/<div[^>]+class=["'][^"']*intro[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '');
+  const coverUrl = pickDoubanCover(html);
+  const doubanRating = pickDoubanRating(html);
+  const publishYear = publishDate?.match(/\d{4}/)?.[0];
+  const pageCount = pageCountText?.match(/\d+/)?.[0];
+
+  return {
+    title: title || undefined,
+    author,
+    translator,
+    publisher,
+    publish_year: publishYear ? Number(publishYear) : undefined,
+    isbn,
+    page_count: pageCount ? Number(pageCount) : undefined,
+    original_title: originalTitle,
+    description,
+    cover_url: coverUrl,
+    douban_rating: doubanRating,
+    source_url: sourceUrl,
+    metadata_source: 'douban',
+  };
+}
+
+async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkMetadata> {
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍介绍链接');
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '只支持 http 或 https 链接');
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 Redesk/0.1 book metadata fetcher',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+    });
+    if (!res.ok) {
+      throw new AppError(ERROR_CODE.BUSINESS_ERROR, `获取链接失败：HTTP ${res.status}`);
+    }
+    const html = await res.text();
+    if (url.hostname.includes('douban.com')) {
+      return parseDoubanHtml(html, url.toString());
+    }
+    if (url.hostname.includes('neodb.social')) {
+      return parseNeoDBHtml(html, url.toString());
+    }
+    return {
+      title: pickMeta(html, 'og:title') ?? stripHtml(html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] ?? ''),
+      description: pickMeta(html, 'og:description'),
+      cover_url: pickMeta(html, 'og:image'),
+      source_url: url.toString(),
+      metadata_source: 'manual',
+    };
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(ERROR_CODE.BUSINESS_ERROR, '获取链接失败，请改用粘贴文本导入');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function coverExtFromResponse(url: string, contentType: string | null): string {
+  if (contentType?.includes('png')) return '.png';
+  if (contentType?.includes('webp')) return '.webp';
+  if (contentType?.includes('gif')) return '.gif';
+  const urlExt = extname(new URL(url).pathname).toLowerCase();
+  if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(urlExt)) return urlExt;
+  return '.jpg';
+}
+
+function storageRelativePath(absPath: string): string {
+  return relative(config.storageDir, absPath).replace(/\\/g, '/');
+}
+
+async function downloadRemoteCover(coverUrl: string, bookId: number): Promise<string | null> {
+  let url: URL;
+  try {
+    url = new URL(coverUrl);
+  } catch {
+    return null;
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 Redesk/0.1 cover fetcher',
+        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        Referer: 'https://book.douban.com/',
+      },
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type');
+    if (contentType && !contentType.startsWith('image/')) return null;
+
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return null;
+
+    const targetDir = join(config.storageDir, 'covers', String(bookId));
+    if (!existsSync(targetDir)) mkdirSync(targetDir, { recursive: true });
+    const targetPath = join(targetDir, `cover${coverExtFromResponse(url.toString(), contentType)}`);
+    writeFileSync(targetPath, bytes);
+    return storageRelativePath(targetPath);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function longestCommonSubstring(a: string, b: string): number {
@@ -134,6 +418,60 @@ function recordStatusChange(bookId: number, fromStatus: string | null, toStatus:
       changed_at: now(),
     })
     .run();
+}
+
+async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { filepath: string; filename: string } | null) {
+  const db = getDb();
+  const timestamp = now();
+  const book = db
+    .insert(books)
+    .values({
+      owner_id: userId,
+      title: input.title,
+      author: input.author ?? null,
+      subtitle: input.subtitle ?? null,
+      isbn: input.isbn ?? null,
+      publisher: input.publisher ?? null,
+      publish_year: input.publish_year ?? null,
+      description: input.description ?? null,
+      language: input.language ?? null,
+      category_id: input.category_id ?? null,
+      genre_category_id: input.genre_category_id ?? null,
+      status: input.status ?? 'COLLECTED',
+      visibility: input.visibility ?? 'PRIVATE',
+      reading_purpose: input.reading_purpose ?? null,
+      rating: input.rating ?? null,
+      custom_attributes: input.custom_attributes ? JSON.stringify(input.custom_attributes) : null,
+      metadata_source: input.metadata_source ?? 'manual',
+      source_url: input.source_url ?? null,
+      translator: input.translator ?? null,
+      original_title: input.original_title ?? null,
+      page_count: input.page_count ?? null,
+      created_at: timestamp,
+      updated_at: timestamp,
+    })
+    .returning(bookSelect())
+    .get();
+
+  syncBookTags(book.id, input.tag_ids);
+  recordStatusChange(book.id, null, book.status);
+
+  if (uploadedFile) {
+    await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
+  }
+
+  if (!uploadedFile && input.cover_url) {
+    const coverPath = await downloadRemoteCover(input.cover_url, book.id);
+    if (coverPath) {
+      db.update(books)
+        .set({ cover_path: coverPath, updated_at: timestamp })
+        .where(eq(books.id, book.id))
+        .run();
+      return db.select(bookSelect()).from(books).where(eq(books.id, book.id)).get() ?? book;
+    }
+  }
+
+  return book;
 }
 
 function syncBookTags(bookId: number, tagIds: number[] | undefined): void {
@@ -335,12 +673,213 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
   return { rows, total, page, pageSize };
 }
 
+const BOOK_IMPORT_HEADERS = [
+  'title',
+  'subtitle',
+  'author',
+  'translator',
+  'original_title',
+  'isbn',
+  'publisher',
+  'publish_year',
+  'page_count',
+  'language',
+  'status',
+  'visibility',
+  'rating',
+  'reading_purpose',
+  'category_name',
+  'genre_category_name',
+  'tag_names',
+  'source_url',
+  'cover_url',
+  'description',
+] as const;
+
+function csvEscape(value: unknown): string {
+  if (value == null) return '';
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function parseCsv(content: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+
+    if (inQuotes) {
+      if (ch === '"' && next === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\n') {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else if (ch !== '\r') {
+      cell += ch;
+    }
+  }
+
+  row.push(cell);
+  rows.push(row);
+
+  return rows.filter((items) => items.some((item) => item.trim() !== ''));
+}
+
+function readCsvFile(data: MultipartFile): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    data.file.on('data', (chunk: Buffer) => chunks.push(chunk));
+    data.file.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8').replace(/^\uFEFF/, '')));
+    data.file.on('error', reject);
+  });
+}
+
+function normalizeKey(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function optionalText(value: string | undefined): string | null {
+  const text = value?.trim();
+  return text ? text : null;
+}
+
+function optionalInt(value: string | undefined, field: string, errors: string[]): number | null {
+  const text = value?.trim();
+  if (!text) return null;
+  const parsed = Number(text);
+  if (!Number.isInteger(parsed)) {
+    errors.push(`${field} 必须是整数`);
+    return null;
+  }
+  return parsed;
+}
+
+function normalizeStatus(value: string | undefined, errors: string[]): string | undefined {
+  const text = value?.trim();
+  if (!text) return undefined;
+  const map: Record<string, string> = {
+    COLLECTED: 'COLLECTED',
+    PLANNED: 'PLANNED',
+    READING: 'READING',
+    READ: 'READ',
+    STORED: 'STORED',
+    收录: 'COLLECTED',
+    计划读: 'PLANNED',
+    想读: 'PLANNED',
+    在读: 'READING',
+    已读: 'READ',
+    存: 'STORED',
+  };
+  const status = map[text.toUpperCase()] ?? map[text];
+  if (!status) {
+    errors.push('status 只能是 COLLECTED/PLANNED/READING/READ/STORED');
+    return undefined;
+  }
+  return status;
+}
+
+function normalizeVisibility(value: string | undefined, errors: string[]): string | undefined {
+  const text = value?.trim();
+  if (!text) return undefined;
+  const map: Record<string, string> = {
+    PUBLIC: 'PUBLIC',
+    PRIVATE: 'PRIVATE',
+    公开: 'PUBLIC',
+    私密: 'PRIVATE',
+  };
+  const visibility = map[text.toUpperCase()] ?? map[text];
+  if (!visibility) {
+    errors.push('visibility 只能是 PUBLIC 或 PRIVATE');
+    return undefined;
+  }
+  return visibility;
+}
+
+function splitNames(value: string | undefined): string[] {
+  return [...new Set((value ?? '')
+    .split(/[;；、|/，]/)
+    .map((item) => item.trim())
+    .filter(Boolean))];
+}
+
+function findOrCreateCategory(ownerId: number, name: string, type: 'GENRE' | 'PERSONAL'): number {
+  const db = getDb();
+  const existing = db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.owner_id, ownerId), eq(categories.name, name), eq(categories.type, type)))
+    .get();
+  if (existing) return existing.id;
+
+  const timestamp = now();
+  return db
+    .insert(categories)
+    .values({ owner_id: ownerId, name, type, parent_id: null, sort_order: 0, created_at: timestamp, updated_at: timestamp })
+    .returning({ id: categories.id })
+    .get().id;
+}
+
+function findOrCreateTag(ownerId: number, name: string): number {
+  const db = getDb();
+  const existing = db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(and(eq(tags.owner_id, ownerId), eq(tags.name, name)))
+    .get();
+  if (existing) return existing.id;
+
+  return db
+    .insert(tags)
+    .values({ owner_id: ownerId, name, created_at: now() })
+    .returning({ id: tags.id })
+    .get().id;
+}
+
+function hasDuplicateBook(ownerId: number, title: string, author: string | null, isbn: string | null): boolean {
+  const db = getDb();
+  if (isbn) {
+    const existingByIsbn = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.owner_id, ownerId), eq(books.isbn, isbn), sql`${books.deleted_at} IS NULL`))
+      .get();
+    if (existingByIsbn) return true;
+  }
+
+  const titleKey = normalizeKey(title);
+  const authorKey = normalizeKey(author);
+  const existing = db
+    .select({ title: books.title, author: books.author })
+    .from(books)
+    .where(and(eq(books.owner_id, ownerId), sql`${books.deleted_at} IS NULL`))
+    .all();
+
+  return existing.some((book) => normalizeKey(book.title) === titleKey && normalizeKey(book.author) === authorKey);
+}
+
 export async function bookRoutes(app: FastifyInstance): Promise<void> {
   app.post('/books', async (req) => {
     const userId = requireUserId(req);
-    const timestamp = now();
-    const db = getDb();
-
     const contentType = req.headers['content-type'] ?? '';
 
     let input;
@@ -381,6 +920,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         custom_attributes: fieldVal('custom_attributes') ? JSON.parse(fieldVal('custom_attributes')!) : null,
         metadata_source: fieldVal('metadata_source') ?? undefined,
         source_url: fieldVal('source_url') ?? null,
+        cover_url: fieldVal('cover_url') ?? null,
         translator: fieldVal('translator') ?? null,
         original_title: fieldVal('original_title') ?? null,
         page_count: fieldVal('page_count') ? Number(fieldVal('page_count')) : null,
@@ -400,44 +940,197 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       input = validate(createBookSchema, req.body);
     }
 
-    const book = db
-      .insert(books)
-      .values({
-        owner_id: userId,
-        title: input.title,
-        author: input.author ?? null,
-        subtitle: input.subtitle ?? null,
-        isbn: input.isbn ?? null,
-        publisher: input.publisher ?? null,
-        publish_year: input.publish_year ?? null,
-        description: input.description ?? null,
-        language: input.language ?? null,
-        category_id: input.category_id ?? null,
-        genre_category_id: input.genre_category_id ?? null,
-        status: input.status ?? 'COLLECTED',
-        visibility: input.visibility ?? 'PRIVATE',
-        reading_purpose: input.reading_purpose ?? null,
-        rating: input.rating ?? null,
-        custom_attributes: input.custom_attributes ? JSON.stringify(input.custom_attributes) : null,
-        metadata_source: input.metadata_source ?? 'manual',
-        source_url: input.source_url ?? null,
-        translator: input.translator ?? null,
-        original_title: input.original_title ?? null,
-        page_count: input.page_count ?? null,
-        created_at: timestamp,
-        updated_at: timestamp,
-      })
-      .returning(bookSelect())
-      .get();
-
-    syncBookTags(book.id, input.tag_ids);
-    recordStatusChange(book.id, null, book.status);
-
-    if (uploadedFile) {
-      await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
-    }
+    const book = await createBookRecord(userId, input, uploadedFile);
 
     return { data: serializeBooks([book], userId)[0] };
+  });
+
+  app.get('/books/import/template', async (req, reply) => {
+    requireUserId(req);
+    const sample = [
+      '如何阅读一本书',
+      '经典阅读指南',
+      '莫提默 J. 艾德勒 / 查尔斯 范多伦',
+      '郝明义 / 朱衣',
+      'How to Read a Book',
+      '9787100040945',
+      '商务印书馆',
+      '2004',
+      '376',
+      'zh',
+      'COLLECTED',
+      'PRIVATE',
+      '5',
+      '精读',
+      '能力提升',
+      '方法论',
+      '阅读方法;经典',
+      'https://book.douban.com/subject/1013208/',
+      '',
+      '这是一行示例，导入前可删除。',
+    ];
+    const csv = [
+      BOOK_IMPORT_HEADERS.join(','),
+      sample.map(csvEscape).join(','),
+    ].join('\n');
+
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', 'attachment; filename="redesk-books-import-template.csv"');
+    return reply.send(`\uFEFF${csv}`);
+  });
+
+  app.post('/books/import', async (req) => {
+    const userId = requireUserId(req);
+    const dryRun = (req.query as { dry_run?: string | boolean } | undefined)?.dry_run === 'true';
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供 CSV 文件');
+
+    const content = await readCsvFile(data);
+    const rows = parseCsv(content);
+    if (rows.length < 2) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'CSV 至少需要表头和一行数据');
+    }
+
+    const headers = rows[0].map((header) => header.trim().replace(/^\uFEFF/, ''));
+    const headerSet = new Set(headers);
+    if (!headerSet.has('title')) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'CSV 表头必须包含 title');
+    }
+
+    const importRows: {
+      row: number;
+      title: string | null;
+      success: boolean;
+      skipped: boolean;
+      book_id: number | null;
+      error: string | null;
+    }[] = [];
+    const seenKeys = new Set<string>();
+
+    for (let i = 1; i < rows.length; i++) {
+      const raw = rows[i];
+      const rowNo = i + 1;
+      const item: Record<string, string | undefined> = {};
+      headers.forEach((header, index) => {
+        item[header] = raw[index];
+      });
+
+      const errors: string[] = [];
+      const title = optionalText(item.title);
+      const author = optionalText(item.author);
+      const isbn = optionalText(item.isbn)?.replace(/[^\dXx]/g, '') ?? null;
+      if (!title) errors.push('title 不能为空');
+
+      const publishYear = optionalInt(item.publish_year, 'publish_year', errors);
+      const pageCount = optionalInt(item.page_count, 'page_count', errors);
+      const rating = optionalInt(item.rating, 'rating', errors);
+      const status = normalizeStatus(item.status, errors);
+      const visibility = normalizeVisibility(item.visibility, errors);
+
+      if (title) {
+        const duplicateKey = isbn ? `isbn:${isbn}` : `book:${normalizeKey(title)}:${normalizeKey(author)}`;
+        if (seenKeys.has(duplicateKey) || hasDuplicateBook(userId, title, author, isbn)) {
+          importRows.push({
+            row: rowNo,
+            title,
+            success: false,
+            skipped: true,
+            book_id: null,
+            error: '已存在相同 ISBN 或书名+作者的书籍',
+          });
+          seenKeys.add(duplicateKey);
+          continue;
+        }
+        seenKeys.add(duplicateKey);
+      }
+
+      if (errors.length > 0 || !title) {
+        importRows.push({
+          row: rowNo,
+          title,
+          success: false,
+          skipped: false,
+          book_id: null,
+          error: errors.join('；'),
+        });
+        continue;
+      }
+
+      try {
+        const categoryName = optionalText(item.category_name);
+        const genreCategoryName = optionalText(item.genre_category_name);
+        const tagNames = splitNames(item.tag_names);
+        const input = validate(createBookSchema, {
+          title,
+          subtitle: optionalText(item.subtitle),
+          author,
+          translator: optionalText(item.translator),
+          original_title: optionalText(item.original_title),
+          isbn,
+          publisher: optionalText(item.publisher),
+          publish_year: publishYear,
+          page_count: pageCount,
+          language: optionalText(item.language),
+          status,
+          visibility,
+          rating,
+          reading_purpose: optionalText(item.reading_purpose),
+          category_id: !dryRun && categoryName ? findOrCreateCategory(userId, categoryName, 'PERSONAL') : null,
+          genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
+          tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
+          source_url: optionalText(item.source_url),
+          cover_url: optionalText(item.cover_url),
+          description: optionalText(item.description),
+          metadata_source: 'manual',
+        });
+
+        if (dryRun) {
+          importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: null, error: null });
+          continue;
+        }
+
+        const book = await createBookRecord(userId, input, null);
+        importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: book.id, error: null });
+      } catch (err) {
+        importRows.push({
+          row: rowNo,
+          title,
+          success: false,
+          skipped: false,
+          book_id: null,
+          error: err instanceof Error ? err.message : '导入失败',
+        });
+      }
+    }
+
+    const created = importRows.filter((row) => row.success && row.book_id != null).length;
+    const valid = importRows.filter((row) => row.success).length;
+    const skipped = importRows.filter((row) => row.skipped).length;
+    const failed = importRows.filter((row) => !row.success && !row.skipped).length;
+
+    return {
+      data: {
+        dry_run: dryRun,
+        total: importRows.length,
+        created,
+        valid,
+        skipped,
+        failed,
+        rows: importRows,
+      },
+    };
+  });
+
+  app.post('/books/metadata/fetch', async (req) => {
+    requireUserId(req);
+    const body = req.body as { source_url?: unknown };
+    const sourceUrl = typeof body?.source_url === 'string' ? body.source_url.trim() : '';
+    if (!sourceUrl) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '请先填写书籍介绍链接');
+    }
+
+    const metadata = await fetchBookMetadataFromUrl(sourceUrl);
+    return { data: metadata };
   });
 
   app.get('/books', async (req) => {
