@@ -10,6 +10,22 @@ function Write-Info($message) {
   Write-Host "[Redesk] $message"
 }
 
+$currentNodeVersion = (node --version).TrimStart('v')
+$nodeMajor = $currentNodeVersion.Split('.')[0]
+if ($nodeMajor -lt 20 -or $nodeMajor -ge 25) {
+  Write-Host "[Redesk] Node.js version $currentNodeVersion is NOT supported."
+  Write-Host "[Redesk] This project requires Node.js >= 20 and < 25 (LTS recommended: 22.x)."
+  Write-Host "[Redesk] better-sqlite3 does not have prebuilt binaries for Node >= 25."
+  Write-Host "[Redesk] Switch Node version using nvm-windows:"
+  Write-Host "  nvm install 22"
+  Write-Host "  nvm use 22"
+  Write-Host ""
+  Write-Host "Press any key to close."
+  $null = $Host.UI.PromptForChoice('Incompatible Node.js', '', @('&Close'), 0)
+  exit 1
+}
+Write-Info "Node.js $currentNodeVersion - OK"
+
 function Find-Pnpm {
   $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
   if ($cmd) {
