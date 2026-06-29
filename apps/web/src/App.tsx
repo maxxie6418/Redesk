@@ -18,6 +18,7 @@ export default function App() {
       <Route path="/setup" element={<SetupRoute />} />
       <Route element={<RequireAuth />}>
         <Route path="/" element={<Bookshelf />} />
+        <Route path="/trash" element={<Bookshelf initialPageView="trash" />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/books/:id" element={<BookDetailPage />} />
         <Route path="/books/:id/read" element={<BookReaderPage />} />

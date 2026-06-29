@@ -4,5 +4,9 @@ import type { AuthUser } from '@/lib/api';
 export const ShellUserContext = createContext<AuthUser | null>(null);
 
 export function useShellUser() {
-  return useContext(ShellUserContext);
+  const user = useContext(ShellUserContext);
+  if (!user) {
+    throw new Error('ShellUserContext is missing');
+  }
+  return user;
 }

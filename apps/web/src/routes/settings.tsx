@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Monitor,
   Moon,
   Sun,
@@ -38,6 +36,8 @@ import { useBackupList, triggerAutoBackup, triggerFullBackup } from '@/hooks/use
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppSidebar } from '@/components/app-sidebar';
+import { useShellUser } from '@/components/shell-user-context';
 import { cn } from '@/lib/utils';
 
 type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'backup' | 'system';
@@ -73,7 +73,7 @@ function StatusBanner({ message }: { message: StatusMessage }) {
 }
 
 export function SettingsPage() {
-  const navigate = useNavigate();
+  const user = useShellUser();
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const settings = useSettings();
 
@@ -100,15 +100,12 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center gap-4 border-b border-border px-6 py-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-xl font-semibold text-foreground">设置</h1>
-      </header>
+    <div className="flex min-h-screen bg-background">
+      <AppSidebar activeKey="settings" user={user} />
 
-      <div className="mx-auto max-w-3xl px-6 py-6">
+      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="mb-5 text-xl font-semibold text-foreground">设置</h1>
         <nav className="mb-6 flex gap-1 rounded-lg border border-border bg-popover p-1">
           {tabs.map((tab) => (
             <button
@@ -139,7 +136,8 @@ export function SettingsPage() {
           <BackupTab settings={settings.data ?? {}} />
         )}
         {activeTab === 'system' && <SystemTab />}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
