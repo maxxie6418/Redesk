@@ -163,7 +163,18 @@ Redesk/
 
 ## 🚀 部署与开发
 
+### 环境要求
+
+- **Node.js**：>= 20
+- **pnpm**：最新版（通过 `npm install -g pnpm` 安装）
+
 ### 本地启动
+
+首次运行前，需在项目根目录安装依赖：
+
+```bash
+pnpm install
+```
 
 Windows 下可直接双击：
 
@@ -180,7 +191,6 @@ http://localhost:5173/
 也可以手动启动：
 
 ```bash
-pnpm install
 pnpm dev
 ```
 

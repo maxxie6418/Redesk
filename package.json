@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "description": "自托管个人阅读管理与 AI 陪读系统",
-  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=20"
   },
