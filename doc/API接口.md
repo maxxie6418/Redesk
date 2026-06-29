@@ -25,6 +25,7 @@
 | v1.0.7 | 2026-06-28 | M1-F/G/H 闭环：OPDS 1.2（catalog/by-status/by-tag/search/download + HTTP Basic）；概览端点 GET /overview；暗色模式全局开关；回收站保留期；自定义属性 custom_attributes；灰置阅读按钮+阅读痕迹占位 | — |
 | v1.0.8 | 2026-06-28 | M1 复查修正：概览端点合并为 GET /overview（含 total/status_counts/recent_added/recent_reading）；OPDS download 说明改为 acquisition 链接复用文件端点；metadata/preview 标注未落地；设置配置项补充 llm_provider/llm_api_key/llm_model/llm_base_url；密钥脱敏新增 llm_api_key | — |
 | v1.0.9 | 2026-06-29 | M1 书架数据层与文件管理增强（P1/P2）：POST /books author 改可选，补充 subtitle/translator/original_title/page_count/source_url 等全字段；筛选新增 favorited/has_files/genre_category_id；新增书库文件端点 GET /files、未关联文件池 POST/GET/DELETE /files/unassociated、文件匹配书籍 POST /files/{id}/match | — |
+| v1.0.10 | 2026-06-29 | 文件管理风险收口：书库文件与未关联文件池按 owner_id 隔离；checksum 去重范围明确为当前用户书库；彻底删除书籍同步清理关联文件记录与物理文件；匹配接口以 POST /files/{fileId}/match 为准 | AI |
 
 ## 文档说明
 
@@ -337,6 +338,8 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | DELETE | /files/unassociated/{fileId} | 删除未关联文件 | 2.x |
 | POST | /files/{fileId}/match | 将文件池中的文件匹配到指定书籍 | 2.x |
 
+> `/files` 与 `/files/unassociated` 均只返回当前用户 `owner_id` 下的文件。checksum 去重范围为当前用户整个书库（已关联与未关联文件池），重复时返回 `DUPLICATE_FILE`。
+
 ### POST /books/{id}/files
 
 请求：`multipart/form-data`，字段 `file`（二进制）、`is_primary`（bool，可选）。
@@ -360,6 +363,8 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | DELETE | /trash/{bookId} | 彻底删除 | 1.25 |
 | DELETE | /trash | 清空回收站 | 1.25 |
 | GET | /books/{id}/status-history | 状态变更时间轴 | 1.26 |
+
+> `DELETE /trash/{bookId}` 与 `DELETE /trash` 是彻底删除：除书籍、标签关联、关系、状态历史外，也同步删除该书关联的 `book_files` 记录与物理文件。软删除 `DELETE /books/{id}` 不删除文件。
 
 ### GET /books/{id}/status-history
 ```json

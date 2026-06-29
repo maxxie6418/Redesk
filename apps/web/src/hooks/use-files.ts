@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 
 export interface BookFileItem {
   id: number;
+  owner_id: number;
   book_id: number | null;
   file_path: string;
   original_filename: string | null;
@@ -112,6 +113,15 @@ export interface FileLibraryParams {
   associated?: 'true' | 'false';
 }
 
+export interface PaginatedFiles {
+  data: BookFileItem[];
+  pagination: {
+    page: number;
+    page_size: number;
+    total: number;
+  };
+}
+
 export function useFileLibrary(params?: FileLibraryParams) {
   return useQuery({
     queryKey: ['file-library', params],
@@ -122,7 +132,7 @@ export function useFileLibrary(params?: FileLibraryParams) {
       if (params?.format) sp.set('format', params.format);
       if (params?.associated) sp.set('associated', params.associated);
       const qs = sp.toString();
-      return api.get<{ data: BookFileItem[]; pagination: { page: number; page_size: number; total: number } }>(`/files${qs ? `?${qs}` : ''}`);
+      return api.getBody<PaginatedFiles>(`/files${qs ? `?${qs}` : ''}`);
     },
   });
 }
@@ -166,7 +176,7 @@ export function useMatchFileToBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ fileId, bookId }: { fileId: number; bookId: number }) =>
-      api.post<BookFileItem>(`/files/unassociated/${fileId}/match`, { book_id: bookId }),
+      api.post<BookFileItem>(`/files/${fileId}/match`, { book_id: bookId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unassociated-files'] });
       qc.invalidateQueries({ queryKey: ['file-library'] });

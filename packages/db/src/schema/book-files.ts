@@ -1,8 +1,10 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { books } from './books';
+import { users } from './users';
 
 export const bookFiles = sqliteTable('book_files', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  owner_id: integer('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   book_id: integer('book_id').references(() => books.id, { onDelete: 'set null' }),
   file_path: text('file_path').notNull(),
   original_filename: text('original_filename'),

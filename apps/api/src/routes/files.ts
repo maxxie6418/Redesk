@@ -1,5 +1,5 @@
-import type { FastifyInstance } from 'fastify';
-import { and, eq, count, isNull, sql } from 'drizzle-orm';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { and, eq, count, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, createReadStream, renameSync, unlinkSync, statSync, copyFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
@@ -145,6 +145,7 @@ async function extractEpubCover(filePath: string, bookId: number): Promise<strin
 }
 
 export async function saveUploadedFile(
+  ownerId: number,
   bookId: number | null,
   originalFilename: string,
   sourcePath: string,
@@ -166,20 +167,23 @@ export async function saveUploadedFile(
   const db = getDb();
   const timestamp = now();
 
-  if (bookId != null) {
-    const dup = db
-      .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
-      .from(bookFiles)
-      .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.checksum, checksum)))
-      .get();
-    if (dup && dup.id !== replaceFileId) {
-      try { unlinkSync(targetPath); } catch { /* ignore */ }
-      throw new AppError(
-        ERROR_CODE.DUPLICATE_FILE,
-        `已存在相同文件: ${dup.original_filename ?? '未知'}`,
-        [{ field: 'existing_file_id', issue: String(dup.id) }],
-      );
-    }
+  const dupConditions = [eq(bookFiles.owner_id, ownerId), eq(bookFiles.checksum, checksum)];
+  if (replaceFileId != null) {
+    dupConditions.push(ne(bookFiles.id, replaceFileId));
+  }
+
+  const dup = db
+    .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
+    .from(bookFiles)
+    .where(and(...dupConditions))
+    .get();
+  if (dup) {
+    try { unlinkSync(targetPath); } catch { /* ignore */ }
+    throw new AppError(
+      ERROR_CODE.DUPLICATE_FILE,
+      `书库已存在相同文件: ${dup.original_filename ?? '未知'}`,
+      [{ field: 'existing_file_id', issue: String(dup.id) }],
+    );
   }
 
   let coverPath: string | null = null;
@@ -191,7 +195,7 @@ export async function saveUploadedFile(
     const existing = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, replaceFileId), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, replaceFileId), eq(bookFiles.owner_id, ownerId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (existing) {
@@ -229,13 +233,14 @@ export async function saveUploadedFile(
   if (isPrimary && bookId != null) {
     db.update(bookFiles)
       .set({ is_primary: 0 })
-      .where(eq(bookFiles.book_id, bookId))
+      .where(and(eq(bookFiles.owner_id, ownerId), eq(bookFiles.book_id, bookId)))
       .run();
   }
 
   const result = db
     .insert(bookFiles)
     .values({
+      owner_id: ownerId,
       book_id: bookId,
       file_path: relativePath(targetPath),
       original_filename: originalFilename,
@@ -280,6 +285,27 @@ function resolveStoragePath(rel: string): string {
   return join(config.storageDir, rel);
 }
 
+export function deleteFilesForBooks(ownerId: number, bookIds: number[]): void {
+  if (bookIds.length === 0) return;
+
+  const db = getDb();
+  const rows = db
+    .select({ id: bookFiles.id, file_path: bookFiles.file_path })
+    .from(bookFiles)
+    .where(and(eq(bookFiles.owner_id, ownerId), inArray(bookFiles.book_id, bookIds)))
+    .all();
+
+  for (const row of rows) {
+    try { unlinkSync(resolveStoragePath(row.file_path)); } catch { /* ignore */ }
+  }
+
+  if (rows.length > 0) {
+    db.delete(bookFiles)
+      .where(and(eq(bookFiles.owner_id, ownerId), inArray(bookFiles.id, rows.map((row) => row.id))))
+      .run();
+  }
+}
+
 export async function fileRoutes(app: FastifyInstance): Promise<void> {
   const ownerBookCheck = (bookId: number, userId: number) => {
     const db = getDb();
@@ -302,7 +328,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const rows = db
       .select()
       .from(bookFiles)
-      .where(eq(bookFiles.book_id, bookId))
+      .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .all();
 
     return { data: rows };
@@ -320,7 +346,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (!file) throw notFound('文件不存在');
@@ -339,7 +365,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (!file) throw notFound('文件不存在');
@@ -400,7 +426,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (!file) throw notFound('文件不存在');
@@ -410,7 +436,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     if (input.is_primary === true) {
       db.update(bookFiles)
         .set({ is_primary: 0 })
-        .where(eq(bookFiles.book_id, bookId))
+        .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
         .run();
       updateData.is_primary = 1;
     } else if (input.is_primary === false) {
@@ -421,9 +447,9 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       updateData.original_filename = input.original_filename;
     }
 
-    db.update(bookFiles).set(updateData).where(eq(bookFiles.id, fid)).run();
+    db.update(bookFiles).set(updateData).where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId))).run();
 
-    const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get();
+    const updated = db.select().from(bookFiles).where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId))).get();
     return { data: updated };
   });
 
@@ -439,19 +465,19 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (!file) throw notFound('文件不存在');
 
     try { unlinkSync(resolveStoragePath(file.file_path)); } catch { /* ignore */ }
 
-    db.delete(bookFiles).where(eq(bookFiles.id, fid)).run();
+    db.delete(bookFiles).where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId))).run();
 
     const remaining = db
       .select({ c: count() })
       .from(bookFiles)
-      .where(eq(bookFiles.book_id, bookId))
+      .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (remaining?.c === 0) {
@@ -498,7 +524,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       ? (data.fields.is_primary as unknown as string) === 'true'
       : false;
 
-    const r = await saveUploadedFile(bookId, originalFilename, tmpPath, isPrimary);
+    const r = await saveUploadedFile(userId, bookId, originalFilename, tmpPath, isPrimary);
     reply.code(201);
     return { data: r };
   });
@@ -515,7 +541,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const existing = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
       .get();
 
     if (!existing) throw notFound('文件不存在');
@@ -544,6 +570,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const r = await saveUploadedFile(
+      userId,
       bookId,
       originalFilename,
       tmpPath,
@@ -555,7 +582,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/files/unassociated', async (req, reply) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
 
     const data = await req.file();
     if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
@@ -580,25 +607,25 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
     }
 
-    const r = await saveUploadedFile(null, originalFilename, tmpPath, false);
+    const r = await saveUploadedFile(userId, null, originalFilename, tmpPath, false);
     reply.code(201);
     return { data: r };
   });
 
   app.get('/files/unassociated', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const db = getDb();
 
     const rows = db
       .select()
       .from(bookFiles)
-      .where(isNull(bookFiles.book_id))
+      .where(and(eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
       .all();
 
     return { data: rows };
   });
 
-  app.post('/files/unassociated/:fileId/match', async (req) => {
+  const matchUnassociatedFile = async (req: FastifyRequest) => {
     const userId = requireUserId(req);
     const { fileId } = req.params as { fileId: string };
     const fid = Number(fileId);
@@ -616,7 +643,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), isNull(bookFiles.book_id)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
       .get();
 
     if (!file) throw notFound('文件不存在或已关联书籍');
@@ -625,7 +652,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       const dup = db
         .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
         .from(bookFiles)
-        .where(and(eq(bookFiles.book_id, targetBookId), eq(bookFiles.checksum, file.checksum)))
+        .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.checksum, file.checksum), ne(bookFiles.id, fid)))
         .get();
       if (dup) {
         throw new AppError(
@@ -654,7 +681,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
         file_path: newPath,
         updated_at: timestamp,
       })
-      .where(eq(bookFiles.id, fid))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId)))
       .run();
 
     if (file.file_format === 'EPUB') {
@@ -667,12 +694,15 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get();
+    const updated = db.select().from(bookFiles).where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId))).get();
     return { data: updated };
-  });
+  };
+
+  app.post('/files/:fileId/match', matchUnassociatedFile);
+  app.post('/files/unassociated/:fileId/match', matchUnassociatedFile);
 
   app.delete('/files/unassociated/:fileId', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const { fileId } = req.params as { fileId: string };
     const fid = Number(fileId);
     if (Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
@@ -681,14 +711,14 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const file = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), isNull(bookFiles.book_id)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
       .get();
 
     if (!file) throw notFound('文件不存在或已关联书籍');
 
     try { unlinkSync(resolveStoragePath(file.file_path)); } catch { /* ignore */ }
 
-    db.delete(bookFiles).where(eq(bookFiles.id, fid)).run();
+    db.delete(bookFiles).where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId))).run();
 
     return { data: { id: fid, deleted: true } };
   });
@@ -700,7 +730,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const pageSize = Math.min(500, Math.max(1, Number(query.page_size) || 20));
 
     const db = getDb();
-    const conditions: ReturnType<typeof and>[] = [];
+    const conditions: ReturnType<typeof and>[] = [eq(bookFiles.owner_id, userId)];
 
     if (query.format) {
       conditions.push(eq(bookFiles.file_format, query.format.toUpperCase()));
@@ -708,12 +738,11 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
 
     if (query.associated === 'true') {
       conditions.push(sql`${bookFiles.book_id} IS NOT NULL`);
-      conditions.push(eq(books.owner_id, userId));
     } else if (query.associated === 'false') {
       conditions.push(isNull(bookFiles.book_id));
     }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = and(...conditions);
 
     const totalResult = db
       .select({ value: count() })

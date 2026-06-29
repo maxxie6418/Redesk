@@ -15,7 +15,7 @@ import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
-import { saveUploadedFile, EXTENSION_FORMAT } from './files';
+import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT } from './files';
 import { existsSync, mkdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -434,7 +434,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     recordStatusChange(book.id, null, book.status);
 
     if (uploadedFile) {
-      await saveUploadedFile(book.id, uploadedFile.filename, uploadedFile.filepath, true);
+      await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
     }
 
     return { data: serializeBooks([book], userId)[0] };
@@ -988,6 +988,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       or(eq(bookRelations.source_book_id, bookId), eq(bookRelations.target_book_id, bookId)),
     ).run();
     db.delete(statusHistory).where(eq(statusHistory.book_id, bookId)).run();
+    deleteFilesForBooks(userId, [bookId]);
     db.delete(books).where(eq(books.id, bookId)).run();
 
     return { data: { id: bookId, deleted: true } };
@@ -1017,6 +1018,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       ),
     ).run();
     db.delete(statusHistory).where(inArray(statusHistory.book_id, trashedIds)).run();
+    deleteFilesForBooks(userId, trashedIds);
     db.delete(books).where(and(eq(books.owner_id, userId), inArray(books.id, trashedIds))).run();
 
     return { data: { affected: trashedBooks.length } };

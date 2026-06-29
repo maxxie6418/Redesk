@@ -1,4 +1,4 @@
-CREATE TABLE `book_file_new` (
+CREATE TABLE `book_files_new` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`book_id` integer REFERENCES `books`(`id`) ON DELETE SET NULL,
 	`file_path` text NOT NULL,
@@ -12,12 +12,12 @@ CREATE TABLE `book_file_new` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO `book_file_new` SELECT * FROM `book_file`;
+INSERT INTO `book_files_new` SELECT * FROM `book_files`;
 --> statement-breakpoint
-DROP TABLE `book_file`;
+DROP TABLE `book_files`;
 --> statement-breakpoint
-ALTER TABLE `book_file_new` RENAME TO `book_file`;
+ALTER TABLE `book_files_new` RENAME TO `book_files`;
 --> statement-breakpoint
-CREATE INDEX `idx_book_file_book` ON `book_file` (`book_id`);
+CREATE INDEX `idx_book_files_book` ON `book_files` (`book_id`);
 --> statement-breakpoint
-CREATE INDEX `idx_book_file_checksum` ON `book_file` (`checksum`);
+CREATE INDEX `idx_book_files_checksum` ON `book_files` (`checksum`);

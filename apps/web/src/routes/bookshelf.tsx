@@ -7,6 +7,7 @@ import {
   BookPlus,
   Bookmark,
   Check,
+  FolderOpen,
   Grid3X3,
   LayoutGrid,
   LayoutList,
@@ -1266,6 +1267,11 @@ export function Bookshelf() {
               icon={<BookOpen className="h-4 w-4" />}
               label="书架"
               onClick={() => handleSwitchView('bookshelf')}
+            />
+            <SidebarItem
+              icon={<FolderOpen className="h-4 w-4" />}
+              label="书库文件"
+              onClick={() => navigate('/files')}
             />
             <SidebarItem icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" disabled hint="M2" />
             <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" disabled hint="M4" />

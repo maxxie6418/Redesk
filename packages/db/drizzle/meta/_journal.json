@@ -29,6 +29,13 @@
       "when": 1751246400000,
       "tag": "0003_file_pool",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782726000000,
+      "tag": "0004_file_owner_boundary",
+      "breakpoints": true
     }
   ]
 }
