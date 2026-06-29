@@ -66,7 +66,7 @@ function statusClass(status: string) {
   if (status === BOOK_STATUS.READING) return 'text-success';
   if (status === BOOK_STATUS.PLANNED) return 'text-primary';
   if (status === BOOK_STATUS.STORED) return 'text-muted-foreground';
-  if (status === BOOK_STATUS.READ) return 'text-[#536843]';
+  if (status === BOOK_STATUS.READ) return 'text-success';
   return 'text-muted-foreground';
 }
 

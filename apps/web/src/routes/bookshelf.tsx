@@ -217,15 +217,15 @@ function MenuMore({ onClick }: { onClick?: () => void }) {
   return (
     <button
       type="button"
-      className="absolute right-5 top-5 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-[rgba(0,0,0,0.03)]"
+      className="absolute right-5 top-5 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
       onClick={(e) => {
         e.stopPropagation();
         onClick?.();
       }}
     >
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
     </button>
   );
 }
@@ -234,15 +234,15 @@ function MenuMoreSmall({ onClick }: { onClick?: () => void }) {
   return (
     <button
       type="button"
-      className="absolute right-4 top-4 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-[rgba(0,0,0,0.03)]"
+      className="absolute right-4 top-4 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
       onClick={(e) => {
         e.stopPropagation();
         onClick?.();
       }}
     >
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
     </button>
   );
 }
@@ -251,15 +251,15 @@ function MenuMoreTiny({ onClick, className }: { onClick?: () => void; className?
   return (
     <button
       type="button"
-      className={cn("absolute right-4 top-3.5 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-[rgba(0,0,0,0.03)]", className)}
+      className={cn("absolute right-4 top-3.5 z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5", className)}
       onClick={(e) => {
         e.stopPropagation();
         onClick?.();
       }}
     >
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
-      <span className="block h-1 w-1 rounded-full bg-[#d0d0d0] transition-colors hover:bg-[#999]" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
+      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
     </button>
   );
 }
@@ -268,7 +268,7 @@ function TagAtom({ children, size = 'default' }: { children: React.ReactNode; si
   return (
     <span
       className={cn(
-        'inline-flex items-center border border-[#ebebeb] bg-[#fafafa] text-[#666] transition-colors hover:border-[#ddd] hover:bg-[#f5f5f5] hover:text-[#444]',
+        'inline-flex items-center border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground',
         size === 'default' && 'rounded-md px-2.5 py-[3px] text-xs leading-[1.4]',
         size === 'small' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
         size === 'tiny' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
@@ -281,7 +281,7 @@ function TagAtom({ children, size = 'default' }: { children: React.ReactNode; si
 
 function RatingDisplay({ rating, size = 'sm' }: { rating: number | null; size?: 'sm' | 'xs' }) {
   return (
-    <div className={cn('inline-flex items-center gap-1 font-semibold text-[#262626]', size === 'xs' ? 'text-[13px]' : 'text-sm')}>
+    <div className={cn('inline-flex items-center gap-1 font-semibold text-foreground', size === 'xs' ? 'text-[13px]' : 'text-sm')}>
       <Star className={cn('fill-[#f5c842] text-[#f5c842]', size === 'xs' ? 'h-3 w-3' : 'h-[13px] w-[13px]')} />
       {rating ?? '—'}
     </div>
@@ -291,13 +291,13 @@ function RatingDisplay({ rating, size = 'sm' }: { rating: number | null; size?: 
 function ProgressBar({ progress, trackWidth = 'w-[70px]', trackHeight = 'h-1' }: { progress: number; trackWidth?: string; trackHeight?: string }) {
   return (
     <div className="inline-flex items-center gap-2">
-      <div className={cn('overflow-hidden rounded-full bg-[#f0f0f0]', trackWidth, trackHeight)}>
+      <div className={cn('overflow-hidden rounded-full bg-muted', trackWidth, trackHeight)}>
         <div
           className="h-full rounded-full bg-[#2f7af5] transition-[width] duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
-      <span className="min-w-[32px] text-right text-[13px] font-medium tabular-nums text-[#666]">{progress}%</span>
+      <span className="min-w-[32px] text-right text-[13px] font-medium tabular-nums text-muted-foreground">{progress}%</span>
     </div>
   );
 }
@@ -324,7 +324,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   const progress = bookProgress(book);
   return (
     <article
-      className="group relative flex gap-[18px] rounded-xl bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
+      className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
       style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
     >
       {!isTrash && <MenuMore onClick={onOpenDetail} />}
@@ -338,19 +338,19 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col" onClick={onOpenDetail}>
-        <div className="mb-2.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#262626]">
+        <div className="mb-2.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
           <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
           {statusLabel(book.status)}
         </div>
-        <h2 className="mb-1.5 line-clamp-2 text-base font-bold leading-[1.4] tracking-[-0.2px] text-[#1a1a1a]">{book.title}</h2>
-        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-[#999]">{bookMeta(book) || '未填写作者'}</p>
+        <h2 className="mb-1.5 line-clamp-2 text-base font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
         <div className="mb-2.5 flex flex-wrap gap-2">
           {book.tag_names.slice(0, 3).map((tag) => (
             <TagAtom key={tag}>{tag}</TagAtom>
           ))}
         </div>
-        <p className="mb-3.5 text-[13px] leading-[1.5] tabular-nums text-[#999]">{bookMetaLine(book)}</p>
-        <div className="mt-auto flex items-center gap-3.5 border-t border-[#f5f5f5] pt-3">
+        <p className="mb-3.5 text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+        <div className="mt-auto flex items-center gap-3.5 border-t border-border pt-3">
           <RatingDisplay rating={book.rating} />
           <ProgressBar progress={progress} />
         </div>
@@ -367,7 +367,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group flex w-[200px] flex-col rounded-lg bg-white p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group flex w-[200px] flex-col rounded-lg bg-card p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
         className="relative mx-auto mb-2.5 block h-[190px] w-[130px] cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
@@ -390,15 +390,15 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         </div>
       </button>
       <div className="flex flex-col" onClick={onOpenDetail}>
-        <h2 className="mb-1 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-[#1a1a1a]">{book.title}</h2>
-        <p className="mb-1.5 truncate text-xs leading-[1.5] text-[#999]">{book.author || '未填写作者'}</p>
+        <h2 className="mb-1 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <p className="mb-1.5 truncate text-xs leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {book.tag_names.slice(0, 3).map((tag) => (
             <TagAtom key={tag} size="small">{tag}</TagAtom>
           ))}
         </div>
-        <p className="mb-1.5 text-xs leading-[1.5] tabular-nums text-[#999]">{bookMetaLine(book)}</p>
-        <div className="mt-auto flex items-center justify-between border-t border-[#f5f5f5] pt-2">
+        <p className="mb-1.5 text-xs leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
           <RatingDisplay rating={book.rating} size="xs" />
           <ProgressBar progress={progress} trackWidth="w-[56px]" trackHeight="h-[3px]" />
         </div>
@@ -415,7 +415,7 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group relative flex items-start gap-4 rounded-lg bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {!isTrash && <MenuMoreSmall onClick={onOpenDetail} />}
       <button
         type="button"
@@ -428,21 +428,21 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       </button>
       <div className="flex min-w-0 flex-1 flex-col pr-7">
         <div className="mb-2 flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#262626]">
+          <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
             <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
             {statusLabel(book.status)}
           </div>
           <RatingDisplay rating={book.rating} />
         </div>
-        <h2 className="mb-1.5 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-[#1a1a1a]">{book.title}</h2>
-        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-[#999]">{bookMeta(book) || '未填写作者'}</p>
+        <h2 className="mb-1.5 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
         <div className="mb-2.5 flex flex-wrap gap-2">
           {book.tag_names.slice(0, 3).map((tag) => (
             <TagAtom key={tag}>{tag}</TagAtom>
           ))}
         </div>
         <div className="mt-auto flex items-center justify-between">
-          <p className="text-[13px] leading-[1.5] tabular-nums text-[#999]">{bookMetaLine(book)}</p>
+          <p className="text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
           <ProgressBar progress={progress} trackWidth="w-[80px]" />
         </div>
       </div>
@@ -458,7 +458,7 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group relative flex items-center gap-4 rounded-lg bg-white px-5 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group relative flex items-center gap-4 rounded-lg bg-card px-5 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {!isTrash && <MenuMoreTiny onClick={onOpenDetail} />}
       <button
         type="button"
@@ -470,16 +470,16 @@ function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         <div className="pointer-events-none absolute inset-0 rounded shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div
-        className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center border-r border-[#f0f0f0] pr-5"
+        className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center border-r border-border pr-5"
         onClick={onOpenDetail}
       >
         <div className="mb-1 flex items-center gap-2">
           <span className={cn('h-[7px] w-[7px] shrink-0 rounded-full', statusDotClass(book.status))} />
-          <span className="text-xs font-medium text-[#999]">{statusLabel(book.status)}</span>
-          <h2 className="truncate text-sm font-bold leading-[1.4] tracking-[-0.2px] text-[#1a1a1a]">{book.title}</h2>
+          <span className="text-xs font-medium text-muted-foreground">{statusLabel(book.status)}</span>
+          <h2 className="truncate text-sm font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
         </div>
-        <p className="mb-0.5 truncate text-xs leading-[1.5] text-[#999]">{book.author || '未填写作者'}</p>
-        <p className="text-xs leading-[1.5] tabular-nums text-[#999]">{bookMetaLine(book)}</p>
+        <p className="mb-0.5 truncate text-xs leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
+        <p className="text-xs leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2 pr-6">
         <RatingDisplay rating={book.rating} size="xs" />
@@ -665,11 +665,11 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#e0ddd4] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="font-display text-xl font-medium text-foreground">添加书籍</h2>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -682,12 +682,12 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             {/* 快速录入 */}
             <div className="col-span-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               快速录入
-              <div className="flex-1 h-px bg-[#e0ddd4]" />
+              <div className="flex-1 h-px bg-border" />
             </div>
 
             <div className="col-span-2 space-y-1">
               <label className="text-xs font-medium text-foreground">
-                书名 <span className="text-[#d97757]">*</span>
+                书名 <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -695,7 +695,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 placeholder="输入书名"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -704,7 +704,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
               <select
                 value={categoryId ?? ''}
                 onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 <option value="">未分类</option>
                 {personalCategories.data?.map((c) => (
@@ -723,7 +723,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 onChange={(e) => setPageCount(e.target.value)}
                 placeholder="0"
                 min="0"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -737,15 +737,15 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
                   placeholder="https://douban.com/..."
-                  className="flex-1 h-9 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                  className="flex-1 h-9 rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
                 />
-                <button type="button" onClick={fetchMetadataFromLink} disabled={fetchingMetadata} className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] text-[12px] font-medium text-muted-foreground transition-all hover:border-[#d97757] hover:text-[#d97757] hover:bg-[rgba(217,119,87,0.08)] disabled:opacity-50">
+                <button type="button" onClick={fetchMetadataFromLink} disabled={fetchingMetadata} className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-muted text-[12px] font-medium text-muted-foreground transition-all hover:border-primary hover:text-primary hover:bg-primary/10 disabled:opacity-50">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                   {fetchingMetadata ? '获取中' : '一键获取'}
                 </button>
               </div>
               {(coverUrl || doubanRating) && (
-                <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-2 py-2">
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-muted px-2 py-2">
                   {coverUrl ? (
                     <img src={coverUrl} alt="封面预览" className="h-14 w-10 rounded object-cover" />
                   ) : (
@@ -769,16 +769,16 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="输入书籍简介..."
                 rows={3}
-                className="w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)] resize-vertical"
+                className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)] resize-vertical"
               />
             </div>
 
             {/* 文件上传 */}
             <div className="col-span-2">
-              <label className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#e0ddd4] py-6 cursor-pointer transition hover:border-[#d97757] hover:bg-[rgba(217,119,87,0.08)]">
-                <svg className="h-8 w-8 text-[#b0aea5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              <label className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border py-6 cursor-pointer transition hover:border-primary hover:bg-primary/10">
+                <svg className="h-8 w-8 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 <div className="text-[13px] text-muted-foreground">点击或拖拽上传书籍文件</div>
-                <div className="text-[11px] text-[#b0aea5]">支持 epub, pdf, mobi, txt, azw3, docx 等格式</div>
+                <div className="text-[11px] text-muted-foreground">支持 epub, pdf, mobi, txt, azw3, docx 等格式</div>
                 <input
                   type="file"
                   accept=".epub,.pdf,.mobi,.txt,.azw3,.azw,.djvu,.docx,.fb2"
@@ -794,7 +794,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             {/* 详细信息 */}
             <div className="col-span-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               详细信息（收录后可补充）
-              <div className="flex-1 h-px bg-[#e0ddd4]" />
+              <div className="flex-1 h-px bg-border" />
             </div>
 
             <div className="col-span-2 space-y-1">
@@ -806,7 +806,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 placeholder="输入副标题"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -819,7 +819,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="作者姓名"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -832,7 +832,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 value={isbn}
                 onChange={(e) => setIsbn(e.target.value)}
                 placeholder="978-..."
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -845,7 +845,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 value={publisher}
                 onChange={(e) => setPublisher(e.target.value)}
                 placeholder="出版社名称"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -860,7 +860,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 placeholder="2024"
                 min="0"
                 max="2100"
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -869,7 +869,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
               <select
                 value={genreCategoryId ?? ''}
                 onChange={(e) => setGenreCategoryId(e.target.value ? Number(e.target.value) : null)}
-                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 <option value="">未分类</option>
                 {genreCategories.data?.map((c) => (
@@ -883,7 +883,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -896,7 +896,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
               <select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value)}
-                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 <option value={VISIBILITY.PRIVATE}>私密</option>
                 <option value={VISIBILITY.PUBLIC}>公开</option>
@@ -912,7 +912,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 value={readingPurpose}
                 onChange={(e) => setReadingPurpose(e.target.value)}
                 placeholder="泛读 / 精读 / 参考 ..."
-                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
 
@@ -929,8 +929,8 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                       className={cn(
                         'flex items-center gap-1 rounded-full border px-3 py-1 text-[12px] transition-all',
                         on
-                          ? 'border-[#d97757] bg-[rgba(217,119,87,0.08)] text-[#d97757] font-medium'
-                          : 'border-[#e0ddd4] text-muted-foreground hover:border-[#b0aea5] hover:text-foreground',
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground',
                       )}
                     >
                       {on && (
@@ -950,11 +950,11 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] px-6 py-4">
+        <div className="flex justify-end gap-2.5 border-t border-border px-6 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/3"
+            className="h-9 rounded-lg border border-border bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
           >
             取消
           </button>
@@ -962,7 +962,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             type="button"
             onClick={handleSubmit as unknown as React.MouseEventHandler}
             disabled={submitting}
-            className="h-9 rounded-lg bg-[#d97757] px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+            className="h-9 rounded-lg bg-primary px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting ? '创建中...' : '创建'}
           </button>
@@ -977,17 +977,17 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
           }}
         >
           <div
-            className="w-full max-w-xl rounded-xl border border-[#e0ddd4] bg-card shadow-2xl"
+            className="w-full max-w-xl rounded-xl border border-border bg-card shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#e0ddd4] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <h3 className="font-display text-lg font-medium text-foreground">粘贴豆瓣书籍信息</h3>
                 <p className="mt-1 text-xs text-muted-foreground">会自动识别书名、作者、出版社、出版年、ISBN、页数等字段。</p>
               </div>
               <button
                 type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                 onClick={() => setMetadataPasteOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -999,14 +999,14 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 onChange={(event) => setMetadataPasteText(event.target.value)}
                 rows={12}
                 placeholder="粘贴豆瓣条目信息，例如：&#10;邓小平时代&#10;作者: [【美】傅高义](...)&#10;出版社: 生活·读书·新知三联书店&#10;出版年: 2013-1-18&#10;ISBN: 9787108041531&#10;页数: 754"
-                className="w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               />
             </div>
-            <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] px-5 py-4">
+            <div className="flex justify-end gap-2.5 border-t border-border px-5 py-4">
               <button
                 type="button"
                 onClick={() => setMetadataPasteOpen(false)}
-                className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-black/3"
+                className="h-9 rounded-lg border border-border bg-transparent px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
               >
                 取消
               </button>
@@ -1014,7 +1014,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 type="button"
                 onClick={applyPastedMetadata}
                 disabled={!metadataPasteText.trim()}
-                className="h-9 rounded-lg bg-[#d97757] px-4 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+                className="h-9 rounded-lg bg-primary px-4 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-primary/90 disabled:opacity-50"
               >
                 填入表单
               </button>
@@ -1048,27 +1048,27 @@ function StatusBanner({ message }: { message: StatusMessage }) {
 function ReadModeBadge({ mode }: { mode: string }) {
   if (mode === '精读') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-[#fff3e0] px-2.5 py-1 text-xs font-semibold text-[#e65100]">
+      <span className="inline-flex items-center gap-1 rounded-2xl bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
         🔍 精读
       </span>
     );
   }
   if (mode === '泛读') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-[#e3f2fd] px-2.5 py-1 text-xs font-semibold text-[#1565c0]">
+      <span className="inline-flex items-center gap-1 rounded-2xl bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
         📖 泛读
       </span>
     );
   }
   if (mode === '收录') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-[#f3e5f5] px-2.5 py-1 text-xs font-semibold text-[#7b1fa2]">
+      <span className="inline-flex items-center gap-1 rounded-2xl bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
         📚 收录
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-2xl bg-[#f5f5f5] px-2.5 py-1 text-xs font-semibold text-[#555]">
+    <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
       {mode}
     </span>
   );
@@ -1118,11 +1118,11 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
         className="w-full max-w-xl overflow-hidden rounded-xl bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[#e0ddd4] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="font-display text-xl font-medium text-foreground">批量导入书籍</h2>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -1130,7 +1130,7 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-5 px-6 py-5">
-          <div className="rounded-lg border border-[#e0ddd4] bg-[#faf9f5] p-4">
+          <div className="rounded-lg border border-border bg-muted p-4">
             <div className="text-sm font-medium text-foreground">CSV 模板</div>
             <div className="mt-1 text-sm leading-6 text-muted-foreground">
               模板包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建书籍元数据，不包含文件。
@@ -1152,7 +1152,7 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
               type="file"
               accept=".csv,text/csv"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              className="block w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
+              className="block w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
             />
           </label>
 
@@ -1161,7 +1161,7 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
               type="checkbox"
               checked={dryRun}
               onChange={(e) => setDryRun(e.target.checked)}
-              className="h-4 w-4 rounded border-[#d6d2c6] text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
             <span>仅校验不导入（预览模式）</span>
           </label>
@@ -1173,16 +1173,16 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
           )}
 
           {result && (
-            <div className="rounded-lg border border-[#e0ddd4] bg-white p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <div className="text-sm font-medium text-foreground">
                 {result.dry_run
                   ? `预览通过 ${result.valid} 行，跳过 ${result.skipped} 行，失败 ${result.failed} 行`
                   : `已创建 ${result.created} 本，跳过 ${result.skipped} 行，失败 ${result.failed} 行`}
               </div>
               {problemRows.length > 0 && (
-                <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-[#eee]">
+                <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border">
                   {problemRows.slice(0, 20).map((row) => (
-                    <div key={row.row} className="border-b border-[#f2f2f2] px-3 py-2 text-xs last:border-b-0">
+                    <div key={row.row} className="border-b border-border px-3 py-2 text-xs last:border-b-0">
                       <span className="font-medium text-foreground">第 {row.row} 行</span>
                       <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
                       <div className="mt-1 text-red-700">{row.error}</div>
@@ -1193,7 +1193,7 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] pt-5">
+          <div className="flex justify-end gap-2.5 border-t border-border pt-5">
             <Button type="button" variant="outline" onClick={onClose}>关闭</Button>
             <Button type="button" onClick={importCsv} disabled={submitting}>
               {submitting ? (dryRun ? '校验中...' : '导入中...') : (dryRun ? '开始校验' : '开始导入')}
@@ -1292,11 +1292,11 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
     <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
     <div className="fixed inset-y-0 right-0 z-40 flex w-[min(760px,calc(100vw-256px))] min-w-[560px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
       {/* Topbar */}
-      <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-[#e0ddd4] px-5">
+      <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
         <button
           type="button"
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
         </button>
@@ -1304,7 +1304,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e0ddd4] bg-white px-3 text-[13px] font-medium text-[#333] shadow-sm transition-all hover:-translate-y-px"
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             收藏
@@ -1312,7 +1312,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
           <button
             type="button"
             onClick={openEdit}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e0ddd4] bg-white px-3 text-[13px] font-medium text-[#333] shadow-sm transition-all hover:-translate-y-px"
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             编辑
@@ -1325,7 +1325,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
               if (!bookId || !primaryEpub) return;
               navigate(`/books/${bookId}/read`);
             }}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#d97757] px-3 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <BookOpen className="h-3.5 w-3.5" />
             阅读
@@ -1390,7 +1390,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                     </span>
                   )}
                   {b.reading_purpose && <ReadModeBadge mode={b.reading_purpose} />}
-                  <span className="rounded-full bg-[#f0f0f0] px-3 py-1 text-[12px] font-medium text-[#555]">{b.visibility === 'public' ? '公开' : '私密'}</span>
+                  <span className="rounded-full bg-muted px-3 py-1 text-[12px] font-medium text-muted-foreground">{b.visibility === 'public' ? '公开' : '私密'}</span>
                 </div>
 
                 {/* Tags */}
@@ -1406,14 +1406,14 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
             </div>
 
             {/* Progress Bar */}
-            <div className="mb-8 rounded-xl border border-[#e0ddd4] bg-[#faf9f5] p-4">
+            <div className="mb-8 rounded-xl border border-border bg-muted p-4">
               <div className="mb-2 flex items-center justify-between text-[13px]">
                 <span className="font-medium text-foreground">阅读进度</span>
-                <span className="font-semibold text-[#333]">{progress}%</span>
+                <span className="font-semibold text-foreground">{progress}%</span>
               </div>
-              <div className="h-[6px] overflow-hidden rounded-[3px] bg-[#e0e0e0]">
+              <div className="h-[6px] overflow-hidden rounded-[3px] bg-muted">
                 <div
-                  className="h-full rounded-[3px] bg-[#d97757] transition-all duration-500"
+                  className="h-full rounded-[3px] bg-primary transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -1422,9 +1422,9 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
             {/* Cards Grid */}
             <div className="mb-8 grid grid-cols-2 gap-4">
               {/* 书籍档案 */}
-              <div className="rounded-xl border border-[#e0ddd4] p-4">
+              <div className="rounded-xl border border-border p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   书籍档案
                 </h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px]">
@@ -1443,18 +1443,18 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                   ))}
                 </div>
                 {customAttrs.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[#e0ddd4] pt-3">
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
                     {customAttrs.map((attr) => (
-                      <span key={attr} className="inline-flex items-center gap-1 rounded-md border border-[#e0ddd4] bg-white px-2.5 py-0.5 text-xs text-[#555]">{attr}</span>
+                      <span key={attr} className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{attr}</span>
                     ))}
                   </div>
                 )}
               </div>
 
               {/* 阅读留痕 */}
-              <div className="rounded-xl border border-dashed border-[#e0ddd4] p-4">
+              <div className="rounded-xl border border-dashed border-border p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   阅读留痕
                 </h3>
                 <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -1465,9 +1465,9 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
               </div>
 
               {/* 主题关联 */}
-              <div className="rounded-xl border border-dashed border-[#e0ddd4] p-4">
+              <div className="rounded-xl border border-dashed border-border p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   主题关联
                 </h3>
                 <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -1478,21 +1478,21 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
               </div>
 
               {/* 文件管理 */}
-              <div className="rounded-xl border border-[#e0ddd4] p-4">
+              <div className="rounded-xl border border-border p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   文件管理
                 </h3>
                 {files.data && files.data.length > 0 ? (
                   <div className="space-y-2">
                     {files.data.map((f: { id: number; original_filename: string | null; file_format: string; file_size: number | null; is_primary: number; updated_at: string }) => (
-                      <div key={f.id} className="flex items-center gap-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2.5">
+                      <div key={f.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted px-3 py-2.5">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</p>
                           <p className="text-[11px] text-muted-foreground">{f.file_format} · {formatFullDate(f.updated_at)}</p>
                         </div>
                         {f.is_primary === 1 && (
-                          <span className="shrink-0 rounded-full bg-[#d97757]/10 px-2 py-0.5 text-[10px] font-medium text-[#d97757]">主阅读</span>
+                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">主阅读</span>
                         )}
                       </div>
                     ))}
@@ -1520,7 +1520,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
               </button>
@@ -1529,17 +1529,17 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
             <StatusBanner message={message} />
             <div className="mt-4 space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">书名 <span className="text-[#d97757]">*</span></label>
-                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
+                <label className="text-xs font-medium text-foreground">书名 <span className="text-primary">*</span></label>
+                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">作者</label>
-                <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} placeholder="作者姓名" className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
+                <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} placeholder="作者姓名" className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">状态</label>
-                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
                     {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
                     ))}
@@ -1547,14 +1547,14 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">可见性</label>
-                  <select value={editVisibility} onChange={(e) => setEditVisibility(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                  <select value={editVisibility} onChange={(e) => setEditVisibility(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
                     <option value={VISIBILITY.PRIVATE}>私密</option>
                     <option value={VISIBILITY.PUBLIC}>公开</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">分类</label>
-                  <select value={editCategoryId ?? ''} onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                  <select value={editCategoryId ?? ''} onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)} className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
                     <option value="">未分类</option>
                     {categories.data?.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
@@ -1569,7 +1569,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                         key={r}
                         type="button"
                         onClick={() => setEditRating(editRating === r ? null : r)}
-                        className={cn(r <= (editRating ?? 0) ? 'text-[#f5c842]' : 'text-[#d0cec9]')}
+                        className={cn(r <= (editRating ?? 0) ? 'text-[#f5c842]' : 'text-muted-foreground/40')}
                       >
                         <Star className="h-5 w-5 fill-current" />
                       </button>
@@ -1579,7 +1579,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">阅读目的</label>
-                <input type="text" value={editReadingPurpose} onChange={(e) => setEditReadingPurpose(e.target.value)} placeholder="泛读 / 精读 / 参考 ..." className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
+                <input type="text" value={editReadingPurpose} onChange={(e) => setEditReadingPurpose(e.target.value)} placeholder="泛读 / 精读 / 参考 ..." className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">标签</label>
@@ -1592,8 +1592,8 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                       className={cn(
                         'flex items-center gap-1 rounded-full border px-3 py-1 text-[12px] transition-all',
                         editTagIds.includes(t.id)
-                          ? 'border-[#d97757] bg-[rgba(217,119,87,0.08)] text-[#d97757] font-medium'
-                          : 'border-[#e0ddd4] text-muted-foreground hover:border-[#b0aea5] hover:text-foreground',
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground',
                       )}
                     >
                       {editTagIds.includes(t.id) && (
@@ -1611,16 +1611,16 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                   value={editCustomAttributes}
                   onChange={(e) => setEditCustomAttributes(e.target.value)}
                   placeholder={'JSON 格式，如 {"来源":"朋友推荐"}'}
-                  className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                  className="h-9 w-full rounded-lg border border-border bg-muted px-3 text-[13px] outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
                 />
                 <p className="text-xs text-muted-foreground">需为合法 JSON</p>
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-2.5 border-t border-[#e0ddd4] pt-5">
+            <div className="mt-6 flex justify-end gap-2.5 border-t border-border pt-5">
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/3"
+                className="h-9 rounded-lg border border-border bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
               >
                 取消
               </button>
@@ -1628,7 +1628,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                 type="button"
                 onClick={saveMeta}
                 disabled={updateBook.isPending}
-                className="h-9 rounded-lg bg-[#d97757] px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+                className="h-9 rounded-lg bg-primary px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-primary/90 disabled:opacity-50"
               >
                 {updateBook.isPending ? '保存中...' : '保存'}
               </button>
