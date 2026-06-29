@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppSidebar } from '@/components/app-sidebar';
+import { useShellUser } from '@/components/shell-user-context';
 import { cn } from '@/lib/utils';
 
 const COVER_URL_BASE = '/api/v1';
@@ -90,6 +92,7 @@ export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const bookId = Number(id);
   const navigate = useNavigate();
+  const user = useShellUser();
 
   const book = useBook(bookId);
   const updateBook = useUpdateBook();
@@ -283,7 +286,10 @@ export function BookDetailPage() {
   const hasCover = Boolean(b.cover_path);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
+      <AppSidebar activeKey="bookshelf" user={user} />
+
+      <main className="min-w-0 flex-1 overflow-y-auto">
       <header className="flex items-center gap-4 border-b border-border px-6 py-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
           <ArrowLeft className="h-5 w-5" />
@@ -707,6 +713,7 @@ export function BookDetailPage() {
           </Card>
         </div>
       )}
+      </main>
     </div>
   );
 }

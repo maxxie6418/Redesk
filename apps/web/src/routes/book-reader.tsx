@@ -34,20 +34,25 @@ export function BookReaderPage() {
   const [error, setError] = useState<string | null>(null);
 
   const primaryEpub = files.data?.find((f) => f.is_primary === 1 && f.file_format === 'EPUB');
+  const primaryEpubId = primaryEpub?.id;
   const bookTitle = book.data?.title ?? '';
 
   useEffect(() => {
-    if (!primaryEpub || !viewerRef.current) return;
+    if (!primaryEpubId || !viewerRef.current) return;
 
-    const url = `${API_BASE}/books/${bookId}/files/${primaryEpub.id}/download`;
+    const url = `${API_BASE}/books/${bookId}/files/${primaryEpubId}/download`;
+    let cancelled = false;
 
     try {
-      const book = ePub(url, {
-        openAs: 'epub',
-      });
-      bookRef.current = book;
+      setLoading(true);
+      setError(null);
+      setToc([]);
+      setCurrentTitle(bookTitle);
 
-      const rendition = book.renderTo(viewerRef.current, {
+      const epubBook = ePub(url, { openAs: 'epub' });
+      bookRef.current = epubBook;
+
+      const rendition = epubBook.renderTo(viewerRef.current, {
         width: '100%',
         height: '100%',
         flow: 'paginated',
@@ -55,37 +60,53 @@ export function BookReaderPage() {
       });
       renditionRef.current = rendition;
 
-      book.ready.then(() => {
-        const tocData = book.navigation.toc.map((item: any, index: number) => ({
-          id: String(index),
-          label: item.label,
-          href: item.href,
-        }));
-        setToc(tocData);
-        setLoading(false);
-      });
+      epubBook.ready
+        .then(() => {
+          if (cancelled) return;
+          const tocData = epubBook.navigation.toc.map((item: any, index: number) => ({
+            id: String(index),
+            label: item.label,
+            href: item.href,
+          }));
+          setToc(tocData);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setError(err instanceof Error ? err.message : '加载失败');
+          setLoading(false);
+        });
 
-      book.loaded.metadata.then((meta: any) => {
-        if (meta?.title) {
-          setCurrentTitle(meta.title);
-        }
-      });
+      epubBook.loaded.metadata
+        .then((meta: any) => {
+          if (cancelled) return;
+          if (meta?.title) {
+            setCurrentTitle(meta.title);
+          }
+        })
+        .catch(() => undefined);
 
       rendition.on('relocated', (location: any) => {
+        if (cancelled) return;
         if (location?.start?.displayed?.page) {
           const page = location.start.displayed.page;
           const total = location.start.displayed.total;
-          setCurrentTitle(`${bookTitle}  —  ${page} / ${total}`);
+          setCurrentTitle(`${bookTitle} · ${page} / ${total}`);
         }
       });
 
-      rendition.display();
+      Promise.resolve(rendition.display()).catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : '加载失败');
+        setLoading(false);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载失败');
       setLoading(false);
     }
 
     return () => {
+      cancelled = true;
       if (renditionRef.current) {
         try {
           renditionRef.current.destroy();
@@ -103,7 +124,7 @@ export function BookReaderPage() {
         bookRef.current = null;
       }
     };
-  }, [bookId, primaryEpub?.id]);
+  }, [bookId, bookTitle, primaryEpubId]);
 
   const goPrev = () => {
     renditionRef.current?.prev();

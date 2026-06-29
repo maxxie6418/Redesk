@@ -1,28 +1,22 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Archive,
   BookOpen,
   BookPlus,
   Clock,
   Download,
   FileUp,
-  FolderOpen,
   Grid3X3,
   Import,
   Loader2,
-  NotebookPen,
-  Search,
-  Settings,
   Sparkles,
-  Trash2,
 } from 'lucide-react';
 import { BOOK_STATUS } from '@redesk/shared';
 import { useOverview } from '@/hooks/use-overview';
 import { useCategories } from '@/hooks/use-categories';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useShellUser } from '@/components/shell-user-context';
+import { AppSidebar } from '@/components/app-sidebar';
 import { cn } from '@/lib/utils';
 
 const COVER_TONES = [
@@ -144,191 +138,36 @@ export function OverviewPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-[256px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-5 py-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-medium text-primary-foreground">
-              R
-            </div>
-            <div className="font-display text-xl text-sidebar-foreground">Redesk</div>
-            <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground/50">
-              v{__APP_VERSION__}
-            </span>
-          </div>
+      <AppSidebar
+        activeKey="overview"
+        user={user}
+        stats={[
+          { label: '总数', value: total, valueClass: 'text-foreground' },
+          { label: '在读', value: readingCount, valueClass: 'text-success' },
+          { label: '已读', value: readCount, valueClass: 'text-primary' },
+          { label: '话题', value: 0, valueClass: 'text-muted-foreground' },
+        ]}
+      />
 
-          <div className="relative mt-5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-9 rounded-full border-sidebar-border bg-background pl-9 text-sm"
-              placeholder="搜索书名、作者、标签"
-              value=""
-              readOnly
-            />
-          </div>
-
-          <nav className="mt-5 space-y-0.5">
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-primary text-sidebar-primary-foreground"
-            >
-              <Archive className="h-4 w-4" />
-              档案
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => navigate('/')}
-            >
-              <BookOpen className="h-4 w-4" />
-              书架
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => navigate('/files')}
-            >
-              <FolderOpen className="h-4 w-4" />
-              书库文件
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
-              disabled
-            >
-              <NotebookPen className="h-4 w-4" />
-              读书笔记
-              <span className="ml-auto text-[10px] text-muted-foreground/30">M2</span>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
-              disabled
-            >
-              <Grid3X3 className="h-4 w-4" />
-              阅读话题
-              <span className="ml-auto text-[10px] text-muted-foreground/30">M4</span>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => navigate('/?trash=1')}
-            >
-              <Trash2 className="h-4 w-4" />
-              回收站
-            </button>
-          </nav>
-        </div>
-
-        <div className="mt-auto w-full">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <StatCell label="总数" value={total} valueClass="text-foreground" />
-            <StatCell label="在读" value={readingCount} valueClass="text-success" />
-            <StatCell label="已读" value={readCount} valueClass="text-primary" />
-            <StatCell label="话题" value={0} valueClass="text-muted-foreground" />
-          </div>
-        </div>
-
-        <div className="mt-auto space-y-1 border-t border-sidebar-border pt-4">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/50 cursor-not-allowed"
-            disabled
-          >
-            <Sparkles className="h-4 w-4" />
-            AI 助手
-            <span className="ml-auto text-[10px] text-muted-foreground/30">M3</span>
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            onClick={() => navigate('/settings')}
-          >
-            <Settings className="h-4 w-4" />
-            设置
-          </button>
-          <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 mt-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-              {(user?.display_name ?? user?.username ?? '?').slice(0, 1).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-foreground">
-                {user?.display_name ?? user?.username ?? 'Maxxie'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 px-8 py-7 overflow-y-auto">
+      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-7">
         <div className="mb-6">
           <h1 className="font-display text-[26px] font-semibold text-foreground">档案</h1>
-          <p className="mt-1 text-[13.5px] text-muted-foreground">
-            你的阅读资产全景 · {total} 本书 · {readingCount} 本在读 · {readCount} 本已读
-          </p>
+          <p className="mt-1 text-[13.5px] text-muted-foreground">你的阅读资产全景</p>
         </div>
 
         <div className="mb-5 grid grid-cols-5 gap-3">
-          <KpiCard
-            label="书籍总数"
-            value={total}
-            colorClass="total"
-            change="↑ 本月 +5"
-            changeType="up"
-          />
-          <KpiCard
-            label="正在阅读"
-            value={readingCount}
-            colorClass="reading"
-            change="↑ 较上周 +2"
-            changeType="up"
-          />
-          <KpiCard
-            label="计划阅读"
-            value={plannedCount}
-            colorClass="planned"
-            change="— 持平"
-            changeType="neutral"
-          />
-          <KpiCard
-            label="已存档"
-            value={storedCount}
-            colorClass="stored"
-            change="—"
-            changeType="neutral"
-          />
-          <KpiCard
-            label="收藏"
-            value={0}
-            colorClass="fav"
-            change=""
-            changeType="neutral"
-          />
+          <KpiCard label="书籍总数" value={total} colorClass="total" change="本月 +5" changeType="up" />
+          <KpiCard label="正在阅读" value={readingCount} colorClass="reading" change="较上周 +2" changeType="up" />
+          <KpiCard label="计划阅读" value={plannedCount} colorClass="planned" change="持平" changeType="neutral" />
+          <KpiCard label="已存档" value={storedCount} colorClass="stored" change="—" changeType="neutral" />
+          <KpiCard label="收藏" value={0} colorClass="fav" change="" changeType="neutral" />
         </div>
 
         <div className="mb-5 grid grid-cols-4 gap-3">
-          <QuickAction
-            icon={<BookPlus className="h-[18px] w-[18px]" />}
-            title="添加书籍"
-            subtitle="手动录入或从链接获取"
-            onClick={() => navigate('/')}
-          />
-          <QuickAction
-            icon={<Import className="h-[18px] w-[18px]" />}
-            title="导入笔记"
-            subtitle="从 Markdown / Notion 导入"
-          />
-          <QuickAction
-            icon={<FileUp className="h-[18px] w-[18px]" />}
-            title="上传文件"
-            subtitle="EPUB / PDF / MOBI 等"
-            onClick={() => navigate('/files')}
-          />
-          <QuickAction
-            icon={<Download className="h-[18px] w-[18px]" />}
-            title="导出数据"
-            subtitle="元数据 / 笔记 / 备份"
-            onClick={() => navigate('/settings')}
-          />
+          <QuickAction icon={<BookPlus className="h-[18px] w-[18px]" />} title="添加书籍" subtitle="手动录入或从链接获取" onClick={() => navigate('/')} />
+          <QuickAction icon={<Import className="h-[18px] w-[18px]" />} title="导入笔记" subtitle="从 Markdown / Notion 导入" />
+          <QuickAction icon={<FileUp className="h-[18px] w-[18px]" />} title="上传文件" subtitle="EPUB / PDF / MOBI 等" onClick={() => navigate('/files')} />
+          <QuickAction icon={<Download className="h-[18px] w-[18px]" />} title="导出数据" subtitle="元数据 / 笔记 / 备份" onClick={() => navigate('/settings')} />
         </div>
 
         <div className="grid grid-cols-[1fr_340px] gap-5">
@@ -346,14 +185,12 @@ export function OverviewPage() {
                 </CardHeader>
                 <CardContent className="px-[18px] py-3.5">
                   <div className="relative pl-5">
-                    <div className="absolute left-[4px] top-1 bottom-1 w-[2px] rounded-sm bg-border" />
+                    <div className="absolute bottom-1 left-[4px] top-1 w-[2px] rounded-sm bg-border" />
                     {timeline.map((item, i) => (
-                      <ActivityItem
-                        key={i}
-                        dotClass={item.type === 'add' ? 'bg-success' : 'bg-primary'}
-                        time={formatActivityDate(item.time)}
-                      >
-                        <span className="font-medium text-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => navigate('/')}>{item.title}</span>
+                      <ActivityItem key={i} dotClass="bg-success" time={formatActivityDate(item.time)}>
+                        <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => navigate('/')}>
+                          {item.title}
+                        </span>
                         <span className="text-muted-foreground"> 被添加到书架</span>
                       </ActivityItem>
                     ))}
@@ -376,17 +213,8 @@ export function OverviewPage() {
                 <CardContent className="px-[18px] py-3.5">
                   <div className="flex flex-col gap-2">
                     {recentReading.map((b, i) => (
-                      <Link
-                        key={b.id}
-                        to={`/books/${b.id}`}
-                        className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30"
-                      >
-                        <div
-                          className={cn(
-                            'flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold',
-                            COVER_TONES[i % COVER_TONES.length],
-                          )}
-                        >
+                      <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
+                        <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[i % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -419,14 +247,9 @@ export function OverviewPage() {
                         <div key={cat.id} className="flex items-center gap-2.5">
                           <span className="min-w-[52px] text-[12.5px] text-foreground">{cat.name}</span>
                           <div className="h-2 flex-1 overflow-hidden rounded-sm bg-muted">
-                            <div
-                              className="h-full rounded-sm bg-primary transition-all duration-300"
-                              style={{ width: `${pct}%` }}
-                            />
+                            <div className="h-full rounded-sm bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="min-w-[24px] text-right text-xs tabular-nums text-muted-foreground">
-                            {cat.book_count}
-                          </span>
+                          <span className="min-w-[24px] text-right text-xs tabular-nums text-muted-foreground">{cat.book_count}</span>
                         </div>
                       );
                     })}
@@ -444,27 +267,19 @@ export function OverviewPage() {
               </CardHeader>
               <CardContent className="px-[18px] py-3.5">
                 {recentAdded.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">暂无数据</p>
+                  <p className="py-4 text-center text-sm text-muted-foreground">暂无数据</p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {recentAdded.slice(0, 4).map((b, i) => (
-                      <Link
-                        key={b.id}
-                        to={`/books/${b.id}`}
-                        className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30"
-                      >
-                        <div
-                          className={cn(
-                            'flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold',
-                            COVER_TONES[(i + 3) % COVER_TONES.length],
-                          )}
-                        >
+                      <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
+                        <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[(i + 3) % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[13px] font-medium text-foreground">{b.title}</div>
                           <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                            {formatShortDate(b.created_at)}{b.author ? ` · ${b.author}` : ''}
+                            {formatShortDate(b.created_at)}
+                            {b.author ? ` · ${b.author}` : ''}
                           </div>
                         </div>
                       </Link>
@@ -484,7 +299,7 @@ export function OverviewPage() {
             <div>
               <h4 className="text-[13.5px] font-medium text-foreground">AI 智能助手</h4>
               <p className="mt-0.5 text-xs text-muted-foreground">推荐书单、自动归类、阅读摘要</p>
-              <span className="mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary">M3 阶段</span>
+              <span className="mt-1.5 inline-block rounded bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">M3 阶段</span>
             </div>
           </div>
           <div className="flex items-center gap-3.5 rounded-xl border border-dashed border-border bg-muted/30 px-[18px] py-4">
@@ -494,7 +309,7 @@ export function OverviewPage() {
             <div>
               <h4 className="text-[13.5px] font-medium text-foreground">阅读话题</h4>
               <p className="mt-0.5 text-xs text-muted-foreground">跨书籍组织深度阅读与知识网络</p>
-              <span className="mt-1.5 inline-block rounded px-2 py-0.5 text-[10px] font-semibold bg-success/10 text-success">M4 阶段</span>
+              <span className="mt-1.5 inline-block rounded bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">M4 阶段</span>
             </div>
           </div>
         </div>
@@ -536,9 +351,7 @@ function KpiCard({
     <div className="relative overflow-hidden rounded-xl border border-border bg-card px-4 py-4">
       <div className={cn('absolute left-0 right-0 top-0 h-[3px]', stripColors[colorClass])} />
       <div className="mb-2 text-xs font-medium text-muted-foreground">{label}</div>
-      <div className={cn('text-[28px] font-bold tabular-nums leading-none', valueColors[colorClass])}>
-        {value}
-      </div>
+      <div className={cn('text-[28px] font-bold leading-none tabular-nums', valueColors[colorClass])}>{value}</div>
       {change && (
         <div
           className={cn(
@@ -551,15 +364,6 @@ function KpiCard({
           {change}
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCell({ label, value, valueClass }: { label: string; value: number; valueClass?: string }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn('mt-0.5 text-lg font-semibold tabular-nums leading-none', valueClass)}>{value}</div>
     </div>
   );
 }
