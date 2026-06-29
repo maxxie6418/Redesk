@@ -1,6 +1,11 @@
 import { z } from 'zod';
-import { BOOK_STATUS, VISIBILITY, METADATA_SOURCE } from './enums';
+import { BOOK_STATUS, VISIBILITY, METADATA_SOURCE, CATEGORY_TYPE } from './enums';
 import { MAX_PAGE_SIZE } from './types';
+
+export const categoryTypeSchema = z.enum([
+  CATEGORY_TYPE.GENRE,
+  CATEGORY_TYPE.PERSONAL,
+]);
 
 export const bookStatusSchema = z.enum([
   BOOK_STATUS.COLLECTED,
@@ -49,13 +54,15 @@ export type PaginationInput = z.infer<typeof paginationSchema>;
 
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
-  author: z.string().min(1).max(500),
+  author: z.string().max(500).optional().nullable(),
+  subtitle: z.string().max(500).optional().nullable(),
   isbn: z.string().max(20).optional().nullable(),
   publisher: z.string().max(200).optional().nullable(),
   publish_year: z.number().int().min(0).max(2100).optional().nullable(),
   description: z.string().max(10000).optional().nullable(),
   language: z.string().max(20).optional().nullable(),
   category_id: z.number().int().optional().nullable(),
+  genre_category_id: z.number().int().optional().nullable(),
   status: bookStatusSchema.optional(),
   visibility: visibilitySchema.optional(),
   reading_purpose: z.string().max(500).optional().nullable(),
@@ -63,18 +70,24 @@ export const createBookSchema = z.object({
   tag_ids: z.array(z.number().int()).optional(),
   custom_attributes: z.record(z.unknown()).optional().nullable(),
   metadata_source: metadataSourceSchema.optional(),
+  source_url: z.string().max(2000).optional().nullable(),
+  translator: z.string().max(500).optional().nullable(),
+  original_title: z.string().max(500).optional().nullable(),
+  page_count: z.number().int().min(0).optional().nullable(),
 });
 export type CreateBookInput = z.infer<typeof createBookSchema>;
 
 export const updateBookSchema = z.object({
   title: z.string().min(1).max(500).optional(),
-  author: z.string().min(1).max(500).optional(),
+  author: z.string().max(500).optional().nullable(),
+  subtitle: z.string().max(500).optional().nullable(),
   isbn: z.string().max(20).optional().nullable(),
   publisher: z.string().max(200).optional().nullable(),
   publish_year: z.number().int().min(0).max(2100).optional().nullable(),
   description: z.string().max(10000).optional().nullable(),
   language: z.string().max(20).optional().nullable(),
   category_id: z.number().int().optional().nullable(),
+  genre_category_id: z.number().int().optional().nullable(),
   status: bookStatusSchema.optional(),
   visibility: visibilitySchema.optional(),
   reading_purpose: z.string().max(500).optional().nullable(),
@@ -82,6 +95,12 @@ export const updateBookSchema = z.object({
   tag_ids: z.array(z.number().int()).optional(),
   custom_attributes: z.record(z.unknown()).optional().nullable(),
   metadata_source: metadataSourceSchema.optional(),
+  source_url: z.string().max(2000).optional().nullable(),
+  translator: z.string().max(500).optional().nullable(),
+  original_title: z.string().max(500).optional().nullable(),
+  page_count: z.number().int().min(0).optional().nullable(),
+  started_at: z.string().optional().nullable(),
+  finished_at: z.string().optional().nullable(),
 });
 export type UpdateBookInput = z.infer<typeof updateBookSchema>;
 
@@ -89,15 +108,18 @@ export const bookQuerySchema = paginationSchema.extend({
   q: z.string().max(200).optional(),
   status: z.string().max(200).optional(),
   category_id: z.coerce.number().int().optional(),
+  genre_category_id: z.coerce.number().int().optional(),
   tag_id: z.string().max(200).optional(),
   visibility: visibilitySchema.optional(),
   in_trash: z.coerce.boolean().optional(),
+  favorited: z.coerce.boolean().optional(),
+  has_files: z.coerce.boolean().optional(),
 });
 export type BookQueryInput = z.output<typeof bookQuerySchema>;
 
 export const batchBooksSchema = z.object({
   ids: z.array(z.number().int()).min(1).max(200),
-  action: z.enum(['set_status', 'set_category', 'set_tags', 'set_visibility', 'delete']),
+  action: z.enum(['set_status', 'set_category', 'set_genre_category', 'set_tags', 'set_visibility', 'set_favorited', 'delete']),
   params: z.record(z.unknown()).optional(),
 });
 export type BatchBooksInput = z.infer<typeof batchBooksSchema>;
@@ -129,6 +151,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
+  type: categoryTypeSchema.optional().default('PERSONAL'),
   parent_id: z.number().int().optional().nullable(),
   sort_order: z.number().int().optional(),
 });
@@ -136,10 +159,16 @@ export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 
 export const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  type: categoryTypeSchema.optional(),
   parent_id: z.number().int().optional().nullable(),
   sort_order: z.number().int().optional(),
 });
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
+
+export const categoryQuerySchema = paginationSchema.extend({
+  type: categoryTypeSchema.optional(),
+});
+export type CategoryQueryInput = z.output<typeof categoryQuerySchema>;
 
 export const createTagSchema = z.object({
   name: z.string().min(1).max(100),

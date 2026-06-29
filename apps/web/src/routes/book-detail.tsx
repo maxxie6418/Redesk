@@ -13,9 +13,10 @@ import {
   Check,
   BookOpen,
   MessageSquare,
+  Heart,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
-import { useBook, useUpdateBook } from '@/hooks/use-books';
+import { useBook, useUpdateBook, useFavoriteBook, useUnfavoriteBook } from '@/hooks/use-books';
 import { useBookFiles, useUploadFile, useDeleteFile, useUpdateFile } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
@@ -92,11 +93,14 @@ export function BookDetailPage() {
 
   const book = useBook(bookId);
   const updateBook = useUpdateBook();
+  const favoriteBook = useFavoriteBook();
+  const unfavoriteBook = useUnfavoriteBook();
   const files = useBookFiles(bookId);
   const uploadFile = useUploadFile();
   const deleteFile = useDeleteFile();
   const updateFile = useUpdateFile();
-  const categories = useCategories();
+  const personalCategories = useCategories('PERSONAL');
+  const genreCategories = useCategories('GENRE');
   const tags = useTags();
 
   const [message, setMessage] = useState<StatusMessage>(null);
@@ -110,12 +114,20 @@ export function BookDetailPage() {
   const [editReadingPurpose, setEditReadingPurpose] = useState('');
   const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [editCustomAttributes, setEditCustomAttributes] = useState('');
+  const [editSubtitle, setEditSubtitle] = useState('');
+  const [editSourceUrl, setEditSourceUrl] = useState('');
+  const [editTranslator, setEditTranslator] = useState('');
+  const [editOriginalTitle, setEditOriginalTitle] = useState('');
+  const [editPageCount, setEditPageCount] = useState('');
+  const [editGenreCategoryId, setEditGenreCategoryId] = useState<number | null>(null);
+  const [editStartedAt, setEditStartedAt] = useState('');
+  const [editFinishedAt, setEditFinishedAt] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openEdit = useCallback(() => {
     if (!book.data) return;
     setEditTitle(book.data.title);
-    setEditAuthor(book.data.author);
+    setEditAuthor(book.data.author ?? '');
     setEditStatus(book.data.status);
     setEditVisibility(book.data.visibility);
     setEditCategoryId(book.data.category_id);
@@ -123,6 +135,14 @@ export function BookDetailPage() {
     setEditReadingPurpose(book.data.reading_purpose ?? '');
     setEditTagIds(book.data.tag_ids);
     setEditCustomAttributes(book.data.custom_attributes ?? '');
+    setEditSubtitle(book.data.subtitle ?? '');
+    setEditSourceUrl(book.data.source_url ?? '');
+    setEditTranslator(book.data.translator ?? '');
+    setEditOriginalTitle(book.data.original_title ?? '');
+    setEditPageCount(book.data.page_count != null ? String(book.data.page_count) : '');
+    setEditGenreCategoryId(book.data.genre_category_id);
+    setEditStartedAt(book.data.started_at ? book.data.started_at.slice(0, 10) : '');
+    setEditFinishedAt(book.data.finished_at ? book.data.finished_at.slice(0, 10) : '');
     setEditingMeta(true);
   }, [book.data]);
 
@@ -131,21 +151,29 @@ export function BookDetailPage() {
       await updateBook.mutateAsync({
         id: bookId,
         title: editTitle,
-        author: editAuthor,
+        author: editAuthor || null,
+        subtitle: editSubtitle || null,
         status: editStatus,
         visibility: editVisibility,
         category_id: editCategoryId,
+        genre_category_id: editGenreCategoryId,
         rating: editRating,
         reading_purpose: editReadingPurpose || null,
         tag_ids: editTagIds,
         custom_attributes: editCustomAttributes || null,
+        source_url: editSourceUrl || null,
+        translator: editTranslator || null,
+        original_title: editOriginalTitle || null,
+        page_count: editPageCount ? Number(editPageCount) : null,
+        started_at: editStartedAt ? new Date(editStartedAt).toISOString() : null,
+        finished_at: editFinishedAt ? new Date(editFinishedAt).toISOString() : null,
       });
       setMessage({ type: 'success', text: '已更新' });
       setEditingMeta(false);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
     }
-  }, [bookId, editTitle, editAuthor, editStatus, editVisibility, editCategoryId, editRating, editReadingPurpose, editTagIds, editCustomAttributes, updateBook]);
+  }, [bookId, editTitle, editAuthor, editSubtitle, editStatus, editVisibility, editCategoryId, editGenreCategoryId, editRating, editReadingPurpose, editTagIds, editCustomAttributes, editSourceUrl, editTranslator, editOriginalTitle, editPageCount, editStartedAt, editFinishedAt, updateBook]);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +218,21 @@ export function BookDetailPage() {
     setEditTagIds((prev) => (prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]));
   }, []);
 
+  const handleFavorite = useCallback(async () => {
+    if (!book.data) return;
+    try {
+      if (book.data.favorited_at) {
+        await unfavoriteBook.mutateAsync(bookId);
+        setMessage({ type: 'success', text: '已取消收藏' });
+      } else {
+        await favoriteBook.mutateAsync(bookId);
+        setMessage({ type: 'success', text: '已添加收藏' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: '操作失败' });
+    }
+  }, [book.data, bookId, favoriteBook, unfavoriteBook]);
+
   if (book.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -221,6 +264,14 @@ export function BookDetailPage() {
         </Button>
         <h1 className="text-xl font-semibold text-foreground">{b.title}</h1>
         <div className="flex-1" />
+        <Button
+          variant={b.favorited_at ? 'default' : 'outline'}
+          size="icon"
+          onClick={handleFavorite}
+          title={b.favorited_at ? '取消收藏' : '添加收藏'}
+        >
+          <Heart className={cn('h-4 w-4', b.favorited_at ? 'fill-current' : '')} />
+        </Button>
         <Button variant="outline" size="sm" onClick={openEdit}>
           编辑信息
         </Button>
@@ -260,7 +311,10 @@ export function BookDetailPage() {
 
           <div className="min-w-0 space-y-1.5">
             <h2 className="text-xl font-semibold text-foreground">{b.title}</h2>
-            <p className="text-muted-foreground">{[b.author, b.publisher, b.publish_year].filter(Boolean).join(' / ') || '未填写作者'}</p>
+            {b.subtitle && <p className="text-sm text-muted-foreground">{b.subtitle}</p>}
+            <p className="text-muted-foreground">
+              {[b.author || '未知作者', b.translator ? `译 ${b.translator}` : null, b.publisher, b.publish_year].filter(Boolean).join(' / ')}
+            </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', statusClass(b.status))}>
                 {BOOK_STATUS_LABELS[b.status as keyof typeof BOOK_STATUS_LABELS] ?? b.status}
@@ -268,6 +322,11 @@ export function BookDetailPage() {
               {b.category_name && (
                 <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground">
                   {b.category_name}
+                </span>
+              )}
+              {b.genre_category_name && (
+                <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground">
+                  [类型] {b.genre_category_name}
                 </span>
               )}
               {b.tag_names.map((tag) => (
@@ -286,6 +345,13 @@ export function BookDetailPage() {
             {b.reading_purpose && (
               <p className="text-sm text-muted-foreground">阅读目的：{b.reading_purpose}</p>
             )}
+            {(b.started_at || b.finished_at) && (
+              <p className="text-xs text-muted-foreground">
+                {b.started_at ? `开始：${b.started_at.slice(0, 10)}` : ''}
+                {b.started_at && b.finished_at ? ' · ' : ''}
+                {b.finished_at ? `读完：${b.finished_at.slice(0, 10)}` : ''}
+              </p>
+            )}
           </div>
         </div>
 
@@ -293,6 +359,24 @@ export function BookDetailPage() {
           <Card className="mb-6">
             <CardContent className="px-4 py-4">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{b.description}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {(b.original_title || b.page_count || b.source_url) && (
+          <Card className="mb-6">
+            <CardContent className="px-4 py-4 space-y-1.5">
+              {b.original_title && (
+                <p className="text-xs text-muted-foreground">原作名：<span className="text-foreground">{b.original_title}</span></p>
+              )}
+              {b.page_count && (
+                <p className="text-xs text-muted-foreground">页数：<span className="text-foreground">{b.page_count}</span></p>
+              )}
+              {b.source_url && (
+                <p className="text-xs text-muted-foreground truncate">
+                  链接：<a href={b.source_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{b.source_url}</a>
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -406,8 +490,22 @@ export function BookDetailPage() {
                 <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>作者</Label>
-                <Input value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} />
+                <Label>副标题</Label>
+                <Input value={editSubtitle} onChange={(e) => setEditSubtitle(e.target.value)} placeholder="可选" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>作者</Label>
+                  <Input value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} placeholder="可选" />
+                </div>
+                <div className="space-y-2">
+                  <Label>译者</Label>
+                  <Input value={editTranslator} onChange={(e) => setEditTranslator(e.target.value)} placeholder="可选" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>原作名</Label>
+                <Input value={editOriginalTitle} onChange={(e) => setEditOriginalTitle(e.target.value)} placeholder="可选" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -423,6 +521,46 @@ export function BookDetailPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
+                  <Label>页数</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={editPageCount}
+                    onChange={(e) => setEditPageCount(e.target.value)}
+                    placeholder="可选"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>个人分类</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                    value={editCategoryId ?? ''}
+                    onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">未分类</option>
+                    {personalCategories.data?.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>常规分类</Label>
+                  <select
+                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                    value={editGenreCategoryId ?? ''}
+                    onChange={(e) => setEditGenreCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">未分类</option>
+                    {genreCategories.data?.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>可见性</Label>
                   <select
                     className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
@@ -431,21 +569,6 @@ export function BookDetailPage() {
                   >
                     <option value={VISIBILITY.PRIVATE}>私密</option>
                     <option value={VISIBILITY.PUBLIC}>公开</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>分类</Label>
-                  <select
-                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                    value={editCategoryId ?? ''}
-                    onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">未分类</option>
-                    {categories.data?.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -462,6 +585,33 @@ export function BookDetailPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>书籍介绍链接</Label>
+                <Input
+                  type="url"
+                  value={editSourceUrl}
+                  onChange={(e) => setEditSourceUrl(e.target.value)}
+                  placeholder="https://douban.com/..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>开始阅读时间</Label>
+                  <Input
+                    type="date"
+                    value={editStartedAt}
+                    onChange={(e) => setEditStartedAt(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>读完时间</Label>
+                  <Input
+                    type="date"
+                    value={editFinishedAt}
+                    onChange={(e) => setEditFinishedAt(e.target.value)}
+                  />
                 </div>
               </div>
               <div className="space-y-2">

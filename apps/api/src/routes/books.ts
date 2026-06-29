@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
-import { bookRelations, bookTags, books, categories, statusHistory, tags } from '@redesk/db';
+import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
+import { bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags } from '@redesk/db';
 import {
   ERROR_CODE,
   bookQuerySchema,
@@ -20,8 +20,10 @@ interface RawBookRow {
   id: number;
   owner_id: number;
   category_id: number | null;
+  genre_category_id: number | null;
   title: string;
-  author: string;
+  author: string | null;
+  subtitle: string | null;
   isbn: string | null;
   publisher: string | null;
   publish_year: number | null;
@@ -34,6 +36,13 @@ interface RawBookRow {
   rating: number | null;
   custom_attributes: string | null;
   metadata_source: string | null;
+  source_url: string | null;
+  translator: string | null;
+  original_title: string | null;
+  page_count: number | null;
+  favorited_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -68,8 +77,10 @@ function bookSelect() {
     id: books.id,
     owner_id: books.owner_id,
     category_id: books.category_id,
+    genre_category_id: books.genre_category_id,
     title: books.title,
     author: books.author,
+    subtitle: books.subtitle,
     isbn: books.isbn,
     publisher: books.publisher,
     publish_year: books.publish_year,
@@ -82,6 +93,13 @@ function bookSelect() {
     rating: books.rating,
     custom_attributes: books.custom_attributes,
     metadata_source: books.metadata_source,
+    source_url: books.source_url,
+    translator: books.translator,
+    original_title: books.original_title,
+    page_count: books.page_count,
+    favorited_at: books.favorited_at,
+    started_at: books.started_at,
+    finished_at: books.finished_at,
     deleted_at: books.deleted_at,
     created_at: books.created_at,
     updated_at: books.updated_at,
@@ -133,18 +151,21 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
 
   const db = getDb();
   const bookIds = rows.map((row) => row.id);
-  const categoryIds = [...new Set(rows.map((row) => row.category_id).filter((value): value is number => value != null))];
+  const allCategoryIds = [
+    ...new Set(rows.map((row) => row.category_id).filter((v): v is number => v != null)),
+    ...new Set(rows.map((row) => row.genre_category_id).filter((v): v is number => v != null)),
+  ];
 
-  const categoryMap = new Map<number, string>();
-  if (categoryIds.length > 0) {
+  const categoryMap = new Map<number, { name: string; type: string }>();
+  if (allCategoryIds.length > 0) {
     const categoryRows = db
-      .select({ id: categories.id, name: categories.name })
+      .select({ id: categories.id, name: categories.name, type: categories.type })
       .from(categories)
-      .where(and(eq(categories.owner_id, ownerId), inArray(categories.id, categoryIds)))
+      .where(and(eq(categories.owner_id, ownerId), inArray(categories.id, allCategoryIds)))
       .all();
 
     for (const categoryRow of categoryRows) {
-      categoryMap.set(categoryRow.id, categoryRow.name);
+      categoryMap.set(categoryRow.id, { name: categoryRow.name, type: categoryRow.type });
     }
   }
 
@@ -167,15 +188,29 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
     tagMap.set(tagRow.book_id, existing);
   }
 
+  const fileMap = new Map<number, boolean>();
+  const fileRows = db
+    .select({ book_id: bookFiles.book_id })
+    .from(bookFiles)
+    .where(inArray(bookFiles.book_id, bookIds))
+    .all();
+  for (const f of fileRows) {
+    fileMap.set(f.book_id, true);
+  }
+
   return rows.map((row) => {
     const tagMeta = tagMap.get(row.id) ?? { tag_ids: [], tag_names: [] };
+    const personalCategory = row.category_id ? categoryMap.get(row.category_id) : null;
+    const genreCategory = row.genre_category_id ? categoryMap.get(row.genre_category_id) : null;
 
     return {
       ...row,
       custom_attributes: parseCustomAttributes(row.custom_attributes),
-      category_name: row.category_id ? (categoryMap.get(row.category_id) ?? null) : null,
+      category_name: personalCategory?.name ?? null,
+      genre_category_name: genreCategory?.name ?? null,
       tag_ids: tagMeta.tag_ids,
       tag_names: tagMeta.tag_names,
+      has_files: fileMap.get(row.id) ?? false,
     };
   });
 }
@@ -228,6 +263,26 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
 
   if (input.visibility) {
     conditions.push(eq(books.visibility, input.visibility));
+  }
+
+  if (input.favorited) {
+    conditions.push(sql`${books.favorited_at} IS NOT NULL`);
+  }
+
+  if (input.genre_category_id != null) {
+    conditions.push(eq(books.genre_category_id, input.genre_category_id));
+  }
+
+  if (input.has_files === true) {
+    conditions.push(
+      sql`${books.id} IN (SELECT book_id FROM book_files WHERE book_id IS NOT NULL)`,
+    );
+  } else if (input.has_files === false) {
+    conditions.push(
+      notExists(
+        db.select({ one: sql`1` }).from(bookFiles).where(eq(bookFiles.book_id, books.id)).limit(1),
+      ),
+    );
   }
 
   const where = and(...conditions);
@@ -286,19 +341,25 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .values({
         owner_id: userId,
         title: input.title,
-        author: input.author,
+        author: input.author ?? null,
+        subtitle: input.subtitle ?? null,
         isbn: input.isbn ?? null,
         publisher: input.publisher ?? null,
         publish_year: input.publish_year ?? null,
         description: input.description ?? null,
         language: input.language ?? null,
         category_id: input.category_id ?? null,
+        genre_category_id: input.genre_category_id ?? null,
         status: input.status ?? 'COLLECTED',
         visibility: input.visibility ?? 'PRIVATE',
         reading_purpose: input.reading_purpose ?? null,
         rating: input.rating ?? null,
         custom_attributes: input.custom_attributes ? JSON.stringify(input.custom_attributes) : null,
         metadata_source: input.metadata_source ?? 'manual',
+        source_url: input.source_url ?? null,
+        translator: input.translator ?? null,
+        original_title: input.original_title ?? null,
+        page_count: input.page_count ?? null,
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -360,7 +421,12 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const input = validate(updateBookSchema, req.body);
     const db = getDb();
     const existing = db
-      .select({ id: books.id, status: books.status })
+      .select({
+        id: books.id,
+        status: books.status,
+        started_at: books.started_at,
+        finished_at: books.finished_at,
+      })
       .from(books)
       .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
       .get();
@@ -373,23 +439,41 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
     if (input.title !== undefined) updateData.title = input.title;
     if (input.author !== undefined) updateData.author = input.author;
+    if (input.subtitle !== undefined) updateData.subtitle = input.subtitle;
     if (input.isbn !== undefined) updateData.isbn = input.isbn;
     if (input.publisher !== undefined) updateData.publisher = input.publisher;
     if (input.publish_year !== undefined) updateData.publish_year = input.publish_year;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.language !== undefined) updateData.language = input.language;
     if (input.category_id !== undefined) updateData.category_id = input.category_id;
+    if (input.genre_category_id !== undefined) updateData.genre_category_id = input.genre_category_id;
     if (input.visibility !== undefined) updateData.visibility = input.visibility;
     if (input.reading_purpose !== undefined) updateData.reading_purpose = input.reading_purpose;
     if (input.rating !== undefined) updateData.rating = input.rating;
     if (input.metadata_source !== undefined) updateData.metadata_source = input.metadata_source;
+    if (input.source_url !== undefined) updateData.source_url = input.source_url;
+    if (input.translator !== undefined) updateData.translator = input.translator;
+    if (input.original_title !== undefined) updateData.original_title = input.original_title;
+    if (input.page_count !== undefined) updateData.page_count = input.page_count;
     if (input.custom_attributes !== undefined) {
       updateData.custom_attributes = input.custom_attributes ? JSON.stringify(input.custom_attributes) : null;
     }
 
+    // Manual time overrides
+    if (input.started_at !== undefined) updateData.started_at = input.started_at;
+    if (input.finished_at !== undefined) updateData.finished_at = input.finished_at;
+
+    // Auto-fill started_at when status → READING and started_at is empty
     if (input.status !== undefined && input.status !== existing.status) {
       updateData.status = input.status;
       recordStatusChange(bookId, existing.status, input.status);
+
+      if (input.status === 'READING' && !existing.started_at && input.started_at === undefined) {
+        updateData.started_at = now();
+      }
+      if (input.status === 'READ' && !existing.finished_at && input.finished_at === undefined) {
+        updateData.finished_at = now();
+      }
     }
 
     if (Object.keys(updateData).length > 1) {
@@ -490,6 +574,17 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           .run();
         break;
       }
+      case 'set_genre_category': {
+        const genreCategoryId = input.params?.genre_category_id as number | null | undefined;
+        if (genreCategoryId === undefined) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 genre_category_id 参数');
+        }
+        db.update(books)
+          .set({ genre_category_id: genreCategoryId, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+        break;
+      }
       case 'set_tags': {
         const tagIds = input.params?.tag_ids as number[] | undefined;
         if (!tagIds) {
@@ -511,6 +606,17 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         }
         db.update(books)
           .set({ visibility, updated_at: timestamp })
+          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
+          .run();
+        break;
+      }
+      case 'set_favorited': {
+        const favorited = input.params?.favorited as boolean | undefined;
+        if (favorited === undefined) {
+          throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 favorited 参数');
+        }
+        db.update(books)
+          .set({ favorited_at: favorited ? timestamp : null, updated_at: timestamp })
           .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
           .run();
         break;
@@ -567,6 +673,63 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     return { data: history };
   });
 
+  app.post('/books/:id/favorite', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+
+    if (Number.isNaN(bookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    }
+
+    const db = getDb();
+    const existing = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+
+    if (!existing) {
+      throw notFound('书籍不存在');
+    }
+
+    db.update(books)
+      .set({ favorited_at: now(), updated_at: now() })
+      .where(eq(books.id, bookId))
+      .run();
+
+    const updated = db.select(bookSelect()).from(books).where(eq(books.id, bookId)).get();
+    return { data: serializeBooks([updated!], userId)[0] };
+  });
+
+  app.delete('/books/:id/favorite', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+
+    if (Number.isNaN(bookId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    }
+
+    const db = getDb();
+    const existing = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+
+    if (!existing) {
+      throw notFound('书籍不存在');
+    }
+
+    db.update(books)
+      .set({ favorited_at: null, updated_at: now() })
+      .where(eq(books.id, bookId))
+      .run();
+
+    const updated = db.select(bookSelect()).from(books).where(eq(books.id, bookId)).get();
+    return { data: serializeBooks([updated!], userId)[0] };
+  });
   app.get('/books/duplicates', async (req) => {
     const userId = requireUserId(req);
     const input = validate(duplicateQuerySchema, req.query) as DuplicateQueryInput;
@@ -602,8 +765,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
         const titleA = bookA.title.toLowerCase().replace(/\s+/g, '');
         const titleB = bookB.title.toLowerCase().replace(/\s+/g, '');
-        const authorA = bookA.author.toLowerCase().replace(/\s+/g, '');
-        const authorB = bookB.author.toLowerCase().replace(/\s+/g, '');
+        const authorA = (bookA.author ?? '').toLowerCase().replace(/\s+/g, '');
+        const authorB = (bookB.author ?? '').toLowerCase().replace(/\s+/g, '');
 
         let titleScore = 0;
         if (titleA === titleB) {

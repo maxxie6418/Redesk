@@ -5,6 +5,7 @@ export interface CategoryItem {
   id: number;
   owner_id: number;
   name: string;
+  type: 'GENRE' | 'PERSONAL';
   parent_id: number | null;
   sort_order: number;
   created_at: string;
@@ -12,17 +13,20 @@ export interface CategoryItem {
   book_count: number;
 }
 
-export function useCategories() {
+export function useCategories(type?: 'GENRE' | 'PERSONAL') {
   return useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.get<CategoryItem[]>('/categories'),
+    queryKey: ['categories', type],
+    queryFn: () => {
+      const qs = type ? `?type=${type}` : '';
+      return api.get<CategoryItem[]>(`/categories${qs}`);
+    },
   });
 }
 
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; parent_id?: number | null; sort_order?: number }) =>
+    mutationFn: (input: { name: string; type?: 'GENRE' | 'PERSONAL'; parent_id?: number | null; sort_order?: number }) =>
       api.post<CategoryItem>('/categories', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categories'] });
@@ -33,7 +37,7 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...input }: { id: number; name?: string; parent_id?: number | null; sort_order?: number }) =>
+    mutationFn: ({ id, ...input }: { id: number; name?: string; type?: 'GENRE' | 'PERSONAL'; parent_id?: number | null; sort_order?: number }) =>
       api.patch<CategoryItem>(`/categories/${id}`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categories'] });

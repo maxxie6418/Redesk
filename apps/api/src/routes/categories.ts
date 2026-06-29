@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, count, asc } from 'drizzle-orm';
 import { books, categories } from '@redesk/db';
-import { ERROR_CODE, createCategorySchema, updateCategorySchema } from '@redesk/shared';
+import { ERROR_CODE, createCategorySchema, updateCategorySchema, categoryQuerySchema } from '@redesk/shared';
+import type { CategoryQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
@@ -14,12 +15,18 @@ function now(): string {
 export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/categories', async (req) => {
     const userId = requireUserId(req);
+    const input = validate(categoryQuerySchema, req.query) as CategoryQueryInput;
     const db = getDb();
+
+    const conditions = [eq(categories.owner_id, userId)];
+    if (input.type) {
+      conditions.push(eq(categories.type, input.type) as ReturnType<typeof eq>);
+    }
 
     const rows = db
       .select()
       .from(categories)
-      .where(eq(categories.owner_id, userId))
+      .where(and(...conditions))
       .orderBy(asc(categories.sort_order), asc(categories.name))
       .all();
 
@@ -28,12 +35,17 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
 
     if (categoryIds.length > 0) {
       for (const catId of categoryIds) {
-        const result = db
+        const personalCount = db
           .select({ c: count() })
           .from(books)
           .where(and(eq(books.owner_id, userId), eq(books.category_id, catId)))
           .get();
-        bookCounts.set(catId, result?.c ?? 0);
+        const genreCount = db
+          .select({ c: count() })
+          .from(books)
+          .where(and(eq(books.owner_id, userId), eq(books.genre_category_id, catId)))
+          .get();
+        bookCounts.set(catId, (personalCount?.c ?? 0) + (genreCount?.c ?? 0));
       }
     }
 
@@ -50,11 +62,12 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
     const input = validate(createCategorySchema, req.body);
     const db = getDb();
     const timestamp = now();
+    const catType = input.type ?? 'PERSONAL';
 
     const existing = db
       .select({ id: categories.id })
       .from(categories)
-      .where(and(eq(categories.owner_id, userId), eq(categories.name, input.name)))
+      .where(and(eq(categories.owner_id, userId), eq(categories.name, input.name), eq(categories.type, catType)))
       .get();
 
     if (existing) {
@@ -66,6 +79,7 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
       .values({
         owner_id: userId,
         name: input.name,
+        type: catType,
         parent_id: input.parent_id ?? null,
         sort_order: input.sort_order ?? 0,
         created_at: timestamp,
@@ -100,10 +114,19 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (input.name !== undefined && input.name !== existing.name) {
+      const dupConditions = [
+        eq(categories.owner_id, userId),
+        eq(categories.name, input.name),
+      ] as ReturnType<typeof eq>[];
+      if (input.type !== undefined) {
+        dupConditions.push(eq(categories.type, input.type) as ReturnType<typeof eq>);
+      } else {
+        dupConditions.push(eq(categories.type, existing.type) as ReturnType<typeof eq>);
+      }
       const duplicate = db
         .select({ id: categories.id })
         .from(categories)
-        .where(and(eq(categories.owner_id, userId), eq(categories.name, input.name)))
+        .where(and(...dupConditions))
         .get();
 
       if (duplicate) {
@@ -113,6 +136,7 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
 
     const updateData: Record<string, unknown> = { updated_at: now() };
     if (input.name !== undefined) updateData.name = input.name;
+    if (input.type !== undefined) updateData.type = input.type;
     if (input.parent_id !== undefined) updateData.parent_id = input.parent_id;
     if (input.sort_order !== undefined) updateData.sort_order = input.sort_order;
 
@@ -156,6 +180,11 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
     db.update(books)
       .set({ category_id: null, updated_at: now() })
       .where(and(eq(books.owner_id, userId), eq(books.category_id, categoryId)))
+      .run();
+
+    db.update(books)
+      .set({ genre_category_id: null, updated_at: now() })
+      .where(and(eq(books.owner_id, userId), eq(books.genre_category_id, categoryId)))
       .run();
 
     db.delete(categories).where(eq(categories.id, categoryId)).run();

@@ -5,13 +5,16 @@ export interface BookSummary {
   id: number;
   owner_id: number;
   title: string;
-  author: string;
+  author: string | null;
+  subtitle: string | null;
   cover_path: string | null;
   status: string;
   visibility: string;
   rating: number | null;
   category_id: number | null;
   category_name: string | null;
+  genre_category_id: number | null;
+  genre_category_name: string | null;
   tag_ids: number[];
   tag_names: string[];
   description: string | null;
@@ -21,6 +24,14 @@ export interface BookSummary {
   reading_purpose: string | null;
   custom_attributes: string | null;
   metadata_source: string | null;
+  source_url: string | null;
+  translator: string | null;
+  original_title: string | null;
+  page_count: number | null;
+  favorited_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  has_files: boolean;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -46,43 +57,60 @@ export interface BookQueryParams {
   q?: string;
   status?: string;
   category_id?: number;
+  genre_category_id?: number;
   tag_id?: string;
   visibility?: string;
   in_trash?: boolean;
+  favorited?: boolean;
+  has_files?: boolean;
 }
 
 export interface CreateBookInput {
   title: string;
-  author: string;
+  author?: string | null;
+  subtitle?: string | null;
   isbn?: string | null;
   publisher?: string | null;
   publish_year?: number | null;
   description?: string | null;
   language?: string | null;
   category_id?: number | null;
+  genre_category_id?: number | null;
   status?: string;
   visibility?: string;
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
   custom_attributes?: string | null;
+  source_url?: string | null;
+  translator?: string | null;
+  original_title?: string | null;
+  page_count?: number | null;
 }
 
 export interface UpdateBookInput {
   title?: string;
-  author?: string;
+  author?: string | null;
+  subtitle?: string | null;
   isbn?: string | null;
   publisher?: string | null;
   publish_year?: number | null;
   description?: string | null;
   language?: string | null;
   category_id?: number | null;
+  genre_category_id?: number | null;
   status?: string;
   visibility?: string;
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
   custom_attributes?: string | null;
+  source_url?: string | null;
+  translator?: string | null;
+  original_title?: string | null;
+  page_count?: number | null;
+  started_at?: string | null;
+  finished_at?: string | null;
 }
 
 function buildQuery(params?: BookQueryParams): string {
@@ -94,9 +122,12 @@ function buildQuery(params?: BookQueryParams): string {
   if (params.q) sp.set('q', params.q);
   if (params.status) sp.set('status', params.status);
   if (params.category_id != null) sp.set('category_id', String(params.category_id));
+  if (params.genre_category_id != null) sp.set('genre_category_id', String(params.genre_category_id));
   if (params.tag_id) sp.set('tag_id', params.tag_id);
   if (params.visibility) sp.set('visibility', params.visibility);
   if (params.in_trash) sp.set('in_trash', 'true');
+  if (params.favorited) sp.set('favorited', 'true');
+  if (params.has_files != null) sp.set('has_files', String(params.has_files));
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }
@@ -150,7 +181,7 @@ export function useDeleteBook() {
 
 export interface BatchBooksInput {
   ids: number[];
-  action: 'set_status' | 'set_category' | 'set_tags' | 'set_visibility' | 'delete';
+  action: 'set_status' | 'set_category' | 'set_genre_category' | 'set_tags' | 'set_visibility' | 'set_favorited' | 'delete';
   params?: Record<string, unknown>;
 }
 
@@ -232,6 +263,28 @@ export function useEmptyTrash() {
     mutationFn: () => api.delete<{ affected: number }>('/trash'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trash'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useFavoriteBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: number) => api.post<BookDetail>(`/books/${bookId}/favorite`),
+    onSuccess: (_data, bookId) => {
+      qc.invalidateQueries({ queryKey: ['books', bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useUnfavoriteBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookId: number) => api.delete<BookDetail>(`/books/${bookId}/favorite`),
+    onSuccess: (_data, bookId) => {
+      qc.invalidateQueries({ queryKey: ['books', bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
   });

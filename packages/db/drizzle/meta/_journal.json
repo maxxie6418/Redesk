@@ -15,6 +15,13 @@
       "when": 1782566648504,
       "tag": "0001_eager_susan_delgado",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782706154230,
+      "tag": "0002_loud_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }

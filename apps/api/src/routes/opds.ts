@@ -6,7 +6,7 @@ import { getDb } from '../db';
 interface BookRow {
   id: number;
   title: string;
-  author: string;
+  author: string | null;
   description: string | null;
   status: string;
   cover_path: string | null;

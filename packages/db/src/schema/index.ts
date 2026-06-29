@@ -6,4 +6,5 @@ export * from './book-tags';
 export * from './book-files';
 export * from './book-relations';
 export * from './status-history';
+export * from './bookmarks';
 export * from './settings';

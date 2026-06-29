@@ -18,6 +18,7 @@ import {
   Star,
   Loader2,
   Lightbulb,
+  Heart,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -558,7 +559,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
   const openEdit = useCallback(() => {
     if (!book.data) return;
     setEditTitle(book.data.title);
-    setEditAuthor(book.data.author);
+    setEditAuthor(book.data.author ?? '');
     setEditStatus(book.data.status);
     setEditVisibility(book.data.visibility);
     setEditCategoryId(book.data.category_id);
@@ -905,6 +906,7 @@ export function Bookshelf() {
   const [visibility, setVisibility] = useState('ALL');
   const [category, setCategory] = useState('ALL');
   const [tag, setTag] = useState('ALL');
+  const [favorited, setFavorited] = useState(false);
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
@@ -936,7 +938,8 @@ export function Bookshelf() {
     ...(visibility !== 'ALL' ? { visibility } : {}),
     ...(category !== 'ALL' ? { category_id: Number(category) } : {}),
     ...(tag !== 'ALL' ? { tag_id: tag } : {}),
-  }), [debouncedSearch, status, visibility, category, tag, sort]);
+    ...(favorited ? { favorited: true } : {}),
+  }), [debouncedSearch, status, visibility, category, tag, favorited, sort]);
 
   const trashQueryParams = useMemo(() => ({
     page_size: 200,
@@ -982,7 +985,7 @@ export function Bookshelf() {
 
   const books = rawBooks;
 
-  const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL';
+  const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL' || favorited;
 
   const handleRestore = useCallback(async (id: number) => {
     try {
@@ -1134,11 +1137,21 @@ export function Bookshelf() {
                 options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item])}
               />
               <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item])} />
-              <FilterSelect
-                value={visibility}
-                onChange={setVisibility}
-                options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])}
-              />
+              <FilterSelect value={visibility} onChange={setVisibility} options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])} />
+              <button
+                type="button"
+                title="收藏"
+                onClick={() => setFavorited((v) => !v)}
+                className={cn(
+                  'flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
+                  favorited
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-muted text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                )}
+              >
+                <Heart className={cn('h-3.5 w-3.5', favorited ? 'fill-current' : '')} />
+                收藏
+              </button>
               <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label])} />
             </div>
 

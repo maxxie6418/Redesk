@@ -77,3 +77,9 @@ export const TOPIC_ENTRY_TYPE = {
   COMPARISON: 'COMPARISON',
 } as const;
 export type TopicEntryType = (typeof TOPIC_ENTRY_TYPE)[keyof typeof TOPIC_ENTRY_TYPE];
+
+export const CATEGORY_TYPE = {
+  GENRE: 'GENRE',
+  PERSONAL: 'PERSONAL',
+} as const;
+export type CategoryType = (typeof CATEGORY_TYPE)[keyof typeof CATEGORY_TYPE];
