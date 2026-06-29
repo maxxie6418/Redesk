@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>档案页 - 优化方案</title>
+  <title>档案 - Redesk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -21,6 +21,8 @@
       --success-soft: rgba(120, 140, 93, 0.08);
       --info: #5a7a8c;
       --info-soft: rgba(90, 122, 140, 0.08);
+      --warn: #c9a23e;
+      --warn-soft: rgba(201, 162, 62, 0.08);
       --radius: 0.75rem;
       --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
       --font-display: 'Newsreader', Georgia, ui-serif, serif;
@@ -34,319 +36,752 @@
       color: var(--fg);
     }
 
-    /* 顶部栏 */
-    .topbar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 28px;
-      border-bottom: 1px solid var(--card-border);
-      background: var(--card);
-      position: sticky; top: 0; z-index: 10;
+    /* ===== 布局：侧边栏 + 主内容 ===== */
+    .layout {
+      display: flex;
+      min-height: 100vh;
     }
-    .topbar h1 {
+
+    /* 侧边栏 */
+    .sidebar {
+      width: 256px;
+      background: #f5f4f0;
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+      flex-shrink: 0;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 4px;
+      margin-bottom: 20px;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
       font-family: var(--font-display);
-      font-size: 18px; font-weight: 500;
+      font-size: 18px; font-weight: 600; color: #fff;
     }
-    .topbar .ver {
-      font-size: 11px; font-weight: 500;
-      color: var(--muted-light);
-      font-variant-numeric: tabular-nums;
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 500;
     }
-
-    /* 主内容 */
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 28px;
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: 1px;
+      transition: all 0.12s;
     }
-
-    /* 状态卡片网格 */
-    .status-grid {
+    .nav-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+    .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: auto 4px 0;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .stat-cell {
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-cell .num {
+      font-size: 20px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-cell.total .num { color: var(--fg); }
+    .stat-cell.reading .num { color: var(--primary); }
+    .stat-cell.read .num { color: var(--success); }
+    .stat-cell.topics .num { color: var(--muted); }
+    .stat-cell .lbl {
+      font-size: 11px; color: var(--muted-light);
+      margin-top: 4px;
+    }
+    .bottom {
+      padding-top: 12px;
+    }
+    .bottom-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .bottom-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+
+    /* 主内容区 */
+    .main {
+      flex: 1;
+      min-width: 0;
+      padding: 28px 32px 40px;
+      max-width: 1200px;
+    }
+    .page-header {
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-family: var(--font-display);
+      font-size: 26px; font-weight: 600;
+    }
+    .page-header p {
+      font-size: 13.5px; color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ===== 数据卡片行 ===== */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       margin-bottom: 24px;
     }
-    .status-card {
-      display: flex; align-items: center; gap: 12px;
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid var(--card-border);
+    .kpi {
       background: var(--card);
-      cursor: pointer;
-      transition: all 0.12s;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
     }
-    .status-card:hover {
-      border-color: var(--muted-light);
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    .kpi::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
     }
-    .status-card .icon {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .status-card.reading .icon { background: rgba(120,140,93,0.1); }
-    .status-card.planned .icon { background: rgba(90,122,140,0.1); }
-    .status-card.read .icon { background: rgba(120,140,93,0.08); }
-    .status-card.stored .icon { background: rgba(0,0,0,0.04); }
-    .status-card .info { flex: 1; }
-    .status-card .label {
-      font-size: 12.5px; font-weight: 500;
+    .kpi.total::before { background: var(--fg); }
+    .kpi.reading::before { background: var(--success); }
+    .kpi.planned::before { background: var(--info); }
+    .kpi.stored::before { background: var(--muted-light); }
+    .kpi.fav::before { background: var(--warn); }
+    .kpi .label {
+      font-size: 12px; font-weight: 500;
       color: var(--muted);
+      margin-bottom: 8px;
     }
-    .status-card .count {
-      font-size: 22px; font-weight: 600;
-      color: var(--fg);
-      line-height: 1.2;
-      margin-top: 2px;
+    .kpi .value {
+      font-size: 28px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .kpi .change {
+      font-size: 11px; font-weight: 500;
+      margin-top: 6px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .kpi .change.up { color: var(--success); }
+    .kpi .change.down { color: var(--primary); }
+
+    /* ===== 两栏布局 ===== */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
     }
 
-    /* 卡片 */
+    /* 卡片基础 */
     .card {
       background: var(--card);
-      border-radius: var(--radius);
       border: 1px solid var(--card-border);
-      margin-bottom: 20px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
       overflow: hidden;
     }
     .card-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 16px 20px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
       border-bottom: 1px solid var(--card-border);
     }
     .card-header h3 {
-      font-size: 14px; font-weight: 600;
+      font-size: 13.5px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
     }
-    .card-header .icon {
+    .card-header h3 svg {
       width: 16px; height: 16px;
       color: var(--muted);
     }
-    .card-body {
-      padding: 16px 20px 20px;
-    }
-
-    /* 总览大数字 */
-    .big-stat {
-      text-align: center;
-      padding: 20px 0;
-    }
-    .big-stat .num {
-      font-size: 48px; font-weight: 700;
-      color: var(--fg);
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-    }
-    .big-stat .lbl {
-      font-size: 14px; color: var(--muted);
-      margin-top: 8px;
-    }
-    .big-stat .btn {
-      margin-top: 16px;
-      height: 34px;
-      padding: 0 16px;
-      border-radius: 8px;
-      border: 1px solid var(--card-border);
-      background: transparent;
-      font-size: 13px; font-weight: 500;
-      font-family: var(--font-sans);
-      color: var(--fg);
+    .card-header .link {
+      font-size: 12px; color: var(--primary);
       cursor: pointer;
-      transition: all 0.12s;
+      font-weight: 500;
     }
-    .big-stat .btn:hover { background: rgba(0,0,0,0.03); }
+    .card-header .link:hover { text-decoration: underline; }
+    .card-body {
+      padding: 14px 18px;
+    }
 
-    /* 列表项 */
-    .list-item {
+    /* 最近活动时间线 */
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute; left: 5px; top: 4px; bottom: 4px;
+      width: 2px;
+      background: var(--card-border);
+      border-radius: 1px;
+    }
+    .tl-item {
+      position: relative;
+      padding-bottom: 16px;
+    }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-dot {
+      position: absolute; left: -20px; top: 3px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--card);
+      box-shadow: 0 0 0 2px var(--card-border);
+    }
+    .tl-dot.add { background: var(--success); }
+    .tl-dot.read { background: var(--primary); }
+    .tl-dot.status { background: var(--info); }
+    .tl-time {
+      font-size: 11px; color: var(--muted-light);
+      margin-bottom: 3px;
+    }
+    .tl-text {
+      font-size: 13px; color: var(--fg);
+      line-height: 1.5;
+    }
+    .tl-text .book {
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .tl-text .book:hover { color: var(--primary); }
+    .tl-text .action {
+      color: var(--muted);
+    }
+
+    /* 书籍列表（紧凑） */
+    .book-list {
+      display: flex; flex-direction: column;
+      gap: 8px;
+    }
+    .book-row {
       display: flex; align-items: center; gap: 12px;
       padding: 10px 12px;
       border-radius: 8px;
-      border: 1px solid var(--card-border);
-      margin-bottom: 8px;
-      transition: all 0.12s;
+      border: 1px solid transparent;
       cursor: pointer;
+      transition: all 0.12s;
     }
-    .list-item:hover {
-      border-color: var(--muted-light);
+    .book-row:hover {
       background: var(--bg);
+      border-color: var(--card-border);
     }
-    .list-item:last-child { margin-bottom: 0; }
-    .list-item .title {
-      font-size: 13.5px; font-weight: 500;
-      flex: 1;
+    .book-cover {
+      width: 36px; height: 50px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #d8c6b7, #c9b8a9);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 14px; font-weight: 600;
+      color: #3d2f28;
+      flex-shrink: 0;
+    }
+    .book-info { flex: 1; min-width: 0; }
+    .book-title {
+      font-size: 13px; font-weight: 500;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .list-item .meta {
-      font-size: 12px; color: var(--muted-light);
+    .book-meta {
+      font-size: 11.5px; color: var(--muted-light);
+      margin-top: 2px;
+    }
+    .book-status {
+      font-size: 11px; font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
       white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .book-status.reading {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+    .book-status.planned {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+    .book-status.read {
+      background: rgba(0,0,0,0.04);
+      color: var(--muted);
     }
 
-    /* 占位卡片 */
-    .placeholder {
-      display: flex; align-items: center; gap: 10px;
-      padding: 16px;
-      background: var(--bg);
-      border-radius: 10px;
-      border: 1px dashed var(--card-border);
+    /* 分类分布 */
+    .cat-list {
+      display: flex; flex-direction: column;
+      gap: 10px;
     }
-    .placeholder .ph-icon {
+    .cat-item {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .cat-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: var(--bg);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--primary);
+      transition: width 0.3s;
+    }
+    .cat-label {
+      font-size: 12.5px;
+      min-width: 60px;
+    }
+    .cat-count {
+      font-size: 12px; color: var(--muted);
+      min-width: 28px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 快捷操作 */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .qa-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      cursor: pointer;
+      transition: all 0.12s;
+      text-align: left;
+    }
+    .qa-btn:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .qa-btn .icon {
       width: 36px; height: 36px;
       border-radius: 8px;
       background: var(--primary-soft);
       display: flex; align-items: center; justify-content: center;
       color: var(--primary);
+      flex-shrink: 0;
     }
-    .placeholder .ph-text {
-      font-size: 13px; color: var(--muted);
+    .qa-btn .text {
+      font-size: 13px; font-weight: 500;
     }
-    .placeholder .ph-text .sub {
-      font-size: 11.5px; color: var(--muted-light);
+    .qa-btn .sub {
+      font-size: 11px; color: var(--muted);
       margin-top: 2px;
+    }
+
+    /* 占位卡片 */
+    .placeholder-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .ph-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--card-border);
+      background: var(--bg);
+    }
+    .ph-card .icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ph-card.ai .icon { background: var(--primary-soft); color: var(--primary); }
+    .ph-card.topic .icon { background: var(--success-soft); color: var(--success); }
+    .ph-card h4 {
+      font-size: 13.5px; font-weight: 500;
+    }
+    .ph-card p {
+      font-size: 12px; color: var(--muted);
+      margin-top: 2px;
+    }
+    .ph-card .badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 10px; font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .ph-card.ai .badge { background: var(--primary-soft); color: var(--primary); }
+    .ph-card.topic .badge { background: var(--success-soft); color: var(--success); }
+
+    @media (max-width: 1024px) {
+      .two-col { grid-template-columns: 1fr; }
+      .kpi-row { grid-template-columns: repeat(3, 1fr); }
+      .placeholder-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<header class="topbar">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
-    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-    <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
-  </svg>
-  <h1>Redesk</h1>
-  <span class="ver">v0.2.0</span>
-</header>
+<div class="layout">
 
-<div class="container">
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <div class="logo-text">Redesk</div>
+    </div>
+    <nav>
+      <div class="nav-item active">档案</div>
+      <div class="nav-item">书架</div>
+      <div class="nav-item">书库文件</div>
+      <div class="nav-item">读书笔记</div>
+      <div class="nav-item">阅读话题</div>
+      <div class="nav-item">回收站</div>
+    </nav>
+    <div class="stats-grid">
+      <div class="stat-cell total"><div class="num">128</div><div class="lbl">总数</div></div>
+      <div class="stat-cell reading"><div class="num">12</div><div class="lbl">在读</div></div>
+      <div class="stat-cell read"><div class="num">86</div><div class="lbl">已读</div></div>
+      <div class="stat-cell topics"><div class="num">5</div><div class="lbl">话题</div></div>
+    </div>
+    <div class="bottom">
+      <div class="bottom-item">AI 助手</div>
+      <div class="bottom-item">设置</div>
+    </div>
+  </aside>
 
-  <!-- 状态概览 -->
-  <div class="status-grid">
-    <div class="status-card reading">
-      <div class="icon">📖</div>
-      <div class="info">
+  <!-- 主内容 -->
+  <main class="main">
+
+    <div class="page-header">
+      <h1>档案</h1>
+      <p>你的阅读资产全景 · 128 本书 · 12 本在读 · 86 本已读</p>
+    </div>
+
+    <!-- 核心指标 -->
+    <div class="kpi-row">
+      <div class="kpi total">
+        <div class="label">书籍总数</div>
+        <div class="value">128</div>
+        <div class="change up">↑ 本月 +5</div>
+      </div>
+      <div class="kpi reading">
         <div class="label">正在阅读</div>
-        <div class="count">12</div>
+        <div class="value" style="color:var(--success);">12</div>
+        <div class="change up">↑ 较上周 +2</div>
       </div>
-    </div>
-    <div class="status-card planned">
-      <div class="icon">📋</div>
-      <div class="info">
+      <div class="kpi planned">
         <div class="label">计划阅读</div>
-        <div class="count">18</div>
+        <div class="value" style="color:var(--info);">18</div>
+        <div class="change">— 持平</div>
       </div>
-    </div>
-    <div class="status-card read">
-      <div class="icon">✅</div>
-      <div class="info">
-        <div class="label">已读完</div>
-        <div class="count">86</div>
-      </div>
-    </div>
-    <div class="status-card stored">
-      <div class="icon">📚</div>
-      <div class="info">
+      <div class="kpi stored">
         <div class="label">已存档</div>
-        <div class="count">12</div>
+        <div class="value" style="color:var(--muted);">12</div>
+        <div class="change down">↓ 本月 -3</div>
+      </div>
+      <div class="kpi fav">
+        <div class="label">收藏</div>
+        <div class="value" style="color:var(--warn);">24</div>
+        <div class="change up">↑ +1</div>
       </div>
     </div>
-  </div>
 
-  <!-- 书架总览 -->
-  <div class="card">
-    <div class="card-header">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      <h3>书架总览</h3>
-    </div>
-    <div class="card-body">
-      <div class="big-stat">
-        <div class="num">128</div>
-        <div class="lbl">本书</div>
-        <button class="btn">查看全部书架</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 最近在读 -->
-  <div class="card">
-    <div class="card-header">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      <h3>最近在读</h3>
-    </div>
-    <div class="card-body">
-      <div class="list-item">
-        <span class="title">悉达多</span>
-        <span class="meta">赫尔曼·黑塞</span>
-      </div>
-      <div class="list-item">
-        <span class="title">百年孤独</span>
-        <span class="meta">加西亚·马尔克斯</span>
-      </div>
-      <div class="list-item">
-        <span class="title">设计模式：可复用面向对象软件的基础</span>
-        <span class="meta">GoF</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- 最近新增 -->
-  <div class="card">
-    <div class="card-header">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-      </svg>
-      <h3>最近新增</h3>
-    </div>
-    <div class="card-body">
-      <div class="list-item">
-        <span class="title">人类简史</span>
-        <span class="meta">06月15日</span>
-      </div>
-      <div class="list-item">
-        <span class="title">深度工作</span>
-        <span class="meta">06月10日</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI 助手占位 -->
-  <div class="card" style="border-style:dashed;">
-    <div class="card-body">
-      <div class="placeholder">
-        <div class="ph-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-            <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
-          </svg>
+    <!-- 快捷操作 -->
+    <div class="quick-actions" style="margin-bottom:20px;">
+      <div class="qa-btn">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </div>
-        <div class="ph-text">
-          AI 智能助手
-          <div class="sub">推荐书单、自动归类、阅读摘要 — 即将上线</div>
+        <div>
+          <div class="text">添加书籍</div>
+          <div class="sub">手动录入或从链接获取</div>
+        </div>
+      </div>
+      <div class="qa-btn">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        </div>
+        <div>
+          <div class="text">导入笔记</div>
+          <div class="sub">从 Markdown / Notion 导入</div>
+        </div>
+      </div>
+      <div class="qa-btn">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        </div>
+        <div>
+          <div class="text">上传文件</div>
+          <div class="sub">EPUB / PDF / MOBI 等</div>
+        </div>
+      </div>
+      <div class="qa-btn">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+        </div>
+        <div>
+          <div class="text">导出数据</div>
+          <div class="sub">元数据 / 笔记 / 备份</div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- 阅读话题占位 -->
-  <div class="card" style="border-style:dashed;">
-    <div class="card-body">
-      <div class="placeholder">
-        <div class="ph-icon" style="background:var(--success-soft);color:var(--success);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>
-          </svg>
+    <div class="two-col">
+
+      <!-- 左栏 -->
+      <div class="left">
+
+        <!-- 最近活动 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              最近动态
+            </h3>
+            <span class="link">查看全部</span>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-dot add"></div>
+                <div class="tl-time">今天 14:32</div>
+                <div class="tl-text">
+                  <span class="action">添加了</span> <span class="book">《人类简史》</span> <span class="action">到书架</span>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot read"></div>
+                <div class="tl-time">今天 10:15</div>
+                <div class="tl-text">
+                  <span class="action">继续阅读</span> <span class="book">《悉达多》</span> <span class="action">· 第 7 章</span>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot status"></div>
+                <div class="tl-time">昨天 22:08</div>
+                <div class="tl-text">
+                  <span class="book">《百年孤独》</span> <span class="action">标记为「已读完」</span>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot add"></div>
+                <div class="tl-time">昨天 18:40</div>
+                <div class="tl-text">
+                  <span class="action">上传了文件</span> <span class="book">百年孤独.epub</span> <span class="action">并关联到书籍</span>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot read"></div>
+                <div class="tl-time">06月25日</div>
+                <div class="tl-text">
+                  <span class="action">开始阅读</span> <span class="book">《深度工作》</span> <span class="action">· 进度 12%</span>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot status"></div>
+                <div class="tl-time">06月24日</div>
+                <div class="tl-text">
+                  <span class="book">《设计模式》</span> <span class="action">状态从「计划读」改为「在读」</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="ph-text">
-          阅读话题
-          <div class="sub">围绕一个话题组织多本书的深度阅读 — 即将上线</div>
+
+        <!-- 最近在读 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              最近在读
+            </h3>
+            <span class="link">进入书架</span>
+          </div>
+          <div class="card-body">
+            <div class="book-list">
+              <div class="book-row">
+                <div class="book-cover">悉</div>
+                <div class="book-info">
+                  <div class="book-title">悉达多</div>
+                  <div class="book-meta">赫尔曼·黑塞 · 进度 68%</div>
+                </div>
+                <span class="book-status reading">在读</span>
+              </div>
+              <div class="book-row">
+                <div class="book-cover" style="background:linear-gradient(135deg,#cfd8c8,#b8c4b0);">深</div>
+                <div class="book-info">
+                  <div class="book-title">深度工作</div>
+                  <div class="book-meta">卡尔·纽波特 · 进度 12%</div>
+                </div>
+                <span class="book-status reading">在读</span>
+              </div>
+              <div class="book-row">
+                <div class="book-cover" style="background:linear-gradient(135deg,#c7d4dc,#a8bcc8);">设</div>
+                <div class="book-info">
+                  <div class="book-title">设计模式：可复用面向对象软件的基础</div>
+                  <div class="book-meta">GoF · 进度 5%</div>
+                </div>
+                <span class="book-status reading">在读</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右栏 -->
+      <div class="right">
+
+        <!-- 分类分布 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+              分类分布
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="cat-list">
+              <div class="cat-item">
+                <span class="cat-label">文学</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:42%"></div></div>
+                <span class="cat-count">42</span>
+              </div>
+              <div class="cat-item">
+                <span class="cat-label">技术</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:28%"></div></div>
+                <span class="cat-count">28</span>
+              </div>
+              <div class="cat-item">
+                <span class="cat-label">哲学</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:18%"></div></div>
+                <span class="cat-count">18</span>
+              </div>
+              <div class="cat-item">
+                <span class="cat-label">历史</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:12%"></div></div>
+                <span class="cat-count">12</span>
+              </div>
+              <div class="cat-item">
+                <span class="cat-label">心理</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:8%"></div></div>
+                <span class="cat-count">8</span>
+              </div>
+              <div class="cat-item">
+                <span class="cat-label">其他</span>
+                <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:20%"></div></div>
+                <span class="cat-count">20</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 阅读状态流转 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              本月流转
+            </h3>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                <span>收录 → 在读</span>
+                <span style="font-weight:600;">3 本</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                <span>在读 → 已读</span>
+                <span style="font-weight:600;">2 本</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                <span>已读 → 存档</span>
+                <span style="font-weight:600;">1 本</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                <span>新收录</span>
+                <span style="font-weight:600;color:var(--success);">+5 本</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近新增 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              最近新增
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="book-list">
+              <div class="book-row">
+                <div class="book-cover" style="background:linear-gradient(135deg,#ded7c2,#cdc5b0);">人</div>
+                <div class="book-info">
+                  <div class="book-title">人类简史</div>
+                  <div class="book-meta">06月28日 · 尤瓦尔·赫拉利</div>
+                </div>
+              </div>
+              <div class="book-row">
+                <div class="book-cover" style="background:linear-gradient(135deg,#d7c8d5,#c4b5c2);">深</div>
+                <div class="book-info">
+                  <div class="book-title">深度工作</div>
+                  <div class="book-meta">06月25日 · 卡尔·纽波特</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 底部占位 -->
+    <div class="placeholder-row">
+      <div class="ph-card ai">
+        <div class="icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        </div>
+        <div>
+          <h4>AI 智能助手</h4>
+          <p>推荐书单、自动归类、阅读摘要</p>
+          <span class="badge">M3 阶段</span>
+        </div>
+      </div>
+      <div class="ph-card topic">
+        <div class="icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        </div>
+        <div>
+          <h4>阅读话题</h4>
+          <p>跨书籍组织深度阅读与知识网络</p>
+          <span class="badge">M4 阶段</span>
         </div>
       </div>
     </div>
-  </div>
 
+  </main>
 </div>
 
 </body>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>书库文件 - 优化方案</title>
+  <title>书库文件 - Redesk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,6 +17,9 @@
       --muted-light: #b0aea5;
       --primary: #d97757;
       --primary-soft: rgba(217, 119, 87, 0.08);
+      --success: #788c5d;
+      --success-soft: rgba(120, 140, 93, 0.08);
+      --warn: #c9a23e;
       --radius: 0.75rem;
       --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
       --font-display: 'Newsreader', Georgia, ui-serif, serif;
@@ -30,63 +33,170 @@
       color: var(--fg);
     }
 
-    /* 顶部栏 */
-    .topbar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 28px;
-      border-bottom: 1px solid var(--card-border);
-      background: var(--card);
-      position: sticky; top: 0; z-index: 10;
+    .layout {
+      display: flex;
+      min-height: 100vh;
     }
-    .back-btn {
-      width: 34px; height: 34px;
+
+    /* 侧边栏 */
+    .sidebar {
+      width: 256px;
+      background: #f5f4f0;
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+      flex-shrink: 0;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 4px;
+      margin-bottom: 20px;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
       border-radius: 8px;
-      border: none; background: transparent;
-      cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      color: var(--muted);
-      transition: background 0.12s;
-    }
-    .back-btn:hover { background: rgba(0,0,0,0.04); }
-    .topbar h1 {
       font-family: var(--font-display);
-      font-size: 18px; font-weight: 500;
-      flex: 1;
+      font-size: 18px; font-weight: 600; color: #fff;
     }
-    .btn-sm {
-      height: 34px;
-      padding: 0 14px;
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 500;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: 1px;
+      transition: all 0.12s;
+    }
+    .nav-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+    .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: auto 4px 0;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .stat-cell {
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-cell .num {
+      font-size: 20px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-cell.total .num { color: var(--fg); }
+    .stat-cell.reading .num { color: var(--primary); }
+    .stat-cell.read .num { color: var(--success); }
+    .stat-cell.topics .num { color: var(--muted); }
+    .stat-cell .lbl {
+      font-size: 11px; color: var(--muted-light);
+      margin-top: 4px;
+    }
+    .bottom {
+      padding-top: 12px;
+    }
+    .bottom-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .bottom-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+
+    /* 主内容 */
+    .main {
+      flex: 1;
+      min-width: 0;
+      padding: 28px 32px 40px;
+    }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-family: var(--font-display);
+      font-size: 26px; font-weight: 600;
+    }
+    .btn {
+      height: 36px;
+      padding: 0 16px;
       border-radius: 8px;
       font-size: 13px; font-weight: 500;
       font-family: var(--font-sans);
       cursor: pointer;
       border: none;
-      display: flex; align-items: center; gap: 5px;
+      display: inline-flex; align-items: center; gap: 6px;
       transition: all 0.12s;
     }
-    .btn-outline {
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-ghost {
       background: transparent;
       border: 1px solid var(--card-border);
       color: var(--fg);
     }
-    .btn-outline:hover { background: rgba(0,0,0,0.03); }
+    .btn-ghost:hover { background: rgba(0,0,0,0.03); }
 
-    /* 主内容 */
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 24px 28px;
+    /* 文件概览 */
+    .file-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .fs-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .fs-card .icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 10px;
+      font-size: 18px;
+    }
+    .fs-card.all .icon { background: rgba(0,0,0,0.04); }
+    .fs-card.linked .icon { background: var(--success-soft); }
+    .fs-card.unlinked .icon { background: var(--primary-soft); }
+    .fs-card.size .icon { background: rgba(201,162,62,0.08); }
+    .fs-card .num {
+      font-size: 24px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .fs-card .lbl {
+      font-size: 12px; color: var(--muted);
+      margin-top: 4px;
     }
 
     /* 筛选器 */
     .filters {
-      display: flex; flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .filter-group {
-      display: flex; gap: 4px;
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
     .pill {
       padding: 5px 12px;
@@ -107,10 +217,15 @@
     .filter-divider {
       width: 1px; height: 20px;
       background: var(--card-border);
-      margin: 0 4px;
     }
 
     /* 表格 */
+    .file-table-wrap {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
     .file-table {
       width: 100%;
       border-collapse: separate;
@@ -119,20 +234,20 @@
     }
     .file-table th {
       text-align: left;
-      padding: 10px 12px;
+      padding: 12px 16px;
       font-size: 12px; font-weight: 500;
       color: var(--muted);
       border-bottom: 1px solid var(--card-border);
+      background: var(--bg);
       white-space: nowrap;
     }
     .file-table td {
-      padding: 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid rgba(224,221,212,0.5);
       vertical-align: middle;
     }
-    .file-table tr:hover td {
-      background: rgba(0,0,0,0.015);
-    }
+    .file-table tr:last-child td { border-bottom: none; }
+    .file-table tr:hover td { background: rgba(0,0,0,0.015); }
 
     .file-name {
       display: flex; align-items: center; gap: 10px;
@@ -140,24 +255,24 @@
     .file-icon {
       width: 32px; height: 32px;
       border-radius: 6px;
-      background: var(--primary-soft);
       display: flex; align-items: center; justify-content: center;
-      color: var(--primary);
       flex-shrink: 0;
     }
+    .file-icon.epub { background: var(--success-soft); color: var(--success); }
+    .file-icon.pdf { background: rgba(214,69,69,0.08); color: #d64545; }
+    .file-icon.mobi { background: var(--primary-soft); color: var(--primary); }
     .file-name-text {
       font-weight: 500;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 240px;
+      max-width: 200px;
     }
     .file-format {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
-      border: 1px solid var(--card-border);
       font-size: 11px; font-weight: 500;
-      color: var(--muted);
       background: var(--bg);
+      color: var(--muted);
     }
     .file-size, .file-date {
       font-size: 12.5px;
@@ -168,7 +283,7 @@
       font-size: 12.5px;
       color: var(--primary);
       cursor: pointer;
-      white-space: nowrap;
+      font-weight: 500;
     }
     .file-link:hover { text-decoration: underline; }
     .file-unlinked {
@@ -211,7 +326,8 @@
     /* 分页 */
     .pagination {
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: 20px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--card-border);
       font-size: 13px;
       color: var(--muted);
     }
@@ -235,150 +351,256 @@
       border-color: var(--primary);
       color: #fff;
     }
+
+    /* 未关联文件提示 */
+    .unlinked-alert {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--warn);
+      background: rgba(201,162,62,0.06);
+      margin-bottom: 20px;
+    }
+    .unlinked-alert .icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: rgba(201,162,62,0.12);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--warn);
+      flex-shrink: 0;
+    }
+    .unlinked-alert .text {
+      flex: 1;
+    }
+    .unlinked-alert .text h4 {
+      font-size: 13.5px; font-weight: 500;
+    }
+    .unlinked-alert .text p {
+      font-size: 12px; color: var(--muted);
+      margin-top: 2px;
+    }
+
+    @media (max-width: 1024px) {
+      .file-summary { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
 
-<header class="topbar">
-  <button class="back-btn">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="m15 18-6-6 6-6"/>
-    </svg>
-  </button>
-  <h1>书库文件</h1>
-  <button class="btn-sm btn-outline">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
-    </svg>
-    上传未关联文件
-  </button>
-</header>
+<div class="layout">
 
-<div class="container">
-
-  <!-- 筛选器 -->
-  <div class="filters">
-    <div class="filter-group">
-      <span class="pill on">全部格式</span>
-      <span class="pill">EPUB</span>
-      <span class="pill">PDF</span>
-      <span class="pill">MOBI</span>
-      <span class="pill">TXT</span>
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <div class="logo-text">Redesk</div>
     </div>
-    <div class="filter-divider"></div>
-    <div class="filter-group">
-      <span class="pill on">全部</span>
-      <span class="pill">已关联</span>
-      <span class="pill">未关联</span>
+    <nav>
+      <div class="nav-item">档案</div>
+      <div class="nav-item">书架</div>
+      <div class="nav-item active">书库文件</div>
+      <div class="nav-item">读书笔记</div>
+      <div class="nav-item">阅读话题</div>
+      <div class="nav-item">回收站</div>
+    </nav>
+    <div class="stats-grid">
+      <div class="stat-cell total"><div class="num">128</div><div class="lbl">总数</div></div>
+      <div class="stat-cell reading"><div class="num">12</div><div class="lbl">在读</div></div>
+      <div class="stat-cell read"><div class="num">86</div><div class="lbl">已读</div></div>
+      <div class="stat-cell topics"><div class="num">5</div><div class="lbl">话题</div></div>
     </div>
-  </div>
-
-  <!-- 文件列表 -->
-  <table class="file-table">
-    <thead>
-      <tr>
-        <th>文件名</th>
-        <th>格式</th>
-        <th>大小</th>
-        <th>关联书籍</th>
-        <th>上传时间</th>
-        <th style="text-align:right;">操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>
-          <div class="file-name">
-            <div class="file-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-            </div>
-            <span class="file-name-text">悉达多.epub</span>
-          </div>
-        </td>
-        <td><span class="file-format">EPUB</span></td>
-        <td class="file-size">2.4 MB</td>
-        <td><span class="file-link">悉达多</span></td>
-        <td class="file-date">2024-03-15</td>
-        <td>
-          <div class="file-actions">
-            <button class="btn-del">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <div class="file-name">
-            <div class="file-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-            </div>
-            <span class="file-name-text">百年孤独.pdf</span>
-          </div>
-        </td>
-        <td><span class="file-format">PDF</span></td>
-        <td class="file-size">5.1 MB</td>
-        <td><span class="file-unlinked">未关联</span></td>
-        <td class="file-date">2024-06-20</td>
-        <td>
-          <div class="file-actions">
-            <button class="btn-match">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-              匹配
-            </button>
-            <button class="btn-del">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <div class="file-name">
-            <div class="file-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-            </div>
-            <span class="file-name-text">设计模式.mobi</span>
-          </div>
-        </td>
-        <td><span class="file-format">MOBI</span></td>
-        <td class="file-size">1.8 MB</td>
-        <td><span class="file-link">设计模式</span></td>
-        <td class="file-date">2024-05-02</td>
-        <td>
-          <div class="file-actions">
-            <button class="btn-del">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-              </svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- 分页 -->
-  <div class="pagination">
-    <span>共 3 个文件</span>
-    <div class="page-btns">
-      <button class="on">1</button>
+    <div class="bottom">
+      <div class="bottom-item">AI 助手</div>
+      <div class="bottom-item">设置</div>
     </div>
-  </div>
+  </aside>
 
+  <!-- 主内容 -->
+  <main class="main">
+
+    <div class="page-header">
+      <h1>书库文件</h1>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
+        </svg>
+        上传文件
+      </button>
+    </div>
+
+    <!-- 文件概览 -->
+    <div class="file-summary">
+      <div class="fs-card all">
+        <div class="icon">📁</div>
+        <div class="num">156</div>
+        <div class="lbl">文件总数</div>
+      </div>
+      <div class="fs-card linked">
+        <div class="icon">🔗</div>
+        <div class="num" style="color:var(--success);">142</div>
+        <div class="lbl">已关联</div>
+      </div>
+      <div class="fs-card unlinked">
+        <div class="icon">📎</div>
+        <div class="num" style="color:var(--primary);">14</div>
+        <div class="lbl">未关联</div>
+      </div>
+      <div class="fs-card size">
+        <div class="icon">💾</div>
+        <div class="num" style="color:var(--warn);">2.4 GB</div>
+        <div class="lbl">占用空间</div>
+      </div>
+    </div>
+
+    <!-- 未关联提示 -->
+    <div class="unlinked-alert">
+      <div class="icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+        </svg>
+      </div>
+      <div class="text">
+        <h4>14 个文件尚未关联到书籍</h4>
+        <p>未关联的文件不会出现在书架中，建议尽快匹配或清理</p>
+      </div>
+      <button class="btn btn-ghost" style="height:32px;">一键匹配</button>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="filters">
+      <div class="pill on">全部</div>
+      <div class="pill">已关联</div>
+      <div class="pill">未关联</div>
+      <div class="filter-divider"></div>
+      <div class="pill on">全部格式</div>
+      <div class="pill">EPUB</div>
+      <div class="pill">PDF</div>
+      <div class="pill">MOBI</div>
+      <div class="pill">TXT</div>
+      <div class="pill">AZW3</div>
+    </div>
+
+    <!-- 文件表格 -->
+    <div class="file-table-wrap">
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th>文件名</th>
+            <th>格式</th>
+            <th>大小</th>
+            <th>关联书籍</th>
+            <th>上传时间</th>
+            <th style="text-align:right;width:120px;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="file-name">
+                <div class="file-icon epub">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <span class="file-name-text">悉达多.epub</span>
+              </div>
+            </td>
+            <td><span class="file-format">EPUB</span></td>
+            <td class="file-size">2.4 MB</td>
+            <td><span class="file-link">悉达多</span></td>
+            <td class="file-date">2024-03-15</td>
+            <td>
+              <div class="file-actions">
+                <button class="btn-match">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+                  </svg>
+                  下载
+                </button>
+                <button class="btn-del">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="file-name">
+                <div class="file-icon pdf">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <span class="file-name-text">百年孤独.pdf</span>
+              </div>
+            </td>
+            <td><span class="file-format">PDF</span></td>
+            <td class="file-size">5.1 MB</td>
+            <td><span class="file-unlinked">未关联</span></td>
+            <td class="file-date">2024-06-20</td>
+            <td>
+              <div class="file-actions">
+                <button class="btn-match">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                  匹配
+                </button>
+                <button class="btn-del">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="file-name">
+                <div class="file-icon mobi">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <span class="file-name-text">设计模式.mobi</span>
+              </div>
+            </td>
+            <td><span class="file-format">MOBI</span></td>
+            <td class="file-size">1.8 MB</td>
+            <td><span class="file-link">设计模式</span></td>
+            <td class="file-date">2024-05-02</td>
+            <td>
+              <div class="file-actions">
+                <button class="btn-match">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+                  </svg>
+                  下载
+                </button>
+                <button class="btn-del">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span>共 156 个文件</span>
+        <div class="page-btns">
+          <button class="on">1</button>
+          <button>2</button>
+          <button>3</button>
+          <button>4</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 </body>

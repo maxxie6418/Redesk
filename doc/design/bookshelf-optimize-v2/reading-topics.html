@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>阅读话题 - 占位页</title>
+  <title>阅读话题 - Redesk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -32,51 +32,121 @@
       color: var(--fg);
     }
 
-    .topbar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 28px;
-      border-bottom: 1px solid var(--card-border);
-      background: var(--card);
-      position: sticky; top: 0; z-index: 10;
-    }
-    .back-btn {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      border: none; background: transparent;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--muted);
-      transition: background 0.12s;
-    }
-    .back-btn:hover { background: rgba(0,0,0,0.04); }
-    .topbar h1 {
-      font-family: var(--font-display);
-      font-size: 18px; font-weight: 500;
-      flex: 1;
+    .layout {
+      display: flex;
+      min-height: 100vh;
     }
 
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 60px 28px;
+    /* 侧边栏 */
+    .sidebar {
+      width: 256px;
+      background: #f5f4f0;
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+      flex-shrink: 0;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 4px;
+      margin-bottom: 20px;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 600; color: #fff;
+    }
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 500;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: 1px;
+      transition: all 0.12s;
+    }
+    .nav-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+    .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: auto 4px 0;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .stat-cell {
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-cell .num {
+      font-size: 20px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-cell.total .num { color: var(--fg); }
+    .stat-cell.reading .num { color: var(--primary); }
+    .stat-cell.read .num { color: var(--success); }
+    .stat-cell.topics .num { color: var(--muted); }
+    .stat-cell .lbl {
+      font-size: 11px; color: var(--muted-light);
+      margin-top: 4px;
+    }
+    .bottom {
+      padding-top: 12px;
+    }
+    .bottom-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .bottom-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+
+    /* 主内容 */
+    .main {
+      flex: 1;
+      min-width: 0;
+      padding: 28px 32px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
     }
 
-    .placeholder-icon {
+    .ph-icon {
       width: 80px; height: 80px;
       border-radius: 20px;
       background: var(--success-soft);
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 24px;
+      margin-bottom: 24px;
       color: var(--success);
     }
 
-    .container h2 {
+    .main h2 {
       font-family: var(--font-display);
       font-size: 24px; font-weight: 500;
       margin-bottom: 12px;
     }
-    .container p {
+    .main p {
       font-size: 14px; color: var(--muted);
       line-height: 1.7;
       max-width: 420px;
@@ -119,36 +189,57 @@
 </head>
 <body>
 
-<header class="topbar">
-  <button class="back-btn">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="m15 18-6-6 6-6"/>
-    </svg>
-  </button>
-  <h1>阅读话题</h1>
-</header>
+<div class="layout">
 
-<div class="container">
-  <div class="placeholder-icon">
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
-      <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
-    </svg>
-  </div>
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <div class="logo-text">Redesk</div>
+    </div>
+    <nav>
+      <div class="nav-item">档案</div>
+      <div class="nav-item">书架</div>
+      <div class="nav-item">书库文件</div>
+      <div class="nav-item">读书笔记</div>
+      <div class="nav-item active">阅读话题</div>
+      <div class="nav-item">回收站</div>
+    </nav>
+    <div class="stats-grid">
+      <div class="stat-cell total"><div class="num">128</div><div class="lbl">总数</div></div>
+      <div class="stat-cell reading"><div class="num">12</div><div class="lbl">在读</div></div>
+      <div class="stat-cell read"><div class="num">86</div><div class="lbl">已读</div></div>
+      <div class="stat-cell topics"><div class="num">5</div><div class="lbl">话题</div></div>
+    </div>
+    <div class="bottom">
+      <div class="bottom-item">AI 助手</div>
+      <div class="bottom-item">设置</div>
+    </div>
+  </aside>
 
-  <h2>阅读话题功能即将上线</h2>
-  <p>围绕一个核心话题，跨书籍组织深度阅读。将不同书中的相关观点串联起来，形成自己的知识网络。</p>
+  <!-- 主内容 -->
+  <main class="main">
+    <div class="ph-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
+        <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+      </svg>
+    </div>
 
-  <span class="badge">M4 阶段</span>
+    <h2>阅读话题功能即将上线</h2>
+    <p>围绕一个核心话题，跨书籍组织深度阅读。将不同书中的相关观点串联起来，形成自己的知识网络。</p>
 
-  <div class="topic-demo">
-    <span class="topic-tag">存在主义</span>
-    <span class="topic-tag hl">认知心理学</span>
-    <span class="topic-tag">中国哲学</span>
-    <span class="topic-tag">设计思维</span>
-    <span class="topic-tag">技术伦理</span>
-    <span class="topic-tag">历史周期</span>
-  </div>
+    <span class="badge">M4 阶段</span>
+
+    <div class="topic-demo">
+      <span class="topic-tag">存在主义</span>
+      <span class="topic-tag hl">认知心理学</span>
+      <span class="topic-tag">中国哲学</span>
+      <span class="topic-tag">设计思维</span>
+      <span class="topic-tag">技术伦理</span>
+      <span class="topic-tag">历史周期</span>
+    </div>
+  </main>
 </div>
 
 </body>
