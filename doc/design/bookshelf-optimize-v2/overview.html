@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>档案页 - 优化方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --card: #ffffff;
+      --card-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --success: #788c5d;
+      --success-soft: rgba(120, 140, 93, 0.08);
+      --info: #5a7a8c;
+      --info-soft: rgba(90, 122, 140, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    /* 顶部栏 */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: var(--card);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar h1 {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 500;
+    }
+    .topbar .ver {
+      font-size: 11px; font-weight: 500;
+      color: var(--muted-light);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 主内容 */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    /* 状态卡片网格 */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .status-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .status-card:hover {
+      border-color: var(--muted-light);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .status-card .icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .status-card.reading .icon { background: rgba(120,140,93,0.1); }
+    .status-card.planned .icon { background: rgba(90,122,140,0.1); }
+    .status-card.read .icon { background: rgba(120,140,93,0.08); }
+    .status-card.stored .icon { background: rgba(0,0,0,0.04); }
+    .status-card .info { flex: 1; }
+    .status-card .label {
+      font-size: 12.5px; font-weight: 500;
+      color: var(--muted);
+    }
+    .status-card .count {
+      font-size: 22px; font-weight: 600;
+      color: var(--fg);
+      line-height: 1.2;
+      margin-top: 2px;
+    }
+
+    /* 卡片 */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-header h3 {
+      font-size: 14px; font-weight: 600;
+    }
+    .card-header .icon {
+      width: 16px; height: 16px;
+      color: var(--muted);
+    }
+    .card-body {
+      padding: 16px 20px 20px;
+    }
+
+    /* 总览大数字 */
+    .big-stat {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .big-stat .num {
+      font-size: 48px; font-weight: 700;
+      color: var(--fg);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .big-stat .lbl {
+      font-size: 14px; color: var(--muted);
+      margin-top: 8px;
+    }
+    .big-stat .btn {
+      margin-top: 16px;
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: transparent;
+      font-size: 13px; font-weight: 500;
+      font-family: var(--font-sans);
+      color: var(--fg);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .big-stat .btn:hover { background: rgba(0,0,0,0.03); }
+
+    /* 列表项 */
+    .list-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      margin-bottom: 8px;
+      transition: all 0.12s;
+      cursor: pointer;
+    }
+    .list-item:hover {
+      border-color: var(--muted-light);
+      background: var(--bg);
+    }
+    .list-item:last-child { margin-bottom: 0; }
+    .list-item .title {
+      font-size: 13.5px; font-weight: 500;
+      flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .list-item .meta {
+      font-size: 12px; color: var(--muted-light);
+      white-space: nowrap;
+    }
+
+    /* 占位卡片 */
+    .placeholder {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px dashed var(--card-border);
+    }
+    .placeholder .ph-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+    }
+    .placeholder .ph-text {
+      font-size: 13px; color: var(--muted);
+    }
+    .placeholder .ph-text .sub {
+      font-size: 11.5px; color: var(--muted-light);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+    <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+  </svg>
+  <h1>Redesk</h1>
+  <span class="ver">v0.2.0</span>
+</header>
+
+<div class="container">
+
+  <!-- 状态概览 -->
+  <div class="status-grid">
+    <div class="status-card reading">
+      <div class="icon">📖</div>
+      <div class="info">
+        <div class="label">正在阅读</div>
+        <div class="count">12</div>
+      </div>
+    </div>
+    <div class="status-card planned">
+      <div class="icon">📋</div>
+      <div class="info">
+        <div class="label">计划阅读</div>
+        <div class="count">18</div>
+      </div>
+    </div>
+    <div class="status-card read">
+      <div class="icon">✅</div>
+      <div class="info">
+        <div class="label">已读完</div>
+        <div class="count">86</div>
+      </div>
+    </div>
+    <div class="status-card stored">
+      <div class="icon">📚</div>
+      <div class="info">
+        <div class="label">已存档</div>
+        <div class="count">12</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 书架总览 -->
+  <div class="card">
+    <div class="card-header">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      <h3>书架总览</h3>
+    </div>
+    <div class="card-body">
+      <div class="big-stat">
+        <div class="num">128</div>
+        <div class="lbl">本书</div>
+        <button class="btn">查看全部书架</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近在读 -->
+  <div class="card">
+    <div class="card-header">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      <h3>最近在读</h3>
+    </div>
+    <div class="card-body">
+      <div class="list-item">
+        <span class="title">悉达多</span>
+        <span class="meta">赫尔曼·黑塞</span>
+      </div>
+      <div class="list-item">
+        <span class="title">百年孤独</span>
+        <span class="meta">加西亚·马尔克斯</span>
+      </div>
+      <div class="list-item">
+        <span class="title">设计模式：可复用面向对象软件的基础</span>
+        <span class="meta">GoF</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近新增 -->
+  <div class="card">
+    <div class="card-header">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <h3>最近新增</h3>
+    </div>
+    <div class="card-body">
+      <div class="list-item">
+        <span class="title">人类简史</span>
+        <span class="meta">06月15日</span>
+      </div>
+      <div class="list-item">
+        <span class="title">深度工作</span>
+        <span class="meta">06月10日</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 助手占位 -->
+  <div class="card" style="border-style:dashed;">
+    <div class="card-body">
+      <div class="placeholder">
+        <div class="ph-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+            <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+          </svg>
+        </div>
+        <div class="ph-text">
+          AI 智能助手
+          <div class="sub">推荐书单、自动归类、阅读摘要 — 即将上线</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 阅读话题占位 -->
+  <div class="card" style="border-style:dashed;">
+    <div class="card-body">
+      <div class="placeholder">
+        <div class="ph-icon" style="background:var(--success-soft);color:var(--success);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>
+          </svg>
+        </div>
+        <div class="ph-text">
+          阅读话题
+          <div class="sub">围绕一个话题组织多本书的深度阅读 — 即将上线</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

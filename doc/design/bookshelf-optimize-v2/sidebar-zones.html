@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>侧边栏区域划分示意</title>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --sidebar: #f5f4f0;
+      --sidebar-border: #e0ddd4;
+      --muted: #6e6d68;
+      --primary: #d97757;
+      --zone-border: #d97757;
+      --font-sans: 'Poppins', sans-serif;
+      --font-display: 'Newsreader', serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: #e8e6dc;
+      display: flex;
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    .sidebar {
+      width: 256px;
+      min-height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+      position: relative;
+    }
+
+    /* 区域标注 */
+    .zone {
+      position: relative;
+      border: 2px dashed var(--zone-border);
+      border-radius: 8px;
+      margin: 4px 0;
+    }
+    .zone-label {
+      position: absolute;
+      top: -11px;
+      left: 8px;
+      background: var(--zone-border);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    /* 区域 A - Logo+搜索 */
+    .zone-a { padding: 16px 8px 12px; margin-top: 8px; }
+
+    /* 区域 B - 导航 */
+    .zone-b { padding: 16px 8px 12px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--muted);
+      margin-bottom: 1px;
+    }
+    .nav-item.active {
+      background: rgba(217,119,87,0.08);
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    /* 区域 C - 空白区 */
+    .zone-c {
+      flex: 1;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-style: dashed;
+      border-color: #b0aea5;
+      background: rgba(0,0,0,0.02);
+    }
+    .zone-c .zone-label {
+      background: #b0aea5;
+    }
+    .zone-c .hint {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* 区域 D - 统计 */
+    .zone-d { padding: 16px 8px 12px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat-cell {
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--sidebar-border);
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-cell .num {
+      font-size: 20px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-cell.total .num { color: var(--fg); }
+    .stat-cell.reading .num { color: var(--primary); }
+    .stat-cell.read .num { color: #788c5d; }
+    .stat-cell.topics .num { color: var(--muted); }
+    .stat-cell .lbl {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* 区域 E - 底部操作 */
+    .zone-e { padding: 12px 8px; }
+    .bottom-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 1px;
+    }
+    .user-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      margin-top: 4px;
+    }
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(217,119,87,0.08);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+      font-size: 12px;
+    }
+
+    /* 右侧说明 */
+    .info {
+      flex: 1;
+      padding: 40px;
+      max-width: 500px;
+    }
+    .info h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .zone-desc {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid var(--sidebar-border);
+    }
+    .zone-desc .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .tag-a { background: var(--zone-border); color: #fff; }
+    .tag-b { background: var(--zone-border); color: #fff; }
+    .tag-c { background: #b0aea5; color: #fff; }
+    .tag-d { background: var(--zone-border); color: #fff; }
+    .tag-e { background: var(--zone-border); color: #fff; }
+    .zone-desc p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<aside class="sidebar">
+
+  <!-- 区域 A -->
+  <div class="zone zone-a">
+    <span class="zone-label">区域 A</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:18px;font-weight:600;color:#fff;">R</div>
+      <div style="font-family:var(--font-display);font-size:20px;font-weight:500;">Redesk</div>
+      <span style="margin-left:auto;font-size:11px;color:var(--muted);">v0.2.0</span>
+    </div>
+    <div style="position:relative;">
+      <input type="text" placeholder="搜索书名、作者、标签" style="width:100%;height:36px;border-radius:999px;border:1px solid var(--sidebar-border);background:var(--bg);padding:0 12px 0 32px;font-size:13px;">
+    </div>
+  </div>
+
+  <!-- 区域 B -->
+  <div class="zone zone-b">
+    <span class="zone-label">区域 B</span>
+    <div class="nav-item active">书架 <span style="margin-left:auto;font-size:10px;">128</span></div>
+    <div class="nav-item">档案</div>
+    <div class="nav-item">书库文件</div>
+    <div class="nav-item" style="opacity:0.45;">读书笔记 <span style="margin-left:auto;font-size:10px;">M2</span></div>
+    <div class="nav-item" style="opacity:0.45;">阅读话题 <span style="margin-left:auto;font-size:10px;">M4</span></div>
+    <div class="nav-item">回收站</div>
+  </div>
+
+  <!-- 区域 C - 空白/可扩展 -->
+  <div class="zone zone-c">
+    <span class="zone-label">区域 C</span>
+    <p class="hint">当前空白区域<br>可放置快捷操作、最近阅读等</p>
+  </div>
+
+  <!-- 区域 D -->
+  <div class="zone zone-d">
+    <span class="zone-label">区域 D</span>
+    <div class="stats-grid">
+      <div class="stat-cell total"><div class="num">128</div><div class="lbl">总数</div></div>
+      <div class="stat-cell reading"><div class="num">12</div><div class="lbl">在读</div></div>
+      <div class="stat-cell read"><div class="num">86</div><div class="lbl">已读</div></div>
+      <div class="stat-cell topics"><div class="num">5</div><div class="lbl">话题</div></div>
+    </div>
+  </div>
+
+  <!-- 区域 E -->
+  <div class="zone zone-e">
+    <span class="zone-label">区域 E</span>
+    <div class="bottom-item" style="opacity:0.4;">AI 助手 <span style="margin-left:auto;font-size:10px;">M3</span></div>
+    <div class="bottom-item">设置</div>
+    <div class="user-row">
+      <div class="user-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <span style="font-size:13px;font-weight:500;">Maxxie</span>
+    </div>
+  </div>
+
+</aside>
+
+<!-- 右侧说明 -->
+<div class="info">
+  <h2>侧边栏区域划分</h2>
+  <div class="zone-desc">
+    <span class="tag tag-a">区域 A</span>
+    <p>Logo + 搜索框。固定顶部，品牌标识和全局搜索入口。</p>
+  </div>
+  <div class="zone-desc">
+    <span class="tag tag-b">区域 B</span>
+    <p>主导航菜单。书架、档案、书库文件等功能入口。</p>
+  </div>
+  <div class="zone-desc">
+    <span class="tag tag-c">区域 C</span>
+    <p>当前空白区域，可扩展放置快捷操作、最近阅读、阅读进度等。</p>
+  </div>
+  <div class="zone-desc">
+    <span class="tag tag-d">区域 D</span>
+    <p>统计面板。2×2 数字网格，展示总数、在读、已读、话题。</p>
+  </div>
+  <div class="zone-desc">
+    <span class="tag tag-e">区域 E</span>
+    <p>底部操作区。AI 助手、设置、用户信息。</p>
+  </div>
+</div>
+
+</body>
+</html>

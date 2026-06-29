@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读话题 - 占位页</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --card: #ffffff;
+      --card-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --success: #788c5d;
+      --success-soft: rgba(120, 140, 93, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: var(--card);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: none; background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 0.12s;
+    }
+    .back-btn:hover { background: rgba(0,0,0,0.04); }
+    .topbar h1 {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 500;
+      flex: 1;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 28px;
+      text-align: center;
+    }
+
+    .placeholder-icon {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      background: var(--success-soft);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      color: var(--success);
+    }
+
+    .container h2 {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .container p {
+      font-size: 14px; color: var(--muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin: 0 auto 32px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .topic-demo {
+      display: flex; flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 500px;
+      margin: 40px auto 0;
+    }
+    .topic-tag {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      font-size: 13px; font-weight: 500;
+      color: var(--muted);
+      background: var(--card);
+      opacity: 0.6;
+    }
+    .topic-tag.hl {
+      border-color: var(--success);
+      color: var(--success);
+      background: var(--success-soft);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+  </button>
+  <h1>阅读话题</h1>
+</header>
+
+<div class="container">
+  <div class="placeholder-icon">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
+      <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+    </svg>
+  </div>
+
+  <h2>阅读话题功能即将上线</h2>
+  <p>围绕一个核心话题，跨书籍组织深度阅读。将不同书中的相关观点串联起来，形成自己的知识网络。</p>
+
+  <span class="badge">M4 阶段</span>
+
+  <div class="topic-demo">
+    <span class="topic-tag">存在主义</span>
+    <span class="topic-tag hl">认知心理学</span>
+    <span class="topic-tag">中国哲学</span>
+    <span class="topic-tag">设计思维</span>
+    <span class="topic-tag">技术伦理</span>
+    <span class="topic-tag">历史周期</span>
+  </div>
+</div>
+
+</body>
+</html>

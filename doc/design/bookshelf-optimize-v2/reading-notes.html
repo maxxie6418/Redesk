@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>读书笔记 - 占位页</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --card: #ffffff;
+      --card-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: var(--card);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: none; background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 0.12s;
+    }
+    .back-btn:hover { background: rgba(0,0,0,0.04); }
+    .topbar h1 {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 500;
+      flex: 1;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 28px;
+      text-align: center;
+    }
+
+    .placeholder-icon {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      color: var(--primary);
+    }
+
+    .container h2 {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .container p {
+      font-size: 14px; color: var(--muted);
+      line-height: 1.7;
+      max-width: 400px;
+      margin: 0 auto 32px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 480px;
+      margin: 40px auto 0;
+      text-align: left;
+    }
+    .feature-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+    }
+    .feature-item .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+    .feature-item span {
+      font-size: 13.5px; color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+  </button>
+  <h1>读书笔记</h1>
+</header>
+
+<div class="container">
+  <div class="placeholder-icon">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/>
+      <path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>
+    </svg>
+  </div>
+
+  <h2>读书笔记功能即将上线</h2>
+  <p>在阅读过程中随时记录标注、摘录和心得，所有笔记将按书籍自动归档，支持搜索和导出。</p>
+
+  <span class="badge">M2 阶段</span>
+
+  <div class="feature-list">
+    <div class="feature-item">
+      <div class="dot"></div>
+      <span>高亮与标注</span>
+    </div>
+    <div class="feature-item">
+      <div class="dot"></div>
+      <span>段落摘录</span>
+    </div>
+    <div class="feature-item">
+      <div class="dot"></div>
+      <span>阅读心得</span>
+    </div>
+    <div class="feature-item">
+      <div class="dot"></div>
+      <span>笔记导出</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

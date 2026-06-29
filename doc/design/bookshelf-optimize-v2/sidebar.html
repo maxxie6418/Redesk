@@ -17,6 +17,7 @@
       --muted-light: #b0aea5;
       --primary: #d97757;
       --primary-soft: rgba(217, 119, 87, 0.08);
+      --success: #788c5d;
       --radius: 0.75rem;
       --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
       --font-display: 'Newsreader', Georgia, ui-serif, serif;
@@ -151,7 +152,9 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin: 16px 4px 0;
+      margin: auto 4px 0;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--sidebar-border);
     }
     .stat-cell {
       background: var(--bg);
@@ -184,9 +187,7 @@
 
     /* 底部 */
     .bottom {
-      margin-top: auto;
       padding-top: 12px;
-      border-top: 1px solid var(--sidebar-border);
     }
     .bottom-item {
       display: flex; align-items: center; gap: 10px;
@@ -307,7 +308,7 @@
   </nav>
 
   <!-- 统计面板 -->
-  <div class="stats-grid" style="margin:16px 4px 0;">
+  <div class="stats-grid">
     <div class="stat-cell total">
       <div class="num">128</div>
       <div class="lbl">总数</div>
