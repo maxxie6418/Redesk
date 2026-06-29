@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>添加书籍 - 优化方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --card: #ffffff;
+      --card-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --primary-hover: #c96a4b;
+      --success: #788c5d;
+      --success-soft: rgba(120, 140, 93, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: rgba(0,0,0,0.35);
+      min-height: 100vh;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 48px 20px;
+      color: var(--fg);
+    }
+
+    /* 弹窗卡片 */
+    .modal {
+      width: 100%; max-width: 720px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header h2 {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 500;
+    }
+    .close-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: none; background: transparent;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 0.12s;
+    }
+    .close-btn:hover { background: rgba(0,0,0,0.04); }
+
+    .modal-body {
+      padding: 20px 24px;
+    }
+
+    /* 左右分栏 */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px 24px;
+    }
+
+    .field {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .field.full { grid-column: 1 / -1; }
+    .field label {
+      font-size: 12.5px; font-weight: 500;
+      color: var(--fg);
+    }
+    .field label .opt {
+      font-weight: 400;
+      color: var(--muted-light);
+      margin-left: 3px;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--bg);
+      padding: 0 12px;
+      font-size: 13.5px;
+      font-family: var(--font-sans);
+      color: var(--fg);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(217,119,87,0.1);
+    }
+    .field input::placeholder,
+    .field textarea::placeholder { color: var(--muted-light); }
+    .field textarea {
+      height: auto; min-height: 100px;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+    .field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0aea5' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+
+    /* 链接输入框 + 获取按钮 */
+    .link-field {
+      display: flex; gap: 8px;
+    }
+    .link-field input { flex: 1; }
+    .btn-fetch {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      background: var(--bg);
+      font-size: 12.5px; font-weight: 500;
+      font-family: var(--font-sans);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.12s;
+    }
+    .btn-fetch:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    /* 分组标题 */
+    .section-title {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 4px;
+      font-size: 12px; font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--card-border);
+    }
+
+    /* 标签 */
+    .tag-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .tag {
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--card-border);
+      font-size: 12px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.12s;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .tag:hover { border-color: var(--muted-light); color: var(--fg); }
+    .tag.on {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .tag .chk { width: 12px; height: 12px; display: none; }
+    .tag.on .chk { display: inline; }
+
+    /* 文件上传 */
+    .file-zone {
+      grid-column: 1 / -1;
+      border: 2px dashed var(--card-border);
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .file-zone:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .file-zone .icon {
+      width: 32px; height: 32px;
+      color: var(--muted-light);
+      margin: 0 auto 8px;
+    }
+    .file-zone p {
+      font-size: 13px; color: var(--muted);
+    }
+    .file-zone .hint {
+      font-size: 11px; color: var(--muted-light);
+      margin-top: 4px;
+    }
+
+    /* 底部按钮 */
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--card-border);
+    }
+    .btn {
+      height: 36px;
+      padding: 0 18px;
+      border-radius: 8px;
+      font-size: 13.5px; font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      border: none;
+      transition: all 0.12s;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--fg);
+    }
+    .btn-ghost:hover { background: rgba(0,0,0,0.03); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    /* 响应式 */
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .link-field { flex-direction: column; }
+      .btn-fetch { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="modal">
+  <div class="modal-header">
+    <h2>添加书籍</h2>
+    <button class="close-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="form-grid">
+      <!-- 快速录入（用户优先填写） -->
+      <div class="section-title">快速录入</div>
+
+      <div class="field full">
+        <label>书名 <span style="color:var(--primary)">*</span></label>
+        <input type="text" placeholder="输入书名">
+      </div>
+
+      <div class="field">
+        <label>个人分类</label>
+        <select>
+          <option>未分类</option>
+          <option>技术</option>
+          <option>文学</option>
+          <option>历史</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>页数 <span class="opt">可选</span></label>
+        <input type="number" placeholder="0" min="0">
+      </div>
+
+      <div class="field full">
+        <label>书籍介绍链接 <span class="opt">可选</span></label>
+        <div class="link-field">
+          <input type="url" placeholder="https://douban.com/...">
+          <button class="btn-fetch">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
+            </svg>
+            一键获取
+          </button>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>书籍简介 <span class="opt">可选</span></label>
+        <textarea placeholder="输入书籍简介..."></textarea>
+      </div>
+
+      <!-- 文件上传 -->
+      <div class="file-zone">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
+        </svg>
+        <p>点击或拖拽上传书籍文件</p>
+        <p class="hint">支持 epub, pdf, mobi, txt, azw3, docx 等格式</p>
+      </div>
+
+      <!-- 详细信息（收录后补充） -->
+      <div class="section-title">详细信息（收录后可补充）</div>
+
+      <div class="field full">
+        <label>副标题 <span class="opt">可选</span></label>
+        <input type="text" placeholder="输入副标题">
+      </div>
+
+      <div class="field">
+        <label>作者 <span class="opt">可选</span></label>
+        <input type="text" placeholder="作者姓名">
+      </div>
+
+      <div class="field">
+        <label>ISBN <span class="opt">可选</span></label>
+        <input type="text" placeholder="978-...">
+      </div>
+
+      <div class="field">
+        <label>出版社 <span class="opt">可选</span></label>
+        <input type="text" placeholder="出版社名称">
+      </div>
+
+      <div class="field">
+        <label>出版年 <span class="opt">可选</span></label>
+        <input type="number" placeholder="2024" min="0" max="2100">
+      </div>
+
+      <div class="field">
+        <label>常规分类</label>
+        <select>
+          <option>未分类</option>
+          <option>小说</option>
+          <option>非虚构</option>
+          <option>传记</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>阅读状态</label>
+        <select>
+          <option>已收藏</option>
+          <option>计划阅读</option>
+          <option>正在阅读</option>
+          <option>已读完</option>
+          <option>已存档</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>可见性</label>
+        <select>
+          <option>私密</option>
+          <option>公开</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>阅读目的 <span class="opt">可选</span></label>
+        <input type="text" placeholder="泛读 / 精读 / 参考 ...">
+      </div>
+
+      <div class="field">
+        <label>标签</label>
+        <div class="tag-list">
+          <span class="tag on"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>哲学</span>
+          <span class="tag">经典</span>
+          <span class="tag on"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>心理学</span>
+          <span class="tag">科幻</span>
+          <span class="tag">历史</span>
+          <span class="tag">技术</span>
+          <span class="tag">散文</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-ghost">取消</button>
+    <button class="btn btn-primary">创建</button>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书籍详情 - 优化方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --card: #ffffff;
+      --card-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --success: #788c5d;
+      --success-soft: rgba(120, 140, 93, 0.08);
+      --info: #5a7a8c;
+      --info-soft: rgba(90, 122, 140, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    /* 顶部导航栏 */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: var(--card);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: none; background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 0.12s;
+    }
+    .back-btn:hover { background: rgba(0,0,0,0.04); }
+    .topbar h1 {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 500;
+      flex: 1;
+    }
+    .topbar-actions {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-sm {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      border: none;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.12s;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--fg);
+    }
+    .btn-outline:hover { background: rgba(0,0,0,0.03); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-icon {
+      width: 34px; height: 34px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    /* 主内容区 */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    /* 头部信息区 */
+    .hero {
+      display: flex; gap: 24px;
+      margin-bottom: 28px;
+    }
+    .cover {
+      width: 120px; height: 172px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #d8c6b7, #c9b8a9);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      flex-shrink: 0;
+    }
+    .cover .initial {
+      font-family: var(--font-display);
+      font-size: 40px; font-weight: 600;
+      color: #3d2f28;
+    }
+    .cover .year {
+      font-size: 11px; color: #3d2f28;
+      opacity: 0.6; margin-top: 4px;
+    }
+    .hero-info {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .hero-info h2 {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 600;
+      line-height: 1.3;
+    }
+    .hero-info .subtitle {
+      font-size: 14px; color: var(--muted);
+    }
+    .hero-info .meta {
+      font-size: 13.5px; color: var(--muted);
+    }
+    .tag-row {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .tag-row .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px; font-weight: 500;
+    }
+    .pill.status {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+    .pill.cat {
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      background: transparent;
+    }
+    .pill.tag {
+      background: rgba(0,0,0,0.03);
+      color: var(--muted);
+    }
+    .stars-row {
+      display: flex; align-items: center; gap: 3px;
+    }
+    .stars-row svg {
+      width: 16px; height: 16px;
+      color: #f0a030;
+    }
+    .purpose {
+      font-size: 13px; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .purpose .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    /* 分组卡片 */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .card-header .stripe {
+      width: 4px; height: 18px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .stripe.archive { background: var(--muted-light); }
+    .stripe.trace { background: var(--primary); }
+    .stripe.topic { background: var(--success); }
+    .card-header h3 {
+      font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-header .icon {
+      width: 16px; height: 16px;
+      color: var(--muted);
+    }
+    .card-body {
+      padding: 16px 20px 20px;
+    }
+
+    /* 档案卡片 - 两栏网格 */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 24px;
+    }
+    .kv {
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .kv .k {
+      font-size: 11px; font-weight: 500;
+      color: var(--muted-light);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .kv .v {
+      font-size: 13.5px;
+      color: var(--fg);
+    }
+    .kv .v.muted { color: var(--muted); }
+
+    /* 简介 */
+    .desc {
+      font-size: 14px; line-height: 1.7;
+      color: var(--muted);
+    }
+
+    /* 留痕占位 */
+    .placeholder {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px dashed var(--card-border);
+    }
+    .placeholder .ph-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+    }
+    .placeholder .ph-text {
+      font-size: 13px; color: var(--muted);
+    }
+    .placeholder .ph-text .sub {
+      font-size: 11.5px; color: var(--muted-light);
+      margin-top: 2px;
+    }
+
+    /* 文件列表 */
+    .file-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .file-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      transition: background 0.12s;
+    }
+    .file-item:hover { background: var(--bg); }
+    .file-item .f-icon {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    .file-item .f-info { flex: 1; min-width: 0; }
+    .file-item .f-name {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-item .f-meta {
+      font-size: 11px; color: var(--muted-light);
+      margin-top: 1px;
+    }
+    .file-item .f-badge {
+      font-size: 10px; font-weight: 600;
+      color: var(--success);
+      background: var(--success-soft);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .file-item .f-actions {
+      display: flex; gap: 4px;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+    .file-item:hover .f-actions { opacity: 1; }
+    .f-actions button {
+      width: 26px; height: 26px;
+      border-radius: 5px;
+      border: none; background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background 0.12s;
+    }
+    .f-actions button:hover { background: rgba(0,0,0,0.05); }
+
+    /* 上传区 */
+    .upload-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 12px;
+    }
+    .upload-zone:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .upload-zone p {
+      font-size: 12.5px; color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<header class="topbar">
+  <button class="back-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+  </button>
+  <h1>悉达多</h1>
+  <div class="topbar-actions">
+    <button class="btn-sm btn-outline btn-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+    </button>
+    <button class="btn-sm btn-outline">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+      </svg>
+      编辑
+    </button>
+    <button class="btn-sm btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      阅读
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 头部信息 -->
+  <div class="hero">
+    <div class="cover">
+      <span class="initial">悉</span>
+      <span class="year">1922</span>
+    </div>
+    <div class="hero-info">
+      <h2>悉达多</h2>
+      <p class="subtitle">一首印度的诗</p>
+      <p class="meta">赫尔曼·黑塞 / 姜乙 译 / 天津人民出版社 / 2017</p>
+      <div class="tag-row">
+        <span class="pill status">已读完</span>
+        <span class="pill cat">文学</span>
+        <span class="pill tag">#哲学</span>
+        <span class="pill tag">#经典</span>
+      </div>
+      <div class="stars-row">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div class="purpose">
+        <span class="dot"></span>
+        阅读目的：精读
+      </div>
+      <p style="font-size:12px;color:var(--muted-light)">开始：2024-03-15 · 读完：2024-03-28</p>
+    </div>
+  </div>
+
+  <!-- 书籍档案 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="stripe archive"></div>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
+        </svg>
+        书籍档案
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="kv-grid">
+        <div class="kv">
+          <span class="k">原作名</span>
+          <span class="v">Siddhartha</span>
+        </div>
+        <div class="kv">
+          <span class="k">ISBN</span>
+          <span class="v">9787201112695</span>
+        </div>
+        <div class="kv">
+          <span class="k">页数</span>
+          <span class="v">152 页</span>
+        </div>
+        <div class="kv">
+          <span class="k">来源</span>
+          <span class="v muted">未设置</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <span class="k">简介</span>
+        <p class="desc" style="margin-top:6px;">
+          《悉达多》并非是佛陀的故事，它讲述了一个人的一生，千万寻常人亦会经历的一生。意气风发的少年郎，常认为自己是被命运选中的人。抛下过去，随了跌跌撞撞的步伐，找寻心中的声音，追逐名利，经历友情，品尝爱情。不同的是，悉达多一生追求的是生命的圆融统一，看似宏大，确是每个人无法回避的问题。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 阅读留痕 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="stripe trace"></div>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/>
+          <path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>
+        </svg>
+        阅读留痕
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="placeholder">
+        <div class="ph-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="ph-text">
+          笔记与高亮功能将在 M2 上线
+          <div class="sub">阅读过程中的标注、摘录和思考将集中展示于此</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主题关联 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="stripe topic"></div>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
+          <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+        </svg>
+        主题关联
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="placeholder">
+        <div class="ph-icon" style="background:var(--success-soft);color:var(--success);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="ph-text">
+          阅读话题功能将在 M4 上线
+          <div class="sub">围绕特定主题跨书籍的探讨与关联将展示于此</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件管理 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="stripe archive"></div>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>
+        </svg>
+        文件管理
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="file-list">
+        <div class="file-item">
+          <div class="f-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div class="f-info">
+            <div class="f-name">悉达多.epub</div>
+            <div class="f-meta">2.4 MB · 2024-03-15 上传</div>
+          </div>
+          <span class="f-badge">主文件</span>
+          <div class="f-actions">
+            <button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+              </svg>
+            </button>
+            <button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="upload-zone">
+        <p>+ 上传新文件</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

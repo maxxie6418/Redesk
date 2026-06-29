@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redesk 侧边栏 - 优化方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --fg: #141413;
+      --sidebar: #f5f4f0;
+      --sidebar-border: #e0ddd4;
+      --muted: #6e6d68;
+      --muted-light: #b0aea5;
+      --primary: #d97757;
+      --primary-soft: rgba(217, 119, 87, 0.08);
+      --radius: 0.75rem;
+      --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+      --font-display: 'Newsreader', Georgia, ui-serif, serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-sans);
+      background: #e8e6dc;
+      display: flex;
+      min-height: 100vh;
+      color: var(--fg);
+    }
+
+    /* ===== 侧边栏 ===== */
+    .sidebar {
+      width: 256px;
+      min-height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px 16px;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 4px;
+      margin-bottom: 20px;
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 600;
+      color: #fff;
+    }
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 500;
+      color: var(--fg);
+    }
+    .logo-ver {
+      margin-left: auto;
+      font-size: 11px; font-weight: 500;
+      color: var(--muted-light);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 搜索 */
+    .search-box {
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .search-box input {
+      width: 100%; height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--sidebar-border);
+      background: var(--bg);
+      padding: 0 12px 0 36px;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      color: var(--fg);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-box input::placeholder { color: var(--muted-light); }
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(217,119,87,0.12);
+    }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px;
+      color: var(--muted-light);
+    }
+
+    /* 导航 */
+    .nav { margin-top: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.12s;
+      position: relative;
+      margin-bottom: 1px;
+    }
+    .nav-item:hover:not(.disabled) {
+      background: rgba(0,0,0,0.03);
+      color: var(--fg);
+    }
+    .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute; left: -16px; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 18px;
+      background: var(--primary);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-item.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .nav-item .icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-item .badge {
+      margin-left: auto;
+      font-size: 10px; font-weight: 600;
+      color: var(--muted-light);
+      background: rgba(0,0,0,0.04);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .nav-item.active .badge {
+      background: rgba(217,119,87,0.12);
+      color: var(--primary);
+    }
+
+    /* 统计面板 - 2x2 网格，差异化强调 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 16px 4px 0;
+    }
+    .stat-cell {
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--sidebar-border);
+      padding: 12px 10px;
+      text-align: center;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .stat-cell:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-cell .num {
+      font-size: 20px; font-weight: 600;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-cell .lbl {
+      font-size: 11px;
+      color: var(--muted-light);
+      margin-top: 4px;
+      letter-spacing: 0.02em;
+    }
+    /* 差异化颜色 */
+    .stat-cell.total .num { color: var(--fg); }
+    .stat-cell.reading .num { color: var(--primary); }
+    .stat-cell.read .num { color: var(--success); }
+    .stat-cell.topics .num { color: var(--muted); }
+
+    /* 底部 */
+    .bottom {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--sidebar-border);
+    }
+    .bottom-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .bottom-item:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
+    .bottom-item .icon { width: 16px; height: 16px; }
+    .bottom-item.disabled { opacity: 0.4; cursor: not-allowed; }
+    .bottom-item.disabled:hover { background: transparent; }
+
+    .user-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px;
+      margin-top: 4px;
+    }
+    .user-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--primary);
+      font-size: 12px;
+    }
+    .user-name {
+      font-size: 13px; font-weight: 500;
+      color: var(--fg);
+    }
+
+    /* 右侧演示区 */
+    .demo-main {
+      flex: 1;
+      padding: 40px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .demo-card {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 48px 56px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      border: 1px solid var(--sidebar-border);
+    }
+    .demo-card h2 {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .demo-card p { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">R</div>
+    <div class="logo-text">Redesk</div>
+    <span class="logo-ver">v0.2.0</span>
+  </div>
+
+  <div class="search-box">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" placeholder="搜索书名、作者、标签">
+  </div>
+
+  <nav class="nav">
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+        <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+      </svg>
+      档案
+    </div>
+    <div class="nav-item active">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      书架
+      <span class="badge">128</span>
+    </div>
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>
+      </svg>
+      书库文件
+    </div>
+    <div class="nav-item disabled">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/>
+        <path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>
+      </svg>
+      读书笔记
+      <span class="badge">M2</span>
+    </div>
+    <div class="nav-item disabled">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
+        <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+      </svg>
+      阅读话题
+      <span class="badge">M4</span>
+    </div>
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+        <line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+      </svg>
+      回收站
+    </div>
+  </nav>
+
+  <!-- 统计面板 -->
+  <div class="stats-grid">
+    <div class="stat-cell total">
+      <div class="num">128</div>
+      <div class="lbl">总数</div>
+    </div>
+    <div class="stat-cell reading">
+      <div class="num">12</div>
+      <div class="lbl">在读</div>
+    </div>
+    <div class="stat-cell read">
+      <div class="num">86</div>
+      <div class="lbl">已读</div>
+    </div>
+    <div class="stat-cell topics">
+      <div class="num">5</div>
+      <div class="lbl">话题</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="bottom-item disabled">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+        <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+      </svg>
+      AI 助手
+      <span style="margin-left:auto;font-size:10px;color:var(--muted-light)">M3</span>
+    </div>
+    <div class="bottom-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+      设置
+    </div>
+    <div class="user-row">
+      <div class="user-avatar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span class="user-name">Maxxie</span>
+    </div>
+  </div>
+</aside>
+
+<!-- 右侧演示区 -->
+<main class="demo-main">
+  <div class="demo-card">
+    <h2>侧边栏优化效果</h2>
+    <p>左侧为方案 B 的侧边栏设计，请确认视觉方向</p>
+  </div>
+</main>
+
+</body>
+</html>
