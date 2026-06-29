@@ -6,7 +6,7 @@ import {
   BookOpen,
   BookPlus,
   Bookmark,
-  Check,
+  FileUp,
   FolderOpen,
   Grid3X3,
   LayoutGrid,
@@ -40,14 +40,8 @@ import { useBookFiles } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useShellUser } from '@/components/shell-user-context';
-import {
-  Sheet,
-  SheetContent,
-} from '@/components/ui/sheet';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -129,6 +123,10 @@ function formatFullDate(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
 function bookMeta(book: BookSummary) {
@@ -457,7 +455,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   const [genreCategoryId, setGenreCategoryId] = useState<number | null>(null);
   const [status, setStatus] = useState<string>(BOOK_STATUS.COLLECTED);
   const [visibility, setVisibility] = useState<string>(VISIBILITY.PRIVATE);
-  const [rating, setRating] = useState<number | null>(null);
+  const [rating] = useState<number | null>(null);
   const [readingPurpose, setReadingPurpose] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [pageCount, setPageCount] = useState('');
@@ -532,183 +530,308 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-8" onClick={onClose}>
-      <Card className="w-full max-w-lg border-border bg-card shadow-2xl" onClick={(event) => event.stopPropagation()}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="font-serif text-xl">添加书籍</CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="关闭">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-xl bg-card shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e0ddd4] px-6 py-4">
+          <h2 className="font-display text-xl font-medium text-foreground">添加书籍</h2>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">书名</Label>
-              <Input id="title" value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="必填" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5">
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {/* 快速录入 */}
+            <div className="col-span-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              快速录入
+              <div className="flex-1 h-px bg-[#e0ddd4]" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="subtitle">副标题</Label>
-              <Input id="subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} placeholder="可选" />
+
+            <div className="col-span-2 space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                书名 <span className="text-[#d97757]">*</span>
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                placeholder="输入书名"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="author">作者</Label>
-                <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="可选" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="isbn">ISBN</Label>
-                <Input id="isbn" value={isbn} onChange={(event) => setIsbn(event.target.value)} placeholder="可选" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="publisher">出版社</Label>
-                <Input id="publisher" value={publisher} onChange={(event) => setPublisher(event.target.value)} placeholder="可选" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="publishYear">出版年</Label>
-                <Input id="publishYear" type="number" min="0" max="2100" value={publishYear} onChange={(event) => setPublishYear(event.target.value)} placeholder="可选" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>个人分类</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                  value={categoryId ?? ''}
-                  onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="">未分类</option>
-                  {personalCategories.data?.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>常规分类</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                  value={genreCategoryId ?? ''}
-                  onChange={(e) => setGenreCategoryId(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="">未分类</option>
-                  {genreCategories.data?.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>状态</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pageCount">页数</Label>
-                <Input id="pageCount" type="number" min="0" value={pageCount} onChange={(event) => setPageCount(event.target.value)} placeholder="可选" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>可见性</Label>
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
-                  value={visibility}
-                  onChange={(e) => setVisibility(e.target.value)}
-                >
-                  <option value={VISIBILITY.PRIVATE}>私密</option>
-                  <option value={VISIBILITY.PUBLIC}>公开</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>评分</Label>
-                <div className="flex items-center gap-1 pt-1">
-                  {[1, 2, 3, 4, 5].map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRating(rating === r ? null : r)}
-                      className={cn(r <= (rating ?? 0) ? 'text-yellow-500' : 'text-muted-foreground/30')}
-                    >
-                      <Star className="h-5 w-5 fill-current" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sourceUrl">书籍介绍链接</Label>
-              <Input id="sourceUrl" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://douban.com/...（可选）" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="readingPurpose">阅读目的</Label>
-              <Input id="readingPurpose" value={readingPurpose} onChange={(event) => setReadingPurpose(event.target.value)} placeholder="泛读/精读/参考…（可选）" />
-            </div>
-            <div className="space-y-2">
-              <Label>标签</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {tags.data?.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={cn(
-                      'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                      tagIds.includes(t.id)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:border-foreground/20',
-                    )}
-                    onClick={() => toggleTag(t.id)}
-                  >
-                    {tagIds.includes(t.id) ? <Check className="mr-1 inline h-3 w-3" /> : null}
-                    {t.name}
-                  </button>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">个人分类</label>
+              <select
+                value={categoryId ?? ''}
+                onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
+                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              >
+                <option value="">未分类</option>
+                {personalCategories.data?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                页数 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="number"
+                value={pageCount}
+                onChange={(e) => setPageCount(e.target.value)}
+                placeholder="0"
+                min="0"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="col-span-2 space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                书籍介绍链接 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  placeholder="https://douban.com/..."
+                  className="flex-1 h-9 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                />
+                <button type="button" className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] text-[12px] font-medium text-muted-foreground transition-all hover:border-[#d97757] hover:text-[#d97757] hover:bg-[rgba(217,119,87,0.08)]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                  一键获取
+                </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>书籍简介</Label>
+
+            <div className="col-span-2 space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                书籍简介 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
               <textarea
-                className="min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="可选"
+                placeholder="输入书籍简介..."
+                rows={3}
+                className="w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)] resize-vertical"
               />
             </div>
-            <div className="space-y-2">
-              <Label>上传文件（可选）</Label>
-              <input
-                type="file"
-                accept=".epub,.pdf,.mobi,.txt,.azw3,.azw,.djvu,.docx,.fb2"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary hover:file:bg-primary/20"
-              />
+
+            {/* 文件上传 */}
+            <div className="col-span-2">
+              <label className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[#e0ddd4] py-6 cursor-pointer transition hover:border-[#d97757] hover:bg-[rgba(217,119,87,0.08)]">
+                <svg className="h-8 w-8 text-[#b0aea5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <div className="text-[13px] text-muted-foreground">点击或拖拽上传书籍文件</div>
+                <div className="text-[11px] text-[#b0aea5]">支持 epub, pdf, mobi, txt, azw3, docx 等格式</div>
+                <input
+                  type="file"
+                  accept=".epub,.pdf,.mobi,.txt,.azw3,.azw,.djvu,.docx,.fb2"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </label>
               {selectedFile && (
-                <p className="text-xs text-muted-foreground">已选择: {selectedFile.name}</p>
+                <p className="mt-2 text-xs text-muted-foreground">已选择: {selectedFile.name}</p>
               )}
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                取消
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? '创建中...' : '创建'}
-              </Button>
+
+            {/* 详细信息 */}
+            <div className="col-span-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              详细信息（收录后可补充）
+              <div className="flex-1 h-px bg-[#e0ddd4]" />
             </div>
+
+            <div className="col-span-2 space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                副标题 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="text"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+                placeholder="输入副标题"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                作者 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="text"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                placeholder="作者姓名"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                ISBN <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="text"
+                value={isbn}
+                onChange={(e) => setIsbn(e.target.value)}
+                placeholder="978-..."
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                出版社 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="text"
+                value={publisher}
+                onChange={(e) => setPublisher(e.target.value)}
+                placeholder="出版社名称"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                出版年 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="number"
+                value={publishYear}
+                onChange={(e) => setPublishYear(e.target.value)}
+                placeholder="2024"
+                min="0"
+                max="2100"
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">常规分类</label>
+              <select
+                value={genreCategoryId ?? ''}
+                onChange={(e) => setGenreCategoryId(e.target.value ? Number(e.target.value) : null)}
+                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              >
+                <option value="">未分类</option>
+                {genreCategories.data?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">阅读状态</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              >
+                {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">可见性</label>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              >
+                <option value={VISIBILITY.PRIVATE}>私密</option>
+                <option value={VISIBILITY.PUBLIC}>公开</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                阅读目的 <span className="font-normal text-muted-foreground/60">可选</span>
+              </label>
+              <input
+                type="text"
+                value={readingPurpose}
+                onChange={(e) => setReadingPurpose(e.target.value)}
+                placeholder="泛读 / 精读 / 参考 ..."
+                className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] text-foreground outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+              />
+            </div>
+
+            <div className="col-span-2 space-y-1.5">
+              <label className="text-xs font-medium text-foreground">标签</label>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.data?.map((t) => {
+                  const on = tagIds.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTag(t.id)}
+                      className={cn(
+                        'flex items-center gap-1 rounded-full border px-3 py-1 text-[12px] transition-all',
+                        on
+                          ? 'border-[#d97757] bg-[rgba(217,119,87,0.08)] text-[#d97757] font-medium'
+                          : 'border-[#e0ddd4] text-muted-foreground hover:border-[#b0aea5] hover:text-foreground',
+                      )}
+                    >
+                      {on && (
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
+                      )}
+                      {t.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {error && (
+              <div className="col-span-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+            )}
           </form>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2.5 border-t border-[#e0ddd4] px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/3"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit as unknown as React.MouseEventHandler}
+            disabled={submitting}
+            className="h-9 rounded-lg bg-[#d97757] px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+          >
+            {submitting ? '创建中...' : '创建'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 type StatusMessage = { type: 'success' | 'error'; text: string } | null;
 
@@ -832,13 +955,51 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
     return [];
   }, [b?.custom_attributes]);
 
+  // Full-page layout, shown when open=true
+  if (!open) return null;
+
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent
-        side="right"
-        className="w-[480px] overflow-hidden border-0 p-0 shadow-[-8px_0_32px_rgba(0,0,0,0.1)] sm:max-w-[480px]"
-        style={{ borderRadius: '12px 0 0 12px' }}
-      >
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-background">
+      {/* Topbar */}
+      <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-[#e0ddd4] px-5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </button>
+        <span className="font-display text-[15px] font-medium text-foreground">书籍详情</span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e0ddd4] bg-white px-3 text-[13px] font-medium text-[#333] shadow-sm transition-all hover:-translate-y-px"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            收藏
+          </button>
+          <button
+            type="button"
+            onClick={openEdit}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-[#e0ddd4] bg-white px-3 text-[13px] font-medium text-[#333] shadow-sm transition-all hover:-translate-y-px"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            编辑
+          </button>
+          <button
+            type="button"
+            disabled
+            title="阅读器将在 M2 上线"
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-[#d97757] px-3 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            阅读
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
         {book.isLoading && (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -850,72 +1011,55 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
         )}
 
         {b && !editing && (
-          <div className="flex h-full flex-col">
-            {/* 顶部封面区 */}
-            <div className="relative h-[200px] shrink-0 overflow-hidden">
-              {hasCover ? (
-                <img
-                  src={`${COVER_URL_BASE}/books/${bookId}/cover`}
-                  alt={b.title}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className={cn('flex h-full w-full items-center justify-center', COVER_TONES[(bookId ?? 0) % COVER_TONES.length])}>
-                  <span className="text-4xl font-bold">{b.title.slice(0, 1)}</span>
-                </div>
-              )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-black/50" />
-              <button
-                type="button"
-                className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.1)] backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4 text-[#333]" />
-              </button>
-              <div className="absolute bottom-0 left-0 right-0 z-[1] px-6 py-5 text-white">
-                <h2 className="mb-1.5 text-[22px] font-bold leading-[1.3] tracking-[-0.3px]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-                  {b.title}
-                </h2>
-                <p className="text-sm opacity-90" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                  {[b.author, b.publisher].filter(Boolean).join(' / ') || '未填写作者'}
-                </p>
+          <div className="mx-auto max-w-3xl px-8 py-8">
+            <StatusBanner message={message} />
+
+            {/* Hero */}
+            <div className="mb-8 flex gap-8">
+              {/* Cover */}
+              <div className="shrink-0">
+                {hasCover ? (
+                  <img
+                    src={`${COVER_URL_BASE}/books/${bookId}/cover`}
+                    alt={b.title}
+                    className="h-[180px] w-[128px] rounded-xl object-cover shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+                  />
+                ) : (
+                  <div
+                    className={cn('flex h-[180px] w-[128px] items-center justify-center rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.12)] font-display text-5xl font-bold', COVER_TONES[(bookId ?? 0) % COVER_TONES.length])}
+                  >
+                    {b.title.slice(0, 1)}
+                  </div>
+                )}
               </div>
-            </div>
 
-            {/* 内容区 */}
-            <div className="flex-1 overflow-y-auto px-6 py-5" style={{ scrollbarWidth: 'thin' }}>
-              <StatusBanner message={message} />
+              {/* Title + Meta */}
+              <div className="min-w-0 flex-1">
+                <h1 className="mb-1.5 font-display text-[26px] font-semibold leading-tight text-foreground">{b.title}</h1>
+                {b.subtitle && <p className="mb-2 text-[14px] text-muted-foreground">{b.subtitle}</p>}
+                <p className="mb-4 text-[13.5px] text-muted-foreground">
+                  {[b.author, b.publisher].filter(Boolean).join(' / ') || '作者未填写'}
+                  {b.publish_year ? ` · ${b.publish_year}年` : ''}
+                </p>
 
-              {/* 书籍本体区 */}
-              <div className="mb-6 rounded-xl bg-[#fafafa] p-4">
-                <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-2xl bg-[rgba(47,122,245,0.08)] px-2.5 py-1 text-xs font-semibold text-[#2f7af5]">
+                {/* Status + Rating */}
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f0ea] px-3 py-1 text-[12px] font-medium text-[#8a6a4a]">
                     <span className={cn('h-[7px] w-[7px] rounded-full', statusDotClass(b.status))} />
                     {statusLabel(b.status)}
                   </span>
                   {b.rating != null && (
-                    <span className="inline-flex items-center gap-1 text-[15px] font-bold text-[#1a1a1a]">
+                    <span className="inline-flex items-center gap-1 text-[15px] font-bold text-foreground">
                       <Star className="h-[14px] w-[14px] fill-[#f5c842] text-[#f5c842]" />
                       {b.rating}
                     </span>
                   )}
                   {b.reading_purpose && <ReadModeBadge mode={b.reading_purpose} />}
+                  <span className="rounded-full bg-[#f0f0f0] px-3 py-1 text-[12px] font-medium text-[#555]">{b.visibility === 'public' ? '公开' : '私密'}</span>
                 </div>
 
-                <div className="mb-3">
-                  <div className="mb-1.5 flex items-center justify-between text-xs text-[#888]">
-                    <span>阅读进度</span>
-                    <span className="font-semibold text-[#333]">{progress}%</span>
-                  </div>
-                  <div className="h-[5px] overflow-hidden rounded-[3px] bg-[#e0e0e0]">
-                    <div
-                      className="h-full rounded-[3px] bg-[#2f7af5] transition-[width] duration-500"
-                      style={{ width: `${progress}%`, transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3.5 flex flex-wrap gap-1.5">
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1.5">
                   {b.tag_names.map((tag) => (
                     <TagAtom key={tag} size="small">{tag}</TagAtom>
                   ))}
@@ -923,197 +1067,241 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                     <TagAtom key="cat" size="small">{b.category_name}</TagAtom>
                   )}
                 </div>
+              </div>
+            </div>
 
+            {/* Progress Bar */}
+            <div className="mb-8 rounded-xl border border-[#e0ddd4] bg-[#faf9f5] p-4">
+              <div className="mb-2 flex items-center justify-between text-[13px]">
+                <span className="font-medium text-foreground">阅读进度</span>
+                <span className="font-semibold text-[#333]">{progress}%</span>
+              </div>
+              <div className="h-[6px] overflow-hidden rounded-[3px] bg-[#e0e0e0]">
+                <div
+                  className="h-full rounded-[3px] bg-[#d97757] transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Cards Grid */}
+            <div className="mb-8 grid grid-cols-2 gap-4">
+              {/* 书籍档案 */}
+              <div className="rounded-xl border border-[#e0ddd4] p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  书籍档案
+                </h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px]">
+                  {[
+                    ['作者', b.author ?? '—'],
+                    ['出版社', b.publisher ?? '—'],
+                    ['出版年', b.publish_year ? String(b.publish_year) : '—'],
+                    ['ISBN', b.isbn ?? '—'],
+                    ['页数', b.page_count ? String(b.page_count) : '—'],
+                    ['录入', formatShortDate(b.created_at)],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">{k}</span>
+                      <span className="font-medium text-foreground">{v}</span>
+                    </div>
+                  ))}
+                </div>
                 {customAttrs.length > 0 && (
-                  <div className="flex flex-wrap gap-2 border-t border-[#e8e8e8] pt-3">
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[#e0ddd4] pt-3">
                     {customAttrs.map((attr) => (
-                      <span key={attr} className="inline-flex items-center gap-1 rounded-md border border-[#e0e0e0] bg-white px-2.5 py-1 text-xs text-[#555]">
-                        {attr}
-                      </span>
+                      <span key={attr} className="inline-flex items-center gap-1 rounded-md border border-[#e0ddd4] bg-white px-2.5 py-0.5 text-xs text-[#555]">{attr}</span>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* 阅读沉淀区 */}
-              <div className="mb-6">
-                <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-bold tracking-[-0.2px] text-[#1a1a1a]">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#2f7af5]" />
-                  阅读沉淀
+              {/* 阅读留痕 */}
+              <div className="rounded-xl border border-dashed border-[#e0ddd4] p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  阅读留痕
                 </h3>
-                <div className="rounded-xl border border-dashed border-[#e0e0e0] bg-[#fafafa] py-6 text-center">
-                  <NotebookPen className="mx-auto h-5 w-5 text-muted-foreground/40" />
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <NotebookPen className="h-6 w-6 text-muted-foreground/30" />
                   <p className="mt-2 text-[13px] text-muted-foreground">笔记、高亮、标注</p>
-                  <p className="text-xs text-muted-foreground/60">阅读器上线后（M2）自动记录</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/50">阅读器上线后（M2）自动记录</p>
                 </div>
               </div>
 
-              {/* 主题阅读区 */}
-              <div className="mb-6">
-                <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-bold tracking-[-0.2px] text-[#1a1a1a]">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#2f7af5]" />
-                  主题阅读
+              {/* 主题关联 */}
+              <div className="rounded-xl border border-dashed border-[#e0ddd4] p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  主题关联
                 </h3>
-                <div className="rounded-xl border border-dashed border-[#e0e0e0] bg-[#fafafa] py-6 text-center">
-                  <Lightbulb className="mx-auto h-5 w-5 text-muted-foreground/40" />
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Lightbulb className="h-6 w-6 text-muted-foreground/30" />
                   <p className="mt-2 text-[13px] text-muted-foreground">围绕一个主题组织多本书</p>
-                  <p className="text-xs text-muted-foreground/60">主题阅读 — 即将上线（M4）</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/50">主题阅读 — 即将上线（M4）</p>
                 </div>
               </div>
 
-              {/* 文件列表 */}
-              {files.data && files.data.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-bold tracking-[-0.2px] text-[#1a1a1a]">
-                    <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#2f7af5]" />
-                    文件 ({files.data.length})
-                  </h3>
+              {/* 文件管理 */}
+              <div className="rounded-xl border border-[#e0ddd4] p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#d97757]" />
+                  文件管理
+                </h3>
+                {files.data && files.data.length > 0 ? (
                   <div className="space-y-2">
                     {files.data.map((f: { id: number; original_filename: string | null; file_format: string; file_size: number | null; is_primary: number; updated_at: string }) => (
-                      <div key={f.id} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5">
+                      <div key={f.id} className="flex items-center gap-3 rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 py-2.5">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">{f.original_filename ?? '未知文件'}</p>
-                          <p className="text-xs text-muted-foreground">{f.file_format} · {formatFullDate(f.updated_at)}</p>
+                          <p className="truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</p>
+                          <p className="text-[11px] text-muted-foreground">{f.file_format} · {formatFullDate(f.updated_at)}</p>
                         </div>
                         {f.is_primary === 1 && (
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">主阅读</span>
+                          <span className="shrink-0 rounded-full bg-[#d97757]/10 px-2 py-0.5 text-[10px] font-medium text-[#d97757]">主阅读</span>
                         )}
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              <div className="text-xs text-muted-foreground/60 pt-2">
-                创建 {formatFullDate(b.created_at)} · 更新 {formatFullDate(b.updated_at)}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <FileUp className="h-6 w-6 text-muted-foreground/30" />
+                    <p className="mt-2 text-[13px] text-muted-foreground">暂未上传文件</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground/50">可上传 epub / pdf 等电子书</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 底部操作栏 */}
-            <div className="flex shrink-0 gap-3 border-t border-[#f0f0f0] px-6 py-4">
-              <button
-                type="button"
-                className="flex h-11 flex-1 items-center justify-center rounded-lg border border-[#e8e8e8] bg-[#f5f5f5] text-sm font-semibold text-[#333] transition-colors hover:bg-[#eee]"
-                onClick={openEdit}
-              >
-                编辑属性
-              </button>
-              <button
-                type="button"
-                className="flex h-11 flex-1 items-center justify-center rounded-lg bg-[#2f7af5] text-sm font-semibold text-white shadow-[0_2px_8px_rgba(47,122,245,0.25)] transition-all hover:-translate-y-px hover:bg-[#1a68e5]"
-                disabled
-                title="阅读器将在 M2 上线"
-              >
-                继续阅读
-              </button>
+            {/* Timestamps */}
+            <div className="text-xs text-muted-foreground/50 text-center">
+              创建于 {formatFullDate(b.created_at)} · 最后更新 {formatFullDate(b.updated_at)}
             </div>
           </div>
         )}
 
         {b && editing && (
-          <div className="h-full overflow-y-auto px-6 py-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">编辑信息</h2>
-              <Button variant="ghost" size="icon" onClick={() => setEditing(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+          <div className="mx-auto max-w-2xl px-8 py-8">
+            <div className="mb-5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+              </button>
+              <h2 className="font-display text-[15px] font-medium text-foreground">编辑书籍信息</h2>
             </div>
             <StatusBanner message={message} />
-            <div className="space-y-2">
-              <Label>书名</Label>
-              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>作者</Label>
-              <Input value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>状态</Label>
-                <select className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                  {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
+            <div className="mt-4 space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">书名 <span className="text-[#d97757]">*</span></label>
+                <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
               </div>
-              <div className="space-y-2">
-                <Label>可见性</Label>
-                <select className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm" value={editVisibility} onChange={(e) => setEditVisibility(e.target.value)}>
-                  <option value={VISIBILITY.PRIVATE}>私密</option>
-                  <option value={VISIBILITY.PUBLIC}>公开</option>
-                </select>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">作者</label>
+                <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)} placeholder="作者姓名" className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>分类</Label>
-                <select className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm" value={editCategoryId ?? ''} onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)}>
-                  <option value="">未分类</option>
-                  {categories.data?.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">状态</label>
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                    {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">可见性</label>
+                  <select value={editVisibility} onChange={(e) => setEditVisibility(e.target.value)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                    <option value={VISIBILITY.PRIVATE}>私密</option>
+                    <option value={VISIBILITY.PUBLIC}>公开</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">分类</label>
+                  <select value={editCategoryId ?? ''} onChange={(e) => setEditCategoryId(e.target.value ? Number(e.target.value) : null)} className="h-9 w-full appearance-none rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]">
+                    <option value="">未分类</option>
+                    {categories.data?.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">评分</label>
+                  <div className="flex items-center gap-1 pt-1.5">
+                    {[1, 2, 3, 4, 5].map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setEditRating(editRating === r ? null : r)}
+                        className={cn(r <= (editRating ?? 0) ? 'text-[#f5c842]' : 'text-[#d0cec9]')}
+                      >
+                        <Star className="h-5 w-5 fill-current" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>评分</Label>
-                <div className="flex items-center gap-1 pt-1">
-                  {[1, 2, 3, 4, 5].map((r) => (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">阅读目的</label>
+                <input type="text" value={editReadingPurpose} onChange={(e) => setEditReadingPurpose(e.target.value)} placeholder="泛读 / 精读 / 参考 ..." className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">标签</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.data?.map((t) => (
                     <button
-                      key={r}
+                      key={t.id}
                       type="button"
-                      onClick={() => setEditRating(editRating === r ? null : r)}
-                      className={cn(r <= (editRating ?? 0) ? 'text-primary' : 'text-muted-foreground/30')}
+                      onClick={() => toggleTag(t.id)}
+                      className={cn(
+                        'flex items-center gap-1 rounded-full border px-3 py-1 text-[12px] transition-all',
+                        editTagIds.includes(t.id)
+                          ? 'border-[#d97757] bg-[rgba(217,119,87,0.08)] text-[#d97757] font-medium'
+                          : 'border-[#e0ddd4] text-muted-foreground hover:border-[#b0aea5] hover:text-foreground',
+                      )}
                     >
-                      <Star className="h-5 w-5 fill-current" />
+                      {editTagIds.includes(t.id) && (
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
+                      )}
+                      {t.name}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>阅读目的</Label>
-              <Input placeholder="泛读/精读/参考…" value={editReadingPurpose} onChange={(e) => setEditReadingPurpose(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>标签</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {tags.data?.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={cn(
-                      'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                      editTagIds.includes(t.id)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:border-foreground/20',
-                    )}
-                    onClick={() => toggleTag(t.id)}
-                  >
-                    {t.name}
-                  </button>
-                ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">自定义属性</label>
+                <input
+                  type="text"
+                  value={editCustomAttributes}
+                  onChange={(e) => setEditCustomAttributes(e.target.value)}
+                  placeholder={'JSON 格式，如 {"来源":"朋友推荐"}'}
+                  className="h-9 w-full rounded-lg border border-[#e0ddd4] bg-[#faf9f5] px-3 text-[13px] outline-none transition focus:border-[#d97757] focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
+                />
+                <p className="text-xs text-muted-foreground">需为合法 JSON</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>自定义属性</Label>
-              <Input
-                placeholder={'JSON 格式，如 {"来源":"朋友推荐"}'}
-                value={editCustomAttributes}
-                onChange={(e) => setEditCustomAttributes(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">存储自定义收藏信息，需为合法 JSON</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditing(false)}>取消</Button>
-              <Button onClick={saveMeta} disabled={updateBook.isPending}>
-                {updateBook.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                保存
-              </Button>
+            <div className="mt-6 flex justify-end gap-2.5 border-t border-[#e0ddd4] pt-5">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="h-9 rounded-lg border border-[#e0ddd4] bg-transparent px-5 text-[13.5px] font-medium text-foreground transition-colors hover:bg-black/3"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={saveMeta}
+                disabled={updateBook.isPending}
+                className="h-9 rounded-lg bg-[#d97757] px-5 text-[13.5px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:bg-[#c96a4b] disabled:opacity-50"
+              >
+                {updateBook.isPending ? '保存中...' : '保存'}
+              </button>
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   );
 }
 
@@ -1273,8 +1461,8 @@ export function Bookshelf() {
               label="书库文件"
               onClick={() => navigate('/files')}
             />
-            <SidebarItem icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" disabled hint="M2" />
-            <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" disabled hint="M4" />
+            <SidebarItem icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" onClick={() => navigate('/reading-notes')} hint="M2" />
+            <SidebarItem icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" onClick={() => navigate('/reading-topics')} hint="M4" />
             <SidebarItem
               active={pageView === 'trash'}
               icon={<Trash2 className="h-4 w-4" />}
@@ -1286,10 +1474,10 @@ export function Bookshelf() {
 
         <div className="mt-10 w-full">
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <StatCell label="总数" value={stats.total} />
-            <StatCell label="在读" value={stats.reading} />
-            <StatCell label="已读" value={stats.read} />
-            <StatCell label="话题数" value={stats.topics} />
+            <StatCell label="总数" value={stats.total} valueClass="text-foreground" />
+            <StatCell label="在读" value={stats.reading} valueClass="text-success" />
+            <StatCell label="已读" value={stats.read} valueClass="text-primary" />
+            <StatCell label="话题" value={stats.topics} valueClass="text-muted-foreground" />
           </div>
         </div>
 
@@ -1511,6 +1699,7 @@ export function Bookshelf() {
 }
 
 function SidebarItem({ active, icon, label, onClick, disabled, hint }: { active?: boolean; icon: React.ReactNode; label: string; onClick?: () => void; disabled?: boolean; hint?: string }) {
+  const isPending = Boolean(hint) && !active;
   if (disabled) {
     return (
       <button
@@ -1530,20 +1719,22 @@ function SidebarItem({ active, icon, label, onClick, disabled, hint }: { active?
       className={cn(
         'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
         active && 'bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary',
+        isPending && 'text-muted-foreground/50 cursor-not-allowed hover:bg-transparent',
       )}
-      onClick={onClick}
+      onClick={isPending ? undefined : onClick}
     >
       {icon}
       {label}
+      {hint && <span className={cn('ml-auto text-[10px]', active ? 'text-sidebar-primary-foreground/60' : 'text-muted-foreground/30')}>{hint}</span>}
     </button>
   );
 }
 
-function StatCell({ label, value }: { label: string; value: number }) {
+function StatCell({ label, value, valueClass }: { label: string; value: number; valueClass?: string }) {
   return (
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-lg font-semibold tabular-nums leading-none text-foreground">{value}</div>
+      <div className={cn('mt-0.5 text-lg font-semibold tabular-nums leading-none', valueClass)}>{value}</div>
     </div>
   );
 }
