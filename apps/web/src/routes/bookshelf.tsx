@@ -17,6 +17,7 @@ import {
   NotebookPen,
   Star,
   Loader2,
+  Lightbulb,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -720,55 +721,10 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                   <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#2f7af5]" />
                   阅读沉淀
                 </h3>
-                <div className="relative pl-4">
-                  <div className="absolute bottom-1 left-[5px] top-1 w-[2px] rounded-sm bg-[#e8e8e8]" />
-                  {/* 笔记 */}
-                  <div className="relative mb-3.5">
-                    <span className="absolute -left-[13px] top-[5px] h-2.5 w-2.5 rounded-full border-2 border-white bg-[#1971c2] shadow-[0_0_0_2px_#a5d8ff]" />
-                    <div className="rounded-[10px] border border-[#f0f0f0] bg-white px-3.5 py-3 transition-colors hover:border-[#ddd] hover:bg-[#fafafa]">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#333]">📝 读书笔记</span>
-                        <span className="rounded-[10px] bg-[#f5f5f5] px-2 py-0.5 text-[11px] text-[#999]">12 条</span>
-                      </div>
-                      <p className="line-clamp-2 text-[13px] leading-[1.6] text-[#666]">
-                        「所谓的自由，就是被别人讨厌。」—— 课题分离的核心在于区分这是谁的课题...
-                      </p>
-                      <div className="mt-2.5 flex gap-2">
-                        <button type="button" className="rounded-md bg-[rgba(47,122,245,0.06)] px-3 py-[5px] text-xs font-medium text-[#2f7af5] transition-colors hover:bg-[rgba(47,122,245,0.12)]">
-                          查看全部
-                        </button>
-                        <button type="button" className="rounded-md bg-[rgba(47,122,245,0.06)] px-3 py-[5px] text-xs font-medium text-[#2f7af5] transition-colors hover:bg-[rgba(47,122,245,0.12)]">
-                          写笔记
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {/* 高亮 */}
-                  <div className="relative mb-3.5">
-                    <span className="absolute -left-[13px] top-[5px] h-2.5 w-2.5 rounded-full border-2 border-white bg-[#e67700] shadow-[0_0_0_2px_#ffd8a8]" />
-                    <div className="rounded-[10px] border border-[#f0f0f0] bg-white px-3.5 py-3 transition-colors hover:border-[#ddd] hover:bg-[#fafafa]">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#333]">💡 高亮内容</span>
-                        <span className="rounded-[10px] bg-[#f5f5f5] px-2 py-0.5 text-[11px] text-[#999]">8 处</span>
-                      </div>
-                      <p className="line-clamp-2 text-[13px] leading-[1.6] text-[#666]">
-                        「你之所以无法改变，是因为自己下了『不改变』的决心。」
-                      </p>
-                    </div>
-                  </div>
-                  {/* 划线 */}
-                  <div className="relative">
-                    <span className="absolute -left-[13px] top-[5px] h-2.5 w-2.5 rounded-full border-2 border-white bg-[#7048e8] shadow-[0_0_0_2px_#d0bfff]" />
-                    <div className="rounded-[10px] border border-[#f0f0f0] bg-white px-3.5 py-3 transition-colors hover:border-[#ddd] hover:bg-[#fafafa]">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#333]">📌 划线摘录</span>
-                        <span className="rounded-[10px] bg-[#f5f5f5] px-2 py-0.5 text-[11px] text-[#999]">23 条</span>
-                      </div>
-                      <p className="line-clamp-2 text-[13px] leading-[1.6] text-[#666]">
-                        「一切烦恼都来自人际关系。」「自卑感本身并不是坏事。」
-                      </p>
-                    </div>
-                  </div>
+                <div className="rounded-xl border border-dashed border-[#e0e0e0] bg-[#fafafa] py-6 text-center">
+                  <NotebookPen className="mx-auto h-5 w-5 text-muted-foreground/40" />
+                  <p className="mt-2 text-[13px] text-muted-foreground">笔记、高亮、标注</p>
+                  <p className="text-xs text-muted-foreground/60">阅读器上线后（M2）自动记录</p>
                 </div>
               </div>
 
@@ -778,36 +734,10 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                   <span className="inline-block h-3.5 w-[3px] rounded-sm bg-[#2f7af5]" />
                   主题阅读
                 </h3>
-                <div className="rounded-xl border border-[#e9ecef] bg-[#f8f9fa] p-[18px]">
-                  <div className="mb-2.5 flex items-center gap-2.5">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-[#2f7af5] px-2.5 py-1 text-[11px] font-semibold text-white">
-                      📚 主题
-                    </span>
-                    <span className="text-[15px] font-bold text-[#1a1a1a]">阿德勒心理学入门</span>
-                  </div>
-                  <p className="mb-3.5 text-[13px] leading-[1.7] text-[#666]">
-                    从《被讨厌的勇气》出发，系统理解阿德勒个体心理学的核心概念：课题分离、共同体感觉、目的论等。
-                  </p>
-                  <div className="flex gap-2.5 overflow-x-auto pb-1">
-                    <div className="w-14 shrink-0 cursor-pointer transition-transform hover:-translate-y-0.5">
-                      <div className="h-[78px] w-14 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.1)]">
-                        <img src={`${COVER_URL_BASE}/books/${bookId}/cover`} alt={b.title} className="h-full w-full object-cover" />
-                      </div>
-                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-[1.3] text-[#666]">{b.title}</p>
-                    </div>
-                    <div className="w-14 shrink-0 cursor-pointer transition-transform hover:-translate-y-0.5">
-                      <div className="h-[78px] w-14 overflow-hidden rounded bg-[#d8c6b7] shadow-[0_2px_6px_rgba(0,0,0,0.1)]" />
-                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-[1.3] text-[#666]">幸福的勇气</p>
-                    </div>
-                    <div className="w-14 shrink-0 cursor-pointer transition-transform hover:-translate-y-0.5">
-                      <div className="h-[78px] w-14 overflow-hidden rounded bg-[#cfd8c8] shadow-[0_2px_6px_rgba(0,0,0,0.1)]" />
-                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-[1.3] text-[#666]">自卑与超越</p>
-                    </div>
-                    <div className="w-14 shrink-0 cursor-pointer transition-transform hover:-translate-y-0.5">
-                      <div className="h-[78px] w-14 overflow-hidden rounded bg-[#c7d4dc] shadow-[0_2px_6px_rgba(0,0,0,0.1)]" />
-                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-[1.3] text-[#666]">理解人性</p>
-                    </div>
-                  </div>
+                <div className="rounded-xl border border-dashed border-[#e0e0e0] bg-[#fafafa] py-6 text-center">
+                  <Lightbulb className="mx-auto h-5 w-5 text-muted-foreground/40" />
+                  <p className="mt-2 text-[13px] text-muted-foreground">围绕一个主题组织多本书</p>
+                  <p className="text-xs text-muted-foreground/60">主题阅读 — 即将上线（M4）</p>
                 </div>
               </div>
 
@@ -1091,6 +1021,7 @@ export function Bookshelf() {
               R
             </div>
             <div className="font-display text-xl text-sidebar-foreground">Redesk</div>
+            <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground/50">v{__APP_VERSION__}</span>
           </div>
 
           <div className="relative mt-5">

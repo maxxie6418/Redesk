@@ -47,6 +47,7 @@ export function OverviewPage() {
       <header className="flex items-center gap-4 border-b border-border px-6 py-4">
         <Library className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-semibold text-foreground">Redesk</h1>
+        <span className="text-xs font-medium tabular-nums text-muted-foreground/50">v{__APP_VERSION__}</span>
         <div className="flex-1" />
         <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
           <Settings className="h-4 w-4" />
