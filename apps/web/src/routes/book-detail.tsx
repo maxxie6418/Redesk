@@ -257,6 +257,8 @@ export function BookDetailPage() {
     }
   }, [book.data, bookId, favoriteBook, unfavoriteBook]);
 
+  const primaryEpub = files.data?.find((f) => f.is_primary === 1 && f.file_format === 'EPUB');
+
   if (book.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -299,7 +301,12 @@ export function BookDetailPage() {
         <Button variant="outline" size="sm" onClick={openEdit}>
           编辑信息
         </Button>
-        <Button size="sm" disabled title="阅读器将在 M2 上线">
+        <Button
+          size="sm"
+          disabled={!primaryEpub}
+          onClick={() => primaryEpub && navigate(`/books/${bookId}/read`)}
+          title={primaryEpub ? '开始阅读' : '请先上传 EPUB 主阅读文件'}
+        >
           <BookOpen className="mr-1.5 h-4 w-4" />
           阅读
         </Button>

@@ -4,6 +4,7 @@ import { LoginRoute } from '@/routes/login';
 import { SetupRoute } from '@/routes/setup';
 import { Bookshelf } from '@/routes/bookshelf';
 import { BookDetailPage } from '@/routes/book-detail';
+import { BookReaderPage } from '@/routes/book-reader';
 import { OverviewPage } from '@/routes/overview';
 import { ReadingNotesPage } from '@/routes/reading-notes';
 import { ReadingTopicsPage } from '@/routes/reading-topics';
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Bookshelf />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/books/:id" element={<BookDetailPage />} />
+        <Route path="/books/:id/read" element={<BookReaderPage />} />
         <Route path="/files" element={<FileLibraryPage />} />
         <Route path="/reading-notes" element={<ReadingNotesPage />} />
         <Route path="/reading-topics" element={<ReadingTopicsPage />} />
