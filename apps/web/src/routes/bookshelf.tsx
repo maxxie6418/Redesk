@@ -448,13 +448,10 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [author, setAuthor] = useState('');
-  const [translator, setTranslator] = useState('');
-  const [originalTitle, setOriginalTitle] = useState('');
   const [isbn, setIsbn] = useState('');
   const [publisher, setPublisher] = useState('');
   const [publishYear, setPublishYear] = useState('');
   const [description, setDescription] = useState('');
-  const [language, setLanguage] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [genreCategoryId, setGenreCategoryId] = useState<number | null>(null);
   const [status, setStatus] = useState<string>(BOOK_STATUS.COLLECTED);
@@ -484,13 +481,10 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         title,
         subtitle: subtitle || null,
         author: author || null,
-        translator: translator || null,
-        original_title: originalTitle || null,
         isbn: isbn || null,
         publisher: publisher || null,
         publish_year: publishYear ? Number(publishYear) : null,
         description: description || null,
-        language: language || null,
         category_id: categoryId,
         genre_category_id: genreCategoryId,
         status,
@@ -561,22 +555,8 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 <Input id="author" value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="可选" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="translator">译者</Label>
-                <Input id="translator" value={translator} onChange={(event) => setTranslator(event.target.value)} placeholder="可选" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="originalTitle">原作名</Label>
-              <Input id="originalTitle" value={originalTitle} onChange={(event) => setOriginalTitle(event.target.value)} placeholder="可选" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label htmlFor="isbn">ISBN</Label>
                 <Input id="isbn" value={isbn} onChange={(event) => setIsbn(event.target.value)} placeholder="可选" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">语言</Label>
-                <Input id="language" value={language} onChange={(event) => setLanguage(event.target.value)} placeholder="可选" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

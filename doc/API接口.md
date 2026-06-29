@@ -5,9 +5,9 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.8 |
+| 当前版本 | v1.0.9 |
 | 文档状态 | 待评审 |
-| 最后更新 | 2026-06-28 |
+| 最后更新 | 2026-06-29 |
 | 适用范围 | 全项目实现期 |
 | 关联文档 | 数据模型.md、技术方案.md、功能清单.md |
 
@@ -24,6 +24,7 @@
 | v1.0.6 | 2026-06-28 | M1-E 完成：元数据导出 JSON/CSV 全部落地；全量备份 ZIP 流式打包（archiver，DB+文件+Markdown）；自动备份 VACUUM（保留7份）含列表/触发端点；笔记/高亮/标记导出预留空实现（S2 激活）；外部笔记导入 Markdown 解析+书名模糊匹配 | — |
 | v1.0.7 | 2026-06-28 | M1-F/G/H 闭环：OPDS 1.2（catalog/by-status/by-tag/search/download + HTTP Basic）；概览端点 GET /overview；暗色模式全局开关；回收站保留期；自定义属性 custom_attributes；灰置阅读按钮+阅读痕迹占位 | — |
 | v1.0.8 | 2026-06-28 | M1 复查修正：概览端点合并为 GET /overview（含 total/status_counts/recent_added/recent_reading）；OPDS download 说明改为 acquisition 链接复用文件端点；metadata/preview 标注未落地；设置配置项补充 llm_provider/llm_api_key/llm_model/llm_base_url；密钥脱敏新增 llm_api_key | — |
+| v1.0.9 | 2026-06-29 | M1 书架数据层与文件管理增强（P1/P2）：POST /books author 改可选，补充 subtitle/translator/original_title/page_count/source_url 等全字段；筛选新增 favorited/has_files/genre_category_id；新增书库文件端点 GET /files、未关联文件池 POST/GET/DELETE /files/unassociated、文件匹配书籍 POST /files/{id}/match | — |
 
 ## 文档说明
 
@@ -92,9 +93,12 @@
 | --- | --- | --- |
 | q | 全文关键词（FTS5 全文检索，命中 title/author/isbn） | 1.13 |
 | status | 状态，逗号分隔多值 | 1.15 |
-| category_id | 分类 | 1.16 |
+| category_id | 个人分类 | 1.16 |
+| genre_category_id | 常规分类 | 1.16 |
 | tag_id | 标签，逗号分隔（AND 关系） | 1.17 |
 | visibility | PUBLIC/PRIVATE | 1.18 |
+| favorited | true 仅收藏 | 1.x |
+| has_files | true 仅含文件；false 仅无文件 | 2.x |
 | in_trash | true 仅回收站；默认 false | 1.25 |
 
 ### 1.4 错误响应
@@ -160,27 +164,35 @@
 
 ### POST /books
 
-请求（title、author 必填，余可选）：
+请求（title 必填，其余全部可选）：
 ```json
 {
   "title": "如何阅读一本书",
+  "subtitle": "(...)",
   "author": "艾德勒",
+  "translator": "...",
+  "original_title": "How to Read a Book",
   "isbn": "9787100040945",
   "publisher": "商务印书馆",
   "publish_year": 2004,
   "description": "...",
   "language": "zh",
   "category_id": 3,
+  "genre_category_id": 5,
   "status": "COLLECTED",
   "visibility": "PRIVATE",
   "reading_purpose": "精读",
   "rating": null,
+  "page_count": 350,
+  "source_url": "https://douban.com/...",
   "tag_ids": [5, 12],
   "custom_attributes": {
     "edition_note": "精装"
   }
 }
 ```
+> 支持 `multipart/form-data` 同时上传文件：字段与 JSON 一致，额外附加 `file` 二进制字段。后端自动识别格式、抽取 EPUB 封面、计算 checksum。
+
 响应 201：`{ "data": { /* book 对象 */ } }`
 
 ### PATCH /books/{id}
@@ -314,6 +326,16 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | PATCH | /books/{id}/files/{fileId} | 编辑（设主阅读文件等） | 2.04 |
 | DELETE | /books/{id}/files/{fileId} | 删除关联（可选删物理文件） | 2.07 |
 | PUT-REPLACE | POST /books/{id}/files/{fileId}/replace | 替换文件（multipart） | 2.08 |
+
+### 书库文件（全局视图）
+
+| 方法 | 路径 | 说明 | 功能 |
+| --- | --- | --- | --- |
+| GET | /files | 书库文件列表（分页，支持 format/associated 筛选） | 2.x |
+| POST | /files/unassociated | 上传未关联文件（进入文件池） | 2.x |
+| GET | /files/unassociated | 未关联文件列表 | 2.x |
+| DELETE | /files/unassociated/{fileId} | 删除未关联文件 | 2.x |
+| POST | /files/{fileId}/match | 将文件池中的文件匹配到指定书籍 | 2.x |
 
 ### POST /books/{id}/files
 
