@@ -1418,7 +1418,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'A' && (
-          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+          <section className="grid grid-cols-1 gap-y-3 gap-x-0 xl:grid-cols-2 2xl:grid-cols-3">
             {books.map((book, index) => (
               <BookCardA
                 key={book.id}
@@ -1450,7 +1450,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'C' && (
-          <section className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+          <section className="grid grid-cols-3 gap-y-3 gap-x-0 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
             {books.map((book, index) => (
               <BookCardC
                 key={book.id}
