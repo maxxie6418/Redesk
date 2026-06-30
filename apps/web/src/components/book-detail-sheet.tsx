@@ -96,10 +96,10 @@ type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 're
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
 const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string }[] = [
-  { id: 'archive', label: '档案', icon: Archive, tint: 'border-l-amber-400 text-amber-500' },
-  { id: 'traces', label: '笔记', icon: Highlighter, tint: 'border-l-rose-400 text-rose-500' },
-  { id: 'topics', label: '主题', icon: Tags, tint: 'border-l-emerald-400 text-emerald-500' },
-  { id: 'ai', label: 'AI', icon: Sparkles, tint: 'border-l-violet-400 text-violet-500' },
+  { id: 'archive', label: '档案', icon: Archive, tint: 'bg-[hsl(15,28%,91%)] text-[hsl(15,24%,38%)]' },
+  { id: 'traces', label: '笔记', icon: Highlighter, tint: 'bg-[hsl(22,28%,91%)] text-[hsl(22,24%,38%)]' },
+  { id: 'topics', label: '主题', icon: Tags, tint: 'bg-[hsl(8,28%,91%)] text-[hsl(8,24%,38%)]' },
+  { id: 'ai', label: 'AI', icon: Sparkles, tint: 'bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)]' },
 ];
 
 function extractDomain(url: string) {
@@ -817,11 +817,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       }}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg border-y border-l py-2.5 transition-all duration-200',
+                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg py-2.5 transition-all duration-200',
                         'w-9',
                         active
-                          ? 'mr-2 border-primary bg-primary text-primary-foreground shadow-md'
-                          : cn('border-border bg-card hover:mr-1 hover:bg-muted/70', tab.tint),
+                          ? 'mr-2 bg-primary text-primary-foreground shadow-md'
+                          : cn('hover:mr-1 hover:brightness-[0.97]', tab.tint),
                       )}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
