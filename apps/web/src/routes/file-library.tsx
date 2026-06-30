@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useShellUser } from '@/components/shell-user-context';
-import { AppSidebar } from '@/components/app-sidebar';
+import { AppShell } from '@/components/app-shell';
+import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { cn } from '@/lib/utils';
 
 const FORMAT_OPTIONS = ['ALL', 'EPUB', 'PDF', 'MOBI', 'TXT', 'AZW3', 'DJVU', 'DOCX', 'FB2'];
@@ -38,6 +39,7 @@ function formatTotalSize(bytes: number): string {
 export function FileLibraryPage() {
   const user = useShellUser();
   const navigate = useNavigate();
+  const sidebarStats = useSidebarStats();
   const [formatFilter, setFormatFilter] = useState('ALL');
   const [associatedFilter, setAssociatedFilter] = useState<'all' | 'true' | 'false'>('all');
   const [page, setPage] = useState(1);
@@ -87,9 +89,12 @@ export function FileLibraryPage() {
   const totalSize = allFiles.reduce((sum, f) => sum + (f.file_size ?? 0), 0);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar activeKey="files" user={user} />
-      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-7">
+    <AppShell
+      activeKey="files"
+      user={user}
+      stats={sidebarStats}
+      mainClassName="min-w-0 flex-1 overflow-y-auto px-8 py-7"
+    >
         <div className="mb-6">
           <h1 className="font-display text-[26px] font-semibold text-foreground">涔﹀簱鏂囦欢</h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
@@ -349,7 +354,6 @@ export function FileLibraryPage() {
             </Card>
           </div>
         )}
-      </main>
-    </div>
+    </AppShell>
   );
 }

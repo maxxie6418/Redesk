@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { BOOK_STATUS } from '@redesk/shared';
 import { useOverview } from '@/hooks/use-overview';
+import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useShellUser } from '@/components/shell-user-context';
@@ -96,6 +97,7 @@ export function OverviewPage() {
   const user = useShellUser();
   const navigate = useNavigate();
   const overview = useOverview();
+  const sidebarStats = useSidebarStats();
   const categories = useCategories('PERSONAL');
 
   const total = overview.data?.total ?? 0;
@@ -107,7 +109,6 @@ export function OverviewPage() {
   const readingCount = counts[BOOK_STATUS.READING] ?? 0;
   const plannedCount = counts[BOOK_STATUS.PLANNED] ?? 0;
   const storedCount = counts[BOOK_STATUS.STORED] ?? 0;
-  const readCount = counts[BOOK_STATUS.READ] ?? 0;
 
   const categoryItems = useMemo(() => {
     const items = (categories.data ?? [])
@@ -140,12 +141,7 @@ export function OverviewPage() {
     <AppShell
       activeKey="overview"
       user={user}
-      stats={[
-        { label: '总数', value: total, valueClass: 'text-foreground' },
-        { label: '在读', value: readingCount, valueClass: 'text-success' },
-        { label: '已读', value: readCount, valueClass: 'text-primary' },
-        { label: '话题', value: 0, valueClass: 'text-muted-foreground' },
-      ]}
+      stats={sidebarStats}
       mainClassName="px-8 py-7"
     >
         <div className="mb-6">
@@ -154,11 +150,11 @@ export function OverviewPage() {
         </div>
 
         <div className="mb-5 grid grid-cols-5 gap-3">
-          <KpiCard label="书籍总数" value={total} colorClass="total" change="本月 +5" changeType="up" />
-          <KpiCard label="正在阅读" value={readingCount} colorClass="reading" change="较上周 +2" changeType="up" />
-          <KpiCard label="计划阅读" value={plannedCount} colorClass="planned" change="持平" changeType="neutral" />
-          <KpiCard label="已存档" value={storedCount} colorClass="stored" change="—" changeType="neutral" />
-          <KpiCard label="收藏" value={0} colorClass="fav" change="" changeType="neutral" />
+          <KpiCard label="书籍总数" value={total} colorClass="total" />
+          <KpiCard label="正在阅读" value={readingCount} colorClass="reading" />
+          <KpiCard label="计划阅读" value={plannedCount} colorClass="planned" />
+          <KpiCard label="已存档" value={storedCount} colorClass="stored" />
+          <KpiCard label="收藏" value={0} colorClass="fav" />
         </div>
 
         <div className="mb-5 grid grid-cols-4 gap-3">
@@ -319,14 +315,10 @@ function KpiCard({
   label,
   value,
   colorClass,
-  change,
-  changeType,
 }: {
   label: string;
   value: number;
   colorClass: string;
-  change: string;
-  changeType: 'up' | 'down' | 'neutral';
 }) {
   const valueColors: Record<string, string> = {
     total: 'text-foreground',
@@ -349,18 +341,6 @@ function KpiCard({
       <div className={cn('absolute left-0 right-0 top-0 h-[3px]', stripColors[colorClass])} />
       <div className="mb-2 text-xs font-medium text-muted-foreground">{label}</div>
       <div className={cn('text-[28px] font-bold leading-none tabular-nums', valueColors[colorClass])}>{value}</div>
-      {change && (
-        <div
-          className={cn(
-            'mt-1.5 flex items-center gap-1 text-[11px] font-medium',
-            changeType === 'up' && 'text-success',
-            changeType === 'down' && 'text-destructive',
-            changeType === 'neutral' && 'text-muted-foreground',
-          )}
-        >
-          {change}
-        </div>
-      )}
     </div>
   );
 }

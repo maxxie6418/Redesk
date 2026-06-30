@@ -1,6 +1,7 @@
 import { FileText, Highlighter, Lightbulb, NotebookPen, StickyNote } from 'lucide-react';
-import { AppSidebar } from '@/components/app-sidebar';
+import { AppShell } from '@/components/app-shell';
 import { useShellUser } from '@/components/shell-user-context';
+import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 
 const FEATURES = [
   {
@@ -27,12 +28,15 @@ const FEATURES = [
 
 export function ReadingNotesPage() {
   const user = useShellUser();
+  const sidebarStats = useSidebarStats();
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar activeKey="reading-notes" user={user} />
-
-      <main className="flex min-w-0 flex-1 items-center justify-center px-8 py-7">
+    <AppShell
+      activeKey="reading-notes"
+      user={user}
+      stats={sidebarStats}
+      mainClassName="flex min-w-0 flex-1 items-center justify-center px-8 py-7"
+    >
         <div className="max-w-lg text-center">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-muted/50">
             <NotebookPen className="h-10 w-10 text-muted-foreground/40" />
@@ -59,7 +63,6 @@ export function ReadingNotesPage() {
             ))}
           </div>
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

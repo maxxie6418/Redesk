@@ -32,6 +32,7 @@ import {
 import { useBookFiles } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
+import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { useShellUser } from '@/components/shell-user-context';
 import { AppShell } from '@/components/app-shell';
@@ -1738,15 +1739,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   const tagOptions = useMemo(() => ['ALL', ...new Set(rawBooks.flatMap((book) => book.tag_names))], [rawBooks]);
 
-  const stats = useMemo(() => {
-    const allBooks = booksQuery.data?.data ?? [];
-    return {
-      total: booksQuery.data?.pagination.total ?? 0,
-      reading: allBooks.filter((book) => book.status === BOOK_STATUS.READING).length,
-      read: allBooks.filter((book) => book.status === BOOK_STATUS.READ).length,
-      topics: new Set(allBooks.flatMap((book) => book.tag_names)).size,
-    };
-  }, [booksQuery.data]);
+  const sidebarStats = useSidebarStats();
 
   const books = rawBooks;
 
@@ -1783,12 +1776,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         user={user}
         searchValue={search}
         onSearchChange={setSearch}
-        stats={[
-          { label: '总数', value: stats.total, valueClass: 'text-foreground' },
-          { label: '在读', value: stats.reading, valueClass: 'text-success' },
-          { label: '已读', value: stats.read, valueClass: 'text-primary' },
-          { label: '话题', value: stats.topics, valueClass: 'text-muted-foreground' },
-        ]}
+      stats={sidebarStats}
         mainClassName="px-6 py-6 lg:px-8"
       >
         <header className="mb-5 flex items-center justify-between">
