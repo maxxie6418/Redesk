@@ -19,6 +19,10 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Link,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
 import { useTheme } from '@/components/theme-provider';
@@ -33,6 +37,13 @@ import { useSystemStats, useBackup, useFtsRebuild, useClearCache } from '@/hooks
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-categories';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup } from '@/hooks/use-export';
+import {
+  useQuickLinks,
+  useAddQuickLink,
+  useUpdateQuickLink,
+  useDeleteQuickLink,
+  useReorderQuickLink,
+} from '@/hooks/use-quick-links';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,7 +51,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { useShellUser } from '@/components/shell-user-context';
 import { cn } from '@/lib/utils';
 
-type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'backup' | 'system';
+type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'quick-links' | 'backup' | 'system';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -84,6 +95,7 @@ export function SettingsPage() {
     { key: 'ai', label: 'AI 配置', icon: <Sparkles className="h-4 w-4" /> },
     { key: 'categories', label: '分类', icon: <FolderTree className="h-4 w-4" /> },
     { key: 'tags', label: '标签', icon: <Tags className="h-4 w-4" /> },
+    { key: 'quick-links', label: '快捷链接', icon: <Link className="h-4 w-4" /> },
     ...(isMultiUser
       ? [{ key: 'users' as Tab, label: '用户管理', icon: <UserCog className="h-4 w-4" /> }]
       : []),
@@ -131,6 +143,7 @@ export function SettingsPage() {
         {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} />}
         {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'tags' && <TagsTab />}
+        {activeTab === 'quick-links' && <QuickLinksTab />}
         {activeTab === 'users' && isMultiUser && <UsersTab />}
         {activeTab === 'backup' && (
           <BackupTab settings={settings.data ?? {}} />
@@ -1252,6 +1265,209 @@ function SystemTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function QuickLinksTab() {
+  const { data: links } = useQuickLinks();
+  const addLink = useAddQuickLink();
+  const updateLink = useUpdateQuickLink();
+  const deleteLink = useDeleteQuickLink();
+  const reorder = useReorderQuickLink();
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingUrl, setEditingUrl] = useState('');
+  const [message, setMessage] = useState<StatusMessage>(null);
+
+  const handleCreate = useCallback(async () => {
+    if (!newName.trim() || !newUrl.trim()) return;
+    try {
+      await addLink.mutateAsync({ name: newName.trim(), url: newUrl.trim() });
+      setMessage({ type: 'success', text: '快捷链接已添加' });
+      setShowCreate(false);
+      setNewName('');
+      setNewUrl('');
+    } catch {
+      setMessage({ type: 'error', text: '添加失败' });
+    }
+  }, [newName, newUrl, addLink]);
+
+  const handleUpdate = useCallback(
+    async (id: number) => {
+      if (!editingName.trim() || !editingUrl.trim()) return;
+      try {
+        await updateLink.mutateAsync({ id, name: editingName.trim(), url: editingUrl.trim() });
+        setMessage({ type: 'success', text: '已更新' });
+        setEditingId(null);
+      } catch {
+        setMessage({ type: 'error', text: '更新失败' });
+      }
+    },
+    [editingName, editingUrl, updateLink],
+  );
+
+  const handleDelete = useCallback(
+    async (id: number) => {
+      try {
+        await deleteLink.mutateAsync(id);
+        setMessage({ type: 'success', text: '已删除' });
+      } catch {
+        setMessage({ type: 'error', text: '删除失败' });
+      }
+    },
+    [deleteLink],
+  );
+
+  return (
+    <div className="space-y-4">
+      <StatusBanner message={message} />
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {links ? `${links.length} 个链接` : '加载中…'}
+        </p>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          添加链接
+        </Button>
+      </div>
+
+      {!links && (
+        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-8 text-center text-sm text-muted-foreground">
+          加载失败
+        </div>
+      )}
+
+      {links && links.length === 0 && !showCreate && (
+        <div className="rounded-lg border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          还没有快捷链接，点击上方按钮添加
+        </div>
+      )}
+
+      {links?.map((link, index) => (
+        <Card key={link.id}>
+          <CardContent className="flex items-center gap-4 px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
+              <ExternalLink className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {editingId === link.id ? (
+                <div className="space-y-2">
+                  <Input
+                    className="h-8 text-sm"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    placeholder="链接名称"
+                  />
+                  <Input
+                    className="h-8 text-sm"
+                    value={editingUrl}
+                    onChange={(e) => setEditingUrl(e.target.value)}
+                    placeholder="URL"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="h-7 text-xs" onClick={() => handleUpdate(link.id)}>
+                      <Check className="mr-1 h-3 w-3" />
+                      保存
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => setEditingId(null)}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="truncate text-sm font-medium text-foreground">{link.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{link.url}</p>
+                </>
+              )}
+            </div>
+
+            {editingId !== link.id && (
+              <div className="flex items-center gap-0.5">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => reorder.moveUp(link.id)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => reorder.moveDown(link.id)}
+                  disabled={index === links.length - 1}
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setEditingId(link.id);
+                    setEditingName(link.name);
+                    setEditingUrl(link.url);
+                  }}
+                >
+                  <Pencil className="mr-1 h-3 w-3" />
+                  编辑
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-destructive hover:text-destructive"
+                  onClick={() => handleDelete(link.id)}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  删除
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      {showCreate && (
+        <Card>
+          <CardContent className="space-y-3 px-4 py-4">
+            <Input
+              className="h-9 text-sm"
+              placeholder="链接名称（如：豆瓣读书）"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <Input
+              className="h-9 text-sm"
+              placeholder="URL（如：https://book.douban.com）"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowCreate(false)}>
+                取消
+              </Button>
+              <Button onClick={handleCreate} disabled={addLink.isPending || !newName.trim() || !newUrl.trim()}>
+                {addLink.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                添加
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

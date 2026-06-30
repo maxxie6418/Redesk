@@ -56,16 +56,6 @@ function bookProgress(book: BookSummary) {
   return 0;
 }
 
-function formatFullDate(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
 function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
@@ -887,42 +877,75 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
 
                 {/* Rating + Tags */}
                 <div className="mt-4 flex items-center gap-0 border-t border-border pt-4">
-                  <button
-                    type="button"
-                    onClick={() => startEdit('rating', b.rating != null ? String(b.rating) : '')}
-                    className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground hover:text-primary transition-colors"
-                  >
-                    {b.rating != null ? (
-                      <>
-                        {[1, 2, 3, 4, 5].map((r) => (
-                          <Star
-                            key={r}
-                            className={cn(
-                              'h-4 w-4',
-                              r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
-                            )}
-                          />
-                        ))}
-                        <span className="ml-1">{b.rating}</span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">未评分</span>
-                    )}
-                  </button>
+                  {editMode ? (
+                    <button
+                      type="button"
+                      onClick={() => startEdit('rating', b.rating != null ? String(b.rating) : '')}
+                      className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground hover:text-primary transition-colors"
+                    >
+                      {b.rating != null ? (
+                        <>
+                          {[1, 2, 3, 4, 5].map((r) => (
+                            <Star
+                              key={r}
+                              className={cn(
+                                'h-4 w-4',
+                                r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
+                              )}
+                            />
+                          ))}
+                          <span className="ml-1">{b.rating}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">未评分</span>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground">
+                      {b.rating != null ? (
+                        <>
+                          {[1, 2, 3, 4, 5].map((r) => (
+                            <Star
+                              key={r}
+                              className={cn(
+                                'h-4 w-4',
+                                r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
+                              )}
+                            />
+                          ))}
+                          <span className="ml-1">{b.rating}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">未评分</span>
+                      )}
+                    </div>
+                  )}
                   <div className="mx-4 h-6 w-px bg-border" />
-                  <button
-                    type="button"
-                    onClick={startEditTags}
-                    className="flex min-w-0 flex-1 flex-wrap gap-1.5 text-left"
-                  >
-                    {b.tag_names.length > 0 ? (
-                      b.tag_names.map((tag) => (
-                        <TagAtom key={tag} size="small">{tag}</TagAtom>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60">点击添加标签</span>
-                    )}
-                  </button>
+                  {editMode ? (
+                    <button
+                      type="button"
+                      onClick={startEditTags}
+                      className="flex min-w-0 flex-1 flex-wrap gap-1.5 text-left"
+                    >
+                      {b.tag_names.length > 0 ? (
+                        b.tag_names.map((tag) => (
+                          <TagAtom key={tag} size="small">{tag}</TagAtom>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60">点击添加标签</span>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                      {b.tag_names.length > 0 ? (
+                        b.tag_names.map((tag) => (
+                          <TagAtom key={tag} size="small">{tag}</TagAtom>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground/40">无标签</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {editingField === ('tags' as unknown as EditableField) && (
                   <div className="mt-2 rounded-lg border border-border bg-muted p-3">
@@ -1017,7 +1040,29 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     options={Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                   />
                   <InlineRating />
-                  <InlineEditText field="sourceUrl" label="书籍链接" value={b.source_url ?? ''} />
+                  <div className="flex min-w-0 justify-between gap-2">
+                    <span className="shrink-0 text-muted-foreground">书籍链接</span>
+                    {editMode ? (
+                      <button
+                        type="button"
+                        onClick={() => startEdit('sourceUrl', b.source_url ?? '')}
+                        className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
+                      >
+                        {b.source_url || '—'}
+                      </button>
+                    ) : b.source_url ? (
+                      <a
+                        href={b.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 flex-1 truncate text-right font-medium text-primary hover:underline"
+                      >
+                        {extractDomain(b.source_url)}
+                      </a>
+                    ) : (
+                      <span className="min-w-0 flex-1 text-right font-medium text-foreground">—</span>
+                    )}
+                  </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">元数据来源</span>
                     <span className="font-medium text-foreground">{b.metadata_source ?? '—'}</span>
@@ -1027,15 +1072,21 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {/* Description */}
                 <div className="mt-4 border-t border-border pt-4">
                   <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">简介</span>
-                  <button
-                    type="button"
-                    onClick={() => startEdit('customAttributes', b.description ?? '')}
-                    className="mt-2 block w-full text-left"
-                  >
-                    <p className="text-[14px] leading-relaxed text-muted-foreground">
+                  {editMode ? (
+                    <button
+                      type="button"
+                      onClick={() => startEdit('customAttributes', b.description ?? '')}
+                      className="mt-2 block w-full text-left"
+                    >
+                      <p className="text-[14px] leading-relaxed text-muted-foreground hover:text-foreground transition-colors">
+                        {b.description || '暂无简介'}
+                      </p>
+                    </button>
+                  ) : (
+                    <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
                       {b.description || '暂无简介'}
                     </p>
-                  </button>
+                  )}
                 </div>
 
                 {/* Timestamps */}
@@ -1053,9 +1104,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </div>
                 )}
               </div>
+              </>
+              )}
 
-              {/* Traces Card */}
-              <div className="mb-5 rounded-xl border-l-[3px] border-l-emerald-500 border-y border-r border-border bg-card p-5">
+              {activeTab === 'traces' && (
+              <div className="rounded-xl border-l-[3px] border-l-emerald-500 border-y border-r border-border bg-card p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <NotebookPen className="h-4 w-4 text-emerald-500" />
                   阅读留痕
@@ -1066,9 +1119,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <p className="mt-1 text-[12px] text-muted-foreground/50">阅读器上线后（M2）自动记录</p>
                 </div>
               </div>
+              )}
 
-              {/* Topics Card */}
-              <div className="mb-5 rounded-xl border-l-[3px] border-l-primary/60 border-y border-r border-border bg-card p-5">
+              {activeTab === 'topics' && (
+              <div className="rounded-xl border-l-[3px] border-l-primary/60 border-y border-r border-border bg-card p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <Lightbulb className="h-4 w-4 text-primary/60" />
                   主题关联
@@ -1079,9 +1133,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <p className="mt-1 text-[12px] text-muted-foreground/50">主题阅读 — 即将上线（M4）</p>
                 </div>
               </div>
+              )}
 
-              {/* AI Card */}
-              <div className="mb-5 rounded-xl border-l-[3px] border-l-[#9c87f5] border-y border-r border-border bg-[#f8f7fd] p-5">
+              {activeTab === 'ai' && (
+              <div className="rounded-xl border-l-[3px] border-l-[#9c87f5] border-y border-r border-border bg-[#f8f7fd] p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c6bc4" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                   AI 衍生内容
@@ -1092,11 +1147,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <p className="mt-1 text-[12px] text-muted-foreground/50">接入 LLM 后（S3）自动生成</p>
                 </div>
               </div>
-
-              {/* Footer timestamps */}
-              <div className="text-center text-[11px] text-muted-foreground/40">
-                创建于 {formatFullDate(b.created_at)} · 最后更新 {formatFullDate(b.updated_at)}
-              </div>
+              )}
             </div>
           </div>
         )}
