@@ -347,42 +347,80 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group flex w-[200px] flex-col rounded-lg bg-card p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-      <button
-        type="button"
-        className="relative mx-auto mb-2.5 block h-[190px] w-[130px] cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
-        disabled
-        title="阅读器将在 M2 上线"
-      >
-        <BookCoverImage book={book} index={index} className="h-full w-full" rounded="rounded-md" />
-        <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
-        <div className="absolute left-2 top-2 z-10 inline-flex items-center gap-[5px] rounded-xl bg-black/45 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-md">
-          <span className={cn('h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgba(77,171,247,0.6)]', statusDotClass(book.status))} />
+    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+      {/* 封面区 */}
+      <div className="relative mb-3 overflow-hidden rounded-xl">
+        <button
+          type="button"
+          className="block w-full cursor-not-allowed"
+          disabled
+          title="阅读器将在 M2 上线"
+        >
+          <BookCoverImage book={book} index={index} className="aspect-[3/4] w-full" rounded="rounded-xl" />
+        </button>
+        {/* 状态标签 */}
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
+          <span className={cn('h-1.5 w-1.5 rounded-full', statusDotClass(book.status))} />
           {statusLabel(book.status)}
         </div>
+        {/* 更多按钮 */}
         <div
-          className="absolute bottom-2 right-2 z-10 flex items-center gap-[3px] rounded-[10px] bg-black/45 px-[7px] py-[5px] backdrop-blur-md transition-colors hover:bg-black/65"
-          onClick={(e) => e.stopPropagation()}
+          className="absolute right-2.5 top-2.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/90 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-foreground"
+          onClick={onOpenDetail}
         >
-          <span className="block h-[3px] w-[3px] rounded-full bg-white/85" />
-          <span className="block h-[3px] w-[3px] rounded-full bg-white/85" />
-          <span className="block h-[3px] w-[3px] rounded-full bg-white/85" />
-        </div>
-      </button>
-      <div className="flex flex-col" onClick={onOpenDetail}>
-        <h2 className="mb-1 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
-        <p className="mb-1.5 truncate text-xs leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
-        <div className="mb-1.5 flex flex-wrap gap-1.5">
-          {book.tag_names.slice(0, 3).map((tag) => (
-            <TagAtom key={tag} size="small">{tag}</TagAtom>
-          ))}
-        </div>
-        <p className="mb-1.5 text-xs leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
-        <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
-          <RatingDisplay rating={book.rating} size="xs" />
-          <ProgressBar progress={progress} trackWidth="w-[56px]" trackHeight="h-[3px]" />
+          <div className="flex flex-col gap-[3px]">
+            <span className="block h-[3px] w-[3px] rounded-full bg-current" />
+            <span className="block h-[3px] w-[3px] rounded-full bg-current" />
+            <span className="block h-[3px] w-[3px] rounded-full bg-current" />
+          </div>
         </div>
       </div>
+
+      {/* 信息区 */}
+      <div className="flex flex-1 flex-col" onClick={onOpenDetail}>
+        <h3 className="mb-1 line-clamp-1 text-[14px] font-semibold leading-tight text-foreground">{book.title}</h3>
+        <p className="mb-2 line-clamp-1 text-xs text-muted-foreground">{book.author || '未知作者'}</p>
+
+        {/* 标签 */}
+        {book.tag_names.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {book.tag_names.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          {[book.publish_year, book.page_count ? `${book.page_count}页` : null].filter(Boolean).join(' · ')}
+        </p>
+
+        {/* 评分 + 进度 */}
+        <div className="mt-auto flex items-center gap-2">
+          {book.rating != null ? (
+            <span className="flex items-center gap-0.5 text-sm font-semibold text-yellow-500">
+              <Star className="h-3.5 w-3.5 fill-current" />
+              {book.rating.toFixed(1)}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+          <div className="flex-1">
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+          <span className="text-[10px] tabular-nums text-muted-foreground">{progress}%</span>
+        </div>
+      </div>
+
       {isTrash && (
         <div className="mt-2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -1434,7 +1472,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'B' && (
-          <section className="grid grid-cols-2 gap-y-3 gap-x-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
             {books.map((book, index) => (
               <BookCardB
                 key={book.id}
