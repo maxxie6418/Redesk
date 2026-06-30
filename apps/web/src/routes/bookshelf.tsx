@@ -347,10 +347,10 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group flex w-full flex-col rounded-lg bg-card p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group flex w-[120px] flex-col rounded-lg bg-card p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
-        className="relative mx-auto mb-2.5 block h-[190px] w-[130px] cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+        className="relative mx-auto mb-2 block h-[160px] w-[108px] cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
         disabled
         title="阅读器将在 M2 上线"
       >
@@ -370,17 +370,18 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         </div>
       </button>
       <div className="flex flex-col" onClick={onOpenDetail}>
-        <h2 className="mb-1 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
-        <p className="mb-1.5 truncate text-xs leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
-        <div className="mb-1.5 flex flex-wrap gap-1.5">
-          {book.tag_names.slice(0, 3).map((tag) => (
-            <TagAtom key={tag} size="small">{tag}</TagAtom>
-          ))}
-        </div>
-        <p className="mb-1.5 text-xs leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
-        <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
-          <RatingDisplay rating={book.rating} size="xs" />
-          <ProgressBar progress={progress} trackWidth="w-[56px]" trackHeight="h-[3px]" />
+        <h2 className="mb-0.5 line-clamp-2 text-[11px] font-medium leading-[1.3] text-foreground">{book.title}</h2>
+        <p className="mb-1 truncate text-[10px] leading-[1.3] text-muted-foreground">{book.author || ''}</p>
+        <div className="mt-auto flex items-center justify-between">
+          {book.rating != null ? (
+            <span className="flex items-center gap-0.5 text-[10px] text-yellow-500">
+              <Star className="h-2.5 w-2.5 fill-current" />
+              {book.rating}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span className="text-[9px] text-muted-foreground">{bookMetaLine(book)}</span>
         </div>
       </div>
       {isTrash && (
@@ -1434,7 +1435,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'B' && (
-          <section className="grid grid-cols-2 gap-y-3 gap-x-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4">
+          <section className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 2xl:grid-cols-10">
             {books.map((book, index) => (
               <BookCardB
                 key={book.id}
