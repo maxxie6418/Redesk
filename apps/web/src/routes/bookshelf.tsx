@@ -347,39 +347,39 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       {/* 封面区 */}
-      <div className="relative mb-2 overflow-hidden rounded-lg">
+      <div className="relative mb-1.5 overflow-hidden rounded-md">
         <button
           type="button"
           className="block w-full cursor-not-allowed"
           disabled
           title="阅读器将在 M2 上线"
         >
-          <BookCoverImage book={book} index={index} className="aspect-[2/3] w-full" rounded="rounded-lg" />
+          <BookCoverImage book={book} index={index} className="aspect-[1/2] w-full" rounded="rounded-md" />
         </button>
         {/* 状态标签 */}
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm">
+        <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-white/90 px-1 py-0.5 text-[9px] font-medium text-foreground shadow-sm backdrop-blur-sm">
           <span className={cn('h-1 w-1 rounded-full', statusDotClass(book.status))} />
           {statusLabel(book.status)}
         </div>
         {/* 更多按钮 */}
         <div
-          className="absolute right-2 top-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white/90 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-foreground"
+          className="absolute right-1.5 top-1.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-white/90 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-foreground"
           onClick={onOpenDetail}
         >
-          <div className="flex flex-col gap-[2px]">
-            <span className="block h-[2px] w-[2px] rounded-full bg-current" />
-            <span className="block h-[2px] w-[2px] rounded-full bg-current" />
-            <span className="block h-[2px] w-[2px] rounded-full bg-current" />
+          <div className="flex flex-col gap-[1.5px]">
+            <span className="block h-[1.5px] w-[1.5px] rounded-full bg-current" />
+            <span className="block h-[1.5px] w-[1.5px] rounded-full bg-current" />
+            <span className="block h-[1.5px] w-[1.5px] rounded-full bg-current" />
           </div>
         </div>
       </div>
 
       {/* 信息区 */}
       <div className="flex flex-1 flex-col" onClick={onOpenDetail}>
-        <h3 className="mb-0.5 line-clamp-1 text-[13px] font-semibold leading-tight text-foreground">{book.title}</h3>
-        <p className="mb-1.5 line-clamp-1 text-[11px] text-muted-foreground">{book.author || '未知作者'}</p>
+        <h3 className="mb-0.5 line-clamp-1 text-[12px] font-semibold leading-tight text-foreground">{book.title}</h3>
+        <p className="mb-1 line-clamp-1 text-[10px] text-muted-foreground">{book.author || '未知作者'}</p>
 
         {/* 标签 */}
         {book.tag_names.length > 0 && (
@@ -387,7 +387,7 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
             {book.tag_names.slice(0, 2).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-border bg-muted/60 px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                className="rounded border border-border bg-muted/60 px-1 py-0.5 text-[8px] text-muted-foreground"
               >
                 {tag}
               </span>
@@ -395,34 +395,30 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
           </div>
         )}
 
-        <p className="mb-2 text-[10px] text-muted-foreground">
-          {[book.publish_year, book.page_count ? `${book.page_count}页` : null].filter(Boolean).join(' · ')}
-        </p>
-
         {/* 评分 + 进度 */}
-        <div className="mt-auto flex items-center gap-1.5">
+        <div className="mt-auto flex items-center gap-1">
           {book.rating != null ? (
-            <span className="flex items-center gap-0.5 text-xs font-semibold text-yellow-500">
-              <Star className="h-3 w-3 fill-current" />
+            <span className="flex items-center gap-0.5 text-[11px] font-semibold text-yellow-500">
+              <Star className="h-2.5 w-2.5 fill-current" />
               {book.rating.toFixed(1)}
             </span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">—</span>
+            <span className="text-[9px] text-muted-foreground">—</span>
           )}
           <div className="flex-1">
-            <div className="h-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-0.5 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
-          <span className="text-[9px] tabular-nums text-muted-foreground">{progress}%</span>
+          <span className="text-[8px] tabular-nums text-muted-foreground">{progress}%</span>
         </div>
       </div>
 
       {isTrash && (
-        <div className="mt-2">
+        <div className="mt-1.5">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
         </div>
       )}
