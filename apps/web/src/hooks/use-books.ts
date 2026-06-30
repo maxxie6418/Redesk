@@ -353,3 +353,72 @@ export function useDeleteBookCover() {
     },
   });
 }
+
+export interface LinkMetadata {
+  title?: string;
+  author?: string;
+  translator?: string;
+  publisher?: string;
+  publish_year?: number;
+  isbn?: string;
+  page_count?: number;
+  original_title?: string;
+  description?: string;
+  cover_url?: string;
+  douban_rating?: number;
+  source_url: string;
+  metadata_source: 'douban' | 'neodb' | 'manual';
+}
+
+export function useUploadBookCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, file }: { bookId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return api.postForm<BookCoverItem>(`/books/${bookId}/covers/upload`, formData);
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export interface BatchFetchCoversResult {
+  total: number;
+  success: number;
+  failed: number;
+  rows: Array<{ book_id: number; success: boolean; error: string | null }>;
+}
+
+export function useBatchFetchBookCovers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<BatchFetchCoversResult>('/books/covers/batch-fetch', { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useApplyBookMetadata() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, fields, fetchCover }: { bookId: number; fields: Record<string, unknown>; fetchCover?: boolean }) =>
+      api.post<BookDetail>(`/books/${bookId}/metadata/apply`, { fields, fetch_cover: fetchCover ?? false }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useFetchBookMetadata() {
+  return useMutation({
+    mutationFn: (sourceUrl: string) =>
+      api.post<LinkMetadata>('/books/metadata/fetch', { source_url: sourceUrl }),
+  });
+}

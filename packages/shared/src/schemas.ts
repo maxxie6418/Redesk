@@ -256,3 +256,9 @@ export const batchFetchBookCoversSchema = z.object({
   force: z.boolean().optional().default(false),
 });
 export type BatchFetchBookCoversInput = z.output<typeof batchFetchBookCoversSchema>;
+
+export const metadataApplySchema = z.object({
+  fields: z.record(z.string(), z.unknown()).optional(),
+  fetch_cover: z.boolean().optional().default(false),
+});
+export type MetadataApplyInput = z.infer<typeof metadataApplySchema>;
