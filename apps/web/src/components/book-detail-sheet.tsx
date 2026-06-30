@@ -95,11 +95,11 @@ type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 're
 
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
-const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon }[] = [
-  { id: 'archive', label: '档案', icon: Archive },
-  { id: 'traces', label: '留痕', icon: Highlighter },
-  { id: 'topics', label: '主题', icon: Tags },
-  { id: 'ai', label: 'AI', icon: Sparkles },
+const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string }[] = [
+  { id: 'archive', label: '档案', icon: Archive, tint: 'border-l-amber-400 text-amber-500' },
+  { id: 'traces', label: '笔记', icon: Highlighter, tint: 'border-l-rose-400 text-rose-500' },
+  { id: 'topics', label: '主题', icon: Tags, tint: 'border-l-emerald-400 text-emerald-500' },
+  { id: 'ai', label: 'AI', icon: Sparkles, tint: 'border-l-violet-400 text-violet-500' },
 ];
 
 function extractDomain(url: string) {
@@ -799,8 +799,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               </div>
               </div>
 
-              {/* Bookmark Tabs: 贴左栏右边缘,不随内容滚动 */}
-              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+              {/* Bookmark Tabs: 贴左栏右边缘,靠近底部,不随内容滚动 */}
+              <div className="absolute right-0 bottom-4 flex flex-col gap-2">
                 {TAB_LABELS.map((tab) => {
                   const active = activeTab === tab.id;
                   const Icon = tab.icon;
@@ -821,7 +821,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                         'w-9',
                         active
                           ? 'mr-2 border-primary bg-primary text-primary-foreground shadow-md'
-                          : 'border-border bg-card text-muted-foreground hover:mr-1 hover:bg-muted/70 hover:text-foreground',
+                          : cn('border-border bg-card hover:mr-1 hover:bg-muted/70', tab.tint),
                       )}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
