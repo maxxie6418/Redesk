@@ -29,7 +29,6 @@ import {
   useEmptyTrash,
   useBook,
   useUpdateBook,
-  useBatchFetchBookCovers,
   useBookCovers,
   useFetchBookCover,
   useActivateBookCover,
@@ -2144,8 +2143,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
-  const [batchFetchStatus, setBatchFetchStatus] = useState<string | null>(null);
-  const batchFetchCovers = useBatchFetchBookCovers();
   const [showImport, setShowImport] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
@@ -2244,20 +2241,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     }
   }, [emptyTrash]);
 
-  const handleBatchFetchCovers = useCallback(async () => {
-    const eligible = books.filter((book) => Boolean(book.source_url));
-    if (eligible.length === 0) {
-      setBatchFetchStatus('当前视图下没有含介绍页链接的书籍');
-      return;
-    }
-    try {
-      const result = await batchFetchCovers.mutateAsync(eligible.map((book) => book.id));
-      setBatchFetchStatus(`完成：成功 ${result.success} 本，失败 ${result.failed} 本（共 ${result.total} 本）`);
-    } catch (err) {
-      setBatchFetchStatus(err instanceof ApiError ? err.message : '批量抓取封面失败');
-    }
-  }, [books, batchFetchCovers]);
-
   return (
     <>
       <AppShell
@@ -2286,13 +2269,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             )}
             {pageView === 'bookshelf' && (
               <>
-                {batchFetchStatus && (
-                  <span className="text-xs text-muted-foreground">{batchFetchStatus}</span>
-                )}
-                <Button variant="outline" className="rounded-full" onClick={handleBatchFetchCovers} disabled={batchFetchCovers.isPending}>
-                  {batchFetchCovers.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
-                  抓取封面
-                </Button>
                 <Button variant="outline" className="rounded-full" onClick={() => setShowImport(true)}>
                   <FileUp className="h-4 w-4" />
                   批量导入
