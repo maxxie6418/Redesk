@@ -23,6 +23,11 @@ import {
   ArrowUp,
   ArrowDown,
   ExternalLink,
+  HardDrive,
+  Database,
+  Clock,
+  AlertTriangle,
+  Image,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
 import { useTheme } from '@/components/theme-provider';
@@ -33,7 +38,7 @@ import {
   useDeleteUser,
   useResetPassword,
 } from '@/hooks/use-users-admin';
-import { useSystemStats, useBackup, useFtsRebuild, useClearCache } from '@/hooks/use-system';
+import { useSystemStats, useSystemStorage, useBackup, useFtsRebuild, useClearCache } from '@/hooks/use-system';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-categories';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup } from '@/hooks/use-export';
@@ -51,7 +56,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { useShellUser } from '@/components/shell-user-context';
 import { cn } from '@/lib/utils';
 
-type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'quick-links' | 'backup' | 'system';
+type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'quick-links' | 'backup' | 'storage' | 'system';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -117,6 +122,7 @@ export function SettingsPage() {
       ? [{ key: 'users' as Tab, label: '用户管理', icon: <UserCog className="h-4 w-4" /> }]
       : []),
     { key: 'backup', label: '云备份', icon: <Cloud className="h-4 w-4" /> },
+    { key: 'storage', label: '存储', icon: <HardDrive className="h-4 w-4" /> },
     { key: 'system', label: '系统', icon: <Server className="h-4 w-4" /> },
   ];
 
@@ -166,6 +172,7 @@ export function SettingsPage() {
         {activeTab === 'backup' && (
           <BackupTab settings={settings.data ?? {}} onToast={showToast} />
         )}
+        {activeTab === 'storage' && <StorageTab onToast={showToast} />}
         {activeTab === 'system' && <SystemTab onToast={showToast} />}
         </div>
       </main>
@@ -1143,6 +1150,207 @@ function TagsTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   );
 }
 
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${seconds} 秒`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时`;
+  return `${Math.floor(seconds / 86400)} 天`;
+}
+
+function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const storage = useSystemStorage();
+  const clearCache = useClearCache();
+
+  const dirLabels: Record<string, { label: string; icon: React.ReactNode }> = {
+    books: { label: '书籍文件', icon: <FolderTree className="h-4 w-4" /> },
+    covers: { label: '封面图片', icon: <Image className="h-4 w-4" /> },
+    backups: { label: '备份文件', icon: <Database className="h-4 w-4" /> },
+    tmp: { label: '临时文件', icon: <Clock className="h-4 w-4" /> },
+    unassociated: { label: '未关联文件', icon: <Link className="h-4 w-4" /> },
+  };
+
+  const totalSize = storage.data?.total_size_bytes ?? 0;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">本地存储概况</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {storage.isLoading && <p className="text-sm text-muted-foreground">扫描中…</p>}
+          {storage.data && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 rounded-lg border border-border bg-popover p-4">
+                <HardDrive className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">总占用</p>
+                  <p className="text-xs text-muted-foreground">
+                    {storage.data.total_files} 个文件
+                  </p>
+                </div>
+                <p className="text-lg font-semibold text-foreground">
+                  {formatBytes(totalSize)}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {Object.entries(storage.data.breakdown).map(([key, info]) => {
+                  const percentage = totalSize > 0 ? ((info.size_bytes / totalSize) * 100).toFixed(1) : '0';
+                  const dir = dirLabels[key] ?? { label: key, icon: <FolderTree className="h-4 w-4" /> };
+                  return (
+                    <div key={key} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                      <span className="text-muted-foreground">{dir.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-foreground">{dir.label}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatBytes(info.size_bytes)} ({percentage}%)
+                          </p>
+                        </div>
+                        <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all',
+                              key === 'tmp'
+                                ? 'bg-orange-400'
+                                : key === 'backups'
+                                  ? 'bg-blue-400'
+                                  : 'bg-emerald-400',
+                            )}
+                            style={{ width: `${Math.max(Number(percentage), 1)}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{info.file_count} 个文件</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                <Database className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">数据库</p>
+                  <p className="text-xs text-muted-foreground">SQLite 数据文件</p>
+                </div>
+                <p className="text-sm font-semibold text-foreground">
+                  {formatBytes(storage.data.db_size_bytes)}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">缓存清理</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {storage.data ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">临时文件</p>
+                  <p className="text-xs text-muted-foreground">
+                    占用 {formatBytes(storage.data.breakdown.tmp?.size_bytes ?? 0)}
+                    ，{storage.data.breakdown.tmp?.file_count ?? 0} 个文件
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const result = await clearCache.mutateAsync();
+                      onToast({
+                        type: 'success',
+                        text: `已清理 ${formatBytes(result.freed_bytes)}（${result.removed_files} 个文件）`,
+                      });
+                    } catch {
+                      onToast({ type: 'error', text: '清理失败' });
+                    }
+                  }}
+                  disabled={clearCache.isPending || (storage.data.breakdown.tmp?.size_bytes ?? 0) === 0}
+                >
+                  {clearCache.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1 h-4 w-4" />
+                  )}
+                  清空临时文件
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">远程存储</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {storage.data ? (
+            storage.data.oss.configured ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200/50 bg-emerald-50/95 px-4 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/95">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                      对象存储已配置
+                    </p>
+                    <p className="text-xs text-emerald-600/80 dark:text-emerald-300/80">
+                      {storage.data.oss.provider === 'aliyun'
+                        ? '阿里云 OSS'
+                        : storage.data.oss.provider === 's3'
+                          ? 'S3 兼容'
+                          : storage.data.oss.provider === 'minio'
+                            ? 'MinIO'
+                            : storage.data.oss.provider}
+                    </p>
+                  </div>
+                </div>
+                {storage.data.oss.endpoint && (
+                  <div className="rounded-lg border border-border px-4 py-3">
+                    <p className="text-xs text-muted-foreground">Endpoint</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {storage.data.oss.endpoint}
+                    </p>
+                  </div>
+                )}
+                {storage.data.oss.bucket && (
+                  <div className="rounded-lg border border-border px-4 py-3">
+                    <p className="text-xs text-muted-foreground">Bucket</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {storage.data.oss.bucket}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">未配置对象存储</p>
+                  <p className="text-xs text-muted-foreground">
+                    前往「云备份」Tab 配置 S3 兼容的对象存储
+                  </p>
+                </div>
+              </div>
+            )
+          ) : (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const stats = useSystemStats();
   const backup = useBackup();
@@ -1153,12 +1361,96 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">系统概况</CardTitle>
+          <CardTitle className="text-base">应用信息</CardTitle>
         </CardHeader>
         <CardContent>
           {stats.isLoading && <p className="text-sm text-muted-foreground">加载中…</p>}
           {stats.data && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">版本</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  v{stats.data.version}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">运行环境</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {stats.data.node_env === 'production' ? '生产' : '开发'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">运行时长</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {formatUptime(stats.data.uptime_seconds)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">Node.js</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {stats.data.node_version}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">SQLite</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {stats.data.sqlite_version}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">数据库路径</p>
+                <p className="mt-1 truncate text-xs font-medium text-foreground">
+                  {stats.data.db_path}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">数据概览</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats.data && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">书籍总数</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.book_count}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">文件数</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.file_count}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">分类</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.category_count}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">标签</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.tag_count}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">用户</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.user_count}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-popover p-3">
+                <p className="text-xs text-muted-foreground">回收站</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.trash_count}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">存储概况</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats.data && (
+            <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-border bg-popover p-3">
                 <p className="text-xs text-muted-foreground">数据库大小</p>
                 <p className="mt-1 text-lg font-semibold text-foreground">
@@ -1170,14 +1462,6 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
                 <p className="mt-1 text-lg font-semibold text-foreground">
                   {formatBytes(stats.data.storage_size_bytes)}
                 </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">书籍总数</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.book_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">文件数</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.file_count}</p>
               </div>
             </div>
           )}
@@ -1247,15 +1531,22 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
               size="sm"
               onClick={async () => {
                 try {
-                  await clearCache.mutateAsync();
-                  onToast({ type: 'success', text: '缓存已清理' });
+                  const result = await clearCache.mutateAsync();
+                  onToast({
+                    type: 'success',
+                    text: `已清理 ${formatBytes(result.freed_bytes)}（${result.removed_files} 个文件）`,
+                  });
                 } catch {
                   onToast({ type: 'error', text: '清理失败' });
                 }
               }}
               disabled={clearCache.isPending}
             >
-              <Trash2 className="h-4 w-4" />
+              {clearCache.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </CardContent>
