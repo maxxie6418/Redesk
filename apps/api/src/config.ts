@@ -22,6 +22,8 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   VITE_AUTH_DISABLED: z.string().optional(),
   AUTH_DISABLED: z.string().optional(),
+  BOOTSTRAP_USERNAME: z.string().min(1).max(64).optional(),
+  BOOTSTRAP_PASSWORD: z.string().min(8).max(256).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -63,5 +65,12 @@ export const config = {
 
 export const DEFAULT_ADMIN_USERNAME = 'admin';
 export const DEFAULT_ADMIN_PASSWORD = 'redesk';
+
+export const bootstrapConfig = {
+  username: env.BOOTSTRAP_USERNAME ?? DEFAULT_ADMIN_USERNAME,
+  password: env.BOOTSTRAP_PASSWORD ?? DEFAULT_ADMIN_PASSWORD,
+  isEnvOverride: env.BOOTSTRAP_PASSWORD !== undefined,
+  isDefaultPassword: env.BOOTSTRAP_PASSWORD === undefined,
+};
 
 export type AppConfig = typeof config;

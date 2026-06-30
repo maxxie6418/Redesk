@@ -7,6 +7,7 @@ import {
   Lightbulb,
   Loader2,
   NotebookPen,
+  RefreshCcw,
   Star,
   Upload,
   X,
@@ -686,6 +687,20 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     {editMode ? '完成编辑' : '编辑信息'}
                   </button>
                 </div>
+                {b.source_url && (
+                  <div className="mt-1.5 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleOpenMetadataDialog}
+                      disabled={fetchMetadata.isPending}
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary disabled:opacity-50"
+                      title="从源页面抓取最新元数据，可勾选要更新的字段"
+                    >
+                      <RefreshCcw className={cn('h-3 w-3', fetchMetadata.isPending && 'animate-spin')} />
+                      {fetchMetadata.isPending ? '抓取中…' : '抓取更新信息'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Cover Panel */}
@@ -758,15 +773,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     </div>
                   )}
                   {b.source_url && (
-                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                      <button
-                        type="button"
-                        onClick={handleOpenMetadataDialog}
-                        disabled={fetchMetadata.isPending}
-                        className="text-xs text-primary hover:underline disabled:opacity-50"
-                      >
-                        {fetchMetadata.isPending ? '抓取中...' : '抓取更新信息'}
-                      </button>
+                    <div className="mt-3 flex items-center justify-end border-t border-border pt-3">
                       <button
                         type="button"
                         onClick={handleFetchCover}
@@ -817,11 +824,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       }}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg py-2.5 transition-all duration-200',
+                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg py-2.5 transition-colors duration-150',
                         'w-9',
                         active
                           ? 'mr-2 bg-primary text-primary-foreground shadow-md'
-                          : cn('hover:mr-1 hover:brightness-[0.97]', tab.tint),
+                          : cn('hover:brightness-[0.97]', tab.tint),
                       )}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />

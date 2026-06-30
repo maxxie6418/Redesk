@@ -8,6 +8,14 @@ export function useAuthStatus() {
   });
 }
 
+export function useAuthInit() {
+  return useQuery({
+    queryKey: ['auth-init'],
+    queryFn: () => api.get<{ initial: boolean; has_admin: boolean }>('/auth/init'),
+    retry: false,
+  });
+}
+
 export function useCurrentUser() {
   return useQuery({
     queryKey: ['current-user'],
@@ -55,6 +63,17 @@ export function useLogout() {
     onSuccess: () => {
       qc.setQueryData(['current-user'], null);
       qc.invalidateQueries({ queryKey: ['auth-status'] });
+    },
+  });
+}
+
+export function useChangePassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { newPassword: string }) =>
+      api.post<AuthUser>('/auth/change-password', input),
+    onSuccess: (user) => {
+      qc.setQueryData(['current-user'], user);
     },
   });
 }

@@ -1,10 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { and, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, createReadStream, renameSync, unlinkSync, statSync, copyFileSync, createWriteStream, writeFileSync } from 'node:fs';
-import { basename, extname, join, relative } from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { bookCovers, bookFiles, books } from '@redesk/db';
+import { extname, basename } from 'node:path';
+import { bookCovers, bookFiles, books, type StorageDriver } from '@redesk/db';
 import {
   BOOK_COVER_SOURCE_TYPE,
   ERROR_CODE,
@@ -17,7 +15,8 @@ import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
-import { config } from '../config';
+import { getReadStorage, getWriteDriver, getWriteStorage } from '../lib/storage-factory';
+import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 
 const MIME_MAP: Record<string, string> = {
@@ -50,14 +49,45 @@ function now(): string {
   return new Date().toISOString();
 }
 
-function computeHash(filePath: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const hash = createHash('sha256');
-    const stream = createReadStream(filePath);
-    stream.on('data', (chunk: string | Buffer) => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-    stream.on('error', reject);
-  });
+function safeName(ext: string): string {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+}
+
+function bookFileKey(bookId: number, ext: string): string {
+  return `books/${bookId}/${safeName(ext)}`;
+}
+
+function unassociatedFileKey(ext: string): string {
+  return `unassociated/${safeName(ext)}`;
+}
+
+function tmpUploadKey(ext: string): string {
+  return `tmp/upload_${safeName(ext)}`;
+}
+
+function tmpCoverUploadKey(ext: string): string {
+  return `tmp/cover_upload_${safeName(ext)}`;
+}
+
+function bookCoverKey(bookId: number, ext: string): string {
+  return `covers/${bookId}/cover_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+}
+
+function remoteCoverKey(bookId: number, ext: string): string {
+  return `covers/${bookId}/remote_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+}
+
+async function streamSha256(stream: NodeJS.ReadableStream): Promise<string> {
+  const hash = createHash('sha256');
+  for await (const chunk of stream) {
+    hash.update(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return hash.digest('hex');
+}
+
+async function fileSha256(storage: Storage, key: string): Promise<string> {
+  const stream = await storage.getStream(key);
+  return streamSha256(stream);
 }
 
 function detectFormat(filename: string): string {
@@ -68,24 +98,6 @@ function detectFormat(filename: string): string {
 function detectMime(filename: string): string {
   const ext = extname(filename).toLowerCase();
   return MIME_MAP[ext] ?? 'application/octet-stream';
-}
-
-function bookDir(bookId: number): string {
-  const dir = join(config.storageDir, 'books', String(bookId));
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-function unassociatedDir(): string {
-  const dir = join(config.storageDir, 'unassociated');
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-function coverDir(bookId: number): string {
-  const dir = join(config.storageDir, 'covers', String(bookId));
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  return dir;
 }
 
 function coverMimeFromExt(ext: string): string {
@@ -105,26 +117,6 @@ function coverExtFromResponse(url: string, contentType: string | null): string {
   const urlExt = extname(new URL(url).pathname).toLowerCase();
   if (COVER_EXTS.includes(urlExt)) return urlExt;
   return '.jpg';
-}
-
-function relativePath(abs: string): string {
-  const storageDir = config.storageDir.replace(/\\/g, '/');
-  const absNormalized = abs.replace(/\\/g, '/');
-  if (absNormalized.startsWith(storageDir)) {
-    return absNormalized.slice(storageDir.length).replace(/^\//, '');
-  }
-  return abs;
-}
-
-function storageRelativePath(absPath: string): string {
-  return relative(config.storageDir, absPath).replace(/\\/g, '/');
-}
-
-function resolveStoragePath(rel: string): string {
-  if (rel.includes('..')) {
-    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件路径');
-  }
-  return join(config.storageDir, rel);
 }
 
 function syncBookCoverPath(bookId: number): void {
@@ -160,6 +152,7 @@ function upsertBookCover(input: {
   sourceLabel?: string | null;
   originalUrl?: string | null;
   filePath: string;
+  storageDriver: StorageDriver;
   mimeType: string;
   fileSize: number;
   checksum: string;
@@ -176,6 +169,14 @@ function upsertBookCover(input: {
           .get()
       : null;
 
+  const shouldActivate =
+    input.activate &&
+    !db
+      .select({ id: bookCovers.id })
+      .from(bookCovers)
+      .where(and(eq(bookCovers.book_id, input.bookId), eq(bookCovers.is_active, 1)))
+      .get();
+
   if (existing) {
     db.update(bookCovers)
       .set({
@@ -183,6 +184,7 @@ function upsertBookCover(input: {
         source_label: input.sourceLabel ?? null,
         original_url: input.originalUrl ?? null,
         file_path: input.filePath,
+        storage_driver: input.storageDriver,
         mime_type: input.mimeType,
         file_size: input.fileSize,
         checksum: input.checksum,
@@ -191,11 +193,11 @@ function upsertBookCover(input: {
       .where(eq(bookCovers.id, existing.id))
       .run();
 
-    if (input.activate) activateBookCover(input.bookId, existing.id);
+    if (shouldActivate) activateBookCover(input.bookId, existing.id);
     return existing.id;
   }
 
-  if (input.activate) {
+  if (shouldActivate) {
     db.update(bookCovers).set({ is_active: 0, updated_at: timestamp }).where(eq(bookCovers.book_id, input.bookId)).run();
   }
 
@@ -209,6 +211,7 @@ function upsertBookCover(input: {
       source_label: input.sourceLabel ?? null,
       original_url: input.originalUrl ?? null,
       file_path: input.filePath,
+      storage_driver: input.storageDriver,
       mime_type: input.mimeType,
       file_size: input.fileSize,
       checksum: input.checksum,
@@ -223,10 +226,20 @@ function upsertBookCover(input: {
   return created.id;
 }
 
-async function extractEpubCover(filePath: string, bookId: number): Promise<string | null> {
+async function extractEpubCover(
+  storage: Storage,
+  srcKey: string,
+  bookId: number,
+): Promise<{ key: string; bytes: Buffer; ext: string } | null> {
+  let zipBytes: Buffer;
+  try {
+    zipBytes = await storage.getBytes(srcKey);
+  } catch {
+    return null;
+  }
   try {
     const AdmZip = (await import('adm-zip')).default;
-    const zip = new AdmZip(filePath);
+    const zip = new AdmZip(zipBytes);
 
     const containerEntry = zip.getEntry('META-INF/container.xml');
     if (!containerEntry) return null;
@@ -273,10 +286,9 @@ async function extractEpubCover(filePath: string, bookId: number): Promise<strin
     const coverExt = extname(coverHref).toLowerCase();
     if (!COVER_EXTS.includes(coverExt)) return null;
 
-    const targetDir = coverDir(bookId);
-    const targetPath = join(targetDir, `cover_${Date.now()}${coverExt}`);
-    writeFileSync(targetPath, coverEntry.getData());
-    return targetPath;
+    const bytes = coverEntry.getData();
+    const key = bookCoverKey(bookId, coverExt);
+    return { key, bytes, ext: coverExt };
   } catch {
     return null;
   }
@@ -289,7 +301,7 @@ export async function downloadRemoteCover(input: {
   sourceLabel?: string | null;
   force?: boolean;
   activate?: boolean;
-}): Promise<{ id: number; file_path: string } | null> {
+}): Promise<{ id: number; file_path: string; storage_driver: StorageDriver } | null> {
   let url: URL;
   try {
     url = new URL(input.coverUrl);
@@ -301,7 +313,7 @@ export async function downloadRemoteCover(input: {
   const db = getDb();
   if (!input.force) {
     const existing = db
-      .select({ id: bookCovers.id, file_path: bookCovers.file_path })
+      .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
       .from(bookCovers)
       .where(
         and(
@@ -313,7 +325,7 @@ export async function downloadRemoteCover(input: {
       .get();
     if (existing) {
       if (input.activate) activateBookCover(input.bookId, existing.id);
-      return existing;
+      return { id: existing.id, file_path: existing.file_path, storage_driver: existing.storage_driver };
     }
   }
 
@@ -335,11 +347,12 @@ export async function downloadRemoteCover(input: {
     const bytes = Buffer.from(await res.arrayBuffer());
     if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return null;
 
-    const targetPath = join(
-      coverDir(input.bookId),
-      `remote_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${coverExtFromResponse(url.toString(), contentType)}`,
-    );
-    writeFileSync(targetPath, bytes);
+    const ext = coverExtFromResponse(url.toString(), contentType);
+    const storage = getWriteStorage();
+    const key = remoteCoverKey(input.bookId, ext);
+    await storage.putBytes(key, bytes, { contentType: contentType ?? coverMimeFromExt(ext) });
+    const checksum = await fileSha256(storage, key);
+    const driver = getWriteDriver();
 
     const coverId = upsertBookCover({
       ownerId: input.ownerId,
@@ -347,14 +360,15 @@ export async function downloadRemoteCover(input: {
       sourceType: BOOK_COVER_SOURCE_TYPE.REMOTE_FETCHED,
       sourceLabel: input.sourceLabel ?? url.hostname,
       originalUrl: input.coverUrl,
-      filePath: storageRelativePath(targetPath),
-      mimeType: contentType ?? coverMimeFromExt(extname(targetPath)),
+      filePath: key,
+      storageDriver: driver,
+      mimeType: contentType ?? coverMimeFromExt(ext),
       fileSize: bytes.length,
-      checksum: await computeHash(targetPath),
-      activate: input.activate ?? false,
+      checksum,
+      activate: input.activate ?? true,
     });
 
-    return { id: coverId, file_path: storageRelativePath(targetPath) };
+    return { id: coverId, file_path: key, storage_driver: driver };
   } catch {
     return null;
   } finally {
@@ -366,21 +380,32 @@ export async function saveUploadedFile(
   ownerId: number,
   bookId: number | null,
   originalFilename: string,
-  sourcePath: string,
+  sourceStream: NodeJS.ReadableStream,
   isPrimary: boolean,
   replaceFileId?: number,
-): Promise<{ id: number; file_format: string; file_path: string }> {
+): Promise<{ id: number; file_format: string; file_path: string; storage_driver: StorageDriver }> {
   const fileFormat = detectFormat(originalFilename);
   const mimeType = detectMime(originalFilename);
   const ext = extname(originalFilename).toLowerCase();
-  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-  const targetDir = bookId != null ? bookDir(bookId) : unassociatedDir();
-  const targetPath = join(targetDir, safeName);
+  const storage = getWriteStorage();
+  const driver = getWriteDriver();
 
-  renameSync(sourcePath, targetPath);
+  const tmpKey = tmpUploadKey(ext);
+  const teeStream = (async function* () {
+    for await (const chunk of sourceStream) {
+      yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    }
+  })();
 
-  const fileSize = statSync(targetPath).size;
-  const checksum = await computeHash(targetPath);
+  const { size } = await storage.putStream(tmpKey, teeStream as unknown as NodeJS.ReadableStream, { contentType: mimeType });
+
+  let finalKey: string;
+  if (bookId != null) finalKey = bookFileKey(bookId, ext);
+  else finalKey = unassociatedFileKey(ext);
+
+  await storage.move(tmpKey, finalKey);
+
+  const checksum = await fileSha256(storage, finalKey);
 
   const db = getDb();
   const timestamp = now();
@@ -394,7 +419,7 @@ export async function saveUploadedFile(
     .get();
 
   if (dup) {
-    try { unlinkSync(targetPath); } catch { /* ignore */ }
+    try { await storage.delete(finalKey); } catch { /* ignore */ }
     throw new AppError(
       ERROR_CODE.DUPLICATE_FILE,
       `书库已存在相同文件: ${dup.original_filename ?? '未知文件'}`,
@@ -402,9 +427,13 @@ export async function saveUploadedFile(
     );
   }
 
-  let coverPath: string | null = null;
+  let coverKey: string | null = null;
   if (fileFormat === 'EPUB' && bookId != null) {
-    coverPath = await extractEpubCover(targetPath, bookId);
+    const cover = await extractEpubCover(storage, finalKey, bookId);
+    if (cover) {
+      await storage.putBytes(cover.key, cover.bytes, { contentType: coverMimeFromExt(cover.ext) });
+      coverKey = cover.key;
+    }
   }
 
   if (replaceFileId && bookId != null) {
@@ -415,14 +444,19 @@ export async function saveUploadedFile(
       .get();
 
     if (existing) {
-      try { unlinkSync(resolveStoragePath(existing.file_path)); } catch { /* ignore */ }
+      const oldKey = existing.file_path;
+      try {
+        const oldStorage = getReadStorage(existing.storage_driver);
+        await oldStorage.delete(oldKey);
+      } catch { /* ignore */ }
       db.update(bookFiles)
         .set({
-          file_path: relativePath(targetPath),
+          file_path: finalKey,
+          storage_driver: driver,
           original_filename: originalFilename,
           file_format: fileFormat,
           mime_type: mimeType,
-          file_size: fileSize,
+          file_size: size,
           checksum,
           is_primary: isPrimary ? 1 : 0,
           updated_at: timestamp,
@@ -430,22 +464,23 @@ export async function saveUploadedFile(
         .where(eq(bookFiles.id, replaceFileId))
         .run();
 
-      if (coverPath) {
+      if (coverKey) {
         upsertBookCover({
           ownerId,
           bookId,
           bookFileId: replaceFileId,
           sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
           sourceLabel: 'epub',
-          filePath: relativePath(coverPath),
-          mimeType: coverMimeFromExt(extname(coverPath)),
-          fileSize: statSync(coverPath).size,
-          checksum: await computeHash(coverPath),
+          filePath: coverKey,
+          storageDriver: driver,
+          mimeType: coverMimeFromExt(extname(coverKey)),
+          fileSize: (await storage.size(coverKey)),
+          checksum: await fileSha256(storage, coverKey),
           activate: true,
         });
       }
 
-      return { id: replaceFileId, file_format: fileFormat, file_path: relativePath(targetPath) };
+      return { id: replaceFileId, file_format: fileFormat, file_path: finalKey, storage_driver: driver };
     }
   }
 
@@ -458,11 +493,12 @@ export async function saveUploadedFile(
     .values({
       owner_id: ownerId,
       book_id: bookId,
-      file_path: relativePath(targetPath),
+      file_path: finalKey,
+      storage_driver: driver,
       original_filename: originalFilename,
       file_format: fileFormat,
       mime_type: mimeType,
-      file_size: fileSize,
+      file_size: size,
       checksum,
       is_primary: isPrimary ? 1 : 0,
       created_at: timestamp,
@@ -471,22 +507,23 @@ export async function saveUploadedFile(
     .returning()
     .get();
 
-  if (coverPath && bookId != null) {
+  if (coverKey && bookId != null) {
     upsertBookCover({
       ownerId,
       bookId,
       bookFileId: result.id,
       sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
       sourceLabel: 'epub',
-      filePath: relativePath(coverPath),
-      mimeType: coverMimeFromExt(extname(coverPath)),
-      fileSize: statSync(coverPath).size,
-      checksum: await computeHash(coverPath),
+      filePath: coverKey,
+      storageDriver: driver,
+      mimeType: coverMimeFromExt(extname(coverKey)),
+      fileSize: (await storage.size(coverKey)),
+      checksum: await fileSha256(storage, coverKey),
       activate: true,
     });
   }
 
-  return { id: result.id, file_format: fileFormat, file_path: relativePath(targetPath) };
+  return { id: result.id, file_format: fileFormat, file_path: finalKey, storage_driver: driver };
 }
 
 export function deleteFilesForBooks(ownerId: number, bookIds: number[]): void {
@@ -494,26 +531,32 @@ export function deleteFilesForBooks(ownerId: number, bookIds: number[]): void {
   const db = getDb();
 
   const fileRows = db
-    .select({ id: bookFiles.id, file_path: bookFiles.file_path })
+    .select({ id: bookFiles.id, file_path: bookFiles.file_path, storage_driver: bookFiles.storage_driver })
     .from(bookFiles)
     .where(and(eq(bookFiles.owner_id, ownerId), inArray(bookFiles.book_id, bookIds)))
     .all();
 
   for (const row of fileRows) {
-    try { unlinkSync(resolveStoragePath(row.file_path)); } catch { /* ignore */ }
+    try {
+      const s = getReadStorage(row.storage_driver);
+      s.delete(row.file_path).catch(() => undefined);
+    } catch { /* ignore */ }
   }
   if (fileRows.length > 0) {
     db.delete(bookFiles).where(inArray(bookFiles.id, fileRows.map((row) => row.id))).run();
   }
 
   const coverRows = db
-    .select({ id: bookCovers.id, file_path: bookCovers.file_path })
+    .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
     .from(bookCovers)
     .where(and(eq(bookCovers.owner_id, ownerId), inArray(bookCovers.book_id, bookIds)))
     .all();
 
   for (const row of coverRows) {
-    try { unlinkSync(resolveStoragePath(row.file_path)); } catch { /* ignore */ }
+    try {
+      const s = getReadStorage(row.storage_driver);
+      s.delete(row.file_path).catch(() => undefined);
+    } catch { /* ignore */ }
   }
   if (coverRows.length > 0) {
     db.delete(bookCovers).where(inArray(bookCovers.id, coverRows.map((row) => row.id))).run();
@@ -577,12 +620,13 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!file) throw notFound('文件不存在');
 
-    const absPath = resolveStoragePath(file.file_path);
-    if (!existsSync(absPath)) throw notFound('文件已丢失');
+    const storage = getReadStorage(file.storage_driver);
+    const exists = await storage.exists(file.file_path).catch(() => false);
+    if (!exists) throw notFound('文件已丢失');
 
-    const fileSize = statSync(absPath).size;
+    const fileSize = await storage.size(file.file_path);
     const mime = file.mime_type ?? 'application/octet-stream';
-    const filename = file.original_filename ?? basename(absPath);
+    const filename = file.original_filename ?? basename(file.file_path);
     const rangeHeader = req.headers.range;
 
     if (rangeHeader) {
@@ -595,6 +639,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const chunkSize = end - start + 1;
+      const stream = await storage.getStream(file.file_path, { range: { start, end } });
       reply
         .code(206)
         .header('Content-Range', `bytes ${start}-${end}/${fileSize}`)
@@ -603,16 +648,17 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
         .header('Content-Type', mime)
         .header('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
 
-      return reply.send(createReadStream(absPath, { start, end }));
+      return reply.send(stream);
     }
 
+    const stream = await storage.getStream(file.file_path);
     reply
       .header('Content-Length', fileSize)
       .header('Content-Type', mime)
       .header('Accept-Ranges', 'bytes')
       .header('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
 
-    return reply.send(createReadStream(absPath));
+    return reply.send(stream);
   });
 
   app.patch('/books/:id/files/:fileId', async (req) => {
@@ -664,15 +710,21 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!file) throw notFound('文件不存在');
 
-    try { unlinkSync(resolveStoragePath(file.file_path)); } catch { /* ignore */ }
+    try {
+      const s = getReadStorage(file.storage_driver);
+      await s.delete(file.file_path);
+    } catch { /* ignore */ }
 
     const relatedCovers = db
-      .select({ id: bookCovers.id, file_path: bookCovers.file_path })
+      .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
       .from(bookCovers)
       .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.book_file_id, fid)))
       .all();
     for (const cover of relatedCovers) {
-      try { unlinkSync(resolveStoragePath(cover.file_path)); } catch { /* ignore */ }
+      try {
+        const s = getReadStorage(cover.storage_driver);
+        await s.delete(cover.file_path);
+      } catch { /* ignore */ }
     }
     if (relatedCovers.length > 0) {
       db.delete(bookCovers).where(inArray(bookCovers.id, relatedCovers.map((cover) => cover.id))).run();
@@ -699,22 +751,11 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
     }
 
-    const tmpDirPath = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
-    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
-
-    try {
-      await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
-      try { unlinkSync(tmpPath); } catch { /* ignore */ }
-      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
-    }
-
     const isPrimary = data.fields?.is_primary != null
       ? String(data.fields.is_primary as unknown as string) === 'true'
       : false;
 
-    const result = await saveUploadedFile(userId, bookId, originalFilename, tmpPath, isPrimary);
+    const result = await saveUploadedFile(userId, bookId, originalFilename, data.file, isPrimary);
     reply.code(201);
     return { data: result };
   });
@@ -743,18 +784,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
     }
 
-    const tmpDirPath = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
-    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
-
-    try {
-      await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
-      try { unlinkSync(tmpPath); } catch { /* ignore */ }
-      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
-    }
-
-    const result = await saveUploadedFile(userId, bookId, originalFilename, tmpPath, existing.is_primary === 1, fid);
+    const result = await saveUploadedFile(userId, bookId, originalFilename, data.file, existing.is_primary === 1, fid);
     return { data: result };
   });
 
@@ -769,18 +799,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
     }
 
-    const tmpDirPath = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
-    const tmpPath = join(tmpDirPath, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
-
-    try {
-      await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
-      try { unlinkSync(tmpPath); } catch { /* ignore */ }
-      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件保存失败');
-    }
-
-    const result = await saveUploadedFile(userId, null, originalFilename, tmpPath, false);
+    const result = await saveUploadedFile(userId, null, originalFilename, data.file, false);
     reply.code(201);
     return { data: result };
   });
@@ -828,35 +847,45 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    const srcAbsPath = resolveStoragePath(file.file_path);
-    const dstPath = join(bookDir(targetBookId), basename(srcAbsPath));
-    if (existsSync(srcAbsPath)) {
-      copyFileSync(srcAbsPath, dstPath);
-      try { unlinkSync(srcAbsPath); } catch { /* ignore */ }
+    const writeStorage = getWriteStorage();
+    const writeDriver = getWriteDriver();
+    const ext = extname(file.file_path).toLowerCase();
+    const dstKey = bookFileKey(targetBookId, ext);
+
+    if (file.storage_driver === writeDriver) {
+      await writeStorage.move(file.file_path, dstKey);
+    } else {
+      const srcStorage = getReadStorage(file.storage_driver);
+      const bytes = await srcStorage.getBytes(file.file_path);
+      await writeStorage.putBytes(dstKey, bytes, { contentType: file.mime_type ?? undefined });
+      await srcStorage.delete(file.file_path).catch(() => undefined);
     }
 
     db.update(bookFiles)
       .set({
         book_id: targetBookId,
-        file_path: relativePath(dstPath),
+        file_path: dstKey,
+        storage_driver: writeDriver,
         updated_at: now(),
       })
       .where(eq(bookFiles.id, fid))
       .run();
 
     if (file.file_format === 'EPUB') {
-      const coverPath = await extractEpubCover(dstPath, targetBookId);
-      if (coverPath) {
+      const cover = await extractEpubCover(writeStorage, dstKey, targetBookId);
+      if (cover) {
+        await writeStorage.putBytes(cover.key, cover.bytes, { contentType: coverMimeFromExt(cover.ext) });
         upsertBookCover({
           ownerId: userId,
           bookId: targetBookId,
           bookFileId: fid,
           sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
           sourceLabel: 'epub',
-          filePath: relativePath(coverPath),
-          mimeType: coverMimeFromExt(extname(coverPath)),
-          fileSize: statSync(coverPath).size,
-          checksum: await computeHash(coverPath),
+          filePath: cover.key,
+          storageDriver: writeDriver,
+          mimeType: coverMimeFromExt(cover.ext),
+          fileSize: (await writeStorage.size(cover.key)),
+          checksum: await fileSha256(writeStorage, cover.key),
           activate: true,
         });
       }
@@ -882,7 +911,10 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!file) throw notFound('文件不存在或已关联书籍');
 
-    try { unlinkSync(resolveStoragePath(file.file_path)); } catch { /* ignore */ }
+    try {
+      const s = getReadStorage(file.storage_driver);
+      await s.delete(file.file_path);
+    } catch { /* ignore */ }
     getDb().delete(bookFiles).where(eq(bookFiles.id, fid)).run();
     return { data: { id: fid, deleted: true } };
   });
@@ -994,35 +1026,29 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, `仅支持 jpg/png/webp/gif/bmp 格式，当前格式: ${ext || '未知'}`);
     }
 
-    const tmpDirPath = join(config.storageDir, 'tmp');
-    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
-    const tmpPath = join(tmpDirPath, `cover_upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    const storage = getWriteStorage();
+    const driver = getWriteDriver();
+    const tmpKey = tmpCoverUploadKey(ext);
+    const { size } = await storage.putStream(tmpKey, data.file, { contentType: coverMimeFromExt(ext) });
 
-    try {
-      await pipeline(data.file, createWriteStream(tmpPath));
-    } catch {
-      try { unlinkSync(tmpPath); } catch { /* ignore */ }
-      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '图片保存失败');
-    }
-
-    const fileSize = statSync(tmpPath).size;
-    if (fileSize > 5 * 1024 * 1024) {
-      try { unlinkSync(tmpPath); } catch { /* ignore */ }
+    if (size > 5 * 1024 * 1024) {
+      try { await storage.delete(tmpKey); } catch { /* ignore */ }
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, '图片大小不能超过 5MB');
     }
 
-    const targetPath = join(coverDir(bookId), `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
-    renameSync(tmpPath, targetPath);
+    const finalKey = bookCoverKey(bookId, ext);
+    await storage.move(tmpKey, finalKey);
+    const checksum = await fileSha256(storage, finalKey);
 
-    const checksum = await computeHash(targetPath);
     const coverId = upsertBookCover({
       ownerId: userId,
       bookId,
       sourceType: BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
       sourceLabel: 'upload',
-      filePath: storageRelativePath(targetPath),
+      filePath: finalKey,
+      storageDriver: driver,
       mimeType: coverMimeFromExt(ext),
-      fileSize,
+      fileSize: size,
       checksum,
       activate: false,
     });
@@ -1111,7 +1137,10 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!cover) throw notFound('封面不存在');
 
-    try { unlinkSync(resolveStoragePath(cover.file_path)); } catch { /* ignore */ }
+    try {
+      const s = getReadStorage(cover.storage_driver);
+      await s.delete(cover.file_path);
+    } catch { /* ignore */ }
     getDb().delete(bookCovers).where(eq(bookCovers.id, cid)).run();
 
     const fallback = getDb()
@@ -1136,19 +1165,21 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     ownerBookCheck(bookId, userId);
 
     const cover = getDb()
-      .select({ file_path: bookCovers.file_path, mime_type: bookCovers.mime_type })
+      .select({ file_path: bookCovers.file_path, mime_type: bookCovers.mime_type, storage_driver: bookCovers.storage_driver })
       .from(bookCovers)
       .where(and(eq(bookCovers.id, cid), eq(bookCovers.book_id, bookId), eq(bookCovers.owner_id, userId)))
       .get();
     if (!cover) return reply.code(404).send();
 
-    const absPath = resolveStoragePath(cover.file_path);
-    if (!existsSync(absPath)) return reply.code(404).send();
+    const storage = getReadStorage(cover.storage_driver);
+    const exists = await storage.exists(cover.file_path).catch(() => false);
+    if (!exists) return reply.code(404).send();
 
+    const stream = await storage.getStream(cover.file_path);
     return reply
-      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(absPath)))
+      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(cover.file_path)))
       .header('Cache-Control', 'public, max-age=86400')
-      .send(createReadStream(absPath));
+      .send(stream);
   });
 
   app.get('/books/:id/cover', async (req, reply) => {
@@ -1164,12 +1195,15 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
 
     if (!book?.cover_path) return reply.code(404).send();
-    const absPath = resolveStoragePath(book.cover_path);
-    if (!existsSync(absPath)) return reply.code(404).send();
+    const driver: StorageDriver = 'local';
+    const storage = getReadStorage(driver);
+    const exists = await storage.exists(book.cover_path).catch(() => false);
+    if (!exists) return reply.code(404).send();
 
+    const stream = await storage.getStream(book.cover_path);
     return reply
-      .header('Content-Type', coverMimeFromExt(extname(absPath)))
+      .header('Content-Type', coverMimeFromExt(extname(book.cover_path)))
       .header('Cache-Control', 'public, max-age=86400')
-      .send(createReadStream(absPath));
+      .send(stream);
   });
 }

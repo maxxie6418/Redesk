@@ -29,8 +29,12 @@ export function LoginRoute() {
     e.preventDefault();
     setError(null);
     try {
-      await login.mutateAsync(isMultiToken ? { username, password } : { password });
-      navigate('/', { replace: true });
+      const user = await login.mutateAsync(isMultiToken ? { username, password } : { password });
+      if (user.must_change_password) {
+        navigate('/change-password', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '登录失败');
     }

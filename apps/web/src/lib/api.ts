@@ -4,6 +4,7 @@ export interface AuthUser {
   display_name: string | null;
   is_active: boolean;
   session_expires_days: number;
+  must_change_password: boolean;
 }
 
 export interface AuthStatus {

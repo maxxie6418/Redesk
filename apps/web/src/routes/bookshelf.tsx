@@ -45,7 +45,7 @@ const BOOK_STATUS_LABELS_LOCAL: Record<string, string> = {
   [BOOK_STATUS.PLANNED]: '计划读',
   [BOOK_STATUS.READING]: '在读',
   [BOOK_STATUS.READ]: '已读',
-  [BOOK_STATUS.STORED]: '存',
+  [BOOK_STATUS.STORED]: '存档',
 };
 
 const STATUS_OPTIONS = [

@@ -1,12 +1,12 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ReactNode, FormEvent } from 'react';
+import type { ReactNode } from 'react';
 import {
   Archive,
   BookOpen,
   ExternalLink,
   FolderOpen,
   Grid3X3,
+  KeyRound,
   LogIn,
   NotebookPen,
   Search,
@@ -14,14 +14,21 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { Popover } from 'radix-ui';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
 import { useQuickLinks } from '@/hooks/use-quick-links';
 
-export type AppSidebarKey = 'overview' | 'bookshelf' | 'files' | 'reading-notes' | 'reading-topics' | 'trash' | 'settings';
+export type AppSidebarKey =
+  | 'overview'
+  | 'bookshelf'
+  | 'files'
+  | 'reading-notes'
+  | 'reading-topics'
+  | 'trash'
+  | 'settings'
+  | 'login';
 
 export interface AppSidebarStat {
   label: string;
@@ -39,20 +46,12 @@ interface AppSidebarProps {
 
 export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchChange, stats }: AppSidebarProps) {
   const navigate = useNavigate();
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [token, setToken] = useState('');
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  const handleLogin = (e: FormEvent) => {
-    e.preventDefault();
-    if (token.trim().length < 8) {
-      setLoginError('口令至少 8 位字符');
-      return;
-    }
-    setLoginOpen(false);
-    setToken('');
-    setLoginError(null);
-  };
+  const currentUser = useCurrentUser();
+  const authInit = useAuthInit();
+  const loggedIn = !!currentUser.data;
+  const initial = authInit.data?.initial === true;
+  const authLabel = loggedIn ? '设置' : initial ? '设置管理口令' : '登录';
+  const AuthIcon = loggedIn ? Settings : initial ? KeyRound : LogIn;
 
   return (
     <aside className="flex h-screen w-[clamp(220px,18vw,256px)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5">
@@ -103,56 +102,12 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
 
-        <Popover.Root open={loginOpen} onOpenChange={setLoginOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            >
-              <LogIn className="h-4 w-4" />
-              <span>登录</span>
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              side="top"
-              align="end"
-              sideOffset={8}
-              className="z-50 w-72 rounded-xl border border-border bg-background p-5 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
-            >
-              <div className="mb-4 text-center">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-display text-xl font-semibold text-primary-foreground">
-                  R
-                </div>
-                <p className="mt-2 text-sm font-medium text-foreground">Redesk</p>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-3">
-                <Input
-                  type="password"
-                  placeholder="输入口令"
-                  value={token}
-                  onChange={(e) => {
-                    setToken(e.target.value);
-                    setLoginError(null);
-                  }}
-                  autoFocus
-                  className="h-9"
-                />
-                {loginError && (
-                  <p className="text-sm text-destructive">{loginError}</p>
-                )}
-                <Button type="submit" className="w-full">
-                  登录
-                </Button>
-              </form>
-
-              <Popover.Arrow className="fill-border" />
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-
-        <SidebarItem active={activeKey === 'settings'} icon={<Settings className="h-4 w-4" />} label="设置" onClick={() => navigate('/settings')} />
+        <SidebarItem
+          active={activeKey === 'settings' || activeKey === 'login'}
+          icon={<AuthIcon className="h-4 w-4" />}
+          label={authLabel}
+          onClick={() => navigate(loggedIn ? '/settings' : '/login')}
+        />
       </div>
     </aside>
   );

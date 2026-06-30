@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Monitor,
   Moon,
@@ -30,7 +30,10 @@ import {
   Ban,
   CheckCircle,
   Image,
+  KeyRound,
+  LogOut,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
 import { useTheme } from '@/components/theme-provider';
 import {
@@ -43,6 +46,12 @@ import {
   type UserAdminSummary,
 } from '@/hooks/use-users-admin';
 import { useSystemStats, useSystemStorage, useBackup, useFtsRebuild, useClearCache } from '@/hooks/use-system';
+import {
+  useStorageStatus,
+  useStorageSettings,
+  useUpdateStorageSettings,
+  useTestStorage,
+} from '@/hooks/use-storage-config';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-categories';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup } from '@/hooks/use-export';
@@ -55,9 +64,11 @@ import {
 } from '@/hooks/use-quick-links';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useShellUser } from '@/components/shell-user-context';
+import { useChangePassword, useLogout } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
 type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'quick-links' | 'backup' | 'storage' | 'system';
@@ -103,9 +114,24 @@ function StatusToast({ message, onClose }: { message: StatusMessage; onClose: ()
 
 export function SettingsPage() {
   const user = useShellUser();
+
+  if (isAdminUser(user)) {
+    return <AdminSettingsPage />;
+  }
+  return <SimpleSettingsPage user={user} />;
+}
+
+function isAdminUser(user: { id: number }): boolean {
+  return user.id === 1;
+}
+
+function AdminSettingsPage() {
+  const user = useShellUser();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [toast, setToast] = useState<StatusMessage>(null);
   const settings = useSettings();
+  const mcp = user.must_change_password === true;
 
   const showToast = useCallback((message: StatusMessage) => {
     setToast(message);
@@ -139,12 +165,33 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar activeKey="settings" user={user} />
+    <>
+      {mcp && (
+        <div className="border-b border-amber-200/50 bg-amber-50/95 px-6 py-3 dark:border-amber-800/50 dark:bg-amber-950/95">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+              <KeyRound className="h-4 w-4 shrink-0" />
+              <span>
+                你正在使用初始口令。请先设置一个新口令后再继续。
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/change-password?return=/settings')}
+              className="shrink-0 border-amber-300 dark:border-amber-700"
+            >
+              立即设置
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="flex min-h-screen flex-1 bg-background">
+        <AppSidebar activeKey="settings" user={user} />
       <StatusToast message={toast} onClose={() => setToast(null)} />
 
       <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-5xl">
           <h1 className="mb-5 text-xl font-semibold text-foreground">设置</h1>
         <nav className="mb-6 flex gap-1 rounded-lg border border-border bg-popover p-1">
           {tabs.map((tab) => (
@@ -181,6 +228,7 @@ export function SettingsPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }
 
@@ -1443,7 +1491,238 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
           )}
         </CardContent>
       </Card>
+
+      <CloudStorageCard onToast={onToast} />
     </div>
+  );
+}
+
+function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const status = useStorageStatus();
+  const settings = useStorageSettings();
+  const update = useUpdateStorageSettings();
+  const test = useTestStorage();
+
+  const [driver, setDriver] = useState<'local' | 's3'>('local');
+  const [provider, setProvider] = useState('');
+  const [endpoint, setEndpoint] = useState('');
+  const [bucket, setBucket] = useState('');
+  const [accessKey, setAccessKey] = useState('');
+  const [secretKey, setSecretKey] = useState('');
+  const [region, setRegion] = useState('auto');
+  const [publicUrl, setPublicUrl] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (hydrated || !settings.data) return;
+    const map = settings.data;
+    setDriver(((map.storage_driver as 'local' | 's3') || 'local'));
+    setProvider(map.oss_provider ?? '');
+    setEndpoint(map.oss_endpoint ?? '');
+    setBucket(map.oss_bucket ?? '');
+    setRegion(map.oss_region ?? 'auto');
+    setPublicUrl(map.oss_public_url ?? '');
+    setHydrated(true);
+  }, [settings.data, hydrated]);
+
+  const handleSave = useCallback(async () => {
+    try {
+      await update.mutateAsync({
+        driver,
+        provider: provider || null,
+        endpoint: endpoint || null,
+        bucket: bucket || null,
+        access_key: accessKey || null,
+        secret_key: secretKey || null,
+        region: region || null,
+        public_url: publicUrl || null,
+      });
+      setAccessKey('');
+      setSecretKey('');
+      onToast({ type: 'success', text: '云存储配置已保存' });
+    } catch (err) {
+      onToast({ type: 'error', text: `保存失败: ${err instanceof Error ? err.message : '未知错误'}` });
+    }
+  }, [driver, provider, endpoint, bucket, accessKey, secretKey, region, publicUrl, update, onToast]);
+
+  const handleTest = useCallback(async () => {
+    try {
+      const res = await test.mutateAsync({
+        driver,
+        provider: provider || undefined,
+        endpoint: endpoint || undefined,
+        bucket: bucket || undefined,
+        access_key: accessKey || undefined,
+        secret_key: secretKey || undefined,
+        region: region || undefined,
+        public_url: publicUrl || undefined,
+      });
+      if (res.ok) {
+        onToast({ type: 'success', text: res.message });
+      } else {
+        onToast({ type: 'error', text: res.message });
+      }
+    } catch (err) {
+      onToast({ type: 'error', text: `测试失败: ${err instanceof Error ? err.message : '未知错误'}` });
+    }
+  }, [driver, provider, endpoint, bucket, accessKey, secretKey, region, publicUrl, test, onToast]);
+
+  const writeDriver = status.data?.writeDriver ?? 'local';
+  const configured = status.data?.configured ?? false;
+  const reason = status.data?.reason ?? null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">云存储配置</CardTitle>
+          {status.data && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">当前写入后端:</span>
+              <span className={cn('rounded px-2 py-0.5 font-medium', writeDriver === 's3' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-muted text-foreground')}>
+                {writeDriver === 's3' ? 'S3 兼容' : '本地'}
+              </span>
+              {configured ? (
+                <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">已配置</span>
+              ) : (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">未配置</span>
+              )}
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {reason && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200/50 bg-amber-50/95 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{reason}</span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">存储后端</label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={driver === 'local' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDriver('local')}
+              >
+                本地存储
+              </Button>
+              <Button
+                type="button"
+                variant={driver === 's3' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDriver('s3')}
+              >
+                S3 兼容（含 R2）
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              选择 R2 时填写下方各项。Cloudflare R2 走 S3 兼容协议，endpoint 形如
+              <code className="mx-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">https://&lt;account_id&gt;.r2.cloudflarestorage.com</code>
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Provider 标识</label>
+              <Input
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                placeholder="r2 / s3 / minio / aliyun"
+                disabled={driver === 'local'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Region</label>
+              <Input
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                placeholder="auto"
+                disabled={driver === 'local'}
+              />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-sm font-medium text-foreground">Endpoint</label>
+              <Input
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                placeholder="https://<account_id>.r2.cloudflarestorage.com"
+                disabled={driver === 'local'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Bucket 名称</label>
+              <Input
+                value={bucket}
+                onChange={(e) => setBucket(e.target.value)}
+                placeholder="redesk-books"
+                disabled={driver === 'local'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">公开访问 URL（可选）</label>
+              <Input
+                value={publicUrl}
+                onChange={(e) => setPublicUrl(e.target.value)}
+                placeholder="https://cdn.example.com"
+                disabled={driver === 'local'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Access Key ID</label>
+              <Input
+                value={accessKey}
+                onChange={(e) => setAccessKey(e.target.value)}
+                placeholder={settings.data?.oss_access_key ?? '留空则保留现有值'}
+                disabled={driver === 'local'}
+                autoComplete="off"
+              />
+              {settings.data?.oss_access_key && (
+                <p className="text-xs text-muted-foreground">当前: {settings.data.oss_access_key}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Secret Access Key</label>
+              <Input
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder={settings.data?.oss_secret_key ?? '留空则保留现有值'}
+                disabled={driver === 'local'}
+                autoComplete="new-password"
+              />
+              {settings.data?.oss_secret_key && (
+                <p className="text-xs text-muted-foreground">当前: {settings.data.oss_secret_key}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTest}
+              disabled={driver === 'local' || test.isPending}
+            >
+              {test.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              测试连接
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={update.isPending}
+            >
+              {update.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              保存配置
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1848,5 +2127,188 @@ function QuickLinksTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </Card>
       )}
     </div>
+  );
+}
+
+interface SimpleSettingsPageProps {
+  user: {
+    id: number;
+    username: string;
+    display_name: string | null;
+    is_active: boolean;
+    session_expires_days: number;
+    must_change_password: boolean;
+  };
+}
+
+function SimpleSettingsPage({ user }: SimpleSettingsPageProps) {
+  const navigate = useNavigate();
+  const logout = useLogout();
+  const [showChangePwd, setShowChangePwd] = useState(false);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <AppSidebar activeKey="settings" user={user} />
+      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">个人设置</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              管理你的账户信息和偏好
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">账户信息</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">用户名</span>
+                <span className="font-medium text-foreground">{user.username}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">显示名</span>
+                <span className="font-medium text-foreground">
+                  {user.display_name || '—'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">安全</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!showChangePwd ? (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowChangePwd(true)}
+                >
+                  <Key className="mr-2 h-4 w-4" />
+                  修改口令
+                </Button>
+              ) : (
+                <SimpleChangePassword onClose={() => setShowChangePwd(false)} />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">会话</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-destructive"
+                onClick={() => {
+                  logout.mutate(undefined, {
+                    onSuccess: () => navigate('/'),
+                  });
+                }}
+                disabled={logout.isPending}
+              >
+                {logout.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="mr-2 h-4 w-4" />
+                )}
+                退出登录
+              </Button>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            这里是个人设置页面。更多设置项待规划。
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function SimpleChangePassword({ onClose }: { onClose: () => void }) {
+  const changePassword = useChangePassword();
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const trimmed = newPwd.trim();
+  const longEnough = trimmed.length >= 8;
+  const matches = newPwd === confirmPwd && confirmPwd.length > 0;
+  const canSubmit = longEnough && matches && !changePassword.isPending;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    try {
+      await changePassword.mutateAsync({ newPassword: trimmed });
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '修改失败');
+    }
+  };
+
+  if (saved) {
+    return (
+      <div className="space-y-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <p>口令已更新。</p>
+        <Button variant="outline" size="sm" onClick={onClose}>
+          完成
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="simple-new-password">新口令</Label>
+        <Input
+          id="simple-new-password"
+          type="password"
+          placeholder="至少 8 位字符"
+          value={newPwd}
+          onChange={(e) => {
+            setNewPwd(e.target.value);
+            setError(null);
+          }}
+          autoFocus
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="simple-confirm-password">确认新口令</Label>
+        <Input
+          id="simple-confirm-password"
+          type="password"
+          placeholder="再次输入"
+          value={confirmPwd}
+          onChange={(e) => {
+            setConfirmPwd(e.target.value);
+            setError(null);
+          }}
+        />
+        {confirmPwd.length > 0 && !matches && (
+          <p className="text-xs text-destructive">两次输入不一致</p>
+        )}
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={!canSubmit} className="flex-1">
+          {changePassword.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            '保存'
+          )}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          取消
+        </Button>
+      </div>
+    </form>
   );
 }

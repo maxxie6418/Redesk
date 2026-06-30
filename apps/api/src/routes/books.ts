@@ -18,11 +18,7 @@ import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
-import { existsSync, mkdirSync } from 'node:fs';
-import { extname, join } from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { createWriteStream } from 'node:fs';
-import { config } from '../config';
+import { extname } from 'node:path';
 
 interface LinkMetadata {
   title?: string;
@@ -369,7 +365,7 @@ function recordStatusChange(bookId: number, fromStatus: string | null, toStatus:
     .run();
 }
 
-async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { filepath: string; filename: string } | null) {
+async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { stream: NodeJS.ReadableStream; filename: string } | null) {
   const db = getDb();
   const timestamp = now();
   const book = db
@@ -406,7 +402,7 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
   recordStatusChange(book.id, null, book.status);
 
   if (uploadedFile) {
-    await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
+    await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.stream, true);
   }
 
   if (input.cover_url) {
@@ -737,7 +733,7 @@ function normalizeStatus(value: string | undefined, errors: string[]): string | 
     想读: 'PLANNED',
     在读: 'READING',
     已读: 'READ',
-    存: 'STORED',
+    存档: 'STORED',
   };
   const status = map[text.toUpperCase()] ?? map[text];
   if (!status) {
@@ -832,7 +828,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const contentType = req.headers['content-type'] ?? '';
 
     let input;
-    let uploadedFile: { filepath: string; filename: string } | null = null;
+    let uploadedFile: { stream: NodeJS.ReadableStream; filename: string } | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const data = await req.file();
@@ -877,11 +873,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       if (data.file && data.filename) {
         const ext = extname(data.filename).toLowerCase();
         if (EXTENSION_FORMAT[ext]) {
-          const tmpDir = join(config.storageDir, 'tmp');
-          if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-          const tmpPath = join(tmpDir, `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
-          await pipeline(data.file, createWriteStream(tmpPath));
-          uploadedFile = { filepath: tmpPath, filename: data.filename };
+          uploadedFile = { stream: data.file, filename: data.filename };
         }
       }
     } else {
