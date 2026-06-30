@@ -50,13 +50,6 @@
       "when": 1783152000000,
       "tag": "0006_book_covers",
       "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1783209600000,
-      "tag": "0007_auth_tokens_and_sessions",
-      "breakpoints": true
     }
   ]
 }
