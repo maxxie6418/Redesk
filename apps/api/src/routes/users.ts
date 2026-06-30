@@ -16,6 +16,8 @@ function userSelect() {
     id: users.id,
     username: users.username,
     display_name: users.display_name,
+    is_active: users.is_active,
+    session_expires_days: users.session_expires_days,
     created_at: users.created_at,
   };
 }
@@ -64,6 +66,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         username: input.username,
         password_hash: passwordHash,
         display_name: input.display_name ?? null,
+        session_expires_days: input.session_expires_days ?? 30,
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -94,8 +97,19 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       throw notFound('用户不存在');
     }
 
+    const setData: Record<string, unknown> = { updated_at: now() };
+    if (input.display_name !== undefined) {
+      setData.display_name = input.display_name;
+    }
+    if (input.is_active !== undefined) {
+      setData.is_active = input.is_active ? 1 : 0;
+    }
+    if (input.session_expires_days !== undefined) {
+      setData.session_expires_days = input.session_expires_days;
+    }
+
     db.update(users)
-      .set({ display_name: input.display_name ?? undefined, updated_at: now() })
+      .set(setData)
       .where(eq(users.id, targetId))
       .run();
 
@@ -161,5 +175,40 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       .run();
 
     return { data: { id: targetId, reset: true } };
+  });
+
+  app.post('/users/:id/toggle-active', async (req) => {
+    const currentUserId = requireUserId(req);
+    if (!isMultiUserEnabled()) {
+      throw businessError('当前为单用户模式，用户管理不可用');
+    }
+
+    const { id: targetIdStr } = req.params as { id: string };
+    const targetId = Number(targetIdStr);
+
+    if (Number.isNaN(targetId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的用户 ID');
+    }
+
+    if (targetId === currentUserId) {
+      throw businessError('不能停用当前登录的用户');
+    }
+
+    const db = getDb();
+    const target = db.select({ id: users.id, is_active: users.is_active }).from(users).where(eq(users.id, targetId)).get();
+
+    if (!target) {
+      throw notFound('用户不存在');
+    }
+
+    const newActive = target.is_active === 1 ? 0 : 1;
+    db.update(users)
+      .set({ is_active: newActive, updated_at: now() })
+      .where(eq(users.id, targetId))
+      .run();
+
+    const updated = db.select(userSelect()).from(users).where(eq(users.id, targetId)).get();
+
+    return { data: updated };
   });
 }

@@ -90,3 +90,9 @@ export const CATEGORY_TYPE = {
   PERSONAL: 'PERSONAL',
 } as const;
 export type CategoryType = (typeof CATEGORY_TYPE)[keyof typeof CATEGORY_TYPE];
+
+export const AUTH_MODE = {
+  SINGLE_TOKEN: 'single_token',
+  MULTI_TOKEN: 'multi_token',
+} as const;
+export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE];

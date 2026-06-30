@@ -29,8 +29,10 @@ export const bookCoverSourceTypeSchema = z.enum([
   BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
 ]);
 
+export const sessionDaysSchema = z.union([z.literal(7), z.literal(30)]);
+
 export const loginSchema = z.object({
-  username: z.string().min(1).max(64),
+  username: z.string().max(64).optional(),
   password: z.string().min(1).max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -48,6 +50,8 @@ export const userSchema = z.object({
   id: z.number().int(),
   username: z.string(),
   display_name: z.string().nullable(),
+  is_active: z.boolean(),
+  session_expires_days: sessionDaysSchema,
 });
 export type User = z.infer<typeof userSchema>;
 
@@ -143,11 +147,14 @@ export const createUserSchema = z.object({
   username: z.string().min(2).max(64),
   password: z.string().min(6).max(128),
   display_name: z.string().max(64).optional(),
+  session_expires_days: sessionDaysSchema.optional(),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
   display_name: z.string().max(64).optional().nullable(),
+  is_active: z.boolean().optional(),
+  session_expires_days: sessionDaysSchema.optional(),
 });
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 

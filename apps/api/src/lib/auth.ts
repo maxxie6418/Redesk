@@ -1,11 +1,13 @@
 import { hash, verify } from '@node-rs/argon2';
 import type { FastifyRequest } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
-import { settings, users } from '@redesk/db';
+import { randomBytes } from 'node:crypto';
+import { sql } from 'drizzle-orm';
+import { users } from '@redesk/db';
 import { config, DEFAULT_ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD } from '../config';
 import { getDb } from '../db';
 import { unauthorized } from './errors';
 import { getSessionUserId, setSessionUserId } from './session';
+import { isSingleTokenMode } from './settings-store';
 
 export async function hashPassword(password: string): Promise<string> {
   return hash(password, {
@@ -23,6 +25,17 @@ export async function verifyPassword(password: string, hashed: string): Promise<
   }
 }
 
+const CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export function generatePassword(length = 12): string {
+  const bytes = randomBytes(length * 2);
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += CHARS[bytes[i * 2] % CHARS.length];
+  }
+  return result;
+}
+
 function getAdminUserId(): number | undefined {
   const existing = getDb()
     .select({ id: users.id })
@@ -35,14 +48,7 @@ function getAdminUserId(): number | undefined {
 
 export function isMultiUserEnabled(): boolean {
   if (!config.authDisabled) return true;
-
-  const row = getDb()
-    .select({ value: settings.value })
-    .from(settings)
-    .where(and(eq(settings.owner_id, 1), eq(settings.key, 'multi_user')))
-    .get();
-
-  return row?.value === 'true';
+  return isSingleTokenMode() ? false : true;
 }
 
 export function userCount(): number {
@@ -93,4 +99,8 @@ export function tryLoginAsAdmin(req: FastifyRequest): boolean {
 
   setSessionUserId(req, admin.id);
   return true;
+}
+
+export function getFirstUser() {
+  return getDb().select().from(users).limit(1).get();
 }
