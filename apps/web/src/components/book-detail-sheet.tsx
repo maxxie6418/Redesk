@@ -70,6 +70,10 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
+function formatTimelineDate(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
+}
+
 function formatFileSize(bytes: number | null) {
   if (bytes == null) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -387,12 +391,12 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       );
     }
     return (
-      <div className="flex justify-between gap-2">
-        <span className="text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 justify-between gap-2">
+        <span className="shrink-0 text-muted-foreground">{label}</span>
         <button
           type="button"
           onClick={() => startEdit(field, value)}
-          className="text-right font-medium text-foreground hover:text-primary transition-colors"
+          className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
         >
           {value || '—'}
         </button>
@@ -422,12 +426,12 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     }
     const displayLabel = options.find((o) => o.value === value)?.label ?? value;
     return (
-      <div className="flex justify-between gap-2">
-        <span className="text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 justify-between gap-2">
+        <span className="shrink-0 text-muted-foreground">{label}</span>
         <button
           type="button"
           onClick={() => startEdit(field, value)}
-          className="text-right font-medium text-foreground hover:text-primary transition-colors"
+          className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
         >
           {displayLabel || '—'}
         </button>
@@ -486,7 +490,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   return (
     <>
     <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
-    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(900px,calc(100vw-200px))] min-w-[680px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
+    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(1000px,calc(100vw-160px))] min-w-[720px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
       {/* Topbar */}
       <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
         <button
@@ -516,7 +520,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {book.isLoading && (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -528,9 +532,9 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         )}
 
         {b && (
-          <div className="flex min-h-full">
+          <div className="flex h-full">
             {/* Left Column */}
-            <div className="w-[280px] shrink-0 border-r border-border bg-muted/30 p-6">
+            <div className="w-[300px] shrink-0 overflow-y-auto border-r border-border bg-muted/30 p-6">
               {/* Toast */}
               {message && (
                 <div
@@ -573,6 +577,38 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     className="h-full rounded-full bg-primary transition-all duration-500"
                     style={{ width: `${progress}%` }}
                   />
+                </div>
+              </div>
+
+              {/* Timeline Group */}
+              <div className="mb-6">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">时间</div>
+                <div className="space-y-1.5 text-[12px]">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                      录入
+                    </span>
+                    <span className="font-medium text-foreground">{formatTimelineDate(b.created_at)}</span>
+                  </div>
+                  {b.started_at && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                        开始阅读
+                      </span>
+                      <span className="font-medium text-foreground">{formatTimelineDate(b.started_at)}</span>
+                    </div>
+                  )}
+                  {b.finished_at && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        阅读完成
+                      </span>
+                      <span className="font-medium text-foreground">{formatTimelineDate(b.finished_at)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -723,7 +759,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
             </div>
 
             {/* Right Column */}
-            <div className="flex-1 min-w-0 p-8">
+            <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-8">
               {/* Header */}
               <div className="mb-6">
                 <button
@@ -845,7 +881,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   书籍档案
                 </h3>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-2 text-[13px]">
                   <InlineEditText field="title" label="书名" value={b.title} />
                   <InlineEditText field="author" label="作者" value={b.author ?? ''} />
                   <div className="flex justify-between gap-2">
