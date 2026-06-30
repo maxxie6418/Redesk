@@ -1,19 +1,23 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ReactNode, FormEvent } from 'react';
 import {
   Archive,
   BookOpen,
   ExternalLink,
   FolderOpen,
   Grid3X3,
+  LogIn,
   NotebookPen,
   Search,
   Settings,
   Sparkles,
   Trash2,
-  User,
+  X,
 } from 'lucide-react';
+import { Dialog, VisuallyHidden } from 'radix-ui';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useQuickLinks } from '@/hooks/use-quick-links';
@@ -34,8 +38,22 @@ interface AppSidebarProps {
   stats?: AppSidebarStat[];
 }
 
-export function AppSidebar({ activeKey, user, searchValue = '', onSearchChange, stats }: AppSidebarProps) {
+export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchChange, stats }: AppSidebarProps) {
   const navigate = useNavigate();
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [token, setToken] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const handleLogin = (e: FormEvent) => {
+    e.preventDefault();
+    if (token.trim().length < 8) {
+      setLoginError('口令至少 8 位字符');
+      return;
+    }
+    setLoginOpen(false);
+    setToken('');
+    setLoginError(null);
+  };
 
   return (
     <aside className="flex h-screen w-[clamp(220px,18vw,256px)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5">
@@ -85,16 +103,61 @@ export function AppSidebar({ activeKey, user, searchValue = '', onSearchChange, 
 
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
+
+        <SidebarItem
+          icon={<LogIn className="h-4 w-4" />}
+          label="登录"
+          onClick={() => setLoginOpen(true)}
+        />
+
         <SidebarItem active={activeKey === 'settings'} icon={<Settings className="h-4 w-4" />} label="设置" onClick={() => navigate('/settings')} />
-        <div className="mt-1 flex items-center gap-2.5 rounded-lg px-2.5 py-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <User className="h-3.5 w-3.5" />
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-foreground">{user.display_name ?? user.username}</div>
-          </div>
-        </div>
       </div>
+
+      <Dialog.Root open={loginOpen} onOpenChange={setLoginOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-background p-6 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+            <VisuallyHidden.Root>
+              <Dialog.Title>登录</Dialog.Title>
+            </VisuallyHidden.Root>
+
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-semibold text-primary-foreground">
+                  R
+                </div>
+                <span className="font-display text-lg font-medium text-foreground">Redesk</span>
+              </div>
+              <Dialog.Close className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+                <X className="h-4 w-4" />
+              </Dialog.Close>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <p className="mb-2 text-sm text-muted-foreground">输入口令以访问书库</p>
+                <Input
+                  type="password"
+                  placeholder="输入口令"
+                  value={token}
+                  onChange={(e) => {
+                    setToken(e.target.value);
+                    setLoginError(null);
+                  }}
+                  autoFocus
+                  className="h-10"
+                />
+              </div>
+              {loginError && (
+                <p className="text-sm text-destructive">{loginError}</p>
+              )}
+              <Button type="submit" className="w-full">
+                登录
+              </Button>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </aside>
   );
 }

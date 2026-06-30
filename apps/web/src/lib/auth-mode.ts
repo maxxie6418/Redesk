@@ -11,5 +11,5 @@ export const AUTH_DISABLED = isAuthDisabled();
 export const LOCAL_AUTH_USER: AuthUser = {
   id: 1,
   username: 'local',
-  display_name: '本地模式',
+  display_name: '未登录',
 };
