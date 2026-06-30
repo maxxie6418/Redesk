@@ -2,7 +2,6 @@ import { useMemo, useState, useCallback, useRef, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
-  FileUp,
   Heart,
   ImageDown,
   Lightbulb,
@@ -11,6 +10,9 @@ import {
   Star,
   Upload,
   X,
+  FolderOpen,
+  Pencil,
+  ArrowUpFromLine,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -36,7 +38,6 @@ import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 
-
 const COVER_URL_BASE = '/api/v1';
 
 const COVER_TONES = [
@@ -49,19 +50,6 @@ const COVER_TONES = [
 ];
 
 type StatusMessage = { type: 'success' | 'error'; text: string } | null;
-
-function statusLabel(status: string) {
-  if (status === BOOK_STATUS.COLLECTED) return '已收录';
-  return BOOK_STATUS_LABELS[status as keyof typeof BOOK_STATUS_LABELS] ?? status;
-}
-
-function statusDotClass(status: string) {
-  if (status === BOOK_STATUS.READING) return 'bg-[#2f7af5]';
-  if (status === BOOK_STATUS.PLANNED) return 'bg-[#4dabf7]';
-  if (status === BOOK_STATUS.READ) return 'bg-[#788c5d]';
-  if (status === BOOK_STATUS.STORED) return 'bg-[#bbb]';
-  return 'bg-[#bbb]';
-}
 
 function bookProgress(book: BookSummary) {
   if (book.status === BOOK_STATUS.READ) return 100;
@@ -82,6 +70,13 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
+function formatFileSize(bytes: number | null) {
+  if (bytes == null) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function TagAtom({ children, size = 'default' }: { children: React.ReactNode; size?: 'default' | 'small' | 'tiny' }) {
   return (
     <span
@@ -93,35 +88,6 @@ function TagAtom({ children, size = 'default' }: { children: React.ReactNode; si
       )}
     >
       {children}
-    </span>
-  );
-}
-
-function ReadModeBadge({ mode }: { mode: string }) {
-  if (mode === '精读') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-        🔍 精读
-      </span>
-    );
-  }
-  if (mode === '泛读') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-        📖 泛读
-      </span>
-    );
-  }
-  if (mode === '收录') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-2xl bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-        📚 收录
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-2xl bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-      {mode}
     </span>
   );
 }
@@ -154,6 +120,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
   const [fetchCoverChecked, setFetchCoverChecked] = useState(false);
+  const [showCoverPanel, setShowCoverPanel] = useState(false);
   const categories = personalCategories;
   const tags = tagsQuery;
 
@@ -519,7 +486,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   return (
     <>
     <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
-    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(760px,calc(100vw-256px))] min-w-[560px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
+    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(900px,calc(100vw-200px))] min-w-[680px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
       {/* Topbar */}
       <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
         <button
@@ -534,24 +501,16 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
           <button
             type="button"
             onClick={handleFavorite}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
+            className={cn(
+              'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium shadow-sm transition-all hover:-translate-y-px',
+              b?.favorited_at
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-card text-foreground'
+            )}
             title={b?.favorited_at ? '取消收藏' : '加入收藏'}
           >
             <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
-            收藏
-          </button>
-          <button
-            type="button"
-            disabled={!primaryEpub}
-            title={primaryEpub ? '开始阅读' : '请先上传 EPUB 主阅读文件'}
-            onClick={() => {
-              if (!bookId || !primaryEpub) return;
-              navigate(`/books/${bookId}/read`);
-            }}
-            className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            阅读
+            {b?.favorited_at ? '已收藏' : '收藏'}
           </button>
         </div>
       </div>
@@ -569,106 +528,266 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         )}
 
         {b && (
-          <div className="mx-auto max-w-3xl px-8 py-8">
-            {/* Toast */}
-            {message && (
-              <div
-                className={cn(
-                  'fixed top-4 right-4 z-50 rounded-lg px-4 py-2.5 text-sm shadow-lg transition-all duration-300',
-                  message.type === 'success'
-                    ? 'bg-emerald-500 text-white dark:bg-emerald-600'
-                    : 'bg-red-500 text-white dark:bg-red-600'
-                )}
-              >
-                {message.text}
-              </div>
-            )}
+          <div className="flex min-h-full">
+            {/* Left Column */}
+            <div className="w-[280px] shrink-0 border-r border-border bg-muted/30 p-6">
+              {/* Toast */}
+              {message && (
+                <div
+                  className={cn(
+                    'fixed top-4 right-4 z-50 rounded-lg px-4 py-2.5 text-sm shadow-lg transition-all duration-300',
+                    message.type === 'success'
+                      ? 'bg-emerald-500 text-white dark:bg-emerald-600'
+                      : 'bg-red-500 text-white dark:bg-red-600'
+                  )}
+                >
+                  {message.text}
+                </div>
+              )}
 
-            {/* Hero */}
-            <div className="mb-8 flex gap-8">
-              {/* Cover */}
-              <div className="shrink-0">
+              {/* Cover Group */}
+              <div className="mb-6">
                 {hasCover ? (
                   <img
                     src={`${COVER_URL_BASE}/books/${bookId}/cover`}
                     alt={b.title}
-                    className="h-[180px] w-[128px] rounded-xl object-cover shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+                    className="w-full rounded-xl object-cover shadow-lg aspect-[2/3]"
                   />
                 ) : (
                   <div
-                    className={cn('flex h-[180px] w-[128px] items-center justify-center rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.12)] font-display text-5xl font-bold', COVER_TONES[(bookId ?? 0) % COVER_TONES.length])}
+                    className={cn('flex w-full aspect-[2/3] items-center justify-center rounded-xl shadow-lg font-display text-5xl font-bold', COVER_TONES[(bookId ?? 0) % COVER_TONES.length])}
                   >
                     {b.title.slice(0, 1)}
                   </div>
                 )}
               </div>
 
-              {/* Title + Meta */}
-              <div className="min-w-0 flex-1">
+              {/* Progress Group */}
+              <div className="mb-6">
+                <div className="mb-1.5 flex items-center justify-between text-[12px]">
+                  <span className="text-muted-foreground">阅读进度</span>
+                  <span className="font-semibold text-foreground">{progress}%</span>
+                </div>
+                <div className="h-[6px] overflow-hidden rounded-full bg-border">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Actions Group */}
+              <div className="mb-6 space-y-2.5">
+                <button
+                  type="button"
+                  disabled={!primaryEpub}
+                  title={primaryEpub ? '开始阅读' : '请先上传 EPUB 主阅读文件'}
+                  onClick={() => {
+                    if (!bookId || !primaryEpub) return;
+                    navigate(`/books/${bookId}/read`);
+                  }}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  开始阅读
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCoverPanel(!showCoverPanel)}
+                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
+                  >
+                    <ArrowUpFromLine className="h-3.5 w-3.5" />
+                    选择封面
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startEdit('title', b.title)}
+                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    编辑信息
+                  </button>
+                </div>
+              </div>
+
+              {/* Cover Panel */}
+              {showCoverPanel && (
+                <div className="mb-6 rounded-xl border border-border bg-card p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-foreground">封面管理</span>
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted/70">
+                      <Upload className="h-3 w-3" />
+                      上传
+                      <input
+                        ref={coverInputRef}
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.bmp"
+                        onChange={handleCoverUpload}
+                      />
+                    </label>
+                  </div>
+                  {coverGroups && coverGroups.length > 0 ? (
+                    <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
+                      {coverGroups.map(([type, { label, items }]) => (
+                        <div key={type}>
+                          <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</p>
+                          <div className="space-y-2">
+                            {items.map((cover) => (
+                              <div key={cover.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-2">
+                                <img
+                                  src={`${COVER_URL_BASE}/books/${bookId}/covers/${cover.id}/file?ts=${encodeURIComponent(cover.updated_at)}`}
+                                  alt={b.title}
+                                  className="h-12 w-9 rounded object-cover shadow-sm"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  {cover.is_active === 1 && (
+                                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">当前</span>
+                                  )}
+                                  {cover.source_label && (
+                                    <p className="truncate text-[10px] text-muted-foreground">{cover.source_label}</p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  {cover.is_active !== 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleActivateCover(cover.id)}
+                                      className="text-[10px] text-primary hover:underline"
+                                    >
+                                      设为当前
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCover(cover.id)}
+                                    className="text-[10px] text-muted-foreground hover:text-destructive"
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                      <ImageDown className="h-5 w-5 text-muted-foreground/30" />
+                      <p className="mt-2 text-[12px] text-muted-foreground">暂无封面</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground/50">上传或从介绍页下载</p>
+                    </div>
+                  )}
+                  {b.source_url && (
+                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                      <button
+                        type="button"
+                        onClick={handleOpenMetadataDialog}
+                        disabled={fetchMetadata.isPending}
+                        className="text-xs text-primary hover:underline disabled:opacity-50"
+                      >
+                        {fetchMetadata.isPending ? '抓取中...' : '抓取更新信息'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleFetchCover}
+                        disabled={fetchCover.isPending}
+                        className="text-xs text-primary hover:underline disabled:opacity-50"
+                      >
+                        {fetchCover.isPending ? '下载中...' : '下载封面'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Files Group */}
+              <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
+                {files.data && files.data.length > 0 ? (
+                  <div className="space-y-1">
+                    {files.data.map((f) => (
+                      <div key={f.id} className="flex items-center gap-2 py-1.5">
+                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(f.file_size)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-2 text-[12px] text-muted-foreground/60">暂无文件</div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="flex-1 min-w-0 p-8">
+              {/* Header */}
+              <div className="mb-6">
                 <button
                   type="button"
                   onClick={() => startEdit('title', b.title)}
-                  className="mb-1.5 block w-full text-left font-display text-[26px] font-semibold leading-tight text-foreground hover:text-primary transition-colors"
+                  className="mb-1 block w-full text-left font-display text-[28px] font-semibold leading-tight text-foreground hover:text-primary transition-colors"
                 >
                   {b.title}
                 </button>
-                {b.subtitle && <p className="mb-2 text-[14px] text-muted-foreground">{b.subtitle}</p>}
-                <button
-                  type="button"
-                  onClick={() => startEdit('author', b.author ?? '')}
-                  className="mb-4 block w-full text-left text-[13.5px] text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {[b.author, b.publisher].filter(Boolean).join(' / ') || '作者未填写'}
-                  {b.publish_year ? ` · ${b.publish_year}年` : ''}
-                </button>
+                {b.subtitle && <p className="mb-3 text-[15px] text-muted-foreground italic">{b.subtitle}</p>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted-foreground">
+                  {b.author && <span className="font-medium text-foreground">{b.author}</span>}
+                  {b.translator && <span>·</span>}
+                  {b.translator && <span>{b.translator} 译</span>}
+                  {b.publisher && <span>·</span>}
+                  {b.publisher && <span>{b.publisher}</span>}
+                  {b.publish_year && <span>·</span>}
+                  {b.publish_year && <span>{b.publish_year}年</span>}
+                </div>
 
-                {/* Status + Rating */}
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => startEdit('status', b.status)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#f5f0ea] px-3 py-1 text-[12px] font-medium text-[#8a6a4a] hover:bg-[#efe6dc] transition-colors"
-                  >
-                    <span className={cn('h-[7px] w-[7px] rounded-full', statusDotClass(b.status))} />
-                    {statusLabel(b.status)}
-                  </button>
+                {/* Category Badge */}
+                {b.category_name && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => startEdit('category', b.category_id ? String(b.category_id) : '')}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm transition-all hover:-translate-y-px border-l-[3px] border-l-primary"
+                    >
+                      <FolderOpen className="h-4 w-4 text-primary" />
+                      {b.category_name}
+                    </button>
+                  </div>
+                )}
+
+                {/* Rating + Tags */}
+                <div className="mt-4 flex items-center gap-0 border-t border-border pt-4">
                   <button
                     type="button"
                     onClick={() => startEdit('rating', b.rating != null ? String(b.rating) : '')}
-                    className="inline-flex items-center gap-1 text-[15px] font-bold text-foreground hover:text-primary transition-colors"
+                    className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground hover:text-primary transition-colors"
                   >
                     {b.rating != null ? (
                       <>
-                        <Star className="h-[14px] w-[14px] fill-[#f5c842] text-[#f5c842]" />
-                        {b.rating}
+                        {[1, 2, 3, 4, 5].map((r) => (
+                          <Star
+                            key={r}
+                            className={cn(
+                              'h-4 w-4',
+                              r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
+                            )}
+                          />
+                        ))}
+                        <span className="ml-1">{b.rating}</span>
                       </>
-                    ) : null}
+                    ) : (
+                      <span className="text-sm text-muted-foreground">未评分</span>
+                    )}
                   </button>
-                  {b.reading_purpose && (
-                    <button
-                      type="button"
-                      onClick={() => startEdit('readingPurpose', b.reading_purpose ?? '')}
-                      className="hover:opacity-80 transition-opacity"
-                    >
-                      <ReadModeBadge mode={b.reading_purpose} />
-                    </button>
-                  )}
+                  <div className="mx-4 h-6 w-px bg-border" />
                   <button
                     type="button"
-                    onClick={() => startEdit('visibility', b.visibility)}
-                    className="rounded-full bg-muted px-3 py-1 text-[12px] font-medium text-muted-foreground hover:bg-muted/70 transition-colors"
+                    onClick={startEditTags}
+                    className="flex min-w-0 flex-1 flex-wrap gap-1.5 text-left"
                   >
-                    {b.visibility === 'public' ? '公开' : '私密'}
-                  </button>
-                </div>
-
-                {/* Tags */}
-                <button
-                  type="button"
-                  onClick={startEditTags}
-                  className="w-full text-left"
-                >
-                  <div className="flex flex-wrap gap-1.5">
                     {b.tag_names.length > 0 ? (
                       b.tag_names.map((tag) => (
                         <TagAtom key={tag} size="small">{tag}</TagAtom>
@@ -676,11 +795,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     ) : (
                       <span className="text-xs text-muted-foreground/60">点击添加标签</span>
                     )}
-                    {b.category_name && (
-                      <TagAtom key="cat" size="small">{b.category_name}</TagAtom>
-                    )}
-                  </div>
-                </button>
+                  </button>
+                </div>
                 {editingField === ('tags' as unknown as EditableField) && (
                   <div className="mt-2 rounded-lg border border-border bg-muted p-3">
                     <div className="mb-2 flex flex-wrap gap-1.5">
@@ -722,31 +838,14 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Progress Bar */}
-            <div className="mb-8 rounded-xl border border-border bg-muted p-4">
-              <div className="mb-2 flex items-center justify-between text-[13px]">
-                <span className="font-medium text-foreground">阅读进度</span>
-                <span className="font-semibold text-foreground">{progress}%</span>
-              </div>
-              <div className="h-[6px] overflow-hidden rounded-[3px] bg-muted">
-                <div
-                  className="h-full rounded-[3px] bg-primary transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Cards Grid */}
-            <div className="mb-8 grid grid-cols-2 gap-4">
-              {/* 书籍档案 */}
-              <div className="rounded-xl border border-border p-4">
-                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+              {/* Archive Card */}
+              <div className="mb-5 rounded-xl border border-border bg-muted/30 p-5">
+                <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   书籍档案
                 </h3>
-                <div className="space-y-2 text-[12.5px]">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
                   <InlineEditText field="title" label="书名" value={b.title} />
                   <InlineEditText field="author" label="作者" value={b.author ?? ''} />
                   <div className="flex justify-between gap-2">
@@ -774,9 +873,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       ...(categories.data?.map((c) => ({ value: String(c.id), label: c.name })) ?? []),
                     ]}
                   />
-                  <InlineEditText field="sourceUrl" label="来源链接" value={b.source_url ?? ''} />
                   <InlineEditText field="readingPurpose" label="阅读目的" value={b.reading_purpose ?? ''} />
-                  <InlineRating />
                   <InlineEditSelect
                     field="visibility"
                     label="可见性"
@@ -792,11 +889,35 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     value={b.status}
                     options={Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                   />
+                  <InlineRating />
+                  <InlineEditText field="sourceUrl" label="书籍链接" value={b.source_url ?? ''} />
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">录入时间</span>
-                    <span className="font-medium text-foreground">{formatShortDate(b.created_at)}</span>
+                    <span className="text-muted-foreground">元数据来源</span>
+                    <span className="font-medium text-foreground">{b.metadata_source ?? '—'}</span>
                   </div>
                 </div>
+
+                {/* Description */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">简介</span>
+                  <button
+                    type="button"
+                    onClick={() => startEdit('customAttributes', b.description ?? '')}
+                    className="mt-2 block w-full text-left"
+                  >
+                    <p className="text-[14px] leading-relaxed text-muted-foreground">
+                      {b.description || '暂无简介'}
+                    </p>
+                  </button>
+                </div>
+
+                {/* Timestamps */}
+                <div className="mt-4 flex items-center gap-4 text-[12px] text-muted-foreground/60">
+                  <span>收录于 {formatShortDate(b.created_at)}</span>
+                  <span>·</span>
+                  <span>最后更新 {formatShortDate(b.updated_at)}</span>
+                </div>
+
                 {customAttrs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
                     {customAttrs.map((attr) => (
@@ -804,167 +925,58 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     ))}
                   </div>
                 )}
-                {b.source_url && (
-                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                    <button
-                      type="button"
-                      onClick={handleOpenMetadataDialog}
-                      disabled={fetchMetadata.isPending}
-                      className="text-xs text-primary hover:underline disabled:opacity-50"
-                    >
-                      {fetchMetadata.isPending ? '抓取中...' : '抓取更新信息'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFetchCover}
-                      disabled={fetchCover.isPending}
-                      className="text-xs text-primary hover:underline disabled:opacity-50"
-                    >
-                      {fetchCover.isPending ? '下载中...' : '下载封面'}
-                    </button>
-                  </div>
-                )}
               </div>
 
-              {/* 封面管理 */}
-              <div className="rounded-xl border border-border p-4">
-                <h3 className="mb-3 flex items-center justify-between text-[13px] font-bold text-foreground">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
-                    封面管理
-                  </span>
-                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted/70">
-                    <Upload className="h-3 w-3" />
-                    上传
-                    <input
-                      ref={coverInputRef}
-                      type="file"
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png,.webp,.gif,.bmp"
-                      onChange={handleCoverUpload}
-                    />
-                  </label>
-                </h3>
-                {coverGroups && coverGroups.length > 0 ? (
-                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-                    {coverGroups.map(([type, { label, items }]) => (
-                      <div key={type}>
-                        <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</p>
-                        <div className="space-y-2">
-                          {items.map((cover) => (
-                            <div key={cover.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-2">
-                              <img
-                                src={`${COVER_URL_BASE}/books/${bookId}/covers/${cover.id}/file?ts=${encodeURIComponent(cover.updated_at)}`}
-                                alt={b.title}
-                                className="h-12 w-9 rounded object-cover shadow-sm"
-                              />
-                              <div className="min-w-0 flex-1">
-                                {cover.is_active === 1 && (
-                                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">当前</span>
-                                )}
-                                {cover.source_label && (
-                                  <p className="truncate text-[10px] text-muted-foreground">{cover.source_label}</p>
-                                )}
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                {cover.is_active !== 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleActivateCover(cover.id)}
-                                    className="text-[10px] text-primary hover:underline"
-                                  >
-                                    设为当前
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteCover(cover.id)}
-                                  className="text-[10px] text-muted-foreground hover:text-destructive"
-                                >
-                                  删除
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <ImageDown className="h-5 w-5 text-muted-foreground/30" />
-                    <p className="mt-2 text-[12px] text-muted-foreground">暂无封面</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground/50">上传或从介绍页下载</p>
-                  </div>
-                )}
-              </div>
-
-              {/* 阅读留痕 */}
-              <div className="rounded-xl border border-dashed border-border p-4">
+              {/* Traces Card */}
+              <div className="mb-5 rounded-xl border-l-[3px] border-l-emerald-500 border-y border-r border-border bg-card p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
+                  <NotebookPen className="h-4 w-4 text-emerald-500" />
                   阅读留痕
                 </h3>
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <NotebookPen className="h-6 w-6 text-muted-foreground/30" />
-                  <p className="mt-2 text-[13px] text-muted-foreground">笔记、高亮、标注</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/50">阅读器上线后（M2）自动记录</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
+                  <p className="mt-3 text-[14px] text-muted-foreground">笔记、高亮、标注</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground/50">阅读器上线后（M2）自动记录</p>
                 </div>
               </div>
 
-              {/* 主题关联 */}
-              <div className="rounded-xl border border-dashed border-border p-4">
+              {/* Topics Card */}
+              <div className="mb-5 rounded-xl border-l-[3px] border-l-primary/60 border-y border-r border-border bg-card p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
+                  <Lightbulb className="h-4 w-4 text-primary/60" />
                   主题关联
                 </h3>
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Lightbulb className="h-6 w-6 text-muted-foreground/30" />
-                  <p className="mt-2 text-[13px] text-muted-foreground">围绕一个主题组织多本书</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/50">主题阅读 — 即将上线（M4）</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Lightbulb className="h-8 w-8 text-muted-foreground/20" />
+                  <p className="mt-3 text-[14px] text-muted-foreground">围绕一个主题组织多本书</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground/50">主题阅读 — 即将上线（M4）</p>
                 </div>
               </div>
 
-              {/* 文件管理 */}
-              <div className="rounded-xl border border-border p-4 col-span-2">
+              {/* AI Card */}
+              <div className="mb-5 rounded-xl border-l-[3px] border-l-[#9c87f5] border-y border-r border-border bg-[#f8f7fd] p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
-                  文件管理
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c6bc4" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  AI 衍生内容
                 </h3>
-                {files.data && files.data.length > 0 ? (
-                  <div className="space-y-2">
-                    {files.data.map((f: { id: number; original_filename: string | null; file_format: string; file_size: number | null; is_primary: number; updated_at: string }) => (
-                      <div key={f.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted px-3 py-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</p>
-                          <p className="text-[11px] text-muted-foreground">{f.file_format} · {formatFullDate(f.updated_at)}</p>
-                        </div>
-                        {f.is_primary === 1 && (
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">主阅读</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <FileUp className="h-6 w-6 text-muted-foreground/30" />
-                    <p className="mt-2 text-[13px] text-muted-foreground">暂未上传文件</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground/50">可上传 epub / pdf 等电子书</p>
-                  </div>
-                )}
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground/20"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <p className="mt-3 text-[14px] text-muted-foreground">AI 摘要、问答、标签建议</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground/50">接入 LLM 后（S3）自动生成</p>
+                </div>
               </div>
-            </div>
 
-            {/* Timestamps */}
-            <div className="text-xs text-muted-foreground/50 text-center">
-              创建于 {formatFullDate(b.created_at)} · 最后更新 {formatFullDate(b.updated_at)}
+              {/* Footer timestamps */}
+              <div className="text-center text-[11px] text-muted-foreground/40">
+                创建于 {formatFullDate(b.created_at)} · 最后更新 {formatFullDate(b.updated_at)}
+              </div>
             </div>
           </div>
         )}
       </div>
     </div>
 
-    {/* 元数据抓取更新弹窗 */}
+    {/* Metadata Dialog */}
     {showMetadataDialog && metadataResult && b && (
       <div
         className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
