@@ -67,18 +67,27 @@ function formatBytes(bytes: number): string {
 
 type StatusMessage = { type: 'success' | 'error'; text: string } | null;
 
-function StatusBanner({ message }: { message: StatusMessage }) {
+function StatusToast({ message, onClose }: { message: StatusMessage; onClose: () => void }) {
   if (!message) return null;
   return (
-    <div
-      className={cn(
-        'mb-4 rounded-md px-4 py-2.5 text-sm',
-        message.type === 'success'
-          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-          : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
-      )}
-    >
-      {message.text}
+    <div className="pointer-events-auto fixed right-6 top-6 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg',
+          message.type === 'success'
+            ? 'border-emerald-200/50 bg-emerald-50/95 text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/95 dark:text-emerald-200'
+            : 'border-red-200/50 bg-red-50/95 text-red-800 dark:border-red-800/50 dark:bg-red-950/95 dark:text-red-200',
+        )}
+      >
+        <span className="text-sm font-medium">{message.text}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="ml-1 rounded-md p-0.5 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -86,7 +95,15 @@ function StatusBanner({ message }: { message: StatusMessage }) {
 export function SettingsPage() {
   const user = useShellUser();
   const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [toast, setToast] = useState<StatusMessage>(null);
   const settings = useSettings();
+
+  const showToast = useCallback((message: StatusMessage) => {
+    setToast(message);
+    if (message) {
+      setTimeout(() => setToast(null), 3000);
+    }
+  }, []);
 
   const isMultiUser = settings.data?.multi_user === 'true';
 
@@ -114,6 +131,7 @@ export function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar activeKey="settings" user={user} />
+      <StatusToast message={toast} onClose={() => setToast(null)} />
 
       <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="mx-auto max-w-3xl">
@@ -138,29 +156,28 @@ export function SettingsPage() {
         </nav>
 
         {activeTab === 'general' && (
-          <GeneralTab settings={settings.data ?? {}} />
+          <GeneralTab settings={settings.data ?? {}} onToast={showToast} />
         )}
-        {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} />}
-        {activeTab === 'categories' && <CategoriesTab />}
-        {activeTab === 'tags' && <TagsTab />}
-        {activeTab === 'quick-links' && <QuickLinksTab />}
-        {activeTab === 'users' && isMultiUser && <UsersTab />}
+        {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} onToast={showToast} />}
+        {activeTab === 'categories' && <CategoriesTab onToast={showToast} />}
+        {activeTab === 'tags' && <TagsTab onToast={showToast} />}
+        {activeTab === 'quick-links' && <QuickLinksTab onToast={showToast} />}
+        {activeTab === 'users' && isMultiUser && <UsersTab onToast={showToast} />}
         {activeTab === 'backup' && (
-          <BackupTab settings={settings.data ?? {}} />
+          <BackupTab settings={settings.data ?? {}} onToast={showToast} />
         )}
-        {activeTab === 'system' && <SystemTab />}
+        {activeTab === 'system' && <SystemTab onToast={showToast} />}
         </div>
       </main>
     </div>
   );
 }
 
-function GeneralTab({ settings }: { settings: Record<string, string> }) {
+function GeneralTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
   const themeCtx = useTheme();
   const [recycleDays, setRecycleDays] = useState(settings.recycle_retention_days ?? '30');
   const [multiUser, setMultiUser] = useState(settings.multi_user === 'true');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const handleThemeChange = useCallback((value: string) => {
     if (value === 'dark') themeCtx.setTheme('dark');
@@ -179,16 +196,14 @@ function GeneralTab({ settings }: { settings: Record<string, string> }) {
         recycle_retention_days: recycleDays,
         multi_user: multiUser ? 'true' : 'false',
       });
-      setMessage({ type: 'success', text: '设置已保存' });
+      onToast({ type: 'success', text: '设置已保存' });
     } catch {
-      setMessage({ type: 'error', text: '保存失败' });
+      onToast({ type: 'error', text: '保存失败' });
     }
-  }, [recycleDays, multiUser, updateSettings]);
+  }, [recycleDays, multiUser, updateSettings, onToast]);
 
   return (
     <div className="space-y-6">
-      <StatusBanner message={message} />
-
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">回收站</CardTitle>
@@ -288,13 +303,12 @@ function GeneralTab({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function AiTab({ settings }: { settings: Record<string, string> }) {
+function AiTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
   const [provider, setProvider] = useState(settings.llm_provider ?? '');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState(settings.llm_model ?? '');
   const [baseUrl, setBaseUrl] = useState(settings.llm_base_url ?? '');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const hasExistingKey = Boolean(
     settings.llm_api_key && settings.llm_api_key.includes('****'),
@@ -310,16 +324,14 @@ function AiTab({ settings }: { settings: Record<string, string> }) {
       if (apiKey) data.llm_api_key = apiKey;
       await updateSettings.mutateAsync(data);
       setApiKey('');
-      setMessage({ type: 'success', text: 'AI 配置已保存' });
+      onToast({ type: 'success', text: 'AI 配置已保存' });
     } catch {
-      setMessage({ type: 'error', text: '保存失败' });
+      onToast({ type: 'error', text: '保存失败' });
     }
-  }, [provider, apiKey, model, baseUrl, updateSettings]);
+  }, [provider, apiKey, model, baseUrl, updateSettings, onToast]);
 
   return (
     <div className="space-y-6">
-      <StatusBanner message={message} />
-
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">AI 服务配置</CardTitle>
@@ -416,7 +428,7 @@ function AiTab({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function UsersTab() {
+function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const users = useUserList();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -432,7 +444,6 @@ function UsersTab() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const handleCreate = useCallback(async () => {
     try {
@@ -441,59 +452,57 @@ function UsersTab() {
         password: newPassword,
         display_name: newDisplayName || undefined,
       });
-      setMessage({ type: 'success', text: '用户已创建' });
+      onToast({ type: 'success', text: '用户已创建' });
       setShowCreate(false);
       setNewUsername('');
       setNewPassword('');
       setNewDisplayName('');
     } catch {
-      setMessage({ type: 'error', text: '创建失败' });
+      onToast({ type: 'error', text: '创建失败' });
     }
-  }, [newUsername, newPassword, newDisplayName, createUser]);
+  }, [newUsername, newPassword, newDisplayName, createUser, onToast]);
 
   const handleUpdate = useCallback(
     async (id: number) => {
       try {
         await updateUser.mutateAsync({ id, display_name: editingName || null });
-        setMessage({ type: 'success', text: '已更新' });
+        onToast({ type: 'success', text: '已更新' });
         setEditingId(null);
       } catch {
-        setMessage({ type: 'error', text: '更新失败' });
+        onToast({ type: 'error', text: '更新失败' });
       }
     },
-    [editingName, updateUser],
+    [editingName, updateUser, onToast],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       try {
         await deleteUser.mutateAsync(id);
-        setMessage({ type: 'success', text: '用户已删除' });
+        onToast({ type: 'success', text: '用户已删除' });
       } catch {
-        setMessage({ type: 'error', text: '删除失败' });
+        onToast({ type: 'error', text: '删除失败' });
       }
     },
-    [deleteUser],
+    [deleteUser, onToast],
   );
 
   const handleResetPassword = useCallback(
     async (id: number) => {
       try {
         await resetPassword.mutateAsync({ id, password: resetPwd });
-        setMessage({ type: 'success', text: '密码已重置' });
+        onToast({ type: 'success', text: '密码已重置' });
         setResetId(null);
         setResetPwd('');
       } catch {
-        setMessage({ type: 'error', text: '重置失败' });
+        onToast({ type: 'error', text: '重置失败' });
       }
     },
-    [resetPwd, resetPassword],
+    [resetPwd, resetPassword, onToast],
   );
 
   return (
     <div className="space-y-4">
-      <StatusBanner message={message} />
-
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {users.data ? `${users.data.length} 位用户` : '加载中…'}
@@ -636,17 +645,15 @@ function UsersTab() {
   );
 }
 
-function BackupTab({ settings }: { settings: Record<string, string> }) {
+function BackupTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
   const [provider, setProvider] = useState(settings.oss_provider ?? '');
   const [endpoint, setEndpoint] = useState(settings.oss_endpoint ?? '');
   const [bucket, setBucket] = useState(settings.oss_bucket ?? '');
   const [accessKey, setAccessKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const backupList = useBackupList();
-  const [backupMsg, setBackupMsg] = useState<StatusMessage>(null);
 
   const hasExistingKey = Boolean(
     settings.oss_access_key && settings.oss_access_key.includes('****'),
@@ -664,21 +671,21 @@ function BackupTab({ settings }: { settings: Record<string, string> }) {
       await updateSettings.mutateAsync(data);
       setAccessKey('');
       setSecretKey('');
-      setMessage({ type: 'success', text: '云备份配置已保存' });
+      onToast({ type: 'success', text: '云备份配置已保存' });
     } catch {
-      setMessage({ type: 'error', text: '保存失败' });
+      onToast({ type: 'error', text: '保存失败' });
     }
-  }, [provider, endpoint, bucket, accessKey, secretKey, updateSettings]);
+  }, [provider, endpoint, bucket, accessKey, secretKey, updateSettings, onToast]);
 
   const handleAutoBackup = useCallback(async () => {
     try {
       await triggerAutoBackup();
-      setBackupMsg({ type: 'success', text: '自动备份完成' });
+      onToast({ type: 'success', text: '自动备份完成' });
       backupList.refetch();
     } catch {
-      setBackupMsg({ type: 'error', text: '备份失败' });
+      onToast({ type: 'error', text: '备份失败' });
     }
-  }, [backupList]);
+  }, [backupList, onToast]);
 
   const handleExportJson = useCallback(() => {
     window.open('/api/v1/export/books?format=json', '_self');
@@ -699,17 +706,14 @@ function BackupTab({ settings }: { settings: Record<string, string> }) {
       a.download = `redesk-backup-${Date.now()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      setBackupMsg({ type: 'success', text: '全量备份已下载' });
+      onToast({ type: 'success', text: '全量备份已下载' });
     } catch {
-      setBackupMsg({ type: 'error', text: '全量备份失败' });
+      onToast({ type: 'error', text: '全量备份失败' });
     }
-  }, []);
+  }, [onToast]);
 
   return (
     <div className="space-y-6">
-      <StatusBanner message={message} />
-      <StatusBanner message={backupMsg} />
-
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">元数据导出</CardTitle>
@@ -847,7 +851,7 @@ function BackupTab({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function CategoriesTab() {
+function CategoriesTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const categories = useCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
@@ -857,48 +861,45 @@ function CategoriesTab() {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const handleCreate = useCallback(async () => {
     try {
       await createCategory.mutateAsync({ name: newName });
-      setMessage({ type: 'success', text: '分类已创建' });
+      onToast({ type: 'success', text: '分类已创建' });
       setShowCreate(false);
       setNewName('');
     } catch {
-      setMessage({ type: 'error', text: '创建失败' });
+      onToast({ type: 'error', text: '创建失败' });
     }
-  }, [newName, createCategory]);
+  }, [newName, createCategory, onToast]);
 
   const handleUpdate = useCallback(
     async (id: number) => {
       try {
         await updateCategory.mutateAsync({ id, name: editingName });
-        setMessage({ type: 'success', text: '已更新' });
+        onToast({ type: 'success', text: '已更新' });
         setEditingId(null);
       } catch {
-        setMessage({ type: 'error', text: '更新失败' });
+        onToast({ type: 'error', text: '更新失败' });
       }
     },
-    [editingName, updateCategory],
+    [editingName, updateCategory, onToast],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       try {
         await deleteCategory.mutateAsync(id);
-        setMessage({ type: 'success', text: '分类已删除，相关书籍的分类已清空' });
+        onToast({ type: 'success', text: '分类已删除，相关书籍的分类已清空' });
       } catch {
-        setMessage({ type: 'error', text: '删除失败' });
+        onToast({ type: 'error', text: '删除失败' });
       }
     },
-    [deleteCategory],
+    [deleteCategory, onToast],
   );
 
   return (
     <div className="space-y-4">
-      <StatusBanner message={message} />
-
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {categories.data ? `${categories.data.length} 个分类` : '加载中…'}
@@ -996,7 +997,7 @@ function CategoriesTab() {
   );
 }
 
-function TagsTab() {
+function TagsTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const tags = useTags();
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
@@ -1006,48 +1007,45 @@ function TagsTab() {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const handleCreate = useCallback(async () => {
     try {
       await createTag.mutateAsync({ name: newName });
-      setMessage({ type: 'success', text: '标签已创建' });
+      onToast({ type: 'success', text: '标签已创建' });
       setShowCreate(false);
       setNewName('');
     } catch {
-      setMessage({ type: 'error', text: '创建失败' });
+      onToast({ type: 'error', text: '创建失败' });
     }
-  }, [newName, createTag]);
+  }, [newName, createTag, onToast]);
 
   const handleUpdate = useCallback(
     async (id: number) => {
       try {
         await updateTag.mutateAsync({ id, name: editingName });
-        setMessage({ type: 'success', text: '已更新' });
+        onToast({ type: 'success', text: '已更新' });
         setEditingId(null);
       } catch {
-        setMessage({ type: 'error', text: '更新失败' });
+        onToast({ type: 'error', text: '更新失败' });
       }
     },
-    [editingName, updateTag],
+    [editingName, updateTag, onToast],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       try {
         await deleteTag.mutateAsync(id);
-        setMessage({ type: 'success', text: '标签已删除' });
+        onToast({ type: 'success', text: '标签已删除' });
       } catch {
-        setMessage({ type: 'error', text: '删除失败' });
+        onToast({ type: 'error', text: '删除失败' });
       }
     },
-    [deleteTag],
+    [deleteTag, onToast],
   );
 
   return (
     <div className="space-y-4">
-      <StatusBanner message={message} />
-
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {tags.data ? `${tags.data.length} 个标签` : '加载中…'}
@@ -1145,17 +1143,14 @@ function TagsTab() {
   );
 }
 
-function SystemTab() {
+function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const stats = useSystemStats();
   const backup = useBackup();
   const ftsRebuild = useFtsRebuild();
   const clearCache = useClearCache();
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   return (
     <div className="space-y-6">
-      <StatusBanner message={message} />
-
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">系统概况</CardTitle>
@@ -1205,9 +1200,9 @@ function SystemTab() {
               onClick={async () => {
                 try {
                   const r = await backup.mutateAsync();
-                  setMessage({ type: 'success', text: `备份完成：${r.path}` });
+                  onToast({ type: 'success', text: `备份完成：${r.path}` });
                 } catch {
-                  setMessage({ type: 'error', text: '备份失败' });
+                  onToast({ type: 'error', text: '备份失败' });
                 }
               }}
               disabled={backup.isPending}
@@ -1227,9 +1222,9 @@ function SystemTab() {
               onClick={async () => {
                 try {
                   await ftsRebuild.mutateAsync();
-                  setMessage({ type: 'success', text: '索引重建完成' });
+                  onToast({ type: 'success', text: '索引重建完成' });
                 } catch {
-                  setMessage({ type: 'error', text: '重建失败' });
+                  onToast({ type: 'error', text: '重建失败' });
                 }
               }}
               disabled={ftsRebuild.isPending}
@@ -1253,9 +1248,9 @@ function SystemTab() {
               onClick={async () => {
                 try {
                   await clearCache.mutateAsync();
-                  setMessage({ type: 'success', text: '缓存已清理' });
+                  onToast({ type: 'success', text: '缓存已清理' });
                 } catch {
-                  setMessage({ type: 'error', text: '清理失败' });
+                  onToast({ type: 'error', text: '清理失败' });
                 }
               }}
               disabled={clearCache.isPending}
@@ -1269,7 +1264,7 @@ function SystemTab() {
   );
 }
 
-function QuickLinksTab() {
+function QuickLinksTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const { data: links } = useQuickLinks();
   const addLink = useAddQuickLink();
   const updateLink = useUpdateQuickLink();
@@ -1282,51 +1277,48 @@ function QuickLinksTab() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingUrl, setEditingUrl] = useState('');
-  const [message, setMessage] = useState<StatusMessage>(null);
 
   const handleCreate = useCallback(async () => {
     if (!newName.trim() || !newUrl.trim()) return;
     try {
       await addLink.mutateAsync({ name: newName.trim(), url: newUrl.trim() });
-      setMessage({ type: 'success', text: '快捷链接已添加' });
+      onToast({ type: 'success', text: '快捷链接已添加' });
       setShowCreate(false);
       setNewName('');
       setNewUrl('');
     } catch {
-      setMessage({ type: 'error', text: '添加失败' });
+      onToast({ type: 'error', text: '添加失败' });
     }
-  }, [newName, newUrl, addLink]);
+  }, [newName, newUrl, addLink, onToast]);
 
   const handleUpdate = useCallback(
     async (id: number) => {
       if (!editingName.trim() || !editingUrl.trim()) return;
       try {
         await updateLink.mutateAsync({ id, name: editingName.trim(), url: editingUrl.trim() });
-        setMessage({ type: 'success', text: '已更新' });
+        onToast({ type: 'success', text: '已更新' });
         setEditingId(null);
       } catch {
-        setMessage({ type: 'error', text: '更新失败' });
+        onToast({ type: 'error', text: '更新失败' });
       }
     },
-    [editingName, editingUrl, updateLink],
+    [editingName, editingUrl, updateLink, onToast],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       try {
         await deleteLink.mutateAsync(id);
-        setMessage({ type: 'success', text: '已删除' });
+        onToast({ type: 'success', text: '已删除' });
       } catch {
-        setMessage({ type: 'error', text: '删除失败' });
+        onToast({ type: 'error', text: '删除失败' });
       }
     },
-    [deleteLink],
+    [deleteLink, onToast],
   );
 
   return (
     <div className="space-y-4">
-      <StatusBanner message={message} />
-
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {links ? `${links.length} 个链接` : '加载中…'}
