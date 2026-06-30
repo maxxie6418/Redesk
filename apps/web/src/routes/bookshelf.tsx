@@ -356,7 +356,7 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
           disabled
           title="阅读器将在 M2 上线"
         >
-          <BookCoverImage book={book} index={index} className="aspect-[4/5] w-full" rounded="rounded-xl" />
+          <BookCoverImage book={book} index={index} className="aspect-[5/6] w-full" rounded="rounded-xl" />
         </button>
         {/* 状态标签 */}
         <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
