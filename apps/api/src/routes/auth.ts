@@ -1,19 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { users } from '@redesk/db';
-import { loginSchema, setupSchema, ERROR_CODE } from '@redesk/shared';
+import { changePasswordSchema, loginSchema, setupSchema, ERROR_CODE } from '@redesk/shared';
 import { getDb } from '../db';
 import { validate } from '../lib/zod';
 import { AppError, unauthorized } from '../lib/errors';
 import {
   hashPassword,
   verifyPassword,
-  requireUserId,
   userCount,
   tryLoginAsAdmin,
   isMultiUserEnabled,
 } from '../lib/auth';
-import { setSessionUserId, clearSession } from '../lib/session';
+import { getSessionUserId, setSessionUserId, clearSession } from '../lib/session';
 import { isSingleTokenMode, getAuthMode } from '../lib/settings-store';
 import {
   checkBruteForce,
@@ -27,6 +26,7 @@ function userToResponse(user: {
   display_name: string | null;
   is_active: number;
   session_expires_days: number;
+  must_change_password?: number | null;
 }) {
   return {
     id: user.id,
@@ -34,6 +34,7 @@ function userToResponse(user: {
     display_name: user.display_name,
     is_active: user.is_active === 1,
     session_expires_days: user.session_expires_days,
+    must_change_password: (user.must_change_password ?? 0) === 1,
   };
 }
 
@@ -45,11 +46,27 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { data: { needs_setup: userCount() === 0 } };
   });
 
+  app.get('/auth/init', async () => {
+    const db = getDb();
+    const row = db
+      .select({ mcp: users.must_change_password })
+      .from(users)
+      .limit(1)
+      .get();
+    return {
+      data: {
+        initial: row?.mcp === 1,
+        has_admin: !!row,
+      },
+    };
+  });
+
   app.post('/auth/setup', async (req) => {
     if (!isMultiUserEnabled()) {
-      const loggedIn = tryLoginAsAdmin(req);
+      const input = validate(loginSchema, req.body);
+      const loggedIn = await tryLoginAsAdmin(req, input.password);
       if (!loggedIn) {
-        throw new AppError(ERROR_CODE.BUSINESS_ERROR, '管理员账户未就绪');
+        throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '口令错误');
       }
       const user = getDb().select().from(users).limit(1).get()!;
       return { data: userToResponse(user) };
@@ -78,10 +95,25 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/auth/login', async (req) => {
     if (!isMultiUserEnabled()) {
-      const loggedIn = tryLoginAsAdmin(req);
-      if (!loggedIn) {
-        throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '管理员账户未就绪');
+      const input = validate(loginSchema, req.body);
+      const remoteIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+      const bruteKey = `login:${remoteIp}`;
+      const checkResult = checkBruteForce(bruteKey);
+      if (!checkResult.allowed) {
+        const lockRemaining = checkResult.lockedUntil
+          ? Math.ceil((checkResult.lockedUntil - Date.now()) / 1000 / 60)
+          : 0;
+        throw new AppError(
+          ERROR_CODE.INVALID_CREDENTIALS,
+          `登录尝试过多，请${lockRemaining}分钟后再试`,
+        );
       }
+      const loggedIn = await tryLoginAsAdmin(req, input.password);
+      if (!loggedIn) {
+        recordFailedAttempt(bruteKey);
+        throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '口令错误');
+      }
+      resetBruteForce(bruteKey);
       const user = getDb().select().from(users).limit(1).get()!;
       return { data: userToResponse(user) };
     }
@@ -166,12 +198,33 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { data: { success: true } };
   });
 
+  app.post('/auth/change-password', async (req) => {
+    const userId = getSessionUserId(req);
+    if (!userId) throw unauthorized();
+    const input = validate(changePasswordSchema, req.body);
+    const ts = new Date().toISOString();
+    const newHash = await hashPassword(input.newPassword);
+    const updated = getDb()
+      .update(users)
+      .set({
+        password_hash: newHash,
+        must_change_password: 0,
+        updated_at: ts,
+      })
+      .where(eq(users.id, userId))
+      .returning()
+      .get();
+    if (!updated) throw unauthorized();
+    return { data: userToResponse(updated) };
+  });
+
   app.get('/auth/mode', async () => {
     return { data: { mode: getAuthMode() } };
   });
 
   app.get('/auth/me', async (req) => {
-    const userId = requireUserId(req);
+    const userId = getSessionUserId(req);
+    if (!userId) throw unauthorized();
     const user = getDb()
       .select()
       .from(users)

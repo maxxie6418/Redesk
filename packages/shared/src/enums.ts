@@ -12,7 +12,7 @@ export const BOOK_STATUS_LABELS: Record<BookStatus, string> = {
   PLANNED: '计划读',
   READING: '在读',
   READ: '已读',
-  STORED: '存',
+  STORED: '存档',
 };
 
 export const VISIBILITY = {

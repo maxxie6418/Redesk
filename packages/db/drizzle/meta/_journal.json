@@ -57,6 +57,20 @@
       "when": 1783238400000,
       "tag": "0007_user_auth_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1783245600000,
+      "tag": "0008_storage_driver",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783306800000,
+      "tag": "0009_must_change_password",
+      "breakpoints": true
     }
   ]
 }

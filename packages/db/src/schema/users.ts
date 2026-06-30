@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
   display_name: text('display_name'),
   is_active: integer('is_active').notNull().default(1),
   session_expires_days: integer('session_expires_days').notNull().default(30),
+  must_change_password: integer('must_change_password').notNull().default(0),
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),
 });

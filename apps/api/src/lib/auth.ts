@@ -3,7 +3,7 @@ import type { FastifyRequest } from 'fastify';
 import { randomBytes } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { users } from '@redesk/db';
-import { config, DEFAULT_ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD } from '../config';
+import { config, bootstrapConfig } from '../config';
 import { getDb } from '../db';
 import { unauthorized } from './errors';
 import { getSessionUserId, setSessionUserId } from './session';
@@ -60,42 +60,52 @@ export async function ensureDefaultAdmin(): Promise<void> {
   if (userCount() > 0) return;
 
   const ts = new Date().toISOString();
-  const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+  const username = bootstrapConfig.username;
+  const password = bootstrapConfig.password;
+  const passwordHash = await hashPassword(password);
 
   getDb()
     .insert(users)
     .values({
-      username: DEFAULT_ADMIN_USERNAME,
+      username,
       password_hash: passwordHash,
       display_name: '管理员',
+      must_change_password: 1,
       created_at: ts,
       updated_at: ts,
     })
     .run();
+
+  console.log(
+    `[redesk] 单口令模式默认管理员已创建：username=${username}，登录后必须先修改口令。`,
+  );
 }
 
 export function requireUserId(req: FastifyRequest): number {
+  const userId = getSessionUserId(req);
+  if (userId) return userId;
+
   if (!isMultiUserEnabled()) {
     const adminId = getAdminUserId();
     if (adminId) return adminId;
   }
 
-  const userId = getSessionUserId(req);
-  if (!userId) throw unauthorized();
-
-  return userId;
+  throw unauthorized();
 }
 
-export function tryLoginAsAdmin(req: FastifyRequest): boolean {
+export async function tryLoginAsAdmin(req: FastifyRequest, password: string): Promise<boolean> {
   if (isMultiUserEnabled()) return false;
 
   const admin = getDb()
-    .select({ id: users.id })
+    .select({ id: users.id, password_hash: users.password_hash })
     .from(users)
     .limit(1)
     .get();
 
   if (!admin) return false;
+
+  const ok = await verifyPassword(password, admin.password_hash);
+  if (!ok) return false;
 
   setSessionUserId(req, admin.id);
   return true;

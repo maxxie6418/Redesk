@@ -46,6 +46,13 @@ export const setupSchema = z
   .strict();
 export type SetupInput = z.infer<typeof setupSchema>;
 
+export const changePasswordSchema = z
+  .object({
+    newPassword: z.string().min(8).max(128),
+  })
+  .strict();
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export const userSchema = z.object({
   id: z.number().int(),
   username: z.string(),
@@ -269,3 +276,39 @@ export const metadataApplySchema = z.object({
   fetch_cover: z.boolean().optional().default(false),
 });
 export type MetadataApplyInput = z.infer<typeof metadataApplySchema>;
+
+export const storageDriverSchema = z.enum(['local', 's3']);
+export type StorageDriver = z.infer<typeof storageDriverSchema>;
+
+export const storageSettingsSchema = z.object({
+  driver: storageDriverSchema.default('local'),
+  provider: z.string().max(64).optional().nullable(),
+  endpoint: z.string().max(500).optional().nullable(),
+  bucket: z.string().max(200).optional().nullable(),
+  access_key: z.string().max(500).optional().nullable(),
+  secret_key: z.string().max(500).optional().nullable(),
+  region: z.string().max(64).optional().nullable(),
+  public_url: z.string().max(500).optional().nullable(),
+});
+export type StorageSettingsInput = z.input<typeof storageSettingsSchema>;
+
+export const storageStatusSchema = z.object({
+  write_driver: storageDriverSchema,
+  configured: z.boolean(),
+  provider: z.string().nullable(),
+  bucket: z.string().nullable(),
+  endpoint: z.string().nullable(),
+  has_access_key: z.boolean(),
+  has_secret_key: z.boolean(),
+  region: z.string().nullable(),
+  public_url: z.string().nullable(),
+  reason: z.string().nullable(),
+});
+export type StorageStatusOutput = z.infer<typeof storageStatusSchema>;
+
+export const storageTestResultSchema = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
+export type StorageTestResult = z.infer<typeof storageTestResultSchema>;
