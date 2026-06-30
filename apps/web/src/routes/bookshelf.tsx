@@ -438,35 +438,72 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group relative flex items-center gap-4 rounded-lg bg-card px-5 py-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
       {!isTrash && <MenuMoreTiny onClick={onOpenDetail} />}
+      {/* 封面 */}
       <button
         type="button"
         className="relative shrink-0 cursor-not-allowed overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
         disabled
         title="阅读器将在 M2 上线"
       >
-        <BookCoverImage book={book} index={index} className="h-[76px] w-[56px]" rounded="rounded" />
-        <div className="pointer-events-none absolute inset-0 rounded shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
+        <BookCoverImage book={book} index={index} className="h-[50px] w-[36px]" rounded="rounded-sm" />
+        <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
+      {/* 书名 */}
       <div
-        className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center border-r border-border pr-5"
+        className="min-w-0 flex-1 cursor-pointer pr-16"
         onClick={onOpenDetail}
       >
-        <div className="mb-1 flex items-center gap-2">
-          <span className={cn('h-[7px] w-[7px] shrink-0 rounded-full', statusDotClass(book.status))} />
-          <span className="text-xs font-medium text-muted-foreground">{statusLabel(book.status)}</span>
-          <h2 className="truncate text-sm font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <div className="flex items-center gap-2">
+          <span className={cn('h-[6px] w-[6px] shrink-0 rounded-full', statusDotClass(book.status))} />
+          <span className="truncate text-sm font-medium text-foreground">{book.title}</span>
         </div>
-        <p className="mb-0.5 truncate text-xs leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
-        <p className="text-xs leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{book.author || '—'}</p>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2 pr-6">
-        <RatingDisplay rating={book.rating} size="xs" />
-        <ProgressBar progress={progress} trackWidth="w-[64px]" trackHeight="h-[3px]" />
+      {/* 状态 */}
+      <div className="w-[60px] shrink-0 text-xs text-muted-foreground">
+        {statusLabel(book.status)}
+      </div>
+      {/* 分类 */}
+      <div className="w-[80px] shrink-0 truncate text-xs text-muted-foreground">
+        {book.category_name || '—'}
+      </div>
+      {/* 评分 */}
+      <div className="w-[50px] shrink-0">
+        {book.rating != null ? (
+          <span className="flex items-center gap-0.5 text-xs text-yellow-500">
+            <Star className="h-3 w-3 fill-current" />
+            {book.rating}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
+      {/* 进度 */}
+      <div className="flex w-[80px] shrink-0 items-center gap-2">
+        <div className="h-1.5 w-[50px] overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
+      </div>
+      {/* 标签 */}
+      <div className="flex w-[100px] shrink-0 flex-wrap gap-1">
+        {book.tag_names.slice(0, 2).map((tag) => (
+          <span key={tag} className="max-w-[60px] truncate rounded border border-border bg-muted/50 px-1 py-0.5 text-[10px] text-muted-foreground">
+            #{tag}
+          </span>
+        ))}
+        {book.tag_names.length > 2 && (
+          <span className="text-[10px] text-muted-foreground">+{book.tag_names.length - 2}</span>
+        )}
+      </div>
+      {/* 更新日期 */}
+      <div className="w-[70px] shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {book.updated_at.slice(0, 10)}
       </div>
       {isTrash && (
-        <div className="absolute right-5 top-3.5">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
         </div>
       )}
@@ -1381,7 +1418,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'A' && (
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2 2xl:grid-cols-3">
             {books.map((book, index) => (
               <BookCardA
                 key={book.id}
@@ -1397,7 +1434,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'B' && (
-          <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <section className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
             {books.map((book, index) => (
               <BookCardB
                 key={book.id}
@@ -1429,7 +1466,18 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'D' && (
-          <section className="flex flex-col gap-3">
+          <section className="flex flex-col gap-1">
+            {/* 表头 */}
+            <div className="mb-1 flex items-center gap-4 rounded bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <div className="w-[36px] shrink-0" />
+              <div className="min-w-0 flex-1">书名</div>
+              <div className="w-[60px] shrink-0">状态</div>
+              <div className="w-[80px] shrink-0">分类</div>
+              <div className="w-[50px] shrink-0">评分</div>
+              <div className="w-[80px] shrink-0">进度</div>
+              <div className="w-[100px] shrink-0">标签</div>
+              <div className="w-[70px] shrink-0 text-right">更新</div>
+            </div>
             {books.map((book, index) => (
               <BookCardD
                 key={book.id}
