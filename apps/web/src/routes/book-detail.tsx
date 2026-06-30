@@ -16,14 +16,19 @@ import {
 import { BOOK_STATUS, BOOK_STATUS_LABELS } from '@redesk/shared';
 import {
   useActivateBookCover,
+  useApplyBookMetadata,
   useBook,
   useBookCovers,
   useDeleteBookCover,
   useFavoriteBook,
   useFetchBookCover,
+  useFetchBookMetadata,
+  useUploadBookCover,
   useUnfavoriteBook,
   useUpdateBook,
   type UpdateBookInput,
+  type LinkMetadata,
+  type BookCoverItem,
 } from '@/hooks/use-books';
 import { useBookFiles, useDeleteFile, useReplaceFile, useUpdateFile, useUploadFile } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
@@ -93,6 +98,9 @@ export function BookDetailPage() {
   const fetchCover = useFetchBookCover();
   const activateCover = useActivateBookCover();
   const deleteCover = useDeleteBookCover();
+  const uploadCover = useUploadBookCover();
+  const fetchMetadata = useFetchBookMetadata();
+  const applyMetadata = useApplyBookMetadata();
   const uploadFile = useUploadFile();
   const replaceFile = useReplaceFile();
   const updateFile = useUpdateFile();
@@ -104,8 +112,13 @@ export function BookDetailPage() {
 
   const [message, setMessage] = useState<StatusMessage>(null);
   const [editingMeta, setEditingMeta] = useState(false);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
+  const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
+  const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
+  const [fetchCoverChecked, setFetchCoverChecked] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState<{ fileId: number; file: File } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -235,6 +248,68 @@ export function BookDetailPage() {
     },
     [bookId, deleteCover],
   );
+
+  const handleCoverUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        await uploadCover.mutateAsync({ bookId, file });
+        setMessage({ type: 'success', text: '封面已上传' });
+      } catch (err) {
+        setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '上传封面失败' });
+      }
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    },
+    [bookId, uploadCover],
+  );
+
+  const handleOpenMetadataDialog = useCallback(async () => {
+    const current = book.data;
+    if (!current?.source_url) {
+      setMessage({ type: 'error', text: '请先填写介绍页链接' });
+      return;
+    }
+    try {
+      const result = await fetchMetadata.mutateAsync(current.source_url);
+      setMetadataResult(result);
+      const initialSelected: Record<string, boolean> = {};
+      const fieldKeys = ['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count'] as const;
+      for (const key of fieldKeys) {
+        const value = result[key as keyof LinkMetadata];
+        const currentValue = current[key as keyof typeof current];
+        if (value != null && String(value).trim() !== '' && (currentValue == null || String(currentValue).trim() === '')) {
+          initialSelected[key] = true;
+        } else if (value != null && String(value).trim() !== '' && currentValue != null && String(currentValue).trim() !== '') {
+          initialSelected[key] = false;
+        }
+      }
+      setSelectedFields(initialSelected);
+      setFetchCoverChecked(Boolean(result.cover_url) && !current.cover_path);
+      setShowMetadataDialog(true);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '抓取元数据失败' });
+    }
+  }, [book.data, fetchMetadata]);
+
+  const handleApplyMetadata = useCallback(async () => {
+    if (!metadataResult) return;
+    const fields: Record<string, unknown> = {};
+    for (const [key, checked] of Object.entries(selectedFields)) {
+      if (checked) {
+        const value = metadataResult[key as keyof LinkMetadata];
+        if (value != null) fields[key] = value;
+      }
+    }
+    try {
+      await applyMetadata.mutateAsync({ bookId, fields, fetchCover: fetchCoverChecked });
+      setMessage({ type: 'success', text: '元数据已更新' });
+      setShowMetadataDialog(false);
+      setMetadataResult(null);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新元数据失败' });
+    }
+  }, [bookId, metadataResult, selectedFields, fetchCoverChecked, applyMetadata]);
 
   const primaryEpub = files.data?.find((file) => file.is_primary === 1 && file.file_format === 'EPUB');
 
@@ -433,73 +508,98 @@ export function BookDetailPage() {
           <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">封面管理</CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleFetchCover}
-                disabled={!b.source_url || fetchCover.isPending}
-                title={b.source_url ? '从来源链接手动下载封面' : '请先保存 source_url'}
-              >
-                {fetchCover.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-                手动下载封面
-              </Button>
+              <div className="flex gap-2">
+                {b.source_url && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenMetadataDialog}
+                    disabled={fetchMetadata.isPending || applyMetadata.isPending}
+                  >
+                    {fetchMetadata.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                    抓取更新
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleFetchCover}
+                  disabled={!b.source_url || fetchCover.isPending}
+                  title={b.source_url ? '从介绍页下载封面' : '请先填写介绍页链接'}
+                >
+                  {fetchCover.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                  下载封面
+                </Button>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground">
+                  <Upload className="h-3.5 w-3.5" />
+                  上传封面
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.webp,.gif,.bmp"
+                    onChange={handleCoverUpload}
+                  />
+                </label>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {!b.source_url && (
                 <p className="text-xs text-muted-foreground">
-                  先在书籍信息里填写来源链接，再手动下载封面。系统不会因为链接存在而自动抓取。
+                  先在书籍信息里填写介绍页链接，再下载封面。系统不会因为链接存在而自动抓取。
                 </p>
               )}
-              {covers.data && covers.data.length > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {covers.data.map((cover) => (
-                    <div key={cover.id} className="rounded-lg border border-border p-3">
-                      <div className="flex gap-3">
-                        <img
-                          src={`${COVER_URL_BASE}/books/${bookId}/covers/${cover.id}/file?ts=${encodeURIComponent(cover.updated_at)}`}
-                          alt={b.title}
-                          className="h-[96px] w-[68px] rounded object-cover shadow-sm"
-                        />
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                              {cover.source_type}
-                            </span>
-                            {cover.is_active === 1 && (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                                当前
-                              </span>
-                            )}
+              {covers.data && covers.data.length > 0 ? (() => {
+                const groups: Record<string, { label: string; items: BookCoverItem[] }> = {
+                  EPUB_EXTRACTED: { label: 'EPUB 抽取', items: [] },
+                  REMOTE_FETCHED: { label: '介绍页抓取', items: [] },
+                  MANUAL_UPLOAD: { label: '用户上传', items: [] },
+                };
+                for (const cover of covers.data) {
+                  const g = groups[cover.source_type];
+                  if (g) g.items.push(cover);
+                  else groups[cover.source_type] = { label: cover.source_type, items: [cover] };
+                }
+                return Object.entries(groups)
+                  .filter(([, { items }]) => items.length > 0)
+                  .map(([type, { label, items }]) => (
+                    <div key={type}>
+                      <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {items.map((cover) => (
+                          <div key={cover.id} className="rounded-lg border border-border p-3">
+                            <div className="flex gap-3">
+                              <img
+                                src={`${COVER_URL_BASE}/books/${bookId}/covers/${cover.id}/file?ts=${encodeURIComponent(cover.updated_at)}`}
+                                alt={b.title}
+                                className="h-[96px] w-[68px] rounded object-cover shadow-sm"
+                              />
+                              <div className="min-w-0 flex-1 space-y-1">
+                                {cover.is_active === 1 && (
+                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">当前</span>
+                                )}
+                                <p className="text-xs text-muted-foreground">{cover.source_label ?? '未标注'}</p>
+                                {cover.original_url && (
+                                  <a href={cover.original_url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-primary hover:underline">
+                                    {cover.original_url}
+                                  </a>
+                                )}
+                                <div className="flex gap-2 pt-2">
+                                  {cover.is_active !== 1 && (
+                                    <Button size="sm" variant="outline" onClick={() => handleActivateCover(cover.id)}>设为当前</Button>
+                                  )}
+                                  <Button size="sm" variant="ghost" onClick={() => handleDeleteCover(cover.id)}>删除</Button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">{cover.source_label ?? '未标注'}</p>
-                          {cover.original_url && (
-                            <a
-                              href={cover.original_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block truncate text-xs text-primary hover:underline"
-                            >
-                              {cover.original_url}
-                            </a>
-                          )}
-                          <div className="flex gap-2 pt-2">
-                            {cover.is_active !== 1 && (
-                              <Button size="sm" variant="outline" onClick={() => handleActivateCover(cover.id)}>
-                                设为当前
-                              </Button>
-                            )}
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteCover(cover.id)}>
-                              删除
-                            </Button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
+                  ));
+              })() : (
                 <p className="text-sm text-muted-foreground">
-                  暂无封面资源。EPUB 提取封面和手动下载的远程封面都会出现在这里。
+                  暂无封面资源。上传、下载或 EPUB 提取的封面都会出现在这里。
                 </p>
               )}
             </CardContent>
@@ -621,6 +721,81 @@ export function BookDetailPage() {
                   allTags={tagsQuery.data ?? []}
                   onCreateTag={handleCreateTag}
                 />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {showMetadataDialog && metadataResult && (
+          <div
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-10"
+            onClick={() => setShowMetadataDialog(false)}
+          >
+            <Card className="w-full max-w-lg border-border bg-popover shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle className="text-lg">抓取元数据更新</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowMetadataDialog(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  { key: 'title', label: '书名' },
+                  { key: 'author', label: '作者' },
+                  { key: 'subtitle', label: '副标题' },
+                  { key: 'translator', label: '译者' },
+                  { key: 'original_title', label: '原作名' },
+                  { key: 'publisher', label: '出版社' },
+                  { key: 'publish_year', label: '出版年' },
+                  { key: 'isbn', label: 'ISBN' },
+                  { key: 'page_count', label: '页数' },
+                  { key: 'description', label: '简介' },
+                  { key: 'language', label: '语言' },
+                ]
+                  .filter(({ key }) => metadataResult[key as keyof LinkMetadata] != null)
+                  .map(({ key, label }) => (
+                    <label key={key} className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={selectedFields[key] ?? false}
+                        onChange={(e) => setSelectedFields((prev) => ({ ...prev, [key]: e.target.checked }))}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground">{label}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          抓取值：{String(metadataResult[key as keyof LinkMetadata] ?? '').slice(0, 100)}
+                          {String(metadataResult[key as keyof LinkMetadata] ?? '').length > 100 ? '...' : ''}
+                        </p>
+                        <p className="text-xs text-muted-foreground/70">
+                          当前值：{String(b[key as keyof typeof b] ?? '').slice(0, 50) || '空'}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                {metadataResult.cover_url && (
+                  <label className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={fetchCoverChecked}
+                      onChange={(e) => setFetchCoverChecked(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-foreground">封面图</p>
+                      <p className="text-xs text-muted-foreground/70">
+                        当前值：{b.cover_path ? '已有封面' : '无封面'}
+                      </p>
+                    </div>
+                  </label>
+                )}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowMetadataDialog(false)}>取消</Button>
+                  <Button onClick={handleApplyMetadata} disabled={applyMetadata.isPending || Object.values(selectedFields).every((v) => !v) && !fetchCoverChecked}>
+                    {applyMetadata.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                    确认应用
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

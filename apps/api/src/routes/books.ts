@@ -10,13 +10,14 @@ import {
   batchBooksSchema,
   trashQuerySchema,
   duplicateQuerySchema,
+  metadataApplySchema,
 } from '@redesk/shared';
 import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
-import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT } from './files';
+import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
 import { existsSync, mkdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -406,6 +407,18 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
 
   if (uploadedFile) {
     await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
+  }
+
+  if (input.cover_url) {
+    try {
+      await downloadRemoteCover({
+        ownerId: userId,
+        bookId: book.id,
+        coverUrl: input.cover_url,
+        sourceLabel: input.metadata_source ?? 'manual',
+        activate: false,
+      });
+    } catch { /* 封面下载失败不影响书籍创建 */ }
   }
 
   return book;
@@ -1014,6 +1027,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
           tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
           source_url: optionalText(item.source_url),
+          cover_url: optionalText(item.cover_url),
           description: optionalText(item.description),
           metadata_source: 'manual',
         });
@@ -1065,6 +1079,71 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
     const metadata = await fetchBookMetadataFromUrl(sourceUrl);
     return { data: metadata };
+  });
+
+  app.post('/books/:id/metadata/apply', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+    if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+
+    const book = getDb()
+      .select()
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`))
+      .get();
+    if (!book) throw notFound('书籍不存在');
+
+    const input = validate(metadataApplySchema, req.body);
+    const fields = input.fields ?? {};
+    const fetchCover = input.fetch_cover ?? false;
+
+    const allowedFields = new Set([
+      'title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year',
+      'description', 'language', 'translator', 'original_title', 'page_count',
+      'metadata_source',
+    ]);
+
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (allowedFields.has(key) && value != null && String(value).trim() !== '') {
+        updates[key] = value;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const db = getDb();
+      db.update(books)
+        .set({ ...updates, updated_at: now() })
+        .where(eq(books.id, bookId))
+        .run();
+    }
+
+    if (fetchCover) {
+      const sourceUrl = (updates.source_url as string | undefined) ?? book.source_url;
+      if (sourceUrl) {
+        try {
+          const metadata = await fetchBookMetadataFromUrl(sourceUrl);
+          if (metadata.cover_url) {
+            await downloadRemoteCover({
+              ownerId: userId,
+              bookId,
+              coverUrl: metadata.cover_url,
+              sourceLabel: metadata.metadata_source,
+              activate: false,
+            });
+          }
+        } catch { /* 封面下载失败不影响元数据更新 */ }
+      }
+    }
+
+    const updatedBook = getDb()
+      .select()
+      .from(books)
+      .where(eq(books.id, bookId))
+      .get();
+
+    return { data: serializeBooks([updatedBook as RawBookRow], userId)[0] };
   });
 
   app.get('/books', async (req) => {

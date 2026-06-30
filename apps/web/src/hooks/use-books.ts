@@ -400,6 +400,7 @@ export function useBatchFetchBookCovers() {
       api.post<BatchFetchCoversResult>('/books/covers/batch-fetch', { ids }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['books'] });
+      qc.invalidateQueries({ queryKey: ['covers'] });
     },
   });
 }
@@ -411,6 +412,7 @@ export function useApplyBookMetadata() {
       api.post<BookDetail>(`/books/${bookId}/metadata/apply`, { fields, fetch_cover: fetchCover ?? false }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
   });

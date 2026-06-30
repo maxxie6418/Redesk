@@ -282,12 +282,13 @@ async function extractEpubCover(filePath: string, bookId: number): Promise<strin
   }
 }
 
-async function downloadRemoteCover(input: {
+export async function downloadRemoteCover(input: {
   ownerId: number;
   bookId: number;
   coverUrl: string;
   sourceLabel?: string | null;
   force?: boolean;
+  activate?: boolean;
 }): Promise<{ id: number; file_path: string } | null> {
   let url: URL;
   try {
@@ -311,7 +312,7 @@ async function downloadRemoteCover(input: {
       )
       .get();
     if (existing) {
-      activateBookCover(input.bookId, existing.id);
+      if (input.activate) activateBookCover(input.bookId, existing.id);
       return existing;
     }
   }
@@ -350,7 +351,7 @@ async function downloadRemoteCover(input: {
       mimeType: contentType ?? coverMimeFromExt(extname(targetPath)),
       fileSize: bytes.length,
       checksum: await computeHash(targetPath),
-      activate: true,
+      activate: input.activate ?? false,
     });
 
     return { id: coverId, file_path: storageRelativePath(targetPath) };
@@ -974,6 +975,60 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return { data: getDb().select().from(bookCovers).where(eq(bookCovers.id, created.id)).get() };
+  });
+
+  app.post('/books/:id/covers/upload', async (req, reply) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+    if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+    ownerBookCheck(bookId, userId);
+
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供图片文件');
+
+    const originalFilename = data.filename || 'cover.jpg';
+    const ext = extname(originalFilename).toLowerCase();
+    const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+    if (!allowedImageExts.includes(ext)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `仅支持 jpg/png/webp/gif/bmp 格式，当前格式: ${ext || '未知'}`);
+    }
+
+    const tmpDirPath = join(config.storageDir, 'tmp');
+    if (!existsSync(tmpDirPath)) mkdirSync(tmpDirPath, { recursive: true });
+    const tmpPath = join(tmpDirPath, `cover_upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+
+    try {
+      await pipeline(data.file, createWriteStream(tmpPath));
+    } catch {
+      try { unlinkSync(tmpPath); } catch { /* ignore */ }
+      throw new AppError(ERROR_CODE.INTERNAL_ERROR, '图片保存失败');
+    }
+
+    const fileSize = statSync(tmpPath).size;
+    if (fileSize > 5 * 1024 * 1024) {
+      try { unlinkSync(tmpPath); } catch { /* ignore */ }
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '图片大小不能超过 5MB');
+    }
+
+    const targetPath = join(coverDir(bookId), `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    renameSync(tmpPath, targetPath);
+
+    const checksum = await computeHash(targetPath);
+    const coverId = upsertBookCover({
+      ownerId: userId,
+      bookId,
+      sourceType: BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
+      sourceLabel: 'upload',
+      filePath: storageRelativePath(targetPath),
+      mimeType: coverMimeFromExt(ext),
+      fileSize,
+      checksum,
+      activate: false,
+    });
+
+    reply.code(201);
+    return { data: getDb().select().from(bookCovers).where(eq(bookCovers.id, coverId)).get() };
   });
 
   app.post('/books/covers/batch-fetch', async (req) => {
