@@ -2,6 +2,8 @@ export interface AuthUser {
   id: number;
   username: string;
   display_name: string | null;
+  is_active: boolean;
+  session_expires_days: number;
 }
 
 export interface AuthStatus {

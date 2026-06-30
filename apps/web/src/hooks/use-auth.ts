@@ -19,12 +19,20 @@ export function useCurrentUser() {
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { username: string; password: string }) =>
+    mutationFn: (input: { password: string; username?: string }) =>
       api.post<AuthUser>('/auth/login', input),
     onSuccess: (user) => {
       qc.setQueryData(['current-user'], user);
       qc.invalidateQueries({ queryKey: ['auth-status'] });
     },
+  });
+}
+
+export function useAuthMode() {
+  return useQuery({
+    queryKey: ['auth-mode'],
+    queryFn: () => api.get<{ mode: string }>('/auth/mode'),
+    staleTime: 60_000,
   });
 }
 

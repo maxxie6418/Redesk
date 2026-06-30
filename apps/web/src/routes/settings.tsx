@@ -27,6 +27,8 @@ import {
   Database,
   Clock,
   AlertTriangle,
+  Ban,
+  CheckCircle,
   Image,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
@@ -37,6 +39,8 @@ import {
   useUpdateUser,
   useDeleteUser,
   useResetPassword,
+  useToggleActive,
+  type UserAdminSummary,
 } from '@/hooks/use-users-admin';
 import { useSystemStats, useSystemStorage, useBackup, useFtsRebuild, useClearCache } from '@/hooks/use-system';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-categories';
@@ -110,7 +114,7 @@ export function SettingsPage() {
     }
   }, []);
 
-  const isMultiUser = settings.data?.multi_user === 'true';
+  const isMultiUser = settings.data?.auth_mode === 'multi_token' || settings.data?.multi_user === 'true';
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
@@ -184,7 +188,10 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
   const updateSettings = useUpdateSettings();
   const themeCtx = useTheme();
   const [recycleDays, setRecycleDays] = useState(settings.recycle_retention_days ?? '30');
-  const [multiUser, setMultiUser] = useState(settings.multi_user === 'true');
+  const [authMode, setAuthMode] = useState(settings.auth_mode === 'multi_token' ? 'multi_token' : 'single_token');
+  const [bfWindow, setBfWindow] = useState(settings.brute_force_window_minutes ?? '10');
+  const [bfMaxAttempts, setBfMaxAttempts] = useState(settings.brute_force_max_attempts ?? '5');
+  const [bfLock, setBfLock] = useState(settings.brute_force_lock_minutes ?? '60');
 
   const handleThemeChange = useCallback((value: string) => {
     if (value === 'dark') themeCtx.setTheme('dark');
@@ -201,13 +208,17 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
     try {
       await updateSettings.mutateAsync({
         recycle_retention_days: recycleDays,
-        multi_user: multiUser ? 'true' : 'false',
+        auth_mode: authMode,
+        multi_user: authMode === 'multi_token' ? 'true' : 'false',
+        brute_force_window_minutes: bfWindow,
+        brute_force_max_attempts: bfMaxAttempts,
+        brute_force_lock_minutes: bfLock,
       });
       onToast({ type: 'success', text: '设置已保存' });
     } catch {
       onToast({ type: 'error', text: '保存失败' });
     }
-  }, [recycleDays, multiUser, updateSettings, onToast]);
+  }, [recycleDays, authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings, onToast]);
 
   return (
     <div className="space-y-6">
@@ -271,31 +282,86 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">多用户模式</CardTitle>
+          <CardTitle className="text-base">认证模式</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">启用多用户</p>
+              <p className="text-sm font-medium text-foreground">模式</p>
               <p className="text-xs text-muted-foreground">
-                开启后需要密码登录，关闭后为单用户免登录模式
+                单口令：所有用户共享一个登录口令；多口令：每位用户独立密码
               </p>
             </div>
-            <button
-              type="button"
-              className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
-                multiUser ? 'bg-primary' : 'bg-muted',
-              )}
-              onClick={() => setMultiUser(!multiUser)}
-            >
-              <span
-                className={cn(
-                  'inline-block h-4 w-4 rounded-full bg-white transition-transform',
-                  multiUser ? 'translate-x-5' : 'translate-x-1',
-                )}
-              />
-            </button>
+            <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
+              {([
+                ['single_token', '单口令'],
+                ['multi_token', '多口令'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-sm transition-colors',
+                    authMode === value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={() => setAuthMode(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">暴力破解防护</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">时间窗口（分钟）</p>
+              <p className="text-xs text-muted-foreground">在此时间范围内累计失败次数</p>
+            </div>
+            <Input
+              type="number"
+              min={1}
+              max={60}
+              className="w-24"
+              value={bfWindow}
+              onChange={(e) => setBfWindow(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">最大尝试次数</p>
+              <p className="text-xs text-muted-foreground">超过此次数将触发锁定</p>
+            </div>
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              className="w-24"
+              value={bfMaxAttempts}
+              onChange={(e) => setBfMaxAttempts(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">锁定时长（分钟）</p>
+              <p className="text-xs text-muted-foreground">锁定期间拒绝所有登录请求</p>
+            </div>
+            <Input
+              type="number"
+              min={1}
+              max={1440}
+              className="w-24"
+              value={bfLock}
+              onChange={(e) => setBfLock(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -441,6 +507,7 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
   const resetPassword = useResetPassword();
+  const toggleActive = useToggleActive();
 
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -508,6 +575,18 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
     [resetPwd, resetPassword, onToast],
   );
 
+  const handleToggleActive = useCallback(
+    async (u: UserAdminSummary) => {
+      try {
+        await toggleActive.mutateAsync(u.id);
+        onToast({ type: 'success', text: u.is_active ? '用户已停用' : '用户已启用' });
+      } catch {
+        onToast({ type: 'error', text: '操作失败' });
+      }
+    },
+    [toggleActive, onToast],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -529,14 +608,22 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
       {users.data?.map((u) => (
         <Card key={u.id}>
           <CardContent className="flex items-center gap-4 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+            <div
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium',
+                u.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+              )}
+            >
               {(u.display_name || u.username)[0]}
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-foreground">
                 {u.display_name || u.username}
               </p>
-              <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                @{u.username}
+                {!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}
+              </p>
             </div>
 
             {editingId === u.id ? (
@@ -580,6 +667,15 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
                 >
                   <Key className="mr-1 h-3 w-3" />
                   重置密码
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={cn('h-7 text-xs', u.is_active ? 'text-muted-foreground' : 'text-primary')}
+                  onClick={() => handleToggleActive(u)}
+                >
+                  {u.is_active ? <Ban className="mr-1 h-3 w-3" /> : <CheckCircle className="mr-1 h-3 w-3" />}
+                  {u.is_active ? '停用' : '启用'}
                 </Button>
                 <Button
                   size="sm"

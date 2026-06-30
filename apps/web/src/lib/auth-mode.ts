@@ -12,4 +12,6 @@ export const LOCAL_AUTH_USER: AuthUser = {
   id: 1,
   username: 'local',
   display_name: '未登录',
+  is_active: true,
+  session_expires_days: 30,
 };

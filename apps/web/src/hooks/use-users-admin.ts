@@ -5,6 +5,8 @@ export interface UserAdminSummary {
   id: number;
   username: string;
   display_name: string | null;
+  is_active: boolean;
+  session_expires_days: number;
   created_at: string;
 }
 
@@ -19,7 +21,7 @@ export function useUserList() {
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { username: string; password: string; display_name?: string }) =>
+    mutationFn: (input: { username: string; password: string; display_name?: string; session_expires_days?: number }) =>
       api.post<UserAdminSummary>('/users', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -30,8 +32,19 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; display_name?: string | null }) =>
+    mutationFn: ({ id, ...data }: { id: number; display_name?: string | null; is_active?: boolean; session_expires_days?: number }) =>
       api.patch<UserAdminSummary>(`/users/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+export function useToggleActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.post<UserAdminSummary>(`/users/${id}/toggle-active`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
