@@ -98,6 +98,24 @@ function TagAtom({ children, size = 'default' }: { children: React.ReactNode; si
 
 type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 'readingPurpose' | 'visibility' | 'sourceUrl' | 'customAttributes' | null;
 
+type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
+
+const TAB_LABELS: { id: DetailTab; label: string }[] = [
+  { id: 'archive', label: '档案' },
+  { id: 'traces', label: '留痕' },
+  { id: 'topics', label: '主题' },
+  { id: 'ai', label: 'AI' },
+];
+
+function extractDomain(url: string) {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
@@ -125,6 +143,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
   const [fetchCoverChecked, setFetchCoverChecked] = useState(false);
   const [showCoverPanel, setShowCoverPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('archive');
+  const [editMode, setEditMode] = useState(false);
   const categories = personalCategories;
   const tags = tagsQuery;
 
@@ -355,10 +375,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   if (!open) return null;
 
   const InlineEditText = ({ field, label, value, multiline = false }: { field: EditableField; label: string; value: string; multiline?: boolean }) => {
-    const isEditing = editingField === field;
+    const isEditing = editMode && editingField === field;
     if (isEditing) {
       return (
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <span className="text-xs text-muted-foreground">{label}</span>
           {multiline ? (
             <textarea
@@ -384,7 +404,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 if (e.key === 'Escape') cancelEdit();
                 if (e.key === 'Enter') saveField(field, editValue);
               }}
-              className="h-7 w-full rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
+              className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
             />
           )}
         </div>
@@ -393,29 +413,33 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     return (
       <div className="flex min-w-0 justify-between gap-2">
         <span className="shrink-0 text-muted-foreground">{label}</span>
-        <button
-          type="button"
-          onClick={() => startEdit(field, value)}
-          className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
-        >
-          {value || '—'}
-        </button>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit(field, value)}
+            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {value || '—'}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{value || '—'}</span>
+        )}
       </div>
     );
   };
 
   const InlineEditSelect = ({ field, label, value, options }: { field: EditableField; label: string; value: string; options: { value: string; label: string }[] }) => {
-    const isEditing = editingField === field;
+    const isEditing = editMode && editingField === field;
     if (isEditing) {
       return (
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <span className="text-xs text-muted-foreground">{label}</span>
           <select
             autoFocus
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={() => saveField(field, editValue)}
-            className="h-7 w-full rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
+            className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
           >
             {options.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -428,19 +452,23 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     return (
       <div className="flex min-w-0 justify-between gap-2">
         <span className="shrink-0 text-muted-foreground">{label}</span>
-        <button
-          type="button"
-          onClick={() => startEdit(field, value)}
-          className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
-        >
-          {displayLabel || '—'}
-        </button>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit(field, value)}
+            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {displayLabel || '—'}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{displayLabel || '—'}</span>
+        )}
       </div>
     );
   };
 
   const InlineRating = () => {
-    const isEditing = editingField === 'rating';
+    const isEditing = editMode && editingField === 'rating';
     const currentRating = b?.rating ?? null;
     const displayRating = isEditing ? (editValue ? Number(editValue) : null) : currentRating;
     if (isEditing) {
@@ -469,20 +497,33 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     return (
       <div className="flex justify-between gap-2">
         <span className="text-muted-foreground">评分</span>
-        <button
-          type="button"
-          onClick={() => startEdit('rating', currentRating ? String(currentRating) : '')}
-          className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors"
-        >
-          {currentRating != null ? (
-            <>
-              <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
-              {currentRating}
-            </>
-          ) : (
-            '—'
-          )}
-        </button>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit('rating', currentRating ? String(currentRating) : '')}
+            className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {currentRating != null ? (
+              <>
+                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
+                {currentRating}
+              </>
+            ) : (
+              '—'
+            )}
+          </button>
+        ) : (
+          <span className="flex items-center gap-1 font-medium text-foreground">
+            {currentRating != null ? (
+              <>
+                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
+                {currentRating}
+              </>
+            ) : (
+              '—'
+            )}
+          </span>
+        )}
       </div>
     );
   };
@@ -501,22 +542,20 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
         </button>
         <span className="font-display text-[15px] font-medium text-foreground">书籍详情</span>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleFavorite}
-            className={cn(
-              'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium shadow-sm transition-all hover:-translate-y-px',
-              b?.favorited_at
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-card text-foreground'
-            )}
-            title={b?.favorited_at ? '取消收藏' : '加入收藏'}
-          >
-            <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
-            {b?.favorited_at ? '已收藏' : '收藏'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleFavorite}
+          className={cn(
+            'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium shadow-sm transition-all hover:-translate-y-px',
+            b?.favorited_at
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-border bg-card text-foreground'
+          )}
+          title={b?.favorited_at ? '取消收藏' : '加入收藏'}
+        >
+          <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
+          {b?.favorited_at ? '已收藏' : '收藏'}
+        </button>
       </div>
 
       {/* Content */}
@@ -534,7 +573,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         {b && (
           <div className="flex h-full">
             {/* Left Column */}
-            <div className="w-[300px] shrink-0 overflow-y-auto border-r border-border bg-muted/30 p-6">
+            <div className="relative w-[300px] shrink-0 border-r border-border bg-muted/30">
+              <div className="h-full overflow-y-auto px-6 py-6 pr-9">
               {/* Toast */}
               {message && (
                 <div
@@ -638,11 +678,17 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </button>
                   <button
                     type="button"
-                    onClick={() => startEdit('title', b.title)}
-                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
+                    onClick={() => {
+                      if (editMode) cancelEdit();
+                      setEditMode(!editMode);
+                    }}
+                    className={cn(
+                      'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px',
+                      editMode ? 'border-primary bg-primary/10 text-primary' : 'border-border',
+                    )}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                    编辑信息
+                    {editMode ? '完成编辑' : '编辑信息'}
                   </button>
                 </div>
               </div>
@@ -756,19 +802,57 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <div className="py-2 text-[12px] text-muted-foreground/60">暂无文件</div>
                 )}
               </div>
+              </div>
+
+              {/* Bookmark Tabs: 贴左栏右边缘,不随内容滚动 */}
+              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+                {TAB_LABELS.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        if (editMode) {
+                          cancelEdit();
+                          setEditMode(false);
+                        }
+                      }}
+                      className={cn(
+                        'flex items-center justify-center rounded-l-lg border-y border-l py-3 text-[12px] font-semibold transition-all [writing-mode:vertical-rl]',
+                        'w-[28px]',
+                        active
+                          ? 'mr-[6px] border-primary bg-primary/15 text-primary shadow-sm'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Right Column */}
             <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-8">
+              {activeTab === 'archive' && (
+              <>
               {/* Header */}
               <div className="mb-6">
-                <button
-                  type="button"
-                  onClick={() => startEdit('title', b.title)}
-                  className="mb-1 block w-full text-left font-display text-[28px] font-semibold leading-tight text-foreground hover:text-primary transition-colors"
-                >
-                  {b.title}
-                </button>
+                {editMode ? (
+                  <button
+                    type="button"
+                    onClick={() => startEdit('title', b.title)}
+                    className="mb-1 block w-full text-left font-display text-[28px] font-semibold leading-tight text-foreground hover:text-primary transition-colors"
+                  >
+                    {b.title}
+                  </button>
+                ) : (
+                  <h1 className="mb-1 block w-full font-display text-[28px] font-semibold leading-tight text-foreground">
+                    {b.title}
+                  </h1>
+                )}
                 {b.subtitle && <p className="mb-3 text-[15px] text-muted-foreground italic">{b.subtitle}</p>}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted-foreground">
                   {b.author && <span className="font-medium text-foreground">{b.author}</span>}
@@ -783,14 +867,21 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {/* Category Badge */}
                 {b.category_name && (
                   <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => startEdit('category', b.category_id ? String(b.category_id) : '')}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm transition-all hover:-translate-y-px border-l-[3px] border-l-primary"
-                    >
-                      <FolderOpen className="h-4 w-4 text-primary" />
-                      {b.category_name}
-                    </button>
+                    {editMode ? (
+                      <button
+                        type="button"
+                        onClick={() => startEdit('category', b.category_id ? String(b.category_id) : '')}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm transition-all hover:-translate-y-px border-l-[3px] border-l-primary"
+                      >
+                        <FolderOpen className="h-4 w-4 text-primary" />
+                        {b.category_name}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary">
+                        <FolderOpen className="h-4 w-4 text-primary" />
+                        {b.category_name}
+                      </span>
+                    )}
                   </div>
                 )}
 
