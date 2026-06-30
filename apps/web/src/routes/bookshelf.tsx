@@ -347,7 +347,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
-    <article className="group flex w-[200px] flex-col rounded-lg bg-card p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article className="group flex w-full flex-col rounded-lg bg-card p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
         className="relative mx-auto mb-2.5 block h-[190px] w-[130px] cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
@@ -1418,7 +1418,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'A' && (
-          <section className="grid grid-cols-1 gap-y-3 gap-x-0 xl:grid-cols-2 2xl:grid-cols-3">
+          <section className="grid grid-cols-1 gap-y-3 gap-x-2 xl:grid-cols-2 2xl:grid-cols-3">
             {books.map((book, index) => (
               <BookCardA
                 key={book.id}
@@ -1434,7 +1434,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'B' && (
-          <section className="grid grid-cols-2 gap-y-3 gap-x-0 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-y-3 gap-x-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4">
             {books.map((book, index) => (
               <BookCardB
                 key={book.id}
@@ -1450,7 +1450,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         )}
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'C' && (
-          <section className="grid grid-cols-3 gap-y-3 gap-x-0 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+          <section className="grid grid-cols-3 gap-y-3 gap-x-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
             {books.map((book, index) => (
               <BookCardC
                 key={book.id}
