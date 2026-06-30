@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书籍详情页 - 设计方案展示</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Poppins:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       全局基础
+       ============================================================ */
+    :root {
+      /* 品牌色板 */
+      --brand-50: #fbf2ed;
+      --brand-100: #f4e0d5;
+      --brand-200: #ebc6b6;
+      --brand-300: #e0a892;
+      --brand-400: #d6866a;
+      --brand-500: #c96442;
+      --brand-600: #b0562f;
+      --brand-700: #934828;
+      --brand-800: #753a22;
+      --brand-900: #582e1d;
+      --text-50: #f6f5f0;
+      --text-100: #ece9de;
+      --text-200: #dad9d4;
+      --text-300: #c2c0b6;
+      --text-400: #9b988c;
+      --text-500: #6e6d68;
+      --text-600: #535146;
+      --text-700: #46443b;
+      --text-800: #3d3929;
+      --text-900: #28261b;
+      --bg-50: #ffffff;
+      --bg-100: #faf9f5;
+      --bg-200: #f5f4ef;
+      --bg-300: #ede9de;
+      --bg-400: #e3e0d4;
+      --bg-500: #dad9d4;
+      --bg-600: #cdcabf;
+      --bg-700: #b4b2a7;
+      --bg-800: #8a887e;
+      --bg-900: #535146;
+      --success-50: #f0f3ea;
+      --success-100: #e7ecdd;
+      --success-500: #788c5d;
+      --success-600: #647649;
+      --error-50: #fcecea;
+      --error-500: #d64545;
+      --border-300: #dad9d4;
+      --border-400: #cdcabf;
+
+      --font-display: 'Newsreader', 'Noto Serif SC', Georgia, ui-serif, serif;
+      --font-sans: 'Poppins', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+      --font-serif: 'Lora', 'Noto Serif SC', Georgia, ui-serif, serif;
+
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-full: 9999px;
+
+      --shadow-xs: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      background: #f0ede6;
+      color: var(--text-800);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       导航与页面结构
+       ============================================================ */
+    .page-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-300);
+      padding: 0 32px;
+    }
+    .page-nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 56px;
+    }
+    .page-nav-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-800);
+      margin-right: 24px;
+    }
+    .page-nav-link {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-500);
+      text-decoration: none;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+    }
+    .page-nav-link:hover,
+    .page-nav-link.active {
+      color: var(--brand-500);
+      background: var(--brand-50);
+    }
+
+    .section-anchor {
+      display: block;
+      position: relative;
+      top: -72px;
+      visibility: hidden;
+    }
+
+    /* ============================================================
+       展示容器
+       ============================================================ */
+    .showcase-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    .section-header {
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--brand-200);
+    }
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-800);
+      margin-bottom: 6px;
+    }
+    .section-header p {
+      font-size: 14px;
+      color: var(--text-500);
+    }
+
+    .scheme-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      background: var(--brand-500);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.02em;
+    }
+    .scheme-label .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      background: rgba(255,255,255,0.25);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+    }
+
+    .scheme-container {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 48px;
+      overflow: hidden;
+    }
+    .scheme-container .scheme-header {
+      padding: 20px 28px;
+      background: var(--bg-100);
+      border-bottom: 1px solid var(--border-300);
+    }
+    .scheme-container .scheme-header h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-800);
+      margin-bottom: 4px;
+    }
+    .scheme-container .scheme-header p {
+      font-size: 13px;
+      color: var(--text-500);
+    }
+    .scheme-body {
+      padding: 28px;
+    }
+
+    /* ============================================================
+       方案一：经典双栏（左固定右滚动）
+       ============================================================ */
+    .layout-classic {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 32px;
+      min-height: 600px;
+    }
+    .layout-classic .left-col {
+      position: sticky;
+      top: 80px;
+      align-self: start;
+    }
+    .layout-classic .right-col {
+      min-width: 0;
+    }
+
+    /* 封面 */
+    .book-cover-lg {
+      width: 100%;
+      aspect-ratio: 2/3;
+      border-radius: var(--radius-md);
+      background: linear-gradient(145deg, var(--brand-200) 0%, var(--brand-400) 50%, var(--brand-600) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .book-cover-lg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.15) 100%);
+    }
+    .book-cover-lg .cover-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 600;
+      color: white;
+      text-align: center;
+      padding: 24px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 1;
+    }
+    .book-cover-lg .cover-author {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+    }
+
+    /* 左侧操作区 */
+    .left-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 20px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--brand-500);
+      color: white;
+      box-shadow: 0 2px 8px rgba(201,100,66,0.25);
+    }
+    .btn-primary:hover {
+      background: var(--brand-600);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(201,100,66,0.3);
+    }
+    .btn-outline {
+      background: white;
+      color: var(--text-700);
+      border: 1px solid var(--border-300);
+    }
+    .btn-outline:hover {
+      border-color: var(--brand-300);
+      color: var(--brand-500);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-500);
+      border: 1px solid transparent;
+    }
+    .btn-ghost:hover {
+      background: var(--bg-200);
+      color: var(--text-700);
+    }
+
+    /* 右侧内容 */
+    .book-header-classic {
+      margin-bottom: 28px;
+    }
+    .book-header-classic h1 {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--text-800);
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .book-header-classic .subtitle {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: var(--text-500);
+      font-style: italic;
+      margin-bottom: 12px;
+    }
+    .book-header-classic .meta-line {
+      font-size: 14px;
+      color: var(--text-500);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meta-line .dot-sep {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border-400);
+    }
+
+    /* 标签行 */
+    .tag-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .pill-status {
+      background: var(--success-50);
+      color: var(--success-500);
+      border: 1px solid var(--success-100);
+    }
+    .pill-category {
+      background: var(--bg-200);
+      color: var(--text-600);
+      border: 1px solid var(--border-300);
+    }
+    .pill-tag {
+      background: var(--brand-50);
+      color: var(--brand-600);
+      border: 1px solid var(--brand-100);
+    }
+    .pill-rating {
+      background: #fff8e7;
+      color: #c78a1a;
+      border: 1px solid #f5e6c4;
+    }
+
+    /* 内容卡片 */
+    .content-card {
+      background: var(--bg-100);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-300);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .content-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 20px 12px;
+    }
+    .content-card-header .stripe {
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      background: var(--brand-500);
+    }
+    .content-card-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-800);
+    }
+    .content-card-body {
+      padding: 0 20px 20px;
+    }
+
+    /* KV 网格 */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px 24px;
+    }
+    .kv-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .kv-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-400);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .kv-value {
+      font-size: 14px;
+      color: var(--text-800);
+      font-weight: 500;
+    }
+    .kv-value.muted {
+      color: var(--text-500);
+      font-weight: 400;
+    }
+
+    /* 简介 */
+    .description-text {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text-600);
+    }
+
+    /* 文件列表 */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-300);
+      background: white;
+      transition: all 0.15s ease;
+    }
+    .file-item:hover {
+      border-color: var(--brand-300);
+      box-shadow: var(--shadow-sm);
+    }
+    .file-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--brand-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-500);
+      flex-shrink: 0;
+    }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-800);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-meta {
+      font-size: 11px;
+      color: var(--text-400);
+      margin-top: 2px;
+    }
+    .file-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--success-500);
+      background: var(--success-50);
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .file-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .file-item:hover .file-actions { opacity: 1; }
+    .file-actions button {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-500);
+      transition: all 0.12s ease;
+    }
+    .file-actions button:hover {
+      background: var(--bg-200);
+      color: var(--text-800);
+    }
+
+    /* 占位符 */
+    .placeholder-box {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px;
+      background: white;
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--border-400);
+    }
+    .placeholder-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: var(--brand-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-500);
+      flex-shrink: 0;
+    }
+    .placeholder-text {
+      font-size: 14px;
+      color: var(--text-500);
+    }
+    .placeholder-text .sub {
+      font-size: 12px;
+      color: var(--text-400);
+      margin-top: 3px;
+    }
+
+    /* ============================================================
+       方案二：沉浸式单栏（封面全宽 + 内容流）
+       ============================================================ */
+    .layout-immersive {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .immersive-hero {
+      position: relative;
+      margin: -28px -28px 28px;
+      padding: 48px 28px 32px;
+      background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-500) 50%, var(--brand-400) 100%);
+      color: white;
+      overflow: hidden;
+    }
+    .immersive-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .immersive-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+    }
+    .immersive-hero-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+    .immersive-cover {
+      width: 140px;
+      height: 200px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+    .immersive-cover .cover-letter {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .immersive-info { flex: 1; min-width: 0; }
+    .immersive-info h1 {
+      font-family: var(--font-display);
+      font-size: 30px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .immersive-info .author {
+      font-size: 15px;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+    .immersive-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .immersive-meta-bar .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 12px;
+      font-weight: 500;
+      backdrop-filter: blur(4px);
+    }
+    .immersive-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .immersive-actions .btn {
+      height: 38px;
+      font-size: 13px;
+    }
+    .immersive-actions .btn-light {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(4px);
+    }
+    .immersive-actions .btn-light:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    .immersive-actions .btn-white {
+      background: white;
+      color: var(--brand-600);
+    }
+    .immersive-actions .btn-white:hover {
+      background: var(--brand-50);
+    }
+
+    /* 标签页 */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border-300);
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      position: relative;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-500);
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--text-700); }
+    .tab-btn.active {
+      color: var(--brand-500);
+      font-weight: 600;
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: var(--brand-500);
+      border-radius: 1px;
+    }
+
+    /* 高亮卡片 */
+    .highlight-card {
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--brand-500);
+      background: var(--brand-50);
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      transition: box-shadow 0.15s ease;
+    }
+    .highlight-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+    .highlight-text {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-800);
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+    .highlight-chapter {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-400);
+      margin-bottom: 8px;
+    }
+    .highlight-note {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-600);
+      padding-top: 10px;
+      border-top: 1px solid var(--brand-100);
+    }
+
+    /* 笔记卡片 */
+    .note-card {
+      padding: 18px 20px;
+      border-radius: var(--radius-sm);
+      background: white;
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-xs);
+      margin-bottom: 12px;
+      transition: box-shadow 0.15s ease;
+    }
+    .note-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+    .note-date {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--text-400);
+      margin-bottom: 6px;
+    }
+    .note-text {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-800);
+      margin-bottom: 8px;
+    }
+    .note-chapter {
+      font-size: 11px;
+      color: var(--text-500);
+    }
+
+    /* 时间线 */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding-left: 20px;
+      border-left: 2px solid var(--border-300);
+    }
+    .timeline-item {
+      position: relative;
+      padding: 0 0 20px 20px;
+    }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brand-500);
+      border: 2px solid white;
+    }
+    .timeline-item.current::before {
+      background: var(--brand-500);
+      box-shadow: 0 0 0 3px var(--brand-100);
+    }
+    .timeline-date {
+      font-size: 12px;
+      color: var(--text-400);
+      margin-bottom: 4px;
+    }
+    .timeline-text {
+      font-size: 14px;
+      color: var(--text-800);
+    }
+    .timeline-badge {
+      display: inline-flex;
+      padding: 1px 8px;
+      border-radius: var(--radius-full);
+      background: var(--brand-50);
+      color: var(--brand-600);
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+      border: 1px solid var(--brand-200);
+    }
+
+    /* ============================================================
+       方案三：卡片网格（信息模块化）
+       ============================================================ */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 28px;
+    }
+    .layout-grid .grid-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .grid-main {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      align-content: start;
+    }
+
+    .module-card {
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-xs);
+      overflow: hidden;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .module-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+    .module-card.span-2 {
+      grid-column: span 2;
+    }
+    .module-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-300);
+      background: var(--bg-100);
+    }
+    .module-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .module-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .module-icon.brand { background: var(--brand-50); color: var(--brand-500); }
+    .module-icon.success { background: var(--success-50); color: var(--success-500); }
+    .module-icon.muted { background: var(--bg-200); color: var(--text-500); }
+    .module-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-800);
+    }
+    .module-action {
+      font-size: 12px;
+      color: var(--brand-500);
+      cursor: pointer;
+      transition: color 0.12s ease;
+    }
+    .module-action:hover { color: var(--brand-600); }
+    .module-body {
+      padding: 16px 18px;
+    }
+
+    /* 小封面 */
+    .cover-sm {
+      width: 100%;
+      aspect-ratio: 2/3;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(145deg, var(--brand-200), var(--brand-500));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 12px;
+    }
+    .cover-sm .letter {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* 进度环 */
+    .progress-ring {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .progress-ring-svg {
+      transform: rotate(-90deg);
+    }
+    .progress-ring-bg {
+      fill: none;
+      stroke: var(--bg-300);
+      stroke-width: 4;
+    }
+    .progress-ring-fill {
+      fill: none;
+      stroke: var(--brand-500);
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+    .progress-ring-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .progress-ring-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--brand-500);
+      line-height: 1;
+    }
+    .progress-ring-label {
+      font-size: 12px;
+      color: var(--text-500);
+      margin-top: 4px;
+    }
+
+    /* 关联书籍 */
+    .related-book {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-300);
+      background: var(--bg-100);
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .related-book:hover {
+      border-color: var(--brand-300);
+      box-shadow: var(--shadow-sm);
+    }
+    .related-book-cover {
+      width: 40px;
+      height: 56px;
+      border-radius: 4px;
+      background: linear-gradient(145deg, var(--brand-200), var(--brand-400));
+      flex-shrink: 0;
+    }
+    .related-book-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+    .related-book-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-800);
+    }
+    .related-book-author {
+      font-size: 11px;
+      color: var(--text-500);
+    }
+    .related-book-relation {
+      font-size: 10px;
+      color: var(--brand-500);
+      background: var(--brand-50);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      width: fit-content;
+      margin-top: 2px;
+    }
+
+    /* AI 内容 */
+    .ai-content {
+      border-left: 3px solid #9c87f5;
+      background: #f8f7fd;
+      padding: 16px 18px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .ai-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #7c6bc4;
+      margin-bottom: 10px;
+    }
+    .ai-text {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-600);
+    }
+
+    /* ============================================================
+       属性展示方式变体区
+       ============================================================ */
+    .variants-section {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 48px;
+      overflow: hidden;
+    }
+    .variants-header {
+      padding: 24px 28px;
+      background: var(--bg-100);
+      border-bottom: 1px solid var(--border-300);
+    }
+    .variants-header h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-800);
+      margin-bottom: 4px;
+    }
+    .variants-header p {
+      font-size: 13px;
+      color: var(--text-500);
+    }
+    .variants-body {
+      padding: 28px;
+    }
+
+    .variant-group {
+      margin-bottom: 36px;
+    }
+    .variant-group:last-child {
+      margin-bottom: 0;
+    }
+    .variant-group-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-800);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-300);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .variant-group-title .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-500);
+    }
+
+    .variant-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .variant-item {
+      background: var(--bg-100);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-300);
+      padding: 20px;
+      transition: box-shadow 0.15s ease;
+    }
+    .variant-item:hover {
+      box-shadow: var(--shadow-sm);
+    }
+    .variant-item-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-400);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    /* 状态变体 */
+    .status-v1 {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      background: var(--success-50);
+      color: var(--success-500);
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--success-100);
+    }
+    .status-v1 .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success-500);
+    }
+
+    .status-v2 {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      background: white;
+      color: var(--text-700);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-xs);
+    }
+    .status-v2 .indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      background: var(--brand-500);
+      transform: rotate(45deg);
+    }
+
+    .status-v3 {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(201,100,66,0.25);
+    }
+    .status-v3 .icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    /* 评分变体 */
+    .rating-v1 {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .rating-v1 .star {
+      width: 20px;
+      height: 20px;
+      color: #e8b923;
+    }
+    .rating-v1 .star.empty {
+      color: var(--border-400);
+    }
+    .rating-v1 .score {
+      margin-left: 6px;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-800);
+    }
+
+    .rating-v2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .rating-v2 .stars {
+      display: flex;
+      gap: 2px;
+    }
+    .rating-v2 .stars .star {
+      width: 16px;
+      height: 16px;
+      color: var(--brand-500);
+    }
+    .rating-v2 .label {
+      font-size: 13px;
+      color: var(--text-500);
+      padding: 4px 10px;
+      background: var(--bg-200);
+      border-radius: var(--radius-full);
+    }
+
+    .rating-v3 {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rating-v3 .bar {
+      display: flex;
+      gap: 4px;
+    }
+    .rating-v3 .bar-segment {
+      height: 8px;
+      flex: 1;
+      border-radius: var(--radius-full);
+      background: var(--bg-300);
+      transition: background 0.2s ease;
+    }
+    .rating-v3 .bar-segment.filled {
+      background: linear-gradient(90deg, var(--brand-400), var(--brand-500));
+    }
+    .rating-v3 .text {
+      font-size: 12px;
+      color: var(--text-500);
+    }
+
+    /* 标签变体 */
+    .tags-v1 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tags-v1 .tag {
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: var(--brand-50);
+      color: var(--brand-600);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--brand-100);
+    }
+
+    .tags-v2 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tags-v2 .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: white;
+      color: var(--text-700);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border-300);
+      box-shadow: var(--shadow-xs);
+    }
+    .tags-v2 .tag .remove {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-400);
+      transition: all 0.12s ease;
+    }
+    .tags-v2 .tag .remove:hover {
+      background: var(--error-50);
+      color: var(--error-500);
+    }
+
+    .tags-v3 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tags-v3 .tag {
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .tags-v3 .tag:nth-child(1) { background: #e8f4fd; color: #1a6fb5; }
+    .tags-v3 .tag:nth-child(2) { background: #fdf2e8; color: #b57a1a; }
+    .tags-v3 .tag:nth-child(3) { background: #e8fdf0; color: #1a8f4a; }
+    .tags-v3 .tag:nth-child(4) { background: #f0e8fd; color: #6b1ab5; }
+
+    /* 进度变体 */
+    .progress-v1 {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .progress-v1 .bar-bg {
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg-300);
+      overflow: hidden;
+    }
+    .progress-v1 .bar-fill {
+      height: 100%;
+      width: 72%;
+      border-radius: var(--radius-full);
+      background: linear-gradient(90deg, var(--brand-400), var(--brand-500));
+      transition: width 0.3s ease;
+    }
+    .progress-v1 .text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-500);
+    }
+
+    .progress-v2 {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .progress-v2 .ring-wrap {
+      position: relative;
+      width: 60px;
+      height: 60px;
+    }
+    .progress-v2 .ring-value {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--brand-500);
+    }
+
+    .progress-v3 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-300);
+    }
+    .progress-v3 .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      background: var(--brand-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-500);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .progress-v3 .info {
+      flex: 1;
+    }
+    .progress-v3 .info-top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-v3 .info-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-700);
+    }
+    .progress-v3 .info-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--brand-500);
+    }
+    .progress-v3 .bar-bg {
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--bg-300);
+      overflow: hidden;
+    }
+    .progress-v3 .bar-fill {
+      height: 100%;
+      width: 72%;
+      border-radius: var(--radius-full);
+      background: var(--brand-500);
+    }
+
+    /* 文件变体 */
+    .files-v1 .file-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-300);
+      background: white;
+      margin-bottom: 8px;
+    }
+    .files-v1 .file-row:last-child { margin-bottom: 0; }
+    .files-v1 .file-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--brand-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-500);
+      flex-shrink: 0;
+    }
+    .files-v1 .file-info { flex: 1; }
+    .files-v1 .file-name { font-size: 13px; font-weight: 500; }
+    .files-v1 .file-meta { font-size: 11px; color: var(--text-400); margin-top: 2px; }
+    .files-v1 .file-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--success-500);
+      background: var(--success-50);
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+    }
+
+    .files-v2 .file-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .files-v2 .file-card {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-300);
+      background: white;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .files-v2 .file-card:hover {
+      border-color: var(--brand-300);
+      box-shadow: var(--shadow-sm);
+    }
+    .files-v2 .file-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      background: var(--brand-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-500);
+      margin: 0 auto 10px;
+      font-size: 20px;
+    }
+    .files-v2 .file-card-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-800);
+      margin-bottom: 4px;
+    }
+    .files-v2 .file-card-meta {
+      font-size: 11px;
+      color: var(--text-400);
+    }
+
+    .files-v3 .file-compact {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-300);
+    }
+    .files-v3 .file-compact:last-child {
+      border-bottom: none;
+    }
+    .files-v3 .file-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-500);
+      flex-shrink: 0;
+    }
+    .files-v3 .file-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .files-v3 .file-size { font-size: 11px; color: var(--text-400); }
+    .files-v3 .file-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .files-v3 .file-actions a {
+      font-size: 11px;
+      color: var(--brand-500);
+      text-decoration: none;
+    }
+    .files-v3 .file-actions a:hover { text-decoration: underline; }
+
+    /* 属性行变体 */
+    .attr-v1 .attr-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-300);
+    }
+    .attr-v1 .attr-row:last-child { border-bottom: none; }
+    .attr-v1 .attr-label { font-size: 13px; color: var(--text-500); }
+    .attr-v1 .attr-value { font-size: 13px; font-weight: 500; color: var(--text-800); }
+
+    .attr-v2 .attr-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 12px;
+      background: white;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--border-300);
+    }
+    .attr-v2 .attr-label { font-size: 11px; color: var(--text-400); text-transform: uppercase; letter-spacing: 0.04em; }
+    .attr-v2 .attr-value { font-size: 14px; font-weight: 500; color: var(--text-800); }
+
+    .attr-v3 .attr-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+    }
+    .attr-v3 .attr-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-500);
+      flex-shrink: 0;
+    }
+    .attr-v3 .attr-content { flex: 1; }
+    .attr-v3 .attr-label { font-size: 11px; color: var(--text-400); }
+    .attr-v3 .attr-value { font-size: 13px; font-weight: 500; color: var(--text-800); }
+
+    /* ============================================================
+       响应式
+       ============================================================ */
+    @media (max-width: 1024px) {
+      .layout-classic {
+        grid-template-columns: 1fr;
+      }
+      .layout-classic .left-col {
+        position: static;
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .layout-grid {
+        grid-template-columns: 1fr;
+      }
+      .grid-main {
+        grid-template-columns: 1fr;
+      }
+      .module-card.span-2 {
+        grid-column: span 1;
+      }
+      .variant-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .showcase-wrapper { padding: 16px; }
+      .scheme-body { padding: 16px; }
+      .layout-classic .left-col {
+        grid-template-columns: 1fr;
+      }
+      .immersive-hero-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .kv-grid {
+        grid-template-columns: 1fr;
+      }
+      .page-nav { padding: 0 16px; }
+      .page-nav-link { padding: 6px 10px; font-size: 12px; }
+    }
+
+    /* 隐藏/显示控制 */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- 页面导航 -->
+<nav class="page-nav">
+  <div class="page-nav-inner">
+    <span class="page-nav-title">书籍详情页设计</span>
+    <button class="page-nav-link active" onclick="scrollToSection('layouts')">整体布局方案</button>
+    <button class="page-nav-link" onclick="scrollToSection('attributes')">属性展示变体</button>
+  </div>
+</nav>
+
+<div class="showcase-wrapper">
+
+  <!-- ============================================================
+       第一部分：整体布局方案
+       ============================================================ -->
+  <div class="section-anchor" id="layouts"></div>
+  <div class="section-header">
+    <h2>整体布局方案</h2>
+    <p>三种不同的页面架构思路，适应不同的使用场景和审美偏好</p>
+  </div>
+
+  <!-- 方案一：经典双栏 -->
+  <div class="scheme-label"><span class="num">1</span> 经典双栏布局</div>
+  <div class="scheme-container">
+    <div class="scheme-header">
+      <h3>左固定 + 右滚动</h3>
+      <p>左侧封面与操作固定，右侧信息滚动。适合信息密度高、需要频繁操作的场景。</p>
+    </div>
+    <div class="scheme-body">
+      <div class="layout-classic">
+        <div class="left-col">
+          <div class="book-cover-lg">
+            <span class="cover-title">悉达多</span>
+            <span class="cover-author">赫尔曼·黑塞</span>
+          </div>
+          <div class="left-actions">
+            <button class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              开始阅读
+            </button>
+            <button class="btn btn-outline">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              编辑信息
+            </button>
+            <button class="btn btn-ghost">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              收藏
+            </button>
+          </div>
+        </div>
+        <div class="right-col">
+          <div class="book-header-classic">
+            <h1>悉达多</h1>
+            <p class="subtitle">一首印度的诗</p>
+            <div class="meta-line">
+              <span>赫尔曼·黑塞</span>
+              <span class="dot-sep"></span>
+              <span>姜乙 译</span>
+              <span class="dot-sep"></span>
+              <span>天津人民出版社</span>
+              <span class="dot-sep"></span>
+              <span>2017年</span>
+            </div>
+            <div class="tag-bar">
+              <span class="pill pill-status">
+                <span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--success-500);display:inline-block;"></span>
+                已读完
+              </span>
+              <span class="pill pill-category">文学</span>
+              <span class="pill pill-tag">哲学</span>
+              <span class="pill pill-tag">经典</span>
+              <span class="pill pill-rating">★★★★★ 5.0</span>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <div class="content-card-header">
+              <div class="stripe"></div>
+              <h3>书籍档案</h3>
+            </div>
+            <div class="content-card-body">
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">原作名</span>
+                  <span class="kv-value">Siddhartha</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">ISBN</span>
+                  <span class="kv-value">9787201112695</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">页数</span>
+                  <span class="kv-value">152 页</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">语言</span>
+                  <span class="kv-value">中文</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">分类</span>
+                  <span class="kv-value">外国文学</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">阅读目的</span>
+                  <span class="kv-value">精读</span>
+                </div>
+              </div>
+              <div style="margin-top:20px;">
+                <span class="kv-label">简介</span>
+                <p class="description-text" style="margin-top:8px;">
+                  《悉达多》并非是佛陀的故事，它讲述了一个人的一生，千万寻常人亦会经历的一生。意气风发的少年郎，常认为自己是被命运选中的人。抛下过去，随了跌跌撞撞的步伐，找寻心中的声音，追逐名利，经历友情，品尝爱情。不同的是，悉达多一生追求的是生命的圆融统一，看似宏大，确是每个人无法回避的问题。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <div class="content-card-header">
+              <div class="stripe" style="background:var(--success-500);"></div>
+              <h3>阅读留痕</h3>
+            </div>
+            <div class="content-card-body">
+              <div class="placeholder-box">
+                <div class="placeholder-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="placeholder-text">
+                  笔记与高亮功能将在 M2 上线
+                  <div class="sub">阅读过程中的标注、摘录和思考将集中展示于此</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <div class="content-card-header">
+              <div class="stripe" style="background:var(--brand-300);"></div>
+              <h3>主题关联</h3>
+            </div>
+            <div class="content-card-body">
+              <div class="placeholder-box">
+                <div class="placeholder-icon" style="background:var(--success-50);color:var(--success-500);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="placeholder-text">
+                  阅读话题功能将在 M4 上线
+                  <div class="sub">围绕特定主题跨书籍的探讨与关联将展示于此</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <div class="content-card-header">
+              <div class="stripe" style="background:var(--text-500);"></div>
+              <h3>文件管理</h3>
+            </div>
+            <div class="content-card-body">
+              <div class="file-list">
+                <div class="file-item">
+                  <div class="file-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">悉达多.epub</div>
+                    <div class="file-meta">EPUB · 2.4 MB · 2024-03-15 上传</div>
+                  </div>
+                  <span class="file-badge">主阅读</span>
+                  <div class="file-actions">
+                    <button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
+                    <button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案二：沉浸式单栏 -->
+  <div class="scheme-label"><span class="num">2</span> 沉浸式单栏布局</div>
+  <div class="scheme-container">
+    <div class="scheme-header">
+      <h3>全宽封面 + 标签页内容</h3>
+      <p>顶部沉浸式封面区，下方通过标签页组织不同内容。视觉冲击力强，适合展示型场景。</p>
+    </div>
+    <div class="scheme-body" style="padding:0;">
+      <div class="layout-immersive">
+        <div class="immersive-hero">
+          <div class="immersive-hero-content">
+            <div class="immersive-cover">
+              <span class="cover-letter">悉</span>
+            </div>
+            <div class="immersive-info">
+              <h1>悉达多</h1>
+              <p class="author">赫尔曼·黑塞 著 / 姜乙 译</p>
+              <div class="immersive-meta-bar">
+                <span class="meta-chip">已读完</span>
+                <span class="meta-chip">文学</span>
+                <span class="meta-chip">★★★★★</span>
+                <span class="meta-chip">精读</span>
+              </div>
+              <div class="immersive-actions">
+                <button class="btn btn-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  阅读
+                </button>
+                <button class="btn btn-light">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  编辑
+                </button>
+                <button class="btn btn-light">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                  收藏
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 0 28px 28px;">
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab(this, 'tab-traces')">阅读痕迹</button>
+            <button class="tab-btn" onclick="switchTab(this, 'tab-files')">文件管理</button>
+            <button class="tab-btn" onclick="switchTab(this, 'tab-info')">书籍信息</button>
+            <button class="tab-btn" onclick="switchTab(this, 'tab-relations')">关联与历史</button>
+          </div>
+
+          <div id="tab-traces" class="tab-content active">
+            <!-- 进度 -->
+            <div style="margin-bottom:24px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:14px;font-weight:600;">阅读进度</span>
+                <span style="font-size:13px;color:var(--text-500);">72%</span>
+              </div>
+              <div style="height:8px;border-radius:var(--radius-full);background:var(--bg-300);overflow:hidden;">
+                <div style="height:100%;width:72%;border-radius:var(--radius-full);background:linear-gradient(90deg,var(--brand-400),var(--brand-500));"></div>
+              </div>
+              <p style="font-size:12px;color:var(--text-400);margin-top:8px;">第 87/345 页 · 预计剩余 3 小时</p>
+            </div>
+
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:14px;">高亮与笔记 <span style="font-size:12px;color:var(--text-400);font-weight:400;">(23)</span></h3>
+
+            <div class="highlight-card">
+              <p class="highlight-chapter">第 1 章</p>
+              <p class="highlight-text">"《悉达多》并非是佛陀的故事，它讲述了一个人的一生，千万寻常人亦会经历的一生。"</p>
+              <p class="highlight-note">开篇即点明主题——这不是宗教故事，而是关于每个人的生命旅程。黑塞将东方智慧融入西方叙事，创造出独特的精神探索小说。</p>
+            </div>
+
+            <div class="highlight-card">
+              <p class="highlight-chapter">第 3 章</p>
+              <p class="highlight-text">"知识可以传授，但智慧不能。"</p>
+              <p class="highlight-note">这句话是全书的核心理念。悉达多从沙门、富商到船夫，经历了知识积累到智慧觉醒的过程。</p>
+            </div>
+
+            <h3 style="font-size:15px;font-weight:600;margin:24px 0 14px;">独立笔记 <span style="font-size:12px;color:var(--text-400);font-weight:400;">(5)</span></h3>
+
+            <div class="note-card">
+              <p class="note-date">2024-03-20</p>
+              <p class="note-text">悉达多的三段人生：禁欲主义（沙门）→ 纵欲主义（富商）→ 超脱（船夫）。这三段经历对应着人对世界的三种态度，最终达到的是对"当下"的领悟。</p>
+              <p class="note-chapter">关联：第 5–8 章</p>
+            </div>
+
+            <div class="note-card">
+              <p class="note-date">2024-03-18</p>
+              <p class="note-text">河流的意象反复出现——"河流同时存在于源头和入海口"。时间是幻觉，过去、现在、未来同时存在。这与爱因斯坦的相对论有奇妙的呼应。</p>
+              <p class="note-chapter">关联：第 9 章</p>
+            </div>
+          </div>
+
+          <div id="tab-files" class="tab-content">
+            <div class="file-list">
+              <div class="file-item">
+                <div class="file-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="file-info">
+                  <div class="file-name">悉达多.epub</div>
+                  <div class="file-meta">EPUB · 2.4 MB · 2024-03-15 上传</div>
+                </div>
+                <span class="file-badge">主阅读</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-info" class="tab-content">
+            <div class="kv-grid" style="margin-bottom:20px;">
+              <div class="kv-item">
+                <span class="kv-label">原作名</span>
+                <span class="kv-value">Siddhartha</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-label">ISBN</span>
+                <span class="kv-value">9787201112695</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-label">页数</span>
+                <span class="kv-value">152 页</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-label">出版社</span>
+                <span class="kv-value">天津人民出版社</span>
+              </div>
+            </div>
+            <p class="description-text">
+              《悉达多》并非是佛陀的故事，它讲述了一个人的一生，千万寻常人亦会经历的一生。意气风发的少年郎，常认为自己是被命运选中的人。抛下过去，随了跌跌撞撞的步伐，找寻心中的声音，追逐名利，经历友情，品尝爱情。不同的是，悉达多一生追求的是生命的圆融统一，看似宏大，确是每个人无法回避的问题。
+            </p>
+          </div>
+
+          <div id="tab-relations" class="tab-content">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:14px;">状态历史</h3>
+            <div class="timeline">
+              <div class="timeline-item current">
+                <p class="timeline-date">2024-03-28</p>
+                <p class="timeline-text">已读完 <span class="timeline-badge">当前</span></p>
+              </div>
+              <div class="timeline-item">
+                <p class="timeline-date">2024-03-15</p>
+                <p class="timeline-text">计划读 → 在读</p>
+              </div>
+              <div class="timeline-item">
+                <p class="timeline-date">2024-03-10</p>
+                <p class="timeline-text">收录 → 计划读</p>
+              </div>
+            </div>
+
+            <h3 style="font-size:15px;font-weight:600;margin:24px 0 14px;">关联书籍</h3>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="related-book">
+                <div class="related-book-cover"></div>
+                <div class="related-book-info">
+                  <span class="related-book-title">荒原狼</span>
+                  <span class="related-book-author">赫尔曼·黑塞</span>
+                  <span class="related-book-relation">同一作者</span>
+                </div>
+              </div>
+              <div class="related-book">
+                <div class="related-book-cover" style="background:linear-gradient(145deg,var(--bg-400),var(--text-400));"></div>
+                <div class="related-book-info">
+                  <span class="related-book-title">玻璃球游戏</span>
+                  <span class="related-book-author">赫尔曼·黑塞</span>
+                  <span class="related-book-relation">同一作者</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案三：卡片网格 -->
+  <div class="scheme-label"><span class="num">3</span> 卡片网格布局</div>
+  <div class="scheme-container">
+    <div class="scheme-header">
+      <h3>模块化信息卡片</h3>
+      <p>每个信息区块独立成卡，自由组合。适合信息结构复杂、需要灵活扩展的场景。</p>
+    </div>
+    <div class="scheme-body">
+      <div class="layout-grid">
+        <div class="grid-sidebar">
+          <div class="cover-sm">
+            <span class="letter">悉</span>
+          </div>
+          <div style="text-align:center;">
+            <h2 style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:4px;">悉达多</h2>
+            <p style="font-size:13px;color:var(--text-500);">赫尔曼·黑塞</p>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button class="btn btn-primary" style="flex:1;height:36px;font-size:13px;">阅读</button>
+            <button class="btn btn-outline" style="width:36px;height:36px;padding:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </button>
+          </div>
+          <div class="progress-ring" style="justify-content:center;margin-top:8px;">
+            <svg class="progress-ring-svg" width="56" height="56" viewBox="0 0 56 56">
+              <circle class="progress-ring-bg" cx="28" cy="28" r="24"/>
+              <circle class="progress-ring-fill" cx="28" cy="28" r="24" stroke-dasharray="150.8" stroke-dashoffset="42.2"/>
+            </svg>
+            <div class="progress-ring-text">
+              <span class="progress-ring-value">72%</span>
+              <span class="progress-ring-label">已读</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-main">
+          <!-- 基本信息 -->
+          <div class="module-card span-2">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon brand">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                </div>
+                <span class="module-title">书籍档案</span>
+              </div>
+              <span class="module-action">编辑</span>
+            </div>
+            <div class="module-body">
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">原作名</span>
+                  <span class="kv-value">Siddhartha</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">ISBN</span>
+                  <span class="kv-value">9787201112695</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">页数</span>
+                  <span class="kv-value">152 页</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">出版社</span>
+                  <span class="kv-value">天津人民出版社</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">出版年</span>
+                  <span class="kv-value">2017</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">译者</span>
+                  <span class="kv-value">姜乙</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 简介 -->
+          <div class="module-card span-2">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon muted">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+                <span class="module-title">简介</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <p class="description-text">
+                《悉达多》并非是佛陀的故事，它讲述了一个人的一生，千万寻常人亦会经历的一生。意气风发的少年郎，常认为自己是被命运选中的人。抛下过去，随了跌跌撞撞的步伐，找寻心中的声音，追逐名利，经历友情，品尝爱情。不同的是，悉达多一生追求的是生命的圆融统一，看似宏大，确是每个人无法回避的问题。
+              </p>
+            </div>
+          </div>
+
+          <!-- 标签与状态 -->
+          <div class="module-card">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon brand">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>
+                </div>
+                <span class="module-title">标签</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <div class="tag-bar" style="margin:0;">
+                <span class="pill pill-status">已读完</span>
+                <span class="pill pill-category">文学</span>
+                <span class="pill pill-tag">哲学</span>
+                <span class="pill pill-tag">经典</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 评分 -->
+          <div class="module-card">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon brand">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <span class="module-title">评分</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-family:var(--font-display);font-size:32px;font-weight:600;color:var(--brand-500);">5.0</span>
+                <div style="display:flex;gap:2px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#e8b923" stroke="#e8b923" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#e8b923" stroke="#e8b923" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#e8b923" stroke="#e8b923" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#e8b923" stroke="#e8b923" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#e8b923" stroke="#e8b923" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 阅读留痕 -->
+          <div class="module-card">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <span class="module-title">阅读留痕</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <div class="placeholder-box" style="padding:14px;">
+                <div class="placeholder-icon" style="width:36px;height:36px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="placeholder-text" style="font-size:13px;">
+                  M2 上线后可用
+                  <div class="sub">高亮、笔记、标注</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 主题关联 -->
+          <div class="module-card">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon muted">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                </div>
+                <span class="module-title">主题关联</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <div class="placeholder-box" style="padding:14px;">
+                <div class="placeholder-icon" style="width:36px;height:36px;background:var(--success-50);color:var(--success-500);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="placeholder-text" style="font-size:13px;">
+                  M4 上线后可用
+                  <div class="sub">跨书籍主题组织</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 文件管理 -->
+          <div class="module-card span-2">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon brand">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                </div>
+                <span class="module-title">文件管理</span>
+              </div>
+              <span class="module-action">+ 上传</span>
+            </div>
+            <div class="module-body">
+              <div class="file-list">
+                <div class="file-item">
+                  <div class="file-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">悉达多.epub</div>
+                    <div class="file-meta">EPUB · 2.4 MB</div>
+                  </div>
+                  <span class="file-badge">主阅读</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI 衍生 -->
+          <div class="module-card span-2">
+            <div class="module-header">
+              <div class="module-header-left">
+                <div class="module-icon muted" style="background:#f0edfc;color:#7c6bc4;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                </div>
+                <span class="module-title">AI 衍生内容</span>
+              </div>
+            </div>
+            <div class="module-body">
+              <div class="ai-content">
+                <div class="ai-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  AI 摘要
+                </div>
+                <p class="ai-text">
+                  《悉达多》是黑塞最具代表性的作品之一，以印度社会和宗教为背景，讲述了主人公悉达多从贵族青年到苦行僧，再到富商和船夫的人生历程。小说探讨了自我认知、精神觉醒和生命意义等永恒主题，将东方哲学与西方文学传统完美融合。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       第二部分：属性展示变体
+       ============================================================ -->
+  <div class="section-anchor" id="attributes"></div>
+  <div class="section-header" style="margin-top:64px;">
+    <h2>属性展示方式变体</h2>
+    <p>每个书籍属性（状态、评分、标签、进度、文件等）的多种视觉呈现方式</p>
+  </div>
+
+  <div class="variants-section">
+    <div class="variants-header">
+      <h2>组件变体库</h2>
+      <p>同一属性的不同展示风格，可根据场景和偏好选择</p>
+    </div>
+    <div class="variants-body">
+
+      <!-- 状态变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>阅读状态</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">圆点标签式</div>
+            <span class="status-v1">
+              <span class="dot"></span>
+              在读
+            </span>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">方块指示式</div>
+            <span class="status-v2">
+              <span class="indicator"></span>
+              在读
+            </span>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">渐变按钮式</div>
+            <span class="status-v3">
+              <span class="icon">✓</span>
+              在读
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 评分变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>评分</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">星标 + 分数</div>
+            <div class="rating-v1">
+              <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg class="star empty" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span class="score">4.0</span>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">紧凑星标</div>
+            <div class="rating-v2">
+              <div class="stars">
+                <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="star" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <span class="label">推荐</span>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">分段进度式</div>
+            <div class="rating-v3">
+              <div class="bar">
+                <div class="bar-segment filled"></div>
+                <div class="bar-segment filled"></div>
+                <div class="bar-segment filled"></div>
+                <div class="bar-segment filled"></div>
+                <div class="bar-segment"></div>
+              </div>
+              <span class="text">4/5 星 · 力荐</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 标签变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>标签</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">圆角胶囊式</div>
+            <div class="tags-v1">
+              <span class="tag">哲学</span>
+              <span class="tag">经典</span>
+              <span class="tag">德国文学</span>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">卡片标签式</div>
+            <div class="tags-v2">
+              <span class="tag">哲学 <span class="remove">×</span></span>
+              <span class="tag">经典 <span class="remove">×</span></span>
+              <span class="tag">德国文学 <span class="remove">×</span></span>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">彩色分类式</div>
+            <div class="tags-v3">
+              <span class="tag">哲学</span>
+              <span class="tag">经典</span>
+              <span class="tag">德国文学</span>
+              <span class="tag">精神探索</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 进度变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>阅读进度</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">线性进度条</div>
+            <div class="progress-v1">
+              <div class="bar-bg">
+                <div class="bar-fill"></div>
+              </div>
+              <div class="text">
+                <span>第 87 页</span>
+                <span>72%</span>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">环形进度</div>
+            <div class="progress-v2">
+              <div class="ring-wrap">
+                <svg class="progress-ring-svg" width="60" height="60" viewBox="0 0 60 60">
+                  <circle class="progress-ring-bg" cx="30" cy="30" r="26"/>
+                  <circle class="progress-ring-fill" cx="30" cy="30" r="26" stroke-dasharray="163.4" stroke-dashoffset="45.7"/>
+                </svg>
+                <span class="ring-value">72%</span>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:500;">阅读中</div>
+                <div style="font-size:12px;color:var(--text-500);">剩余约 3 小时</div>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">卡片组合式</div>
+            <div class="progress-v3">
+              <div class="icon">📖</div>
+              <div class="info">
+                <div class="info-top">
+                  <span class="info-label">阅读进度</span>
+                  <span class="info-value">72%</span>
+                </div>
+                <div class="bar-bg">
+                  <div class="bar-fill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文件变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>文件列表</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">行列表式</div>
+            <div class="files-v1">
+              <div class="file-row">
+                <div class="file-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="file-info">
+                  <div class="file-name">悉达多.epub</div>
+                  <div class="file-meta">2.4 MB</div>
+                </div>
+                <span class="file-badge">主阅读</span>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">网格卡片式</div>
+            <div class="files-v2">
+              <div class="file-grid">
+                <div class="file-card">
+                  <div class="file-card-icon">📄</div>
+                  <div class="file-card-name">悉达多.epub</div>
+                  <div class="file-card-meta">2.4 MB · 主阅读</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">极简紧凑式</div>
+            <div class="files-v3">
+              <div class="file-compact">
+                <span class="file-dot"></span>
+                <span class="file-name">悉达多.epub</span>
+                <span class="file-size">2.4 MB</span>
+                <div class="file-actions">
+                  <a href="#">下载</a>
+                  <a href="#">删除</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 属性行变体 -->
+      <div class="variant-group">
+        <div class="variant-group-title"><span class="dot"></span>属性列表</div>
+        <div class="variant-row">
+          <div class="variant-item">
+            <div class="variant-item-label">左右对齐式</div>
+            <div class="attr-v1">
+              <div class="attr-row">
+                <span class="attr-label">作者</span>
+                <span class="attr-value">赫尔曼·黑塞</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">出版社</span>
+                <span class="attr-value">天津人民出版社</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">ISBN</span>
+                <span class="attr-value">9787201112695</span>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">卡片堆叠式</div>
+            <div class="attr-v2">
+              <div class="attr-row">
+                <span class="attr-label">作者</span>
+                <span class="attr-value">赫尔曼·黑塞</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">出版社</span>
+                <span class="attr-value">天津人民出版社</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">ISBN</span>
+                <span class="attr-value">9787201112695</span>
+              </div>
+            </div>
+          </div>
+          <div class="variant-item">
+            <div class="variant-item-label">图标引导式</div>
+            <div class="attr-v3">
+              <div class="attr-row">
+                <div class="attr-icon">✍</div>
+                <div class="attr-content">
+                  <div class="attr-label">作者</div>
+                  <div class="attr-value">赫尔曼·黑塞</div>
+                </div>
+              </div>
+              <div class="attr-row">
+                <div class="attr-icon">🏢</div>
+                <div class="attr-content">
+                  <div class="attr-label">出版社</div>
+                  <div class="attr-value">天津人民出版社</div>
+                </div>
+              </div>
+              <div class="attr-row">
+                <div class="attr-icon">#</div>
+                <div class="attr-content">
+                  <div class="attr-label">ISBN</div>
+                  <div class="attr-value">9787201112695</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function scrollToSection(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    document.querySelectorAll('.page-nav-link').forEach(l => l.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  function switchTab(btn, tabId) {
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
