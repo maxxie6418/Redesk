@@ -13,6 +13,11 @@ import {
   FolderOpen,
   Pencil,
   ArrowUpFromLine,
+  Archive,
+  Highlighter,
+  Sparkles,
+  Tags,
+  type LucideIcon,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -90,11 +95,11 @@ type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 're
 
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
-const TAB_LABELS: { id: DetailTab; label: string }[] = [
-  { id: 'archive', label: '档案' },
-  { id: 'traces', label: '留痕' },
-  { id: 'topics', label: '主题' },
-  { id: 'ai', label: 'AI' },
+const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon }[] = [
+  { id: 'archive', label: '档案', icon: Archive },
+  { id: 'traces', label: '留痕', icon: Highlighter },
+  { id: 'topics', label: '主题', icon: Tags },
+  { id: 'ai', label: 'AI', icon: Sparkles },
 ];
 
 function extractDomain(url: string) {
@@ -795,9 +800,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               </div>
 
               {/* Bookmark Tabs: 贴左栏右边缘,不随内容滚动 */}
-              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-1.5">
+              <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-2">
                 {TAB_LABELS.map((tab) => {
                   const active = activeTab === tab.id;
+                  const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
@@ -809,15 +815,17 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                           setEditMode(false);
                         }
                       }}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'flex items-center justify-center rounded-l-lg border-y border-l py-3 text-[12px] font-semibold transition-all [writing-mode:vertical-rl]',
-                        'w-[28px]',
+                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg border-y border-l py-2.5 transition-all duration-200',
+                        'w-9',
                         active
-                          ? 'mr-[6px] border-primary bg-primary/15 text-primary shadow-sm'
-                          : 'border-border bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                          ? 'mr-2 border-primary bg-primary text-primary-foreground shadow-md'
+                          : 'border-border bg-card text-muted-foreground hover:mr-1 hover:bg-muted/70 hover:text-foreground',
                       )}
                     >
-                      {tab.label}
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="[writing-mode:vertical-rl] text-[11px] font-semibold leading-none">{tab.label}</span>
                     </button>
                   );
                 })}
