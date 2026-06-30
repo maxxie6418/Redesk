@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BOOK_STATUS, VISIBILITY, METADATA_SOURCE, CATEGORY_TYPE } from './enums';
+import { BOOK_STATUS, VISIBILITY, METADATA_SOURCE, CATEGORY_TYPE, BOOK_COVER_SOURCE_TYPE } from './enums';
 import { MAX_PAGE_SIZE } from './types';
 
 export const categoryTypeSchema = z.enum([
@@ -21,6 +21,12 @@ export const metadataSourceSchema = z.enum([
   METADATA_SOURCE.MANUAL,
   METADATA_SOURCE.NEODB,
   METADATA_SOURCE.DOUBAN,
+]);
+
+export const bookCoverSourceTypeSchema = z.enum([
+  BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
+  BOOK_COVER_SOURCE_TYPE.REMOTE_FETCHED,
+  BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
 ]);
 
 export const loginSchema = z.object({
@@ -234,3 +240,19 @@ export const importBooksQuerySchema = z.object({
   dry_run: z.coerce.boolean().optional().default(false),
 });
 export type ImportBooksQuery = z.output<typeof importBooksQuerySchema>;
+
+export const activateBookCoverSchema = z.object({
+  is_active: z.literal(true),
+});
+export type ActivateBookCoverInput = z.infer<typeof activateBookCoverSchema>;
+
+export const fetchBookCoverSchema = z.object({
+  force: z.boolean().optional().default(false),
+});
+export type FetchBookCoverInput = z.output<typeof fetchBookCoverSchema>;
+
+export const batchFetchBookCoversSchema = z.object({
+  ids: z.array(z.number().int()).min(1).max(200),
+  force: z.boolean().optional().default(false),
+});
+export type BatchFetchBookCoversInput = z.output<typeof batchFetchBookCoversSchema>;

@@ -36,7 +36,7 @@ export function AppSidebar({ activeKey, user, searchValue = '', onSearchChange, 
   const navigate = useNavigate();
 
   return (
-    <aside className="flex min-h-screen w-[256px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5">
+    <aside className="flex h-screen w-[clamp(220px,18vw,256px)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5">
       <div className="px-1 pt-1">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-semibold text-primary-foreground">

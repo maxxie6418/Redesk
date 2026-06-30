@@ -18,9 +18,9 @@ import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT } from './files';
 import { existsSync, mkdirSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
+import { extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { createWriteStream, writeFileSync } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { config } from '../config';
 
 interface LinkMetadata {
@@ -290,58 +290,6 @@ async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkMetadata
   }
 }
 
-function coverExtFromResponse(url: string, contentType: string | null): string {
-  if (contentType?.includes('png')) return '.png';
-  if (contentType?.includes('webp')) return '.webp';
-  if (contentType?.includes('gif')) return '.gif';
-  const urlExt = extname(new URL(url).pathname).toLowerCase();
-  if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(urlExt)) return urlExt;
-  return '.jpg';
-}
-
-function storageRelativePath(absPath: string): string {
-  return relative(config.storageDir, absPath).replace(/\\/g, '/');
-}
-
-async function downloadRemoteCover(coverUrl: string, bookId: number): Promise<string | null> {
-  let url: URL;
-  try {
-    url = new URL(coverUrl);
-  } catch {
-    return null;
-  }
-  if (!['http:', 'https:'].includes(url.protocol)) return null;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 Redesk/0.1 cover fetcher',
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        Referer: 'https://book.douban.com/',
-      },
-    });
-    if (!res.ok) return null;
-    const contentType = res.headers.get('content-type');
-    if (contentType && !contentType.startsWith('image/')) return null;
-
-    const bytes = Buffer.from(await res.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return null;
-
-    const targetDir = join(config.storageDir, 'covers', String(bookId));
-    if (!existsSync(targetDir)) mkdirSync(targetDir, { recursive: true });
-    const targetPath = join(targetDir, `cover${coverExtFromResponse(url.toString(), contentType)}`);
-    writeFileSync(targetPath, bytes);
-    return storageRelativePath(targetPath);
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 function longestCommonSubstring(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
@@ -458,17 +406,6 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
 
   if (uploadedFile) {
     await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.filepath, true);
-  }
-
-  if (!uploadedFile && input.cover_url) {
-    const coverPath = await downloadRemoteCover(input.cover_url, book.id);
-    if (coverPath) {
-      db.update(books)
-        .set({ cover_path: coverPath, updated_at: timestamp })
-        .where(eq(books.id, book.id))
-        .run();
-      return db.select(bookSelect()).from(books).where(eq(books.id, book.id)).get() ?? book;
-    }
   }
 
   return book;
@@ -692,7 +629,6 @@ const BOOK_IMPORT_HEADERS = [
   'genre_category_name',
   'tag_names',
   'source_url',
-  'cover_url',
   'description',
 ] as const;
 
@@ -920,7 +856,6 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         custom_attributes: fieldVal('custom_attributes') ? JSON.parse(fieldVal('custom_attributes')!) : null,
         metadata_source: fieldVal('metadata_source') ?? undefined,
         source_url: fieldVal('source_url') ?? null,
-        cover_url: fieldVal('cover_url') ?? null,
         translator: fieldVal('translator') ?? null,
         original_title: fieldVal('original_title') ?? null,
         page_count: fieldVal('page_count') ? Number(fieldVal('page_count')) : null,
@@ -1079,7 +1014,6 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
           tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
           source_url: optionalText(item.source_url),
-          cover_url: optionalText(item.cover_url),
           description: optionalText(item.description),
           metadata_source: 'manual',
         });

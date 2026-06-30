@@ -34,7 +34,7 @@ import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 import { useShellUser } from '@/components/shell-user-context';
-import { AppSidebar } from '@/components/app-sidebar';
+import { AppShell } from '@/components/app-shell';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -1210,19 +1210,22 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
   const book = useBook(bookId ?? 0);
   const updateBook = useUpdateBook();
   const files = useBookFiles(bookId ?? 0);
-  const categories = useCategories();
-  const tags = useTags();
+  const personalCategories = useCategories('PERSONAL');
+  const tagsQuery = useTags();
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<StatusMessage>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editAuthor, setEditAuthor] = useState('');
-  const [editStatus, setEditStatus] = useState('');
-  const [editVisibility, setEditVisibility] = useState('');
+  const [editStatus, setEditStatus] = useState<string>(BOOK_STATUS.COLLECTED);
+  const [editVisibility, setEditVisibility] = useState<string>(VISIBILITY.PRIVATE);
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editReadingPurpose, setEditReadingPurpose] = useState('');
+  const [editSourceUrl, setEditSourceUrl] = useState('');
   const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [editCustomAttributes, setEditCustomAttributes] = useState('');
+  const categories = personalCategories;
+  const tags = tagsQuery;
 
   const openEdit = useCallback(() => {
     if (!book.data) return;
@@ -1233,6 +1236,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
     setEditCategoryId(book.data.category_id);
     setEditRating(book.data.rating);
     setEditReadingPurpose(book.data.reading_purpose ?? '');
+    setEditSourceUrl(book.data.source_url ?? '');
     setEditTagIds(book.data.tag_ids);
     setEditCustomAttributes(book.data.custom_attributes ?? '');
     setEditing(true);
@@ -1250,6 +1254,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
         category_id: editCategoryId,
         rating: editRating,
         reading_purpose: editReadingPurpose || null,
+        source_url: editSourceUrl || null,
         tag_ids: editTagIds,
         custom_attributes: editCustomAttributes || null,
       });
@@ -1258,7 +1263,7 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
     }
-  }, [bookId, editTitle, editAuthor, editStatus, editVisibility, editCategoryId, editRating, editReadingPurpose, editTagIds, editCustomAttributes, updateBook]);
+  }, [bookId, editTitle, editAuthor, editStatus, editVisibility, editCategoryId, editRating, editReadingPurpose, editSourceUrl, editTagIds, editCustomAttributes, updateBook]);
 
   const toggleTag = useCallback((tagId: number) => {
     setEditTagIds((prev) => (prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]));
@@ -1442,6 +1447,19 @@ function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; ope
                     </div>
                   ))}
                 </div>
+                {b.source_url && (
+                  <div className="mt-3 border-t border-border pt-3 text-[12.5px]">
+                    <span className="text-muted-foreground">链接：</span>{' '}
+                    <a
+                      href={b.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="break-all text-primary hover:underline"
+                    >
+                      {b.source_url}
+                    </a>
+                  </div>
+                )}
                 {customAttrs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
                     {customAttrs.map((attr) => (
@@ -1759,8 +1777,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   }, [emptyTrash]);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar
+    <>
+      <AppShell
         activeKey={pageView === 'trash' ? 'trash' : 'bookshelf'}
         user={user}
         searchValue={search}
@@ -1771,9 +1789,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
           { label: '已读', value: stats.read, valueClass: 'text-primary' },
           { label: '话题', value: stats.topics, valueClass: 'text-muted-foreground' },
         ]}
-      />
-
-      <main className="min-w-0 flex-1 px-6 py-6 lg:px-8">
+        mainClassName="px-6 py-6 lg:px-8"
+      >
         <header className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground font-display">
@@ -1959,12 +1976,12 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             ))}
           </section>
         )}
-      </main>
+      </AppShell>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
       {showImport && <ImportBooksDialog onClose={() => setShowImport(false)} />}
       <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
-    </div>
+    </>
   );
 }
 

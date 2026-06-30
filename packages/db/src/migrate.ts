@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -9,12 +10,22 @@ const migrationsFolder = join(here, '..', 'drizzle');
 
 export function runMigrations(url: string): void {
   const handle = createDatabase({ url });
-  migrate(handle.db, { migrationsFolder });
-  setupFts5(handle.db);
-  handle.close();
+  try {
+    handle.db.run(sql.raw('PRAGMA foreign_keys = OFF;'));
+    migrate(handle.db, { migrationsFolder });
+    handle.db.run(sql.raw('PRAGMA foreign_keys = ON;'));
+    setupFts5(handle.db);
+  } finally {
+    handle.close();
+  }
 }
 
 export function runMigrationsOn(db: AppDatabase): void {
-  migrate(db, { migrationsFolder });
+  db.run(sql.raw('PRAGMA foreign_keys = OFF;'));
+  try {
+    migrate(db, { migrationsFolder });
+  } finally {
+    db.run(sql.raw('PRAGMA foreign_keys = ON;'));
+  }
   setupFts5(db);
 }

@@ -37,6 +37,13 @@ export const METADATA_SOURCE = {
 } as const;
 export type MetadataSource = (typeof METADATA_SOURCE)[keyof typeof METADATA_SOURCE];
 
+export const BOOK_COVER_SOURCE_TYPE = {
+  EPUB_EXTRACTED: 'EPUB_EXTRACTED',
+  REMOTE_FETCHED: 'REMOTE_FETCHED',
+  MANUAL_UPLOAD: 'MANUAL_UPLOAD',
+} as const;
+export type BookCoverSourceType = (typeof BOOK_COVER_SOURCE_TYPE)[keyof typeof BOOK_COVER_SOURCE_TYPE];
+
 export const HIGHLIGHT_TYPE = {
   HIGHLIGHT: 'HIGHLIGHT',
   UNDERLINE: 'UNDERLINE',

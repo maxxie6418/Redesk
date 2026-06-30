@@ -36,6 +36,20 @@
       "when": 1782726000000,
       "tag": "0004_file_owner_boundary",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782745200000,
+      "tag": "0005_books_author_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783152000000,
+      "tag": "0006_book_covers",
+      "breakpoints": true
     }
   ]
 }

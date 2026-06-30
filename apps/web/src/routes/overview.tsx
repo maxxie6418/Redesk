@@ -16,7 +16,7 @@ import { useOverview } from '@/hooks/use-overview';
 import { useCategories } from '@/hooks/use-categories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useShellUser } from '@/components/shell-user-context';
-import { AppSidebar } from '@/components/app-sidebar';
+import { AppShell } from '@/components/app-shell';
 import { cn } from '@/lib/utils';
 
 const COVER_TONES = [
@@ -137,19 +137,17 @@ export function OverviewPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar
-        activeKey="overview"
-        user={user}
-        stats={[
-          { label: '总数', value: total, valueClass: 'text-foreground' },
-          { label: '在读', value: readingCount, valueClass: 'text-success' },
-          { label: '已读', value: readCount, valueClass: 'text-primary' },
-          { label: '话题', value: 0, valueClass: 'text-muted-foreground' },
-        ]}
-      />
-
-      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-7">
+    <AppShell
+      activeKey="overview"
+      user={user}
+      stats={[
+        { label: '总数', value: total, valueClass: 'text-foreground' },
+        { label: '在读', value: readingCount, valueClass: 'text-success' },
+        { label: '已读', value: readCount, valueClass: 'text-primary' },
+        { label: '话题', value: 0, valueClass: 'text-muted-foreground' },
+      ]}
+      mainClassName="px-8 py-7"
+    >
         <div className="mb-6">
           <h1 className="font-display text-[26px] font-semibold text-foreground">档案</h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">你的阅读资产全景</p>
@@ -313,8 +311,7 @@ export function OverviewPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }
 

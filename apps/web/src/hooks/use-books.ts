@@ -41,6 +41,23 @@ export interface BookDetail extends BookSummary {
   isbn: string | null;
 }
 
+export interface BookCoverItem {
+  id: number;
+  owner_id: number;
+  book_id: number;
+  book_file_id: number | null;
+  source_type: string;
+  source_label: string | null;
+  original_url: string | null;
+  file_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  checksum: string | null;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginatedBooks {
   data: BookSummary[];
   pagination: {
@@ -285,6 +302,53 @@ export function useUnfavoriteBook() {
     mutationFn: (bookId: number) => api.delete<BookDetail>(`/books/${bookId}/favorite`),
     onSuccess: (_data, bookId) => {
       qc.invalidateQueries({ queryKey: ['books', bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useBookCovers(bookId: number) {
+  return useQuery({
+    queryKey: ['books', bookId, 'covers'],
+    queryFn: () => api.get<BookCoverItem[]>(`/books/${bookId}/covers`),
+    enabled: bookId > 0,
+  });
+}
+
+export function useFetchBookCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, force = false }: { bookId: number; force?: boolean }) =>
+      api.post<BookCoverItem>(`/books/${bookId}/covers/fetch`, { force }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useActivateBookCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, coverId }: { bookId: number; coverId: number }) =>
+      api.patch<BookCoverItem>(`/books/${bookId}/covers/${coverId}`, { is_active: true }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useDeleteBookCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, coverId }: { bookId: number; coverId: number }) =>
+      api.delete<{ id: number; deleted: boolean }>(`/books/${bookId}/covers/${coverId}`),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
+      qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
   });
