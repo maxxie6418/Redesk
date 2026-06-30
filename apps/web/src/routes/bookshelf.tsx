@@ -345,7 +345,6 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 }
 
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
-  const progress = bookProgress(book);
   return (
     <article className="group flex w-[120px] flex-col rounded-lg bg-card p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
