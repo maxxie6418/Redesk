@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
   Lightbulb,
   Loader2,
   Star,
+  Upload,
   X,
   NotebookPen,
   Heart,
@@ -29,9 +30,18 @@ import {
   useBook,
   useUpdateBook,
   useBatchFetchBookCovers,
+  useBookCovers,
+  useFetchBookCover,
+  useActivateBookCover,
+  useDeleteBookCover,
+  useUploadBookCover,
+  useFetchBookMetadata,
+  useApplyBookMetadata,
   type BookSummary,
+  type BookCoverItem,
+  type LinkMetadata,
 } from '@/hooks/use-books';
-import { useBookFiles } from '@/hooks/use-files';
+import { useBookFiles, useUploadFile } from '@/hooks/use-files';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
