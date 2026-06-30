@@ -13,9 +13,8 @@ import {
   Settings,
   Sparkles,
   Trash2,
-  X,
 } from 'lucide-react';
-import { Dialog, VisuallyHidden } from 'radix-ui';
+import { Popover } from 'radix-ui';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { AuthUser } from '@/lib/api';
@@ -104,38 +103,31 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
 
-        <SidebarItem
-          icon={<LogIn className="h-4 w-4" />}
-          label="登录"
-          onClick={() => setLoginOpen(true)}
-        />
-
-        <SidebarItem active={activeKey === 'settings'} icon={<Settings className="h-4 w-4" />} label="设置" onClick={() => navigate('/settings')} />
-      </div>
-
-      <Dialog.Root open={loginOpen} onOpenChange={setLoginOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-background p-6 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
-            <VisuallyHidden.Root>
-              <Dialog.Title>登录</Dialog.Title>
-            </VisuallyHidden.Root>
-
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-display text-lg font-semibold text-primary-foreground">
+        <Popover.Root open={loginOpen} onOpenChange={setLoginOpen}>
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            >
+              <LogIn className="h-4 w-4" />
+              <span>登录</span>
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              side="top"
+              align="end"
+              sideOffset={8}
+              className="z-50 w-72 rounded-xl border border-border bg-background p-5 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
+            >
+              <div className="mb-4 text-center">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-display text-xl font-semibold text-primary-foreground">
                   R
                 </div>
-                <span className="font-display text-lg font-medium text-foreground">Redesk</span>
+                <p className="mt-2 text-sm font-medium text-foreground">Redesk</p>
               </div>
-              <Dialog.Close className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                <X className="h-4 w-4" />
-              </Dialog.Close>
-            </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <p className="mb-2 text-sm text-muted-foreground">输入口令以访问书库</p>
+              <form onSubmit={handleLogin} className="space-y-3">
                 <Input
                   type="password"
                   placeholder="输入口令"
@@ -145,19 +137,23 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
                     setLoginError(null);
                   }}
                   autoFocus
-                  className="h-10"
+                  className="h-9"
                 />
-              </div>
-              {loginError && (
-                <p className="text-sm text-destructive">{loginError}</p>
-              )}
-              <Button type="submit" className="w-full">
-                登录
-              </Button>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+                {loginError && (
+                  <p className="text-sm text-destructive">{loginError}</p>
+                )}
+                <Button type="submit" className="w-full">
+                  登录
+                </Button>
+              </form>
+
+              <Popover.Arrow className="fill-border" />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+
+        <SidebarItem active={activeKey === 'settings'} icon={<Settings className="h-4 w-4" />} label="设置" onClick={() => navigate('/settings')} />
+      </div>
     </aside>
   );
 }
