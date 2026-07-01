@@ -1,21 +1,29 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { and, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import type { FastifyInstance } from 'fastify';
+import { and, count, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { extname, basename } from 'node:path';
-import { bookCovers, bookFiles, books, type StorageDriver } from '@redesk/db';
+import { bookCovers, bookFiles, books, type StorageMode } from '@redesk/db';
 import {
   BOOK_COVER_SOURCE_TYPE,
   ERROR_CODE,
   activateBookCoverSchema,
   batchFetchBookCoversSchema,
   fetchBookCoverSchema,
+  storageModeSchema,
   updateFileSchema,
 } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
-import { getReadStorage, getWriteDriver, getWriteStorage } from '../lib/storage-factory';
+import {
+  assertStorageModeAvailable,
+  getDefaultStorageMode,
+  getStorageByDriver,
+  getStorageForMode,
+  resolvePrimaryLocation,
+  resolveStorageDriverForMode,
+} from '../lib/storage-factory';
 import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 
@@ -59,10 +67,6 @@ function bookFileKey(bookId: number, ext: string): string {
 
 function unassociatedFileKey(ext: string): string {
   return `unassociated/${safeName(ext)}`;
-}
-
-function tmpUploadKey(ext: string): string {
-  return `tmp/upload_${safeName(ext)}`;
 }
 
 function tmpCoverUploadKey(ext: string): string {
@@ -119,17 +123,27 @@ function coverExtFromResponse(url: string, contentType: string | null): string {
   return '.jpg';
 }
 
+function filePathForStorage(mode: StorageMode, key: string): { localPath: string | null; remoteKey: string | null } {
+  const primary = resolvePrimaryLocation(mode);
+  return {
+    localPath: primary === 'local' ? key : null,
+    remoteKey: primary === 'cloud' ? key : null,
+  };
+}
+
 function syncBookCoverPath(bookId: number): void {
   const db = getDb();
   const active = db
-    .select({ file_path: bookCovers.file_path })
+    .select({ local_path: bookCovers.local_path, remote_key: bookCovers.remote_key, primary_location: bookCovers.primary_location })
     .from(bookCovers)
     .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.is_active, 1)))
     .orderBy(desc(bookCovers.updated_at), desc(bookCovers.id))
     .get();
 
+  const coverPath = active?.primary_location === 'cloud' ? active.remote_key : active?.local_path;
+
   db.update(books)
-    .set({ cover_path: active?.file_path ?? null, updated_at: now() })
+    .set({ cover_path: coverPath ?? null, updated_at: now() })
     .where(eq(books.id, bookId))
     .run();
 }
@@ -151,8 +165,8 @@ function upsertBookCover(input: {
   sourceType: string;
   sourceLabel?: string | null;
   originalUrl?: string | null;
-  filePath: string;
-  storageDriver: StorageDriver;
+  key: string;
+  storageMode: StorageMode;
   mimeType: string;
   fileSize: number;
   checksum: string;
@@ -160,6 +174,9 @@ function upsertBookCover(input: {
 }): number {
   const db = getDb();
   const timestamp = now();
+  const { localPath, remoteKey } = filePathForStorage(input.storageMode, input.key);
+  const primary = resolvePrimaryLocation(input.storageMode);
+
   const existing =
     input.bookFileId != null
       ? db
@@ -183,8 +200,11 @@ function upsertBookCover(input: {
         source_type: input.sourceType,
         source_label: input.sourceLabel ?? null,
         original_url: input.originalUrl ?? null,
-        file_path: input.filePath,
-        storage_driver: input.storageDriver,
+        storage_mode: input.storageMode,
+        local_path: localPath,
+        remote_key: remoteKey,
+        primary_location: primary,
+        sync_status: 'synced',
         mime_type: input.mimeType,
         file_size: input.fileSize,
         checksum: input.checksum,
@@ -210,8 +230,11 @@ function upsertBookCover(input: {
       source_type: input.sourceType,
       source_label: input.sourceLabel ?? null,
       original_url: input.originalUrl ?? null,
-      file_path: input.filePath,
-      storage_driver: input.storageDriver,
+      storage_mode: input.storageMode,
+      local_path: localPath,
+      remote_key: remoteKey,
+      primary_location: primary,
+      sync_status: 'synced',
       mime_type: input.mimeType,
       file_size: input.fileSize,
       checksum: input.checksum,
@@ -301,7 +324,7 @@ export async function downloadRemoteCover(input: {
   sourceLabel?: string | null;
   force?: boolean;
   activate?: boolean;
-}): Promise<{ id: number; file_path: string; storage_driver: StorageDriver } | null> {
+}): Promise<{ id: number; local_path: string | null; remote_key: string | null; storage_mode: StorageMode } | null> {
   let url: URL;
   try {
     url = new URL(input.coverUrl);
@@ -310,10 +333,13 @@ export async function downloadRemoteCover(input: {
   }
   if (!['http:', 'https:'].includes(url.protocol)) return null;
 
+  const defaultMode = getDefaultStorageMode();
+  assertStorageModeAvailable(defaultMode);
+
   const db = getDb();
   if (!input.force) {
     const existing = db
-      .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
+      .select({ id: bookCovers.id, local_path: bookCovers.local_path, remote_key: bookCovers.remote_key, storage_mode: bookCovers.storage_mode })
       .from(bookCovers)
       .where(
         and(
@@ -325,7 +351,7 @@ export async function downloadRemoteCover(input: {
       .get();
     if (existing) {
       if (input.activate) activateBookCover(input.bookId, existing.id);
-      return { id: existing.id, file_path: existing.file_path, storage_driver: existing.storage_driver };
+      return { id: existing.id, local_path: existing.local_path, remote_key: existing.remote_key, storage_mode: existing.storage_mode };
     }
   }
 
@@ -348,11 +374,10 @@ export async function downloadRemoteCover(input: {
     if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return null;
 
     const ext = coverExtFromResponse(url.toString(), contentType);
-    const storage = getWriteStorage();
+    const storage = getStorageForMode(defaultMode);
     const key = remoteCoverKey(input.bookId, ext);
     await storage.putBytes(key, bytes, { contentType: contentType ?? coverMimeFromExt(ext) });
     const checksum = await fileSha256(storage, key);
-    const driver = getWriteDriver();
 
     const coverId = upsertBookCover({
       ownerId: input.ownerId,
@@ -360,15 +385,20 @@ export async function downloadRemoteCover(input: {
       sourceType: BOOK_COVER_SOURCE_TYPE.REMOTE_FETCHED,
       sourceLabel: input.sourceLabel ?? url.hostname,
       originalUrl: input.coverUrl,
-      filePath: key,
-      storageDriver: driver,
+      key,
+      storageMode: defaultMode,
       mimeType: contentType ?? coverMimeFromExt(ext),
       fileSize: bytes.length,
       checksum,
       activate: input.activate ?? true,
     });
 
-    return { id: coverId, file_path: key, storage_driver: driver };
+    return {
+      id: coverId,
+      local_path: defaultMode === 'cloud_only' ? null : key,
+      remote_key: defaultMode === 'cloud_only' ? key : null,
+      storage_mode: defaultMode,
+    };
   } catch {
     return null;
   } finally {
@@ -379,360 +409,219 @@ export async function downloadRemoteCover(input: {
 export async function saveUploadedFile(
   ownerId: number,
   bookId: number | null,
-  originalFilename: string,
-  sourceStream: NodeJS.ReadableStream,
-  isPrimary: boolean,
-  replaceFileId?: number,
-): Promise<{ id: number; file_format: string; file_path: string; storage_driver: StorageDriver }> {
-  const fileFormat = detectFormat(originalFilename);
-  const mimeType = detectMime(originalFilename);
-  const ext = extname(originalFilename).toLowerCase();
-  const storage = getWriteStorage();
-  const driver = getWriteDriver();
+  filename: string,
+  stream: NodeJS.ReadableStream,
+  makePrimary: boolean,
+  preferredMode?: StorageMode,
+): Promise<typeof bookFiles.$inferSelect> {
+  const mode = preferredMode ?? getDefaultStorageMode();
+  assertStorageModeAvailable(mode);
 
-  const tmpKey = tmpUploadKey(ext);
-  const teeStream = (async function* () {
-    for await (const chunk of sourceStream) {
-      yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    }
-  })();
+  const ext = extname(filename).toLowerCase();
+  const format = detectFormat(filename);
+  const mime = detectMime(filename);
+  const key = bookId != null ? bookFileKey(bookId, ext) : unassociatedFileKey(ext);
+  const storage = getStorageForMode(mode);
 
-  const { size } = await storage.putStream(tmpKey, teeStream as unknown as NodeJS.ReadableStream, { contentType: mimeType });
+  const { size } = await storage.putStream(key, stream, { contentType: mime });
+  const checksum = await fileSha256(storage, key);
 
-  let finalKey: string;
-  if (bookId != null) finalKey = bookFileKey(bookId, ext);
-  else finalKey = unassociatedFileKey(ext);
-
-  await storage.move(tmpKey, finalKey);
-
-  const checksum = await fileSha256(storage, finalKey);
+  const { localPath, remoteKey } = filePathForStorage(mode, key);
+  const primary = resolvePrimaryLocation(mode);
+  const timestamp = now();
 
   const db = getDb();
-  const timestamp = now();
-  const dupConditions = [eq(bookFiles.owner_id, ownerId), eq(bookFiles.checksum, checksum)];
-  if (replaceFileId != null) dupConditions.push(ne(bookFiles.id, replaceFileId));
-
-  const dup = db
-    .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
-    .from(bookFiles)
-    .where(and(...dupConditions))
-    .get();
-
-  if (dup) {
-    try { await storage.delete(finalKey); } catch { /* ignore */ }
-    throw new AppError(
-      ERROR_CODE.DUPLICATE_FILE,
-      `书库已存在相同文件: ${dup.original_filename ?? '未知文件'}`,
-      [{ field: 'existing_file_id', issue: String(dup.id) }],
-    );
-  }
-
-  let coverKey: string | null = null;
-  if (fileFormat === 'EPUB' && bookId != null) {
-    const cover = await extractEpubCover(storage, finalKey, bookId);
-    if (cover) {
-      await storage.putBytes(cover.key, cover.bytes, { contentType: coverMimeFromExt(cover.ext) });
-      coverKey = cover.key;
-    }
-  }
-
-  if (replaceFileId && bookId != null) {
-    const existing = db
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, replaceFileId), eq(bookFiles.owner_id, ownerId), eq(bookFiles.book_id, bookId)))
-      .get();
-
-    if (existing) {
-      const oldKey = existing.file_path;
-      try {
-        const oldStorage = getReadStorage(existing.storage_driver);
-        await oldStorage.delete(oldKey);
-      } catch { /* ignore */ }
-      db.update(bookFiles)
-        .set({
-          file_path: finalKey,
-          storage_driver: driver,
-          original_filename: originalFilename,
-          file_format: fileFormat,
-          mime_type: mimeType,
-          file_size: size,
-          checksum,
-          is_primary: isPrimary ? 1 : 0,
-          updated_at: timestamp,
-        })
-        .where(eq(bookFiles.id, replaceFileId))
-        .run();
-
-      if (coverKey) {
-        upsertBookCover({
-          ownerId,
-          bookId,
-          bookFileId: replaceFileId,
-          sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
-          sourceLabel: 'epub',
-          filePath: coverKey,
-          storageDriver: driver,
-          mimeType: coverMimeFromExt(extname(coverKey)),
-          fileSize: (await storage.size(coverKey)),
-          checksum: await fileSha256(storage, coverKey),
-          activate: true,
-        });
-      }
-
-      return { id: replaceFileId, file_format: fileFormat, file_path: finalKey, storage_driver: driver };
-    }
-  }
-
-  if (isPrimary && bookId != null) {
-    db.update(bookFiles).set({ is_primary: 0 }).where(and(eq(bookFiles.owner_id, ownerId), eq(bookFiles.book_id, bookId))).run();
-  }
-
-  const result = db
+  const inserted = db
     .insert(bookFiles)
     .values({
       owner_id: ownerId,
       book_id: bookId,
-      file_path: finalKey,
-      storage_driver: driver,
-      original_filename: originalFilename,
-      file_format: fileFormat,
-      mime_type: mimeType,
+      storage_mode: mode,
+      local_path: localPath,
+      remote_key: remoteKey,
+      primary_location: primary,
+      sync_status: 'synced',
+      original_filename: basename(filename),
+      file_format: format,
+      mime_type: mime,
       file_size: size,
       checksum,
-      is_primary: isPrimary ? 1 : 0,
+      is_primary: makePrimary ? 1 : 0,
       created_at: timestamp,
       updated_at: timestamp,
     })
     .returning()
     .get();
 
-  if (coverKey && bookId != null) {
-    upsertBookCover({
-      ownerId,
-      bookId,
-      bookFileId: result.id,
-      sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
-      sourceLabel: 'epub',
-      filePath: coverKey,
-      storageDriver: driver,
-      mimeType: coverMimeFromExt(extname(coverKey)),
-      fileSize: (await storage.size(coverKey)),
-      checksum: await fileSha256(storage, coverKey),
-      activate: true,
-    });
+  if (makePrimary && bookId != null) {
+    db.update(bookFiles)
+      .set({ is_primary: 0 })
+      .where(and(eq(bookFiles.book_id, bookId), ne(bookFiles.id, inserted.id)))
+      .run();
   }
 
-  return { id: result.id, file_format: fileFormat, file_path: finalKey, storage_driver: driver };
+  if (bookId != null) {
+    try {
+      const coverInfo = await extractEpubCover(storage, key, bookId);
+      if (coverInfo) {
+        const coverStorage = getStorageForMode(mode);
+        await coverStorage.putBytes(coverInfo.key, coverInfo.bytes, { contentType: coverMimeFromExt(coverInfo.ext) });
+        const coverChecksum = await fileSha256(coverStorage, coverInfo.key);
+        upsertBookCover({
+          ownerId,
+          bookId,
+          bookFileId: inserted.id,
+          sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
+          sourceLabel: 'epub',
+          key: coverInfo.key,
+          storageMode: mode,
+          mimeType: coverMimeFromExt(coverInfo.ext),
+          fileSize: coverInfo.bytes.length,
+          checksum: coverChecksum,
+          activate: true,
+        });
+      }
+    } catch {
+      // 提取封面失败不影响主文件保存
+    }
+  }
+
+  return inserted;
 }
 
 export function deleteFilesForBooks(ownerId: number, bookIds: number[]): void {
-  if (bookIds.length === 0) return;
   const db = getDb();
-
-  const fileRows = db
-    .select({ id: bookFiles.id, file_path: bookFiles.file_path, storage_driver: bookFiles.storage_driver })
+  const rows = db
+    .select()
     .from(bookFiles)
     .where(and(eq(bookFiles.owner_id, ownerId), inArray(bookFiles.book_id, bookIds)))
     .all();
 
-  for (const row of fileRows) {
-    try {
-      const s = getReadStorage(row.storage_driver);
-      s.delete(row.file_path).catch(() => undefined);
-    } catch { /* ignore */ }
-  }
-  if (fileRows.length > 0) {
-    db.delete(bookFiles).where(inArray(bookFiles.id, fileRows.map((row) => row.id))).run();
-  }
-
-  const coverRows = db
-    .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
-    .from(bookCovers)
-    .where(and(eq(bookCovers.owner_id, ownerId), inArray(bookCovers.book_id, bookIds)))
-    .all();
-
-  for (const row of coverRows) {
-    try {
-      const s = getReadStorage(row.storage_driver);
-      s.delete(row.file_path).catch(() => undefined);
-    } catch { /* ignore */ }
-  }
-  if (coverRows.length > 0) {
-    db.delete(bookCovers).where(inArray(bookCovers.id, coverRows.map((row) => row.id))).run();
+  for (const file of rows) {
+    deleteStoredBookFile(file);
   }
 }
 
-export async function fileRoutes(app: FastifyInstance): Promise<void> {
-  const ownerBookCheck = (bookId: number, userId: number) => {
-    const book = getDb()
-      .select({ id: books.id })
-      .from(books)
-      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+export function deleteStoredBookFile(file: typeof bookFiles.$inferSelect): void {
+  if (file.local_path) {
+    try {
+      const s = getStorageByDriver('local');
+      s.delete(file.local_path).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }
+  if (file.remote_key) {
+    try {
+      const s = getStorageByDriver('s3');
+      s.delete(file.remote_key).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export function fileRoutes(app: FastifyInstance): void {
+  app.post('/files/unassociated', async (req, reply) => {
+    const userId = requireUserId(req);
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
+
+    const ext = extname(data.filename).toLowerCase();
+    if (!EXTENSION_FORMAT[ext]) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式：${ext}`);
+    }
+
+    const modeField = (data.fields.storage_mode as { value?: string } | undefined)?.value;
+    const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
+
+    const saved = await saveUploadedFile(userId, null, data.filename, data.file, false, mode);
+    reply.code(201);
+    return { data: saved };
+  });
+
+  app.get('/files/unassociated', async (req) => {
+    const userId = requireUserId(req);
+    const page = Number((req.query as { page?: string }).page ?? '1');
+    const pageSize = Number((req.query as { page_size?: string }).page_size ?? '20');
+
+    const db = getDb();
+    const conditions = [eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)];
+    const total = db.select({ value: count() }).from(bookFiles).where(and(...conditions)).get()?.value ?? 0;
+
+    const rows = db
+      .select()
+      .from(bookFiles)
+      .where(and(...conditions))
+      .orderBy(desc(bookFiles.created_at))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .all();
+
+    return {
+      data: rows,
+      pagination: { page, page_size: pageSize, total },
+    };
+  });
+
+  app.post('/files/unassociated/:id/associate', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const fileId = Number(id);
+    if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+
+    const { book_id } = req.body as { book_id?: unknown };
+    if (typeof book_id !== 'number') throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 book_id');
+
+    const db = getDb();
+    const file = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
       .get();
-    if (!book) throw notFound('书籍不存在');
-  };
+    if (!file) throw notFound('文件不存在或已关联');
+
+    db.update(bookFiles)
+      .set({ book_id, updated_at: now() })
+      .where(eq(bookFiles.id, fileId))
+      .run();
+
+    return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
+  });
+
+  app.delete('/files/unassociated/:id', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const fileId = Number(id);
+    if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+
+    const db = getDb();
+    const file = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .get();
+    if (!file) throw notFound('文件不存在或已关联');
+
+    deleteStoredBookFile(file);
+    db.delete(bookFiles).where(eq(bookFiles.id, fileId)).run();
+    return { data: { id: fileId, deleted: true } };
+  });
 
   app.get('/books/:id/files', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    ownerBookCheck(bookId, userId);
-    return {
-      data: getDb()
-        .select()
-        .from(bookFiles)
-        .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
-        .all(),
-    };
-  });
 
-  app.get('/books/:id/files/:fileId', async (req) => {
-    const userId = requireUserId(req);
-    const { id, fileId } = req.params as { id: string; fileId: string };
-    const bookId = Number(id);
-    const fid = Number(fileId);
-    if (Number.isNaN(bookId) || Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
-
-    const file = getDb()
+    const rows = getDb()
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
-      .get();
-    if (!file) throw notFound('文件不存在');
-    return { data: file };
-  });
-
-  app.get('/books/:id/files/:fileId/download', async (req, reply) => {
-    const userId = requireUserId(req);
-    const { id, fileId } = req.params as { id: string; fileId: string };
-    const bookId = Number(id);
-    const fid = Number(fileId);
-    if (Number.isNaN(bookId) || Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
-
-    const file = getDb()
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
-      .get();
-    if (!file) throw notFound('文件不存在');
-
-    const storage = getReadStorage(file.storage_driver);
-    const exists = await storage.exists(file.file_path).catch(() => false);
-    if (!exists) throw notFound('文件已丢失');
-
-    const fileSize = await storage.size(file.file_path);
-    const mime = file.mime_type ?? 'application/octet-stream';
-    const filename = file.original_filename ?? basename(file.file_path);
-    const rangeHeader = req.headers.range;
-
-    if (rangeHeader) {
-      const parts = rangeHeader.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-      if (Number.isNaN(start) || Number.isNaN(end) || start >= fileSize) {
-        return reply.code(416).header('Content-Range', `bytes */${fileSize}`).send();
-      }
-
-      const chunkSize = end - start + 1;
-      const stream = await storage.getStream(file.file_path, { range: { start, end } });
-      reply
-        .code(206)
-        .header('Content-Range', `bytes ${start}-${end}/${fileSize}`)
-        .header('Accept-Ranges', 'bytes')
-        .header('Content-Length', chunkSize)
-        .header('Content-Type', mime)
-        .header('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-
-      return reply.send(stream);
-    }
-
-    const stream = await storage.getStream(file.file_path);
-    reply
-      .header('Content-Length', fileSize)
-      .header('Content-Type', mime)
-      .header('Accept-Ranges', 'bytes')
-      .header('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-
-    return reply.send(stream);
-  });
-
-  app.patch('/books/:id/files/:fileId', async (req) => {
-    const userId = requireUserId(req);
-    const { id, fileId } = req.params as { id: string; fileId: string };
-    const bookId = Number(id);
-    const fid = Number(fileId);
-    if (Number.isNaN(bookId) || Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
-
-    const input = validate(updateFileSchema, req.body);
-    const db = getDb();
-    const file = db
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
-      .get();
-    if (!file) throw notFound('文件不存在');
-
-    const updateData: Record<string, unknown> = { updated_at: now() };
-    if (input.is_primary === true) {
-      db.update(bookFiles).set({ is_primary: 0 }).where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId))).run();
-      updateData.is_primary = 1;
-    } else if (input.is_primary === false) {
-      updateData.is_primary = 0;
-    }
-    if (input.original_filename !== undefined) {
-      updateData.original_filename = input.original_filename;
-    }
-
-    db.update(bookFiles).set(updateData).where(eq(bookFiles.id, fid)).run();
-    const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get();
-    return { data: updated };
-  });
-
-  app.delete('/books/:id/files/:fileId', async (req) => {
-    const userId = requireUserId(req);
-    const { id, fileId } = req.params as { id: string; fileId: string };
-    const bookId = Number(id);
-    const fid = Number(fileId);
-    if (Number.isNaN(bookId) || Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
-
-    const db = getDb();
-    const file = db
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
-      .get();
-    if (!file) throw notFound('文件不存在');
-
-    try {
-      const s = getReadStorage(file.storage_driver);
-      await s.delete(file.file_path);
-    } catch { /* ignore */ }
-
-    const relatedCovers = db
-      .select({ id: bookCovers.id, file_path: bookCovers.file_path, storage_driver: bookCovers.storage_driver })
-      .from(bookCovers)
-      .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.book_file_id, fid)))
+      .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.owner_id, userId)))
+      .orderBy(desc(bookFiles.is_primary), desc(bookFiles.created_at))
       .all();
-    for (const cover of relatedCovers) {
-      try {
-        const s = getReadStorage(cover.storage_driver);
-        await s.delete(cover.file_path);
-      } catch { /* ignore */ }
-    }
-    if (relatedCovers.length > 0) {
-      db.delete(bookCovers).where(inArray(bookCovers.id, relatedCovers.map((cover) => cover.id))).run();
-    }
 
-    db.delete(bookFiles).where(eq(bookFiles.id, fid)).run();
-    syncBookCoverPath(bookId);
-    return { data: { id: fid, deleted: true } };
+    return { data: rows };
   });
 
   app.post('/books/:id/files', async (req, reply) => {
@@ -740,245 +629,129 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    ownerBookCheck(bookId, userId);
 
     const data = await req.file();
     if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
 
-    const originalFilename = data.filename || 'unknown';
-    const ext = extname(originalFilename).toLowerCase();
+    const ext = extname(data.filename).toLowerCase();
     if (!EXTENSION_FORMAT[ext]) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式：${ext}`);
     }
 
-    const isPrimary = data.fields?.is_primary != null
-      ? String(data.fields.is_primary as unknown as string) === 'true'
-      : false;
+    const modeField = (data.fields.storage_mode as { value?: string } | undefined)?.value;
+    const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
 
-    const result = await saveUploadedFile(userId, bookId, originalFilename, data.file, isPrimary);
+    const saved = await saveUploadedFile(userId, bookId, data.filename, data.file, true, mode);
     reply.code(201);
-    return { data: result };
+    return { data: saved };
   });
 
-  app.post('/books/:id/files/:fileId/replace', async (req) => {
+  app.patch('/books/:id/files/:fileId', async (req) => {
     const userId = requireUserId(req);
     const { id, fileId } = req.params as { id: string; fileId: string };
     const bookId = Number(id);
     const fid = Number(fileId);
-    if (Number.isNaN(bookId) || Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
+    if (Number.isNaN(bookId) || Number.isNaN(fid)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
+    }
 
-    const existing = getDb()
+    const input = validate(updateFileSchema, req.body ?? {});
+
+    const db = getDb();
+    const existing = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId), eq(bookFiles.owner_id, userId)))
       .get();
     if (!existing) throw notFound('文件不存在');
 
-    const data = await req.file();
-    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
-
-    const originalFilename = data.filename || 'unknown';
-    const ext = extname(originalFilename).toLowerCase();
-    if (!EXTENSION_FORMAT[ext]) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
+    const updates: Record<string, unknown> = { updated_at: now() };
+    if (input.is_primary === true) {
+      updates.is_primary = 1;
+      db.update(bookFiles)
+        .set({ is_primary: 0 })
+        .where(and(eq(bookFiles.book_id, bookId), ne(bookFiles.id, fid)))
+        .run();
+    } else if (input.is_primary === false) {
+      updates.is_primary = 0;
     }
 
-    const result = await saveUploadedFile(userId, bookId, originalFilename, data.file, existing.is_primary === 1, fid);
-    return { data: result };
+    db.update(bookFiles).set(updates).where(eq(bookFiles.id, fid)).run();
+
+    return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get() };
   });
 
-  app.post('/files/unassociated', async (req, reply) => {
+  app.delete('/books/:id/files/:fileId', async (req) => {
     const userId = requireUserId(req);
-    const data = await req.file();
-    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
-
-    const originalFilename = data.filename || 'unknown';
-    const ext = extname(originalFilename).toLowerCase();
-    if (!EXTENSION_FORMAT[ext]) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式: ${ext || '未知'}`);
-    }
-
-    const result = await saveUploadedFile(userId, null, originalFilename, data.file, false);
-    reply.code(201);
-    return { data: result };
-  });
-
-  app.get('/files/unassociated', async (req) => {
-    const userId = requireUserId(req);
-    return {
-      data: getDb().select().from(bookFiles).where(and(eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id))).all(),
-    };
-  });
-
-  const matchUnassociatedFile = async (req: FastifyRequest) => {
-    const userId = requireUserId(req);
-    const { fileId } = req.params as { fileId: string };
+    const { id, fileId } = req.params as { id: string; fileId: string };
+    const bookId = Number(id);
     const fid = Number(fileId);
-    if (Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
-
-    const body = req.body as { book_id?: number };
-    const targetBookId = body.book_id;
-    if (!targetBookId || Number.isNaN(targetBookId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少有效的 book_id');
+    if (Number.isNaN(bookId) || Number.isNaN(fid)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
     }
-    ownerBookCheck(targetBookId, userId);
 
     const db = getDb();
-    const file = db
+    const existing = db
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId), eq(bookFiles.owner_id, userId)))
       .get();
-    if (!file) throw notFound('文件不存在或已关联书籍');
+    if (!existing) throw notFound('文件不存在');
 
-    if (file.checksum) {
-      const dup = db
-        .select({ id: bookFiles.id, original_filename: bookFiles.original_filename })
-        .from(bookFiles)
-        .where(and(eq(bookFiles.owner_id, userId), eq(bookFiles.checksum, file.checksum), ne(bookFiles.id, fid)))
-        .get();
-      if (dup) {
-        throw new AppError(
-          ERROR_CODE.DUPLICATE_FILE,
-          `目标书籍已存在相同文件: ${dup.original_filename ?? '未知文件'}`,
-          [{ field: 'existing_file_id', issue: String(dup.id) }],
-        );
-      }
+    deleteStoredBookFile(existing);
+    db.delete(bookFiles).where(eq(bookFiles.id, fid)).run();
+
+    const remaining = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.owner_id, userId)))
+      .orderBy(desc(bookFiles.created_at))
+      .get();
+    if (remaining) {
+      db.update(bookFiles).set({ is_primary: 1 }).where(eq(bookFiles.id, remaining.id)).run();
     }
 
-    const writeStorage = getWriteStorage();
-    const writeDriver = getWriteDriver();
-    const ext = extname(file.file_path).toLowerCase();
-    const dstKey = bookFileKey(targetBookId, ext);
+    return { data: { id: fid, deleted: true } };
+  });
 
-    if (file.storage_driver === writeDriver) {
-      await writeStorage.move(file.file_path, dstKey);
-    } else {
-      const srcStorage = getReadStorage(file.storage_driver);
-      const bytes = await srcStorage.getBytes(file.file_path);
-      await writeStorage.putBytes(dstKey, bytes, { contentType: file.mime_type ?? undefined });
-      await srcStorage.delete(file.file_path).catch(() => undefined);
-    }
-
-    db.update(bookFiles)
-      .set({
-        book_id: targetBookId,
-        file_path: dstKey,
-        storage_driver: writeDriver,
-        updated_at: now(),
-      })
-      .where(eq(bookFiles.id, fid))
-      .run();
-
-    if (file.file_format === 'EPUB') {
-      const cover = await extractEpubCover(writeStorage, dstKey, targetBookId);
-      if (cover) {
-        await writeStorage.putBytes(cover.key, cover.bytes, { contentType: coverMimeFromExt(cover.ext) });
-        upsertBookCover({
-          ownerId: userId,
-          bookId: targetBookId,
-          bookFileId: fid,
-          sourceType: BOOK_COVER_SOURCE_TYPE.EPUB_EXTRACTED,
-          sourceLabel: 'epub',
-          filePath: cover.key,
-          storageDriver: writeDriver,
-          mimeType: coverMimeFromExt(cover.ext),
-          fileSize: (await writeStorage.size(cover.key)),
-          checksum: await fileSha256(writeStorage, cover.key),
-          activate: true,
-        });
-      }
-    }
-
-    const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get();
-    return { data: updated };
-  };
-
-  app.post('/files/:fileId/match', matchUnassociatedFile);
-  app.post('/files/unassociated/:fileId/match', matchUnassociatedFile);
-
-  app.delete('/files/unassociated/:fileId', async (req) => {
+  app.get('/books/:id/files/:fileId/download', async (req, reply) => {
     const userId = requireUserId(req);
-    const { fileId } = req.params as { fileId: string };
+    const { id, fileId } = req.params as { id: string; fileId: string };
+    const bookId = Number(id);
     const fid = Number(fileId);
-    if (Number.isNaN(fid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+    if (Number.isNaN(bookId) || Number.isNaN(fid)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
+    }
 
     const file = getDb()
       .select()
       .from(bookFiles)
-      .where(and(eq(bookFiles.id, fid), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .where(and(eq(bookFiles.id, fid), eq(bookFiles.book_id, bookId), eq(bookFiles.owner_id, userId)))
       .get();
-    if (!file) throw notFound('文件不存在或已关联书籍');
+    if (!file) throw notFound('文件不存在');
 
-    try {
-      const s = getReadStorage(file.storage_driver);
-      await s.delete(file.file_path);
-    } catch { /* ignore */ }
-    getDb().delete(bookFiles).where(eq(bookFiles.id, fid)).run();
-    return { data: { id: fid, deleted: true } };
+    const key = file.primary_location === 'cloud' ? file.remote_key : file.local_path;
+    if (!key) throw new AppError(ERROR_CODE.BUSINESS_ERROR, '文件路径不存在');
+
+    const driver = resolveStorageDriverForMode(file.storage_mode);
+    const storage = getStorageByDriver(driver);
+
+    const exists = await storage.exists(key).catch(() => false);
+    if (!exists) throw new AppError(ERROR_CODE.BUSINESS_ERROR, '文件不可用');
+
+    const stream = await storage.getStream(key);
+    const filename = encodeURIComponent(file.original_filename ?? `book${extname(key)}`);
+    return reply
+      .header('Content-Type', file.mime_type ?? 'application/octet-stream')
+      .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
+      .send(stream);
   });
 
-  app.get('/files', async (req) => {
-    const userId = requireUserId(req);
-    const query = req.query as Record<string, string>;
-    const page = Math.max(1, Number(query.page) || 1);
-    const pageSize = Math.min(500, Math.max(1, Number(query.page_size) || 20));
-
-    const conditions: ReturnType<typeof and>[] = [eq(bookFiles.owner_id, userId)];
-    if (query.format) conditions.push(eq(bookFiles.file_format, query.format.toUpperCase()));
-    if (query.associated === 'true') {
-      conditions.push(sql`${bookFiles.book_id} IS NOT NULL`);
-    } else if (query.associated === 'false') {
-      conditions.push(isNull(bookFiles.book_id));
-    }
-    const where = and(...conditions);
-
-    const total = getDb()
-      .select({ value: count() })
-      .from(bookFiles)
-      .where(where)
-      .get()?.value ?? 0;
-
-    const rows = getDb()
-      .select({ file: bookFiles, book_title: books.title })
-      .from(bookFiles)
-      .leftJoin(books, eq(bookFiles.book_id, books.id))
-      .where(where)
-      .orderBy(sql`${bookFiles.created_at} DESC`)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .all();
-
-    return {
-      data: rows.map((row) => ({ ...row.file, book_title: row.book_title })),
-      pagination: { page, page_size: pageSize, total },
-    };
-  });
-
-  app.get('/books/:id/covers', async (req) => {
+  app.get('/books/:id/covers/fetch', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    ownerBookCheck(bookId, userId);
-
-    return {
-      data: getDb()
-        .select()
-        .from(bookCovers)
-        .where(and(eq(bookCovers.owner_id, userId), eq(bookCovers.book_id, bookId)))
-        .orderBy(desc(bookCovers.is_active), desc(bookCovers.updated_at), desc(bookCovers.id))
-        .all(),
-    };
-  });
-
-  app.post('/books/:id/covers/fetch', async (req) => {
-    const userId = requireUserId(req);
-    const { id } = req.params as { id: string };
-    const bookId = Number(id);
-    if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    ownerBookCheck(bookId, userId);
 
     const input = validate(fetchBookCoverSchema, req.body ?? {});
     const book = getDb()
@@ -1014,7 +787,6 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    ownerBookCheck(bookId, userId);
 
     const data = await req.file();
     if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供图片文件');
@@ -1026,8 +798,11 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, `仅支持 jpg/png/webp/gif/bmp 格式，当前格式: ${ext || '未知'}`);
     }
 
-    const storage = getWriteStorage();
-    const driver = getWriteDriver();
+    const modeField = (data.fields.storage_mode as { value?: string } | undefined)?.value;
+    const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
+    assertStorageModeAvailable(mode);
+
+    const storage = getStorageForMode(mode);
     const tmpKey = tmpCoverUploadKey(ext);
     const { size } = await storage.putStream(tmpKey, data.file, { contentType: coverMimeFromExt(ext) });
 
@@ -1045,8 +820,8 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       bookId,
       sourceType: BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
       sourceLabel: 'upload',
-      filePath: finalKey,
-      storageDriver: driver,
+      key: finalKey,
+      storageMode: mode,
       mimeType: coverMimeFromExt(ext),
       fileSize: size,
       checksum,
@@ -1108,8 +883,8 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const bookId = Number(id);
     const cid = Number(coverId);
     if (Number.isNaN(bookId) || Number.isNaN(cid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
-    validate(activateBookCoverSchema, req.body);
+
+    const input = validate(activateBookCoverSchema, req.body);
 
     const cover = getDb()
       .select({ id: bookCovers.id })
@@ -1118,7 +893,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!cover) throw notFound('封面不存在');
 
-    activateBookCover(bookId, cid);
+    if (input.is_active) activateBookCover(bookId, cid);
     return { data: getDb().select().from(bookCovers).where(eq(bookCovers.id, cid)).get() };
   });
 
@@ -1128,7 +903,6 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const bookId = Number(id);
     const cid = Number(coverId);
     if (Number.isNaN(bookId) || Number.isNaN(cid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
 
     const cover = getDb()
       .select()
@@ -1137,10 +911,12 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
     if (!cover) throw notFound('封面不存在');
 
-    try {
-      const s = getReadStorage(cover.storage_driver);
-      await s.delete(cover.file_path);
-    } catch { /* ignore */ }
+    if (cover.local_path) {
+      try { getStorageByDriver('local').delete(cover.local_path); } catch { /* ignore */ }
+    }
+    if (cover.remote_key) {
+      try { getStorageByDriver('s3').delete(cover.remote_key); } catch { /* ignore */ }
+    }
     getDb().delete(bookCovers).where(eq(bookCovers.id, cid)).run();
 
     const fallback = getDb()
@@ -1162,22 +938,30 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
     const bookId = Number(id);
     const cid = Number(coverId);
     if (Number.isNaN(bookId) || Number.isNaN(cid)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
-    ownerBookCheck(bookId, userId);
 
     const cover = getDb()
-      .select({ file_path: bookCovers.file_path, mime_type: bookCovers.mime_type, storage_driver: bookCovers.storage_driver })
+      .select({
+        local_path: bookCovers.local_path,
+        remote_key: bookCovers.remote_key,
+        mime_type: bookCovers.mime_type,
+        primary_location: bookCovers.primary_location,
+      })
       .from(bookCovers)
       .where(and(eq(bookCovers.id, cid), eq(bookCovers.book_id, bookId), eq(bookCovers.owner_id, userId)))
       .get();
     if (!cover) return reply.code(404).send();
 
-    const storage = getReadStorage(cover.storage_driver);
-    const exists = await storage.exists(cover.file_path).catch(() => false);
+    const key = cover.primary_location === 'cloud' ? cover.remote_key : cover.local_path;
+    if (!key) return reply.code(404).send();
+
+    const driver = cover.primary_location === 'cloud' ? 's3' : 'local';
+    const storage = getStorageByDriver(driver);
+    const exists = await storage.exists(key).catch(() => false);
     if (!exists) return reply.code(404).send();
 
-    const stream = await storage.getStream(cover.file_path);
+    const stream = await storage.getStream(key);
     return reply
-      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(cover.file_path)))
+      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(key)))
       .header('Cache-Control', 'public, max-age=86400')
       .send(stream);
   });
@@ -1195,8 +979,7 @@ export async function fileRoutes(app: FastifyInstance): Promise<void> {
       .get();
 
     if (!book?.cover_path) return reply.code(404).send();
-    const driver: StorageDriver = 'local';
-    const storage = getReadStorage(driver);
+    const storage = getStorageByDriver('local');
     const exists = await storage.exists(book.cover_path).catch(() => false);
     if (!exists) return reply.code(404).send();
 

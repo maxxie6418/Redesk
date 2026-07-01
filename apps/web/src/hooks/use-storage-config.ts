@@ -2,9 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export type StorageDriver = 'local' | 's3';
+export type StorageMode = 'local_only' | 'cloud_only' | 'dual';
 
 export interface StorageStatus {
-  writeDriver: StorageDriver;
+  defaultStorageMode: StorageMode;
+  cloudAvailable: boolean;
   configured: boolean;
   provider: string | null;
   bucket: string | null;
@@ -19,7 +21,8 @@ export interface StorageStatus {
 export type StorageSettingsMap = Record<string, string | null>;
 
 export interface StorageSettingsInput {
-  driver: StorageDriver;
+  default_storage_mode?: StorageMode;
+  driver?: StorageDriver | null;
   provider?: string | null;
   endpoint?: string | null;
   bucket?: string | null;

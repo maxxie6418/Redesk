@@ -18,6 +18,7 @@ import {
   Highlighter,
   Sparkles,
   Tags,
+  Cloud,
   type LucideIcon,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
@@ -75,6 +76,32 @@ function formatFileSize(bytes: number | null) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const STORAGE_MODE_LABELS: Record<BookFileItem['storage_mode'], string> = {
+  local_only: '本地',
+  cloud_only: '云端',
+  dual: '本地 + 云端',
+};
+
+function StorageStatusBadge({ file }: { file: BookFileItem }) {
+  const labels: string[] = [];
+  if (file.storage_mode === 'local_only') labels.push('本地');
+  if (file.storage_mode === 'cloud_only') labels.push('云端');
+  if (file.storage_mode === 'dual') labels.push('本地', '云端');
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      <Cloud className="h-3 w-3" />
+      {file.sync_status === 'pending' ? (
+        <span>同步中</span>
+      ) : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? (
+        <span className="text-destructive">同步失败</span>
+      ) : (
+        <span>{STORAGE_MODE_LABELS[file.storage_mode]}</span>
+      )}
+    </span>
+  );
 }
 
 function TagAtom({ children, size = 'default' }: { children: React.ReactNode; size?: 'default' | 'small' | 'tiny' }) {
@@ -796,6 +823,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       <div key={f.id} className="flex items-center gap-2 py-1.5">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', f.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
                         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</span>
+                        <StorageStatusBadge file={f} />
                         <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(f.file_size)}</span>
                       </div>
                     ))}

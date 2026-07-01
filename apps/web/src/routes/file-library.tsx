@@ -11,6 +11,7 @@ import {
   Search,
   Trash2,
   Upload,
+  Cloud,
 } from 'lucide-react';
 import {
   useDeleteUnassociatedFile,
@@ -83,6 +84,27 @@ function formatSize(bytes: number | null): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const STORAGE_MODE_LABELS: Record<BookFileItem['storage_mode'], string> = {
+  local_only: '本地',
+  cloud_only: '云端',
+  dual: '本地 + 云端',
+};
+
+function StorageStatusBadge({ file }: { file: BookFileItem }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      <Cloud className="h-3 w-3" />
+      {file.sync_status === 'pending' ? (
+        <span>同步中</span>
+      ) : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? (
+        <span className="text-destructive">同步失败</span>
+      ) : (
+        <span>{STORAGE_MODE_LABELS[file.storage_mode]}</span>
+      )}
+    </span>
+  );
 }
 
 function formatTotalSize(bytes: number): string {
@@ -468,6 +490,7 @@ export function FileLibraryPage() {
               <th className="py-2.5 pl-5 pr-3 text-left font-medium">文件名</th>
               <th className="py-2.5 pr-3 text-left font-medium">格式</th>
               <th className="py-2.5 pr-3 text-left font-medium">大小</th>
+              <th className="py-2.5 pr-3 text-left font-medium">存储位置</th>
               <th className="py-2.5 pr-3 text-left font-medium">关联书籍</th>
               <th className="py-2.5 pr-3 text-left font-medium">上传时间</th>
               <th className="py-2.5 pr-5 text-right font-medium">操作</th>
@@ -486,6 +509,9 @@ export function FileLibraryPage() {
                   <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{file.file_format}</span>
                 </td>
                 <td className="py-3 pr-3 text-muted-foreground">{formatSize(file.file_size)}</td>
+                <td className="py-3 pr-3">
+                  <StorageStatusBadge file={file} />
+                </td>
                 <td className="py-3 pr-3">
                   {file.book_id && file.book_title ? (
                     <button
@@ -524,7 +550,7 @@ export function FileLibraryPage() {
             ))}
             {allFiles.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                   暂无文件
                 </td>
               </tr>

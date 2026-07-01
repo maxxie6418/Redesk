@@ -3,12 +3,13 @@ import { LocalStorage } from './storage';
 import { S3Storage, type S3StorageConfig } from './s3-storage';
 import { config } from '../config';
 import { eq, and } from 'drizzle-orm';
-import { settings } from '@redesk/db';
+import { settings, type StorageMode } from '@redesk/db';
 import { getDb } from '../db';
 
 export const STORAGE_SETTINGS_OWNER_ID = 1;
 
 export const SETTINGS_KEYS = {
+  defaultStorageMode: 'default_storage_mode',
   driver: 'storage_driver',
   provider: 'oss_provider',
   endpoint: 'oss_endpoint',
@@ -20,10 +21,11 @@ export const SETTINGS_KEYS = {
 } as const;
 
 export type StorageDriver = 'local' | 's3';
-export type WriteDriver = StorageDriver;
+export type StorageLocation = 'local' | 'cloud';
 
 export interface StorageStatus {
-  writeDriver: WriteDriver;
+  defaultStorageMode: StorageMode;
+  cloudAvailable: boolean;
   configured: boolean;
   provider: string | null;
   bucket: string | null;
@@ -38,6 +40,12 @@ export interface StorageStatus {
 export class StorageNotConfiguredError extends Error {
   constructor(public readonly driver: StorageDriver) {
     super(`存储后端未配置: ${driver}`);
+  }
+}
+
+export class StorageModeNotAvailableError extends Error {
+  constructor(public readonly mode: StorageMode, reason?: string) {
+    super(`存储模式不可用: ${mode}${reason ? ` (${reason})` : ''}`);
   }
 }
 
@@ -79,12 +87,17 @@ function isS3ConfigComplete(c: S3StorageConfig): { ok: boolean; missing: string[
   return { ok: missing.length === 0, missing };
 }
 
+function resolveDefaultStorageMode(): StorageMode {
+  const raw = readSettingsValue(SETTINGS_KEYS.defaultStorageMode)?.toLowerCase();
+  if (raw === 'cloud_only' || raw === 'dual') return raw;
+  return 'local_only';
+}
+
 interface Cache {
   local: LocalStorage;
   s3: S3Storage | null;
   s3Error: string | null;
-  writeDriver: WriteDriver;
-  writeReason: string | null;
+  defaultStorageMode: StorageMode;
 }
 
 let cached: Cache | null = null;
@@ -105,17 +118,8 @@ function buildCache(): Cache {
     s3Error = `配置不完整，缺少：${completeness.missing.join(', ')}`;
   }
 
-  const driverPref = (readSettingsValue(SETTINGS_KEYS.driver) ?? 'local').toLowerCase();
-  let writeDriver: WriteDriver = 'local';
-  let writeReason: string | null = null;
-  if (driverPref === 's3' || driverPref === 'r2') {
-    if (s3) {
-      writeDriver = 's3';
-    } else {
-      writeReason = `云存储不可用（${s3Error ?? '未知原因'}），新文件将写入本地存储`;
-    }
-  }
-  return { local, s3, s3Error, writeDriver, writeReason };
+  const defaultStorageMode = resolveDefaultStorageMode();
+  return { local, s3, s3Error, defaultStorageMode };
 }
 
 function ensureCache(): Cache {
@@ -133,7 +137,7 @@ export function getS3Storage(): S3Storage {
   return c.s3;
 }
 
-export function getReadStorage(driver: StorageDriver): Storage {
+export function getStorageByDriver(driver: StorageDriver): Storage {
   const c = ensureCache();
   if (driver === 's3') {
     if (!c.s3) throw new StorageNotConfiguredError('s3');
@@ -142,20 +146,46 @@ export function getReadStorage(driver: StorageDriver): Storage {
   return c.local;
 }
 
-export function getWriteStorage(): Storage {
-  const c = ensureCache();
-  return c.writeDriver === 's3' && c.s3 ? c.s3 : c.local;
+export function resolvePrimaryLocation(mode: StorageMode): StorageLocation {
+  if (mode === 'cloud_only') return 'cloud';
+  return 'local';
 }
 
-export function getWriteDriver(): WriteDriver {
-  return ensureCache().writeDriver;
+export function resolveStorageDriverForMode(mode: StorageMode): StorageDriver {
+  return resolvePrimaryLocation(mode) === 'cloud' ? 's3' : 'local';
+}
+
+export function getStorageForMode(mode: StorageMode): Storage {
+  return getStorageByDriver(resolveStorageDriverForMode(mode));
+}
+
+export function isCloudAvailable(): boolean {
+  return ensureCache().s3 != null;
+}
+
+export function assertStorageModeAvailable(mode: StorageMode): void {
+  if (mode === 'local_only') return;
+  const c = ensureCache();
+  if (!c.s3) {
+    throw new StorageModeNotAvailableError(mode, c.s3Error ?? '云存储未配置');
+  }
+}
+
+export function getDefaultStorageMode(): StorageMode {
+  return ensureCache().defaultStorageMode;
+}
+
+export function normalizeStorageMode(mode: unknown): StorageMode {
+  if (mode === 'cloud_only' || mode === 'dual') return mode;
+  return 'local_only';
 }
 
 export function getStorageStatus(): StorageStatus {
   const c = ensureCache();
   const cfg = buildS3Config();
   return {
-    writeDriver: c.writeDriver,
+    defaultStorageMode: c.defaultStorageMode,
+    cloudAvailable: c.s3 != null,
     configured: c.s3 != null,
     provider: readSettingsValue(SETTINGS_KEYS.provider),
     bucket: cfg.bucket || null,
@@ -164,7 +194,7 @@ export function getStorageStatus(): StorageStatus {
     hasSecretKey: Boolean(cfg.secretAccessKey),
     region: cfg.region,
     publicUrl: cfg.publicUrlBase ?? null,
-    reason: c.writeReason,
+    reason: c.s3 ? null : c.s3Error,
   };
 }
 

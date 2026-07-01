@@ -91,6 +91,8 @@ export async function storageRoutes(app: FastifyInstance): Promise<void> {
 
     const isPresent = (v: string | null | undefined): v is string => v != null && v !== '';
 
+    writeSetting(SETTINGS_KEYS.defaultStorageMode, input.default_storage_mode);
+
     if (isPresent(input.driver)) writeSetting(SETTINGS_KEYS.driver, input.driver);
     else writeSetting(SETTINGS_KEYS.driver, null);
 

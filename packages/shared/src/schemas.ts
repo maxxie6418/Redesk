@@ -277,11 +277,20 @@ export const metadataApplySchema = z.object({
 });
 export type MetadataApplyInput = z.infer<typeof metadataApplySchema>;
 
+export const STORAGE_MODES = ['local_only', 'cloud_only', 'dual'] as const;
+
+export const storageModeSchema = z.enum(STORAGE_MODES);
+export type StorageMode = z.infer<typeof storageModeSchema>;
+
 export const storageDriverSchema = z.enum(['local', 's3']);
 export type StorageDriver = z.infer<typeof storageDriverSchema>;
 
+export const syncStatusSchema = z.enum(['synced', 'pending', 'partial_failed', 'failed']);
+export type SyncStatus = z.infer<typeof syncStatusSchema>;
+
 export const storageSettingsSchema = z.object({
-  driver: storageDriverSchema.default('local'),
+  default_storage_mode: storageModeSchema.default('local_only'),
+  driver: storageDriverSchema.default('local').optional().nullable(),
   provider: z.string().max(64).optional().nullable(),
   endpoint: z.string().max(500).optional().nullable(),
   bucket: z.string().max(200).optional().nullable(),
@@ -293,6 +302,7 @@ export const storageSettingsSchema = z.object({
 export type StorageSettingsInput = z.input<typeof storageSettingsSchema>;
 
 export const storageStatusSchema = z.object({
+  default_storage_mode: storageModeSchema,
   write_driver: storageDriverSchema,
   configured: z.boolean(),
   provider: z.string().nullable(),
@@ -312,3 +322,48 @@ export const storageTestResultSchema = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
 });
 export type StorageTestResult = z.infer<typeof storageTestResultSchema>;
+
+export const storageLocationSchema = z.enum(['local', 'cloud']);
+export type StorageLocation = z.infer<typeof storageLocationSchema>;
+
+export const bookFileSchema = z.object({
+  id: z.number().int(),
+  owner_id: z.number().int(),
+  book_id: z.number().int().nullable(),
+  storage_mode: storageModeSchema,
+  local_path: z.string().nullable(),
+  remote_key: z.string().nullable(),
+  primary_location: storageLocationSchema,
+  sync_status: syncStatusSchema,
+  original_filename: z.string().nullable(),
+  file_format: z.string(),
+  mime_type: z.string().nullable(),
+  file_size: z.number().int().nullable(),
+  checksum: z.string().nullable(),
+  is_primary: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type BookFileItem = z.infer<typeof bookFileSchema>;
+
+export const bookCoverSchema = z.object({
+  id: z.number().int(),
+  owner_id: z.number().int(),
+  book_id: z.number().int(),
+  book_file_id: z.number().int().nullable(),
+  source_type: z.string(),
+  source_label: z.string().nullable(),
+  original_url: z.string().nullable(),
+  storage_mode: storageModeSchema,
+  local_path: z.string().nullable(),
+  remote_key: z.string().nullable(),
+  primary_location: storageLocationSchema,
+  sync_status: syncStatusSchema,
+  mime_type: z.string().nullable(),
+  file_size: z.number().int().nullable(),
+  checksum: z.string().nullable(),
+  is_active: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type BookCoverItem = z.infer<typeof bookCoverSchema>;

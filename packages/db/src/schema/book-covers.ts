@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { books } from './books';
 import { users } from './users';
-import { bookFiles, type StorageDriver } from './book-files';
+import { bookFiles, type StorageMode, type SyncStatus } from './book-files';
 
 export const bookCovers = sqliteTable('book_covers', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -11,8 +11,11 @@ export const bookCovers = sqliteTable('book_covers', {
   source_type: text('source_type').notNull(),
   source_label: text('source_label'),
   original_url: text('original_url'),
-  file_path: text('file_path').notNull(),
-  storage_driver: text('storage_driver', { enum: ['local', 's3'] as const }).notNull().default('local'),
+  storage_mode: text('storage_mode', { enum: ['local_only', 'cloud_only', 'dual'] as const }).notNull().default('local_only'),
+  local_path: text('local_path'),
+  remote_key: text('remote_key'),
+  primary_location: text('primary_location', { enum: ['local', 'cloud'] as const }).notNull().default('local'),
+  sync_status: text('sync_status', { enum: ['synced', 'pending', 'partial_failed', 'failed'] as const }).notNull().default('synced'),
   mime_type: text('mime_type'),
   file_size: integer('file_size'),
   checksum: text('checksum'),
@@ -21,7 +24,7 @@ export const bookCovers = sqliteTable('book_covers', {
   updated_at: text('updated_at').notNull(),
 });
 
-export type { StorageDriver };
+export type { StorageMode, SyncStatus };
 
 export type BookCover = typeof bookCovers.$inferSelect;
 export type NewBookCover = typeof bookCovers.$inferInsert;

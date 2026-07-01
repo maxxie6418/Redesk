@@ -1,11 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+export type StorageMode = 'local_only' | 'cloud_only' | 'dual';
+export type SyncStatus = 'synced' | 'pending' | 'partial_failed' | 'failed';
+
 export interface BookFileItem {
   id: number;
   owner_id: number;
   book_id: number | null;
-  file_path: string;
+  storage_mode: StorageMode;
+  local_path: string | null;
+  remote_key: string | null;
+  primary_location: 'local' | 'cloud';
+  sync_status: SyncStatus;
   original_filename: string | null;
   file_format: string;
   mime_type: string | null;
@@ -28,10 +35,11 @@ export function useBookFiles(bookId: number) {
 export function useUploadFile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ bookId, file, isPrimary }: { bookId: number; file: File; isPrimary?: boolean }) => {
+    mutationFn: async ({ bookId, file, isPrimary, storageMode }: { bookId: number; file: File; isPrimary?: boolean; storageMode?: StorageMode }) => {
       const form = new FormData();
       form.append('file', file);
       if (isPrimary) form.append('is_primary', 'true');
+      if (storageMode) form.append('storage_mode', storageMode);
 
       const res = await fetch(`/api/v1/books/${bookId}/files`, {
         method: 'POST',

@@ -27,6 +27,7 @@
 | v1.0.9 | 2026-06-29 | M1 书架数据层与文件管理增强（P1/P2）：POST /books author 改可选，补充 subtitle/translator/original_title/page_count/source_url 等全字段；筛选新增 favorited/has_files/genre_category_id；新增书库文件端点 GET /files、未关联文件池 POST/GET/DELETE /files/unassociated、文件匹配书籍 POST /files/{id}/match | — |
 | v1.0.10 | 2026-06-29 | 文件管理风险收口：书库文件与未关联文件池按 owner_id 隔离；checksum 去重范围明确为当前用户书库；彻底删除书籍同步清理关联文件记录与物理文件；匹配接口以 POST /files/{fileId}/match 为准 | AI |
 | v1.0.11 | 2026-06-29 | 新增书籍元数据批量导入：提供 CSV 模板下载 GET /books/import/template，支持 multipart CSV 导入 POST /books/import；导入仅创建书籍元数据，不包含文件 | AI |
+| v1.1.0 | 2026-07-01 | 存储策略三态改造：book_files/book_covers 增加 storage_mode/local_path/remote_key/primary_location/sync_status；上传接口支持 `storage_mode` 字段；新增默认存储方式设置 `default_storage_mode`；设置页增加批量上传弹窗；云未配置时禁用 `cloud_only`/`dual` | AI |
 
 ## 文档说明
 
@@ -193,7 +194,7 @@
   }
 }
 ```
-> 支持 `multipart/form-data` 同时上传文件：字段与 JSON 一致，额外附加 `file` 二进制字段。后端自动识别格式、抽取 EPUB 封面、计算 checksum。
+> 支持 `multipart/form-data` 同时上传文件：字段与 JSON 一致，额外附加 `file` 二进制字段；可选附加 `storage_mode`（`local_only`/`cloud_only`/`dual`，缺省使用系统默认）。后端自动识别格式、抽取 EPUB 封面缓存、计算 checksum。
 
 响应 201：`{ "data": { /* book 对象 */ } }`
 
@@ -322,7 +323,7 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
 | GET | /books/{id}/files | 文件列表 | 2.05 |
-| POST | /books/{id}/files | 上传文件（multipart） | 2.01/2.02/2.03 |
+| POST | /books/{id}/files | 上传文件（multipart），支持 `storage_mode` | 2.01/2.02/2.03 |
 | GET | /books/{id}/files/{fileId} | 文件元信息 | 2.05/2.09 |
 | GET | /books/{id}/files/{fileId}/download | 下载（支持 Range） | 2.06 |
 | PATCH | /books/{id}/files/{fileId} | 编辑（设主阅读文件等） | 2.04 |
@@ -334,7 +335,7 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
 | GET | /files | 书库文件列表（分页，支持 format/associated 筛选） | 2.x |
-| POST | /files/unassociated | 上传未关联文件（进入文件池） | 2.x |
+| POST | /files/unassociated | 上传未关联文件（进入文件池），支持 `storage_mode` | 2.x |
 | GET | /files/unassociated | 未关联文件列表 | 2.x |
 | DELETE | /files/unassociated/{fileId} | 删除未关联文件 | 2.x |
 | POST | /files/{fileId}/match | 将文件池中的文件匹配到指定书籍 | 2.x |
@@ -343,9 +344,14 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 
 ### POST /books/{id}/files
 
-请求：`multipart/form-data`，字段 `file`（二进制）、`is_primary`（bool，可选）。
-后端处理：存储到挂载卷、抽取 EPUB 封面缓存、计算 checksum、识别格式。
-响应 201：`{ "data": { "id": 9, "file_format": "EPUB", "is_primary": true, "cover_path": "..." } }`
+请求：`multipart/form-data`，字段 `file`（二进制）、`is_primary`（bool，可选）、`storage_mode`（`local_only`/`cloud_only`/`dual`，可选，缺省系统默认）。
+后端处理：按 `storage_mode` 写入主端，另一端标记为 `pending`（`dual` 模式下），抽取 EPUB 封面缓存、计算 checksum、识别格式。
+响应 201：`{ "data": { "id": 9, "file_format": "EPUB", "is_primary": true, "storage_mode": "local_only", "local_path": "...", "remote_key": null, "primary_location": "local", "sync_status": "synced" } }`
+
+### POST /files/unassociated
+
+请求：`multipart/form-data`，字段 `file`（二进制）、`storage_mode`（可选，缺省系统默认）。
+响应 201：与 POST /books/{id}/files 结构一致。
 
 ### GET .../download
 
@@ -494,6 +500,8 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | recycle_retention_days | string | 回收站保留天数，默认 `"30"` |
 | theme | string | 界面主题：`"light"` / `"dark"` / `"system"` |
 | multi_user | string | 多用户开关：`"true"` 开启、`"false"` 关闭 |
+| default_storage_mode | string | 默认存储方式：`"local_only"` / `"cloud_only"` / `"dual"` |
+| storage_driver | string | 保留项，已废弃；新逻辑仅依据云配置可用性判断 |
 | llm_provider | string | LLM 提供商：`""` / `"openai"` / `"anthropic"` / `"deepseek"` / `"ollama"` |
 | llm_api_key | string | LLM API Key（回读脱敏） |
 | llm_model | string | LLM 模型名，如 `"gpt-4o"` / `"claude-3.5-sonnet"` |
@@ -505,6 +513,31 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | oss_secret_key | string | OSS Secret Key（回读脱敏） |
 
 密钥规则：`llm_api_key`、`oss_access_key`、`oss_secret_key` 等敏感字段写入时接收明文，读取时脱敏返回（如 `sk-****abcd`）。日志、错误响应和导出文件不得包含明文 secret。AI 功能（录入辅助、阅读辅助、RAG）在各里程碑激活后读取这些配置；配置可提前保存但不立即生效。
+
+### GET /storage/status
+
+响应：
+```json
+{
+  "data": {
+    "defaultStorageMode": "local_only",
+    "cloudAvailable": false,
+    "configured": false,
+    "provider": null,
+    "bucket": null,
+    "endpoint": null,
+    "hasAccessKey": false,
+    "hasSecretKey": false,
+    "region": null,
+    "publicUrl": null,
+    "reason": "配置不完整，缺少：oss_endpoint, oss_bucket, oss_access_key, oss_secret_key"
+  }
+}
+```
+
+### PATCH /storage/settings
+
+请求：与 §10 配置项一致；新增 `default_storage_mode` 必填。
 
 ---
 

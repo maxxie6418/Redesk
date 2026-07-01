@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
 import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
-import { bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags } from '@redesk/db';
+import { bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags, type StorageMode } from '@redesk/db';
 import {
   ERROR_CODE,
   bookQuerySchema,
@@ -365,7 +365,7 @@ function recordStatusChange(bookId: number, fromStatus: string | null, toStatus:
     .run();
 }
 
-async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { stream: NodeJS.ReadableStream; filename: string } | null) {
+async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { stream: NodeJS.ReadableStream; filename: string } | null, uploadMode?: StorageMode) {
   const db = getDb();
   const timestamp = now();
   const book = db
@@ -402,7 +402,7 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
   recordStatusChange(book.id, null, book.status);
 
   if (uploadedFile) {
-    await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.stream, true);
+    await saveUploadedFile(userId, book.id, uploadedFile.filename, uploadedFile.stream, true, uploadMode);
   }
 
   if (input.cover_url) {
@@ -870,15 +870,24 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         page_count: fieldVal('page_count') ? Number(fieldVal('page_count')) : null,
       });
 
+      let uploadMode: StorageMode | undefined;
       if (data.file && data.filename) {
         const ext = extname(data.filename).toLowerCase();
         if (EXTENSION_FORMAT[ext]) {
           uploadedFile = { stream: data.file, filename: data.filename };
         }
+        const rawMode = (data.fields.storage_mode as { value?: string } | undefined)?.value;
+        if (rawMode === 'cloud_only' || rawMode === 'dual' || rawMode === 'local_only') {
+          uploadMode = rawMode;
+        }
       }
-    } else {
-      input = validate(createBookSchema, req.body);
+
+      const book = await createBookRecord(userId, input, uploadedFile, uploadMode);
+
+      return { data: serializeBooks([book], userId)[0] };
     }
+
+    input = validate(createBookSchema, req.body);
 
     const book = await createBookRecord(userId, input, uploadedFile);
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type CSSProperties } from 'react';
+import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import {
   Monitor,
   Moon,
@@ -32,6 +32,7 @@ import {
   Image,
   KeyRound,
   LogOut,
+  Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
@@ -51,10 +52,13 @@ import {
   useStorageSettings,
   useUpdateStorageSettings,
   useTestStorage,
+  type StorageMode,
 } from '@/hooks/use-storage-config';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, type CategoryItem } from '@/hooks/use-categories';
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag, type TagItem } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
+import { Select } from '@/components/ui/select';
+import { api } from '@/lib/api';
 import {
   useQuickLinks,
   useAddQuickLink,
@@ -1494,8 +1498,263 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </CardContent>
       </Card>
 
+      <DefaultStorageCard onToast={onToast} />
+      <BatchUploadCard onToast={onToast} />
       <CloudStorageCard onToast={onToast} />
     </div>
+  );
+}
+
+const STORAGE_MODE_LABELS: Record<StorageMode, string> = {
+  local_only: '仅保存在当前设备',
+  cloud_only: '仅保存在云端',
+  dual: '本地和云端都保留',
+};
+
+const MODE_DESCRIPTIONS: Record<StorageMode, string> = {
+  local_only: '文件只写入本地存储，不占用云端空间，换设备时无法直接访问。',
+  cloud_only: '文件只写入云端对象存储，本地不保留副本，便于多设备访问。',
+  dual: '文件先写入主端，另一端标记为待同步；后续会自动补齐双端副本。',
+};
+
+function DefaultStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const status = useStorageStatus();
+  const settings = useStorageSettings();
+  const update = useUpdateStorageSettings();
+  const [mode, setMode] = useState<StorageMode>('local_only');
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (hydrated || !settings.data) return;
+    const raw = settings.data.default_storage_mode;
+    setMode(raw === 'cloud_only' || raw === 'dual' ? raw : 'local_only');
+    setHydrated(true);
+  }, [settings.data, hydrated]);
+
+  const cloudAvailable = status.data?.cloudAvailable ?? false;
+
+  const handleSave = async () => {
+    if (!cloudAvailable && mode !== 'local_only') {
+      onToast({ type: 'error', text: '云存储未配置，无法选择云端相关模式' });
+      return;
+    }
+    try {
+      await update.mutateAsync({ default_storage_mode: mode });
+      onToast({ type: 'success', text: '默认存储方式已保存' });
+    } catch (err) {
+      onToast({ type: 'error', text: err instanceof Error ? err.message : '保存失败' });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base">默认存储方式</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            {(['local_only', 'cloud_only', 'dual'] as StorageMode[]).map((m) => {
+              const disabled = !cloudAvailable && m !== 'local_only';
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    'rounded-lg border p-4 text-left transition-colors',
+                    mode === m
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:bg-accent',
+                    disabled && 'cursor-not-allowed opacity-50',
+                  )}
+                >
+                  <div className="text-sm font-medium text-foreground">{STORAGE_MODE_LABELS[m]}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{MODE_DESCRIPTIONS[m]}</p>
+                </button>
+              );
+            })}
+          </div>
+          {!cloudAvailable && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200/50 bg-amber-50/95 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>云存储未配置，仅「仅保存在当前设备」可选；配置后可在下方「云存储配置」中启用。</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 pt-2">
+            <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+              {update.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+              保存默认方式
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface BatchFileItem {
+  file: File;
+  mode: StorageMode;
+  status: 'pending' | 'uploading' | 'success' | 'error';
+  error: string | null;
+  resultId: number | null;
+}
+
+function BatchUploadCard({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const status = useStorageStatus();
+  const [items, setItems] = useState<BatchFileItem[]>([]);
+  const [open, setOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const defaultMode = status.data?.defaultStorageMode ?? 'local_only';
+  const cloudAvailable = status.data?.cloudAvailable ?? false;
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    const accepted = Array.from(files).filter((f) => {
+      const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
+      return ['.epub', '.pdf', '.mobi', '.txt', '.azw3', '.azw', '.djvu', '.docx', '.fb2'].includes(ext);
+    });
+    if (accepted.length === 0) {
+      onToast({ type: 'error', text: '未识别到支持的电子书格式' });
+      return;
+    }
+    setItems((prev) => [
+      ...prev,
+      ...accepted.map((file) => ({
+        file,
+        mode: defaultMode,
+        status: 'pending' as const,
+        error: null,
+        resultId: null,
+      })),
+    ]);
+    setOpen(true);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const updateItemMode = (index: number, mode: StorageMode) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, mode } : item)));
+  };
+
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpload = async () => {
+    if (items.length === 0) return;
+    setIsUploading(true);
+    setItems((prev) => prev.map((item) => (item.status === 'pending' ? { ...item, status: 'uploading' } : item)));
+    const results: BatchFileItem[] = [];
+
+    for (const item of items) {
+      if (!cloudAvailable && item.mode !== 'local_only') {
+        results.push({ ...item, status: 'error', error: '云存储未配置，无法使用云端模式' });
+        continue;
+      }
+      const form = new FormData();
+      form.append('file', item.file);
+      form.append('storage_mode', item.mode);
+      try {
+        const res = await api.post<{ data: { id: number } }>('/files/unassociated', form);
+        results.push({ ...item, status: 'success', resultId: res.data.id, error: null });
+      } catch (err) {
+        results.push({ ...item, status: 'error', error: err instanceof Error ? err.message : '上传失败' });
+      }
+    }
+
+    setItems(results);
+    setIsUploading(false);
+    const success = results.filter((r) => r.status === 'success').length;
+    const failed = results.filter((r) => r.status === 'error').length;
+    if (failed === 0) {
+      onToast({ type: 'success', text: `全部上传成功：${success} 个文件` });
+    } else {
+      onToast({ type: 'error', text: `上传完成：成功 ${success} 个，失败 ${failed} 个` });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base">批量上传</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept=".epub,.pdf,.mobi,.txt,.azw3,.azw,.djvu,.docx,.fb2"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+            <Upload className="mr-1 h-4 w-4" />
+            选择文件批量上传
+          </Button>
+
+          {open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <Card className="max-h-[80vh] w-full max-w-2xl overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-base">批量上传</CardTitle>
+                  <p className="text-xs text-muted-foreground">共 {items.length} 个文件；系统默认方式：{STORAGE_MODE_LABELS[defaultMode]}</p>
+                </CardHeader>
+                <CardContent className="max-h-[50vh] overflow-auto">
+                  <div className="space-y-2">
+                    {items.map((item, index) => (
+                      <div key={`${item.file.name}-${index}`} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground" title={item.file.name}>{item.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
+                        </div>
+                        <Select
+                          value={item.mode}
+                          disabled={isUploading}
+                          onChange={(e) => updateItemMode(index, e.target.value as StorageMode)}
+                          className="w-40"
+                        >
+                          <option value="local_only">{STORAGE_MODE_LABELS.local_only}</option>
+                          <option value="cloud_only" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.cloud_only}</option>
+                          <option value="dual" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.dual}</option>
+                        </Select>
+                        <div className="w-16 text-right">
+                          {item.status === 'success' && <span className="text-xs text-emerald-600">成功</span>}
+                          {item.status === 'error' && <span className="text-xs text-destructive" title={item.error ?? ''}>失败</span>}
+                          {item.status === 'uploading' && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
+                          {item.status === 'pending' && <span className="text-xs text-muted-foreground">待上传</span>}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={isUploading}
+                          onClick={() => removeItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+                <div className="flex items-center justify-end gap-2 border-t border-border p-4">
+                  <Button variant="outline" onClick={() => { setOpen(false); setItems([]); }} disabled={isUploading}>
+                    关闭
+                  </Button>
+                  <Button onClick={handleUpload} disabled={isUploading || items.length === 0}>
+                    {isUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
+                    开始上传
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1569,7 +1828,7 @@ function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }
     }
   }, [driver, provider, endpoint, bucket, accessKey, secretKey, region, publicUrl, test, onToast]);
 
-  const writeDriver = status.data?.writeDriver ?? 'local';
+  const defaultStorageMode = status.data?.defaultStorageMode ?? 'local_only';
   const configured = status.data?.configured ?? false;
   const reason = status.data?.reason ?? null;
 
@@ -1580,9 +1839,9 @@ function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }
           <CardTitle className="text-base">云存储配置</CardTitle>
           {status.data && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">当前写入后端:</span>
-              <span className={cn('rounded px-2 py-0.5 font-medium', writeDriver === 's3' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-muted text-foreground')}>
-                {writeDriver === 's3' ? 'S3 兼容' : '本地'}
+              <span className="text-muted-foreground">默认存储方式:</span>
+              <span className="rounded bg-muted px-2 py-0.5 font-medium text-foreground">
+                {STORAGE_MODE_LABELS[defaultStorageMode]}
               </span>
               {configured ? (
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">已配置</span>
