@@ -49,7 +49,11 @@ export interface BookCoverItem {
   source_type: string;
   source_label: string | null;
   original_url: string | null;
-  file_path: string;
+  storage_mode: 'local_only' | 'cloud_only' | 'dual';
+  local_path: string | null;
+  remote_key: string | null;
+  primary_location: 'local' | 'cloud';
+  sync_status: 'synced' | 'pending' | 'partial_failed' | 'failed';
   mime_type: string | null;
   file_size: number | null;
   checksum: string | null;

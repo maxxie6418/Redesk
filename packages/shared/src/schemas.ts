@@ -302,16 +302,16 @@ export const storageSettingsSchema = z.object({
 export type StorageSettingsInput = z.input<typeof storageSettingsSchema>;
 
 export const storageStatusSchema = z.object({
-  default_storage_mode: storageModeSchema,
-  write_driver: storageDriverSchema,
+  defaultStorageMode: storageModeSchema,
+  cloudAvailable: z.boolean(),
   configured: z.boolean(),
   provider: z.string().nullable(),
   bucket: z.string().nullable(),
   endpoint: z.string().nullable(),
-  has_access_key: z.boolean(),
-  has_secret_key: z.boolean(),
+  hasAccessKey: z.boolean(),
+  hasSecretKey: z.boolean(),
   region: z.string().nullable(),
-  public_url: z.string().nullable(),
+  publicUrl: z.string().nullable(),
   reason: z.string().nullable(),
 });
 export type StorageStatusOutput = z.infer<typeof storageStatusSchema>;
