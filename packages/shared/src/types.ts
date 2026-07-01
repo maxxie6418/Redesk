@@ -30,14 +30,11 @@ export const MAX_PAGE_SIZE = 500;
 
 export const SETTINGS_KEY = {
   AUTH_MODE: 'auth_mode',
-  SESSION_EXPIRES_DAYS: 'session_expires_days',
   ADMIN_PASSWORD_CHANGED_AT: 'admin_password_changed_at',
   BRUTE_FORCE_WINDOW_MINUTES: 'brute_force_window_minutes',
   BRUTE_FORCE_MAX_ATTEMPTS: 'brute_force_max_attempts',
   BRUTE_FORCE_LOCK_MINUTES: 'brute_force_lock_minutes',
 } as const;
-
-export const DEFAULT_SESSION_EXPIRES_DAYS = 7;
 
 export const BRUTE_FORCE_DEFAULTS = {
   WINDOW_MINUTES: 10,

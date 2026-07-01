@@ -677,7 +677,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         cover_url: coverUrl || null,
         custom_attributes: parsedDoubanRating != null && Number.isFinite(parsedDoubanRating) ? { [externalRatingKey]: parsedDoubanRating } : null,
         page_count: pageCount ? Number(pageCount) : null,
-        tag_ids: tagIds.length > 0 ? tagIds : null,
+        ...(tagIds.length > 0 ? { tag_ids: tagIds } : {}),
       };
 
       if (selectedFile) {

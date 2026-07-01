@@ -4,7 +4,6 @@ import {
   SETTINGS_KEY,
   AUTH_MODE,
   BRUTE_FORCE_DEFAULTS,
-  DEFAULT_SESSION_EXPIRES_DAYS,
 } from '@redesk/shared';
 import type { AuthMode } from '@redesk/shared';
 import { getDb } from '../db';
@@ -60,10 +59,6 @@ export function setSetting(key: string, value: string, ownerId = 1): void {
       set: { value, updated_at: ts },
     })
     .run();
-}
-
-export function getSessionExpiresDays(): number {
-  return getNumberSetting(SETTINGS_KEY.SESSION_EXPIRES_DAYS, DEFAULT_SESSION_EXPIRES_DAYS);
 }
 
 export function getAdminPasswordChangedAt(): number {

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
 import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
-import { bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags, type StorageMode } from '@redesk/db';
+import { bookCovers, bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags, type StorageMode } from '@redesk/db';
 import {
   ERROR_CODE,
   bookQuerySchema,
@@ -447,12 +447,13 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
 
   if (input.cover_url) {
     try {
+      const shouldActivateCover = !hasActiveBookCover(book.id);
       await downloadRemoteCover({
         ownerId: userId,
         bookId: book.id,
         coverUrl: input.cover_url,
         sourceLabel: input.metadata_source ?? 'manual',
-        activate: false,
+        activate: shouldActivateCover,
       });
     } catch { /* 封面下载失败不影响书籍创建 */ }
   }
@@ -472,6 +473,16 @@ function syncBookTags(bookId: number, tagIds: number[] | undefined): void {
   db.insert(bookTags)
     .values(tagIds.map((tagId) => ({ book_id: bookId, tag_id: tagId, created_at: timestamp })))
     .run();
+}
+
+function hasActiveBookCover(bookId: number): boolean {
+  const activeCover = getDb()
+    .select({ id: bookCovers.id })
+    .from(bookCovers)
+    .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.is_active, 1)))
+    .get();
+
+  return Boolean(activeCover);
 }
 
 function serializeBooks(rows: RawBookRow[], ownerId: number) {
@@ -1170,12 +1181,13 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         try {
           const metadata = await fetchBookMetadataFromUrl(sourceUrl);
           if (metadata.cover_url) {
+            const shouldActivateCover = !hasActiveBookCover(bookId);
             await downloadRemoteCover({
               ownerId: userId,
               bookId,
               coverUrl: metadata.cover_url,
               sourceLabel: metadata.metadata_source,
-              activate: false,
+              activate: shouldActivateCover,
             });
           }
         } catch { /* 封面下载失败不影响元数据更新 */ }

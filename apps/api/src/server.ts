@@ -7,7 +7,6 @@ import fastifyMultipart from '@fastify/multipart';
 import { existsSync } from 'node:fs';
 import { config } from './config';
 import { errorHandler } from './plugins/error-handler';
-import { getSessionExpiresDays } from './lib/settings-store';
 
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
@@ -28,6 +27,8 @@ interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
 }
 
+const PERSISTENT_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 365 * 10;
+
 function hasSendFile(reply: FastifyReply): reply is FastifyReply & SendFileReply {
   return typeof (reply as unknown as SendFileReply).sendFile === 'function';
 }
@@ -47,13 +48,13 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: [config.webUrl],
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   await app.register(fastifyMultipart, {
     limits: {
       fileSize: 200 * 1024 * 1024,
     },
   });
-  const sessionExpiresDays = getSessionExpiresDays();
   await app.register(session, {
     secret: config.sessionSecret,
     cookieName: 'sid',
@@ -62,7 +63,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
-      maxAge: sessionExpiresDays * 24 * 60 * 60 * 1000,
+      maxAge: PERSISTENT_SESSION_MAX_AGE_MS,
     },
   });
 

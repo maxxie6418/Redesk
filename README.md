@@ -227,13 +227,45 @@ Redesk 的长期价值在于能否把个人阅读中真正有价值的内容长�
 ```
 Redesk/
 ├── apps/
-│   ├── api/          # Fastify 后端
-│   └── web/          # Vite + React 前端
+│   ├── api/                  # Fastify 后端
+│   │   ├── src/
+│   │   │   ├── lib/          # 核心库（认证、存储、错误处理、S3 等）
+│   │   │   ├── plugins/      # Fastify 插件（错误处理等）
+│   │   │   ├── routes/       # API 路由（books / files / tags / OPDS 等）
+│   │   │   ├── scripts/      # 维护脚本
+│   │   │   ├── config.ts     # 配置加载
+│   │   │   ├── db.ts         # 数据库连接
+│   │   │   └── server.ts     # 服务启动
+│   │   └── tools/            # 一次性工具
+│   └── web/                  # Vite + React 前端
+│       └── src/
+│           ├── components/   # UI 组件（shadcn/ui + 业务组件）
+│           │   └── ui/       # shadcn/ui 基础组件
+│           ├── hooks/        # 数据获取与状态 Hooks
+│           ├── lib/          # 工具库（API 客户端、校验等）
+│           └── routes/       # 页面路由组件
 ├── packages/
-│   ├── db/           # Drizzle schema + better-sqlite3
-│   └── shared/       # 前后端共享类型
-├── doc/              # 全部设计文档
-└── docker-compose.yml
+│   ├── db/                   # Drizzle schema + better-sqlite3
+│   │   ├── drizzle/          # 数据库迁移文件
+│   │   └── src/
+│   │       ├── cli/          # CLI 工具（迁移、种子数据）
+│   │       └── schema/       # 表 schema 定义
+│   └── shared/               # 前后端共享类型与校验（Zod schema）
+│       └── src/
+├── doc/                      # 全部设计文档
+├── scripts/                  # 开发辅助脚本（版本号、检查等）
+├── --library/                # 书籍文件存储目录
+├── AGENTS.md                 # AI 代理工作守则
+├── Dockerfile                # Docker 构建
+├── docker-compose.yml        # Docker Compose 部署
+├── docker-entrypoint.sh      # Docker 启动入口
+├── eslint.config.js          # ESLint 配置
+├── package.json              # 根 package.json（workspace）
+├── pnpm-workspace.yaml       # pnpm workspace 配置
+├── tsconfig.base.json        # TypeScript 基础配置
+├── start-local.bat           # Windows 本地启动（批处理）
+├── start-local.ps1           # Windows 本地启动（PowerShell）
+└── .env.example              # 环境变量模板
 ```
 
 ---

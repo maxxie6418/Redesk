@@ -5,9 +5,9 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.0.11 |
+| 当前版本 | v1.1.1 |
 | 文档状态 | 待评审 |
-| 最后更新 | 2026-06-29 |
+| 最后更新 | 2026-07-02 |
 | 适用范围 | 全项目实现期 |
 | 关联文档 | 数据模型.md、技术方案.md、功能清单.md |
 
@@ -28,6 +28,7 @@
 | v1.0.10 | 2026-06-29 | 文件管理风险收口：书库文件与未关联文件池按 owner_id 隔离；checksum 去重范围明确为当前用户书库；彻底删除书籍同步清理关联文件记录与物理文件；匹配接口以 POST /files/{fileId}/match 为准 | AI |
 | v1.0.11 | 2026-06-29 | 新增书籍元数据批量导入：提供 CSV 模板下载 GET /books/import/template，支持 multipart CSV 导入 POST /books/import；导入仅创建书籍元数据，不包含文件 | AI |
 | v1.1.0 | 2026-07-01 | 存储策略三态改造：book_files/book_covers 增加 storage_mode/local_path/remote_key/primary_location/sync_status；上传接口支持 `storage_mode` 字段；新增默认存储方式设置 `default_storage_mode`；设置页增加批量上传弹窗；云未配置时禁用 `cloud_only`/`dual` | AI |
+| v1.1.1 | 2026-07-02 | 鉴权与文件管理修正：会话改为长期保持直至主动退出；封面管理补充 PATCH/DELETE 跨域支持；新封面在无活动封面时自动设为当前封面 | AI |
 
 ## 文档说明
 
@@ -149,6 +150,8 @@
 > 鉴权模式由 settings 表中的 `multi_user` 键动态控制：`"true"` 时需密码登录（多用户模式）；`"false"` 或不存时自动以默认管理员身份免登录（单用户模式）。免登录模式下 `/auth/status` 返回 `needs_setup: false`，`/auth/login` 直接登入。
 >
 > 单用户模式下默认管理员账户由后端首次启动时自动创建（用户名 `admin`，密码 `redesk`），无需手动 setup。
+>
+> 当前会话 Cookie 为长期保持策略：登录成功后持续有效，直到用户主动调用 `/auth/logout` 退出；后续版本再开放默认天数与管理员配置。
 
 ---
 
@@ -500,6 +503,10 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | recycle_retention_days | string | 回收站保留天数，默认 `"30"` |
 | theme | string | 界面主题：`"light"` / `"dark"` / `"system"` |
 | multi_user | string | 多用户开关：`"true"` 开启、`"false"` 关闭 |
+| auth_mode | string | 鉴权模式：`"single_token"` / `"multi_token"` |
+| brute_force_window_minutes | string | 暴力尝试统计窗口（分钟） |
+| brute_force_max_attempts | string | 暴力尝试窗口内最大失败次数 |
+| brute_force_lock_minutes | string | 触发保护后的锁定时长（分钟） |
 | default_storage_mode | string | 默认存储方式：`"local_only"` / `"cloud_only"` / `"dual"` |
 | storage_driver | string | 保留项，已废弃；新逻辑仅依据云配置可用性判断 |
 | llm_provider | string | LLM 提供商：`""` / `"openai"` / `"anthropic"` / `"deepseek"` / `"ollama"` |
@@ -511,6 +518,8 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | oss_bucket | string | OSS Bucket |
 | oss_access_key | string | OSS Access Key（回读脱敏） |
 | oss_secret_key | string | OSS Secret Key（回读脱敏） |
+
+说明：当前不再提供 `session_expires_days` 配置项。登录状态固定为长期保持，直到用户主动退出。
 
 密钥规则：`llm_api_key`、`oss_access_key`、`oss_secret_key` 等敏感字段写入时接收明文，读取时脱敏返回（如 `sk-****abcd`）。日志、错误响应和导出文件不得包含明文 secret。AI 功能（录入辅助、阅读辅助、RAG）在各里程碑激活后读取这些配置；配置可提前保存但不立即生效。
 

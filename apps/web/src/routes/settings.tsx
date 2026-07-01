@@ -261,7 +261,7 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
           <CardTitle className="text-base">回收站</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="rounded-lg border border-border bg-popover px-4 py-3">
             <div>
               <p className="text-sm font-medium text-foreground">保留天数</p>
               <p className="text-xs text-muted-foreground">超过该天数的回收站书籍将被自动清除</p>
@@ -286,7 +286,7 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
           <CardTitle className="text-base">账号</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="rounded-lg border border-border bg-popover px-4 py-3">
             <div>
               <p className="text-sm font-medium text-foreground">退出当前账号</p>
               <p className="text-xs text-muted-foreground">退出后需重新登录</p>
@@ -554,7 +554,6 @@ function LoginManagementTab() {
   const toggleActive = useToggleActive();
 
   const [multiUser, setMultiUser] = useState(false);
-  const [sessionDays, setSessionDays] = useState('7');
   const [bfWindow, setBfWindow] = useState('10');
   const [bfMaxAttempts, setBfMaxAttempts] = useState('5');
   const [bfLock, setBfLock] = useState('60');
@@ -564,7 +563,6 @@ function LoginManagementTab() {
     if (hydrated || !settings.data) return;
     const s = settings.data;
     setMultiUser(s.auth_mode === 'multi_token');
-    setSessionDays(s.session_expires_days ?? '7');
     setBfWindow(s.brute_force_window_minutes ?? '10');
     setBfMaxAttempts(s.brute_force_max_attempts ?? '5');
     setBfLock(s.brute_force_lock_minutes ?? '60');
@@ -579,14 +577,13 @@ function LoginManagementTab() {
       await updateSettings.mutateAsync({
         auth_mode: multiUser ? 'multi_token' : 'single_token',
         multi_user: multiUser ? 'true' : 'false',
-        session_expires_days: sessionDays,
         brute_force_window_minutes: bfWindow,
         brute_force_max_attempts: bfMaxAttempts,
         brute_force_lock_minutes: bfLock,
       });
       showToast({ type: 'info', text: '登录管理设置已保存' });
     } catch { showToast({ type: 'error', text: '保存失败' }); }
-  }, [multiUser, sessionDays, bfWindow, bfMaxAttempts, bfLock, updateSettings, showToast]);
+  }, [multiUser, bfWindow, bfMaxAttempts, bfLock, updateSettings, showToast]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -661,15 +658,14 @@ function LoginManagementTab() {
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">会话有效期</CardTitle>
+          <CardTitle className="text-base">会话状态</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">登录状态保持天数</p>
-              <p className="text-xs text-muted-foreground">超过该天数后需要重新登录</p>
+              <p className="text-sm font-medium text-foreground">当前固定为长期保持</p>
+              <p className="text-xs text-muted-foreground">只要不主动退出，登录状态就会持续保留。后续版本再开放默认天数和管理员设置。</p>
             </div>
-            <Input type="number" min={1} max={90} className="w-24" value={sessionDays} onChange={(e) => setSessionDays(e.target.value)} />
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -58,6 +58,18 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
   const [loginOpen, setLoginOpen] = useState(false);
   const loggedIn = !!currentUser.data;
   const initial = authInit.data?.initial === true;
+  const firstRunShown = useRef(false);
+
+  useEffect(() => {
+    if (initial && !loggedIn && !firstRunShown.current) {
+      firstRunShown.current = true;
+      const timer = setTimeout(() => {
+        setLoginOpen(true);
+        toast.info('首次部署，请使用默认口令 admin 登录并设置新口令', { duration: 6000 });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [initial, loggedIn]);
   const authLabel = loggedIn ? '设置' : initial ? '设置管理口令' : '登录';
   const AuthIcon = loggedIn ? Settings : initial ? KeyRound : LogIn;
 

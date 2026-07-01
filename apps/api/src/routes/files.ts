@@ -900,7 +900,30 @@ export function fileRoutes(app: FastifyInstance): void {
       .send(stream);
   });
 
-  app.get('/books/:id/covers/fetch', async (req) => {
+  app.get('/books/:id/covers', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookId = Number(id);
+    if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
+
+    const book = getDb()
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+    if (!book) throw notFound('书籍不存在');
+
+    const rows = getDb()
+      .select()
+      .from(bookCovers)
+      .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.owner_id, userId)))
+      .orderBy(desc(bookCovers.is_active), desc(bookCovers.id))
+      .all();
+
+    return { data: rows };
+  });
+
+  app.post('/books/:id/covers/fetch', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
@@ -1131,15 +1154,21 @@ export function fileRoutes(app: FastifyInstance): void {
       .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
       .get();
 
-    if (!book?.cover_path) return reply.code(404).send();
+    if (!book?.cover_path) {
+      reply.header('Cache-Control', 'no-store');
+      return reply.code(404).send();
+    }
     const storage = getStorageByDriver('local');
     const exists = await storage.exists(book.cover_path).catch(() => false);
-    if (!exists) return reply.code(404).send();
+    if (!exists) {
+      reply.header('Cache-Control', 'no-store');
+      return reply.code(404).send();
+    }
 
     const stream = await storage.getStream(book.cover_path);
     return reply
       .header('Content-Type', coverMimeFromExt(extname(book.cover_path)))
-      .header('Cache-Control', 'public, max-age=86400')
+      .header('Cache-Control', 'no-store')
       .send(stream);
   });
 }

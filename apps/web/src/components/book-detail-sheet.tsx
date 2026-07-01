@@ -639,7 +639,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               <div className="mb-6">
                 {hasCover ? (
                   <img
-                    src={`${COVER_URL_BASE}/books/${bookId}/cover`}
+                    src={`${COVER_URL_BASE}/books/${bookId}/cover?v=${encodeURIComponent(b.cover_path ?? b.updated_at)}`}
                     alt={b.title}
                     className="w-full rounded-xl object-cover shadow-lg aspect-[2/3]"
                   />
