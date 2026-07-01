@@ -2,10 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { and, eq, isNull } from 'drizzle-orm';
 import { books, bookFiles, categories, tags, users, settings } from '@redesk/db';
+import { runMigrationsOn } from '@redesk/db';
 import { ERROR_CODE } from '@redesk/shared';
 import { config, MONOREPO_ROOT } from '../config';
 import { getDb, getSqlite } from '../db';
-import { requireUserId } from '../lib/auth';
+import { requireUserId, verifyPassword } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { join } from 'node:path';
 import { statSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync, readFileSync } from 'node:fs';
@@ -264,6 +265,66 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
         freed_bytes: freedBytes,
         removed_files: removedFiles,
       },
+    };
+  });
+
+  app.post('/system/reset', async (req) => {
+    requireUserId(req);
+    const body = req.body as { password?: string } | undefined;
+    const inputPassword = body?.password;
+    if (!inputPassword) {
+      throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '需要管理员口令验证');
+    }
+
+    const admin = getDb()
+      .select({ id: users.id, password_hash: users.password_hash })
+      .from(users)
+      .where(eq(users.id, 1))
+      .get();
+    if (!admin) {
+      throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '管理员账户不存在');
+    }
+    const ok = await verifyPassword(inputPassword, admin.password_hash);
+    if (!ok) {
+      throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '口令错误');
+    }
+
+    const db = getDb();
+    const storageDir = config.storageDir;
+
+    db.run(sql.raw('PRAGMA foreign_keys = OFF;'));
+
+    const tables = [
+      'bookmarks', 'book_files', 'book_covers', 'book_relations',
+      'book_tags', 'status_history', 'categories', 'tags',
+      'books_fts_data', 'books_fts_idx', 'books_fts_content',
+      'books_fts_config', 'books_fts_docsize', 'books_fts',
+      'books', 'settings', 'users',
+    ];
+    for (const t of tables) {
+      db.run(sql.raw(`DROP TABLE IF EXISTS "${t}"`));
+    }
+
+    runMigrationsOn(db);
+
+    for (const dirName of ['books', 'covers', 'backups', 'tmp', 'unassociated']) {
+      const dir = join(storageDir, dirName);
+      if (existsSync(dir)) {
+        try {
+          const entries = readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const full = join(dir, entry.name);
+            try {
+              if (entry.isFile()) unlinkSync(full);
+              else if (entry.isDirectory()) rmdirSync(full, { recursive: true });
+            } catch { /* skip locked */ }
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    return {
+      data: { success: true, message: '应用已重置，请刷新页面后重新设置管理员账户' },
     };
   });
 }

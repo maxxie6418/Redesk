@@ -9,10 +9,12 @@ import {
   Grid3X3,
   KeyRound,
   LogIn,
+  Moon,
   NotebookPen,
   Search,
   Settings,
   Sparkles,
+  Sun,
   Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -20,6 +22,7 @@ import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
 import { useQuickLinks, type QuickLink } from '@/hooks/use-quick-links';
+import { useTheme } from '@/components/theme-provider';
 import { LoginDialog } from '@/components/login-dialog';
 
 export type AppSidebarKey =
@@ -50,6 +53,7 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
   const authInit = useAuthInit();
+  const { theme, setTheme } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
   const loggedIn = !!currentUser.data;
   const initial = authInit.data?.initial === true;
@@ -105,24 +109,34 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
 
-        <div className="relative">
-          <SidebarItem
-            active={activeKey === 'settings' || activeKey === 'login'}
-            icon={<AuthIcon className="h-4 w-4" />}
-            label={authLabel}
-            onClick={() => {
-              if (loggedIn) {
-                navigate('/settings');
-              } else {
-                setLoginOpen((prev) => !prev);
-              }
-            }}
-          />
-          {loginOpen && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 z-[60]">
-              <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
-            </div>
-          )}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            title={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <div className="relative flex-1 min-w-0">
+            <SidebarItem
+              active={activeKey === 'settings' || activeKey === 'login'}
+              icon={<AuthIcon className="h-4 w-4 shrink-0" />}
+              label={authLabel}
+              onClick={() => {
+                if (loggedIn) {
+                  navigate('/settings');
+                } else {
+                  setLoginOpen((prev) => !prev);
+                }
+              }}
+            />
+            {loginOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 z-[60]">
+                <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </aside>

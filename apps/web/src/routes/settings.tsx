@@ -1,9 +1,7 @@
 import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import {
   Monitor,
-  Moon,
-  Sun,
-  UserCog,
+  Shield,
   Cloud,
   Server,
   Trash2,
@@ -15,6 +13,7 @@ import {
   X,
   Loader2,
   FolderTree,
+  List,
   Tags,
   Pencil,
   Plus,
@@ -36,7 +35,6 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
-import { useTheme } from '@/components/theme-provider';
 import {
   useUserList,
   useCreateUser,
@@ -77,7 +75,7 @@ import { useShellUser } from '@/components/shell-user-context';
 import { useChangePassword, useLogout } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
-type Tab = 'general' | 'ai' | 'users' | 'categories' | 'tags' | 'quick-links' | 'backup' | 'storage' | 'system';
+type Tab = 'general' | 'ai' | 'login' | 'properties' | 'backup' | 'storage' | 'system';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -146,17 +144,11 @@ function AdminSettingsPage() {
     }
   }, []);
 
-  const isMultiUser = settings.data?.auth_mode === 'multi_token' || settings.data?.multi_user === 'true';
-
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
     { key: 'ai', label: 'AI 配置', icon: <Sparkles className="h-4 w-4" /> },
-    { key: 'categories', label: '分类', icon: <FolderTree className="h-4 w-4" /> },
-    { key: 'tags', label: '标签', icon: <Tags className="h-4 w-4" /> },
-    { key: 'quick-links', label: '快捷链接', icon: <Link className="h-4 w-4" /> },
-    ...(isMultiUser
-      ? [{ key: 'users' as Tab, label: '用户管理', icon: <UserCog className="h-4 w-4" /> }]
-      : []),
+    { key: 'login', label: '登录管理', icon: <Shield className="h-4 w-4" /> },
+    { key: 'properties', label: '属性设置', icon: <List className="h-4 w-4" /> },
     { key: 'backup', label: '云备份', icon: <Cloud className="h-4 w-4" /> },
     { key: 'storage', label: '存储', icon: <HardDrive className="h-4 w-4" /> },
     { key: 'system', label: '系统', icon: <Server className="h-4 w-4" /> },
@@ -222,10 +214,8 @@ function AdminSettingsPage() {
           <GeneralTab settings={settings.data ?? {}} onToast={showToast} />
         )}
         {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} onToast={showToast} />}
-        {activeTab === 'categories' && <CategoriesTab onToast={showToast} />}
-        {activeTab === 'tags' && <TagsTab onToast={showToast} />}
-        {activeTab === 'quick-links' && <QuickLinksTab onToast={showToast} />}
-        {activeTab === 'users' && isMultiUser && <UsersTab onToast={showToast} />}
+        {activeTab === 'login' && <LoginManagementTab />}
+        {activeTab === 'properties' && <PropertiesTab />}
         {activeTab === 'backup' && (
           <BackupTab settings={settings.data ?? {}} onToast={showToast} />
         )}
@@ -240,39 +230,19 @@ function AdminSettingsPage() {
 
 function GeneralTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
-  const themeCtx = useTheme();
+  const logout = useLogout();
+  const navigate = useNavigate();
+
   const [recycleDays, setRecycleDays] = useState(settings.recycle_retention_days ?? '30');
-  const [authMode, setAuthMode] = useState(settings.auth_mode === 'multi_token' ? 'multi_token' : 'single_token');
-  const [bfWindow, setBfWindow] = useState(settings.brute_force_window_minutes ?? '10');
-  const [bfMaxAttempts, setBfMaxAttempts] = useState(settings.brute_force_max_attempts ?? '5');
-  const [bfLock, setBfLock] = useState(settings.brute_force_lock_minutes ?? '60');
-
-  const handleThemeChange = useCallback((value: string) => {
-    if (value === 'dark') themeCtx.setTheme('dark');
-    else if (value === 'light') themeCtx.setTheme('light');
-    else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      themeCtx.setTheme(prefersDark ? 'dark' : 'light');
-    }
-  }, [themeCtx]);
-
-  const theme = themeCtx.theme === 'dark' ? 'dark' : 'light';
 
   const handleSave = useCallback(async () => {
     try {
-      await updateSettings.mutateAsync({
-        recycle_retention_days: recycleDays,
-        auth_mode: authMode,
-        multi_user: authMode === 'multi_token' ? 'true' : 'false',
-        brute_force_window_minutes: bfWindow,
-        brute_force_max_attempts: bfMaxAttempts,
-        brute_force_lock_minutes: bfLock,
-      });
+      await updateSettings.mutateAsync({ recycle_retention_days: recycleDays });
       onToast({ type: 'success', text: '设置已保存' });
     } catch {
       onToast({ type: 'error', text: '保存失败' });
     }
-  }, [recycleDays, authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings, onToast]);
+  }, [recycleDays, updateSettings, onToast]);
 
   return (
     <div className="space-y-6">
@@ -298,124 +268,35 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">界面</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">主题</p>
-              <p className="text-xs text-muted-foreground">选择界面配色方案</p>
-            </div>
-            <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
-              {([
-                ['light', <Sun className="h-4 w-4" />, '浅色'],
-                ['dark', <Moon className="h-4 w-4" />, '深色'],
-                ['system', <Monitor className="h-4 w-4" />, '跟随系统'],
-              ] as const).map(([value, icon, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors',
-                    (value === 'system' || theme === value)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => handleThemeChange(value)}
-                >
-                  {icon}
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <QuickLinksSection onToast={onToast} />
+      <BatchUploadCard onToast={onToast} />
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">认证模式</CardTitle>
+          <CardTitle className="text-base">账号</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">模式</p>
-              <p className="text-xs text-muted-foreground">
-                单口令：所有用户共享一个登录口令；多口令：每位用户独立密码
-              </p>
+              <p className="text-sm font-medium text-foreground">退出当前账号</p>
+              <p className="text-xs text-muted-foreground">退出后需重新登录</p>
             </div>
-            <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
-              {([
-                ['single_token', '单口令'],
-                ['multi_token', '多口令'],
-              ] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-sm transition-colors',
-                    authMode === value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => setAuthMode(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">暴力破解防护</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">时间窗口（分钟）</p>
-              <p className="text-xs text-muted-foreground">在此时间范围内累计失败次数</p>
-            </div>
-            <Input
-              type="number"
-              min={1}
-              max={60}
-              className="w-24"
-              value={bfWindow}
-              onChange={(e) => setBfWindow(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">最大尝试次数</p>
-              <p className="text-xs text-muted-foreground">超过此次数将触发锁定</p>
-            </div>
-            <Input
-              type="number"
-              min={1}
-              max={20}
-              className="w-24"
-              value={bfMaxAttempts}
-              onChange={(e) => setBfMaxAttempts(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">锁定时长（分钟）</p>
-              <p className="text-xs text-muted-foreground">锁定期间拒绝所有登录请求</p>
-            </div>
-            <Input
-              type="number"
-              min={1}
-              max={1440}
-              className="w-24"
-              value={bfLock}
-              onChange={(e) => setBfLock(e.target.value)}
-            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await logout.mutateAsync();
+                  navigate('/login', { replace: true });
+                } catch {
+                  onToast({ type: 'error', text: '退出失败' });
+                }
+              }}
+              disabled={logout.isPending}
+            >
+              {logout.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <LogOut className="mr-1 h-4 w-4" />}
+              退出账号
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -427,6 +308,103 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
         </Button>
       </div>
     </div>
+  );
+}
+
+function QuickLinksSection({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const { data: links } = useQuickLinks();
+  const addLink = useAddQuickLink();
+  const updateLink = useUpdateQuickLink();
+  const deleteLink = useDeleteQuickLink();
+  const reorder = useReorderQuickLink();
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingUrl, setEditingUrl] = useState('');
+
+  const handleCreate = useCallback(async () => {
+    if (!newName.trim() || !newUrl.trim()) return;
+    try {
+      await addLink.mutateAsync({ name: newName.trim(), url: newUrl.trim() });
+      onToast({ type: 'success', text: '快捷链接已添加' });
+      setShowCreate(false);
+      setNewName('');
+      setNewUrl('');
+    } catch { onToast({ type: 'error', text: '添加失败' }); }
+  }, [newName, newUrl, addLink, onToast]);
+
+  const handleUpdate = useCallback(async (id: number) => {
+    if (!editingName.trim() || !editingUrl.trim()) return;
+    try {
+      await updateLink.mutateAsync({ id, name: editingName.trim(), url: editingUrl.trim() });
+      onToast({ type: 'success', text: '已更新' });
+      setEditingId(null);
+    } catch { onToast({ type: 'error', text: '更新失败' }); }
+  }, [editingName, editingUrl, updateLink, onToast]);
+
+  const handleDelete = useCallback(async (id: number) => {
+    try {
+      await deleteLink.mutateAsync(id);
+      onToast({ type: 'success', text: '已删除' });
+    } catch { onToast({ type: 'error', text: '删除失败' }); }
+  }, [deleteLink, onToast]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-4 flex-row items-center justify-between">
+        <CardTitle className="text-base">快捷链接</CardTitle>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus className="mr-1.5 h-4 w-4" />添加链接
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!links && <p className="text-sm text-muted-foreground">加载中…</p>}
+        {links && links.length === 0 && !showCreate && (
+          <p className="text-sm text-muted-foreground">还没有快捷链接</p>
+        )}
+        {links?.map((link: QuickLink, index: number) => (
+          <div key={link.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+            <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {editingId === link.id ? (
+              <div className="flex flex-1 items-center gap-2">
+                <Input className="h-8 flex-1 text-sm" value={editingName} onChange={(e) => setEditingName(e.target.value)} placeholder="名称" />
+                <Input className="h-8 flex-1 text-sm" value={editingUrl} onChange={(e) => setEditingUrl(e.target.value)} placeholder="URL" />
+                <Button size="sm" className="h-7 text-xs" onClick={() => handleUpdate(link.id)}><Check className="h-3 w-3" /></Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingId(null)}><X className="h-3 w-3" /></Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{link.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{link.url}</p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => reorder.moveUp(link.id)} disabled={index === 0}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => reorder.moveDown(link.id)} disabled={index === links.length - 1}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(link.id); setEditingName(link.name); setEditingUrl(link.url); }}>
+                    <Pencil className="mr-1 h-3 w-3" />编辑
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDelete(link.id)}>
+                    <Trash2 className="mr-1 h-3 w-3" />删除
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+        {showCreate && (
+          <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
+            <Input className="h-8 flex-1 text-sm" placeholder="链接名称" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            <Input className="h-8 flex-1 text-sm" placeholder="URL" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
+            <Button size="sm" className="h-8" onClick={handleCreate} disabled={addLink.isPending}>创建</Button>
+            <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowCreate(false)}>取消</Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -555,7 +533,9 @@ function AiTab({ settings, onToast }: { settings: Record<string, string>; onToas
   );
 }
 
-function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+function LoginManagementTab() {
+  const settings = useSettings();
+  const updateSettings = useUpdateSettings();
   const users = useUserList();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -563,276 +543,209 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const resetPassword = useResetPassword();
   const toggleActive = useToggleActive();
 
+  const [authMode, setAuthMode] = useState('single_token');
+  const [bfWindow, setBfWindow] = useState('10');
+  const [bfMaxAttempts, setBfMaxAttempts] = useState('5');
+  const [bfLock, setBfLock] = useState('60');
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (hydrated || !settings.data) return;
+    const s = settings.data;
+    setAuthMode(s.auth_mode === 'multi_token' ? 'multi_token' : 'single_token');
+    setBfWindow(s.brute_force_window_minutes ?? '10');
+    setBfMaxAttempts(s.brute_force_max_attempts ?? '5');
+    setBfLock(s.brute_force_lock_minutes ?? '60');
+    setHydrated(true);
+  }, [settings.data, hydrated]);
+
+  const [toast, setToast] = useState<StatusMessage>(null);
+  const showToast = useCallback((m: StatusMessage) => { setToast(m); if (m) setTimeout(() => setToast(null), 3000); }, []);
+
+  const handleSave = useCallback(async () => {
+    try {
+      await updateSettings.mutateAsync({
+        auth_mode: authMode,
+        multi_user: authMode === 'multi_token' ? 'true' : 'false',
+        brute_force_window_minutes: bfWindow,
+        brute_force_max_attempts: bfMaxAttempts,
+        brute_force_lock_minutes: bfLock,
+      });
+      showToast({ type: 'success', text: '登录管理设置已保存' });
+    } catch { showToast({ type: 'error', text: '保存失败' }); }
+  }, [authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings]);
+
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPwd, setResetPwd] = useState('');
-
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
 
   const handleCreate = useCallback(async () => {
     try {
-      await createUser.mutateAsync({
-        username: newUsername,
-        password: newPassword,
-        display_name: newDisplayName || undefined,
-      });
-      onToast({ type: 'success', text: '用户已创建' });
-      setShowCreate(false);
-      setNewUsername('');
-      setNewPassword('');
-      setNewDisplayName('');
-    } catch {
-      onToast({ type: 'error', text: '创建失败' });
-    }
-  }, [newUsername, newPassword, newDisplayName, createUser, onToast]);
+      await createUser.mutateAsync({ username: newUsername, password: newPassword, display_name: newDisplayName || undefined });
+      showToast({ type: 'success', text: '用户已创建' });
+      setShowCreate(false); setNewUsername(''); setNewPassword(''); setNewDisplayName('');
+    } catch { showToast({ type: 'error', text: '创建失败' }); }
+  }, [newUsername, newPassword, newDisplayName, createUser]);
 
-  const handleUpdate = useCallback(
-    async (id: number) => {
-      try {
-        await updateUser.mutateAsync({ id, display_name: editingName || null });
-        onToast({ type: 'success', text: '已更新' });
-        setEditingId(null);
-      } catch {
-        onToast({ type: 'error', text: '更新失败' });
-      }
-    },
-    [editingName, updateUser, onToast],
-  );
+  const handleUpdate = useCallback(async (id: number) => {
+    try {
+      await updateUser.mutateAsync({ id, display_name: editingName || null });
+      showToast({ type: 'success', text: '已更新' });
+      setEditingId(null);
+    } catch { showToast({ type: 'error', text: '更新失败' }); }
+  }, [editingName, updateUser]);
 
-  const handleDelete = useCallback(
-    async (id: number) => {
-      try {
-        await deleteUser.mutateAsync(id);
-        onToast({ type: 'success', text: '用户已删除' });
-      } catch {
-        onToast({ type: 'error', text: '删除失败' });
-      }
-    },
-    [deleteUser, onToast],
-  );
+  const handleDelete = useCallback(async (id: number) => {
+    try { await deleteUser.mutateAsync(id); showToast({ type: 'success', text: '用户已删除' }); }
+    catch { showToast({ type: 'error', text: '删除失败' }); }
+  }, [deleteUser]);
 
-  const handleResetPassword = useCallback(
-    async (id: number) => {
-      try {
-        await resetPassword.mutateAsync({ id, password: resetPwd });
-        onToast({ type: 'success', text: '密码已重置' });
-        setResetId(null);
-        setResetPwd('');
-      } catch {
-        onToast({ type: 'error', text: '重置失败' });
-      }
-    },
-    [resetPwd, resetPassword, onToast],
-  );
+  const handleResetPassword = useCallback(async (id: number) => {
+    try {
+      await resetPassword.mutateAsync({ id, password: resetPwd });
+      showToast({ type: 'success', text: '密码已重置' });
+      setResetId(null); setResetPwd('');
+    } catch { showToast({ type: 'error', text: '重置失败' }); }
+  }, [resetPwd, resetPassword]);
 
-  const handleToggleActive = useCallback(
-    async (u: UserAdminSummary) => {
-      try {
-        await toggleActive.mutateAsync(u.id);
-        onToast({ type: 'success', text: u.is_active ? '用户已停用' : '用户已启用' });
-      } catch {
-        onToast({ type: 'error', text: '操作失败' });
-      }
-    },
-    [toggleActive, onToast],
-  );
+  const handleToggleActive = useCallback(async (u: UserAdminSummary) => {
+    try {
+      await toggleActive.mutateAsync(u.id);
+      showToast({ type: 'success', text: u.is_active ? '用户已停用' : '用户已启用' });
+    } catch { showToast({ type: 'error', text: '操作失败' }); }
+  }, [toggleActive]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {users.data ? `${users.data.length} 位用户` : '加载中…'}
-        </p>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <UserPlus className="mr-1.5 h-4 w-4" />
-          添加用户
-        </Button>
-      </div>
-
-      {users.isError && (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-8 text-center text-sm text-muted-foreground">
-          加载用户列表失败
+    <div className="space-y-6">
+      {toast && (
+        <div className={cn('rounded-lg px-4 py-3 text-sm font-medium', toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-destructive/10 text-destructive')}>
+          {toast.text}
         </div>
       )}
 
-      {users.data?.map((u: UserAdminSummary) => (
-        <Card key={u.id}>
-          <CardContent className="flex items-center gap-4 px-4 py-3">
-            <div
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium',
-                u.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {(u.display_name || u.username)[0]}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">认证模式</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">模式</p>
+              <p className="text-xs text-muted-foreground">单口令：所有用户共享一个登录口令；多口令：每位用户独立密码</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
-                {u.display_name || u.username}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                @{u.username}
-                {!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}
-              </p>
+            <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
+              {(['single_token', 'multi_token'] as const).map((value) => (
+                <button key={value} type="button" className={cn('rounded-md px-3 py-1.5 text-sm transition-colors', authMode === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')} onClick={() => setAuthMode(value)}>
+                  {value === 'single_token' ? '单口令' : '多口令'}
+                </button>
+              ))}
             </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            {editingId === u.id ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  className="h-8 w-32 text-xs"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  placeholder="昵称"
-                />
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdate(u.id)}>
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => setEditingId(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+      {authMode === 'multi_token' && (
+        <Card>
+          <CardHeader className="pb-4 flex-row items-center justify-between">
+            <CardTitle className="text-base">用户管理</CardTitle>
+            <Button size="sm" onClick={() => setShowCreate(true)}><UserPlus className="mr-1.5 h-4 w-4" />添加用户</Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {users.isError && <p className="text-sm text-muted-foreground">加载用户列表失败</p>}
+            {users.data?.map((u: UserAdminSummary) => (
+              <div key={u.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                <div className={cn('flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium', u.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
+                  {(u.display_name || u.username)[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{u.display_name || u.username}</p>
+                  <p className="truncate text-xs text-muted-foreground">@{u.username}{!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}</p>
+                </div>
+                {editingId === u.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input className="h-8 w-32 text-xs" value={editingName} onChange={(e) => setEditingName(e.target.value)} placeholder="昵称" />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdate(u.id)}><Check className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(u.id); setEditingName(u.display_name ?? ''); }}>编辑</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setResetId(resetId === u.id ? null : u.id)}><Key className="mr-1 h-3 w-3" />重置密码</Button>
+                    <Button size="sm" variant="ghost" className={cn('h-7 text-xs', u.is_active ? 'text-muted-foreground' : 'text-primary')} onClick={() => handleToggleActive(u)}>
+                      {u.is_active ? <Ban className="mr-1 h-3 w-3" /> : <CheckCircle className="mr-1 h-3 w-3" />}{u.is_active ? '停用' : '启用'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDelete(u.id)}><Trash2 className="mr-1 h-3 w-3" />删除</Button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setEditingId(u.id);
-                    setEditingName(u.display_name ?? '');
-                  }}
-                >
-                  编辑
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => setResetId(resetId === u.id ? null : u.id)}
-                >
-                  <Key className="mr-1 h-3 w-3" />
-                  重置密码
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={cn('h-7 text-xs', u.is_active ? 'text-muted-foreground' : 'text-primary')}
-                  onClick={() => handleToggleActive(u)}
-                >
-                  {u.is_active ? <Ban className="mr-1 h-3 w-3" /> : <CheckCircle className="mr-1 h-3 w-3" />}
-                  {u.is_active ? '停用' : '启用'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(u.id)}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  删除
-                </Button>
+            ))}
+            {resetId && users.data?.find((u: UserAdminSummary) => u.id === resetId) && (
+              <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
+                <Input type="password" className="h-8 flex-1 text-xs" placeholder="新密码（至少 6 位）" value={resetPwd} onChange={(e) => setResetPwd(e.target.value)} />
+                <Button size="sm" className="h-8" onClick={() => handleResetPassword(resetId)}>确认</Button>
+                <Button size="sm" variant="ghost" className="h-8" onClick={() => setResetId(null)}>取消</Button>
+              </div>
+            )}
+            {showCreate && (
+              <div className="space-y-2 rounded-lg border border-border px-4 py-4">
+                <Input className="h-9 text-sm" placeholder="用户名" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+                <Input type="password" className="h-9 text-sm" placeholder="密码（至少 6 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Input className="h-9 text-sm" placeholder="昵称（可选）" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} />
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setShowCreate(false)}>取消</Button>
+                  <Button onClick={handleCreate} disabled={createUser.isPending}>{createUser.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}创建</Button>
+                </div>
               </div>
             )}
           </CardContent>
-
-          {resetId === u.id && (
-            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-              <Input
-                type="password"
-                className="h-8 flex-1 text-xs"
-                placeholder="新密码（至少 6 位）"
-                value={resetPwd}
-                onChange={(e) => setResetPwd(e.target.value)}
-              />
-              <Button size="sm" className="h-8" onClick={() => handleResetPassword(u.id)}>
-                确认
-              </Button>
-              <Button size="sm" variant="ghost" className="h-8" onClick={() => setResetId(null)}>
-                取消
-              </Button>
-            </div>
-          )}
-        </Card>
-      ))}
-
-      {showCreate && (
-        <Card>
-          <CardContent className="space-y-3 px-4 py-4">
-            <Input
-              className="h-9 text-sm"
-              placeholder="用户名"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-            />
-            <Input
-              type="password"
-              className="h-9 text-sm"
-              placeholder="密码（至少 6 位）"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <Input
-              className="h-9 text-sm"
-              placeholder="昵称（可选）"
-              value={newDisplayName}
-              onChange={(e) => setNewDisplayName(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCreate(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={createUser.isPending}>
-                {createUser.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                创建
-              </Button>
-            </div>
-          </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">暴力破解防护</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">时间窗口（分钟）</p>
+              <p className="text-xs text-muted-foreground">在此时间范围内累计失败次数</p>
+            </div>
+            <Input type="number" min={1} max={60} className="w-24" value={bfWindow} onChange={(e) => setBfWindow(e.target.value)} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">最大尝试次数</p>
+              <p className="text-xs text-muted-foreground">超过此次数将触发锁定</p>
+            </div>
+            <Input type="number" min={1} max={20} className="w-24" value={bfMaxAttempts} onChange={(e) => setBfMaxAttempts(e.target.value)} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">锁定时长（分钟）</p>
+              <p className="text-xs text-muted-foreground">锁定期间拒绝所有登录请求</p>
+            </div>
+            <Input type="number" min={1} max={1440} className="w-24" value={bfLock} onChange={(e) => setBfLock(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={updateSettings.isPending}>
+          {updateSettings.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}保存设置
+        </Button>
+      </div>
     </div>
   );
 }
 
-function BackupTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
-  const updateSettings = useUpdateSettings();
-  const [provider, setProvider] = useState(settings.oss_provider ?? '');
-  const [endpoint, setEndpoint] = useState(settings.oss_endpoint ?? '');
-  const [bucket, setBucket] = useState(settings.oss_bucket ?? '');
-  const [accessKey, setAccessKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-
+function BackupTab({ settings: _settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const backupList = useBackupList();
-
-  const hasExistingKey = Boolean(
-    settings.oss_access_key && settings.oss_access_key.includes('****'),
-  );
-
-  const handleSave = useCallback(async () => {
-    try {
-      const data: Record<string, string> = {
-        oss_provider: provider,
-        oss_endpoint: endpoint,
-        oss_bucket: bucket,
-      };
-      if (accessKey) data.oss_access_key = accessKey;
-      if (secretKey) data.oss_secret_key = secretKey;
-      await updateSettings.mutateAsync(data);
-      setAccessKey('');
-      setSecretKey('');
-      onToast({ type: 'success', text: '云备份配置已保存' });
-    } catch {
-      onToast({ type: 'error', text: '保存失败' });
-    }
-  }, [provider, endpoint, bucket, accessKey, secretKey, updateSettings, onToast]);
 
   const handleAutoBackup = useCallback(async () => {
     try {
@@ -934,368 +847,163 @@ function BackupTab({ settings, onToast }: { settings: Record<string, string>; on
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">对象存储配置</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="mb-2 text-sm font-medium text-foreground">提供商</p>
-            <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
-              {(['', 'aliyun', 's3', 'minio'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-sm transition-colors',
-                    provider === v
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => setProvider(v)}
-                >
-                  {v === '' ? '关闭' : v === 'aliyun' ? '阿里云 OSS' : v === 's3' ? 'S3 兼容' : 'MinIO'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Endpoint</p>
-            <Input
-              placeholder="https://oss-cn-hangzhou.aliyuncs.com"
-              value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Bucket</p>
-            <Input placeholder="my-bucket" value={bucket} onChange={(e) => setBucket(e.target.value)} />
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Access Key</p>
-            <Input
-              placeholder={hasExistingKey ? '已配置（留空不修改）' : 'Access Key ID'}
-              value={accessKey}
-              onChange={(e) => setAccessKey(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Secret Key</p>
-            <Input
-              type="password"
-              placeholder={hasExistingKey ? '已配置（留空不修改）' : 'Secret Access Key'}
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled>
-          测试连接
-        </Button>
-        <Button onClick={handleSave} disabled={updateSettings.isPending}>
-          {updateSettings.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          保存配置
-        </Button>
-      </div>
+      <CloudStorageCard onToast={onToast} />
     </div>
   );
 }
 
-function CategoriesTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+function PropertiesTab() {
   const categories = useCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
-
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState('');
-
-  const handleCreate = useCallback(async () => {
-    try {
-      await createCategory.mutateAsync({ name: newName });
-      onToast({ type: 'success', text: '分类已创建' });
-      setShowCreate(false);
-      setNewName('');
-    } catch {
-      onToast({ type: 'error', text: '创建失败' });
-    }
-  }, [newName, createCategory, onToast]);
-
-  const handleUpdate = useCallback(
-    async (id: number) => {
-      try {
-        await updateCategory.mutateAsync({ id, name: editingName });
-        onToast({ type: 'success', text: '已更新' });
-        setEditingId(null);
-      } catch {
-        onToast({ type: 'error', text: '更新失败' });
-      }
-    },
-    [editingName, updateCategory, onToast],
-  );
-
-  const handleDelete = useCallback(
-    async (id: number) => {
-      try {
-        await deleteCategory.mutateAsync(id);
-        onToast({ type: 'success', text: '分类已删除，相关书籍的分类已清空' });
-      } catch {
-        onToast({ type: 'error', text: '删除失败' });
-      }
-    },
-    [deleteCategory, onToast],
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {categories.data ? `${categories.data.length} 个分类` : '加载中…'}
-        </p>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          新建分类
-        </Button>
-      </div>
-
-      {categories.isError && (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-8 text-center text-sm text-muted-foreground">
-          加载分类失败
-        </div>
-      )}
-
-      {categories.data?.map((cat: CategoryItem) => (
-        <Card key={cat.id}>
-          <CardContent className="flex items-center gap-4 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
-              <FolderTree className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {editingId === cat.id ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    className="h-8 flex-1 text-sm"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                  />
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdate(cat.id)}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm font-medium text-foreground">{cat.name}</p>
-              )}
-              <p className="text-xs text-muted-foreground">{cat.book_count} 本书</p>
-            </div>
-
-            {editingId !== cat.id && (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setEditingId(cat.id);
-                    setEditingName(cat.name);
-                  }}
-                >
-                  <Pencil className="mr-1 h-3 w-3" />
-                  编辑
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(cat.id)}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  删除
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-
-      {showCreate && (
-        <Card>
-          <CardContent className="space-y-3 px-4 py-4">
-            <Input
-              className="h-9 text-sm"
-              placeholder="分类名称"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCreate(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={createCategory.isPending}>
-                {createCategory.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                创建
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function TagsTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const tags = useTags();
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
   const deleteTag = useDeleteTag();
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [catShow, setCatShow] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [catEditId, setCatEditId] = useState<number | null>(null);
+  const [catEditName, setCatEditName] = useState('');
 
-  const handleCreate = useCallback(async () => {
-    try {
-      await createTag.mutateAsync({ name: newName });
-      onToast({ type: 'success', text: '标签已创建' });
-      setShowCreate(false);
-      setNewName('');
-    } catch {
-      onToast({ type: 'error', text: '创建失败' });
-    }
-  }, [newName, createTag, onToast]);
+  const [tagShow, setTagShow] = useState(false);
+  const [tagName, setTagName] = useState('');
+  const [tagEditId, setTagEditId] = useState<number | null>(null);
+  const [tagEditName, setTagEditName] = useState('');
 
-  const handleUpdate = useCallback(
-    async (id: number) => {
-      try {
-        await updateTag.mutateAsync({ id, name: editingName });
-        onToast({ type: 'success', text: '已更新' });
-        setEditingId(null);
-      } catch {
-        onToast({ type: 'error', text: '更新失败' });
-      }
-    },
-    [editingName, updateTag, onToast],
-  );
+  const [toast, setToast] = useState<StatusMessage>(null);
+  const showToast = useCallback((m: StatusMessage) => { setToast(m); if (m) setTimeout(() => setToast(null), 3000); }, []);
 
-  const handleDelete = useCallback(
-    async (id: number) => {
-      try {
-        await deleteTag.mutateAsync(id);
-        onToast({ type: 'success', text: '标签已删除' });
-      } catch {
-        onToast({ type: 'error', text: '删除失败' });
-      }
-    },
-    [deleteTag, onToast],
-  );
+  const handleCreateCat = useCallback(async () => {
+    try { await createCategory.mutateAsync({ name: catName }); showToast({ type: 'success', text: '分类已创建' }); setCatShow(false); setCatName(''); }
+    catch { showToast({ type: 'error', text: '创建失败' }); }
+  }, [catName, createCategory]);
+
+  const handleUpdateCat = useCallback(async (id: number) => {
+    try { await updateCategory.mutateAsync({ id, name: catEditName }); showToast({ type: 'success', text: '已更新' }); setCatEditId(null); }
+    catch { showToast({ type: 'error', text: '更新失败' }); }
+  }, [catEditName, updateCategory]);
+
+  const handleDeleteCat = useCallback(async (id: number) => {
+    try { await deleteCategory.mutateAsync(id); showToast({ type: 'success', text: '分类已删除' }); }
+    catch { showToast({ type: 'error', text: '删除失败' }); }
+  }, [deleteCategory]);
+
+  const handleCreateTag = useCallback(async () => {
+    try { await createTag.mutateAsync({ name: tagName }); showToast({ type: 'success', text: '标签已创建' }); setTagShow(false); setTagName(''); }
+    catch { showToast({ type: 'error', text: '创建失败' }); }
+  }, [tagName, createTag]);
+
+  const handleUpdateTag = useCallback(async (id: number) => {
+    try { await updateTag.mutateAsync({ id, name: tagEditName }); showToast({ type: 'success', text: '已更新' }); setTagEditId(null); }
+    catch { showToast({ type: 'error', text: '更新失败' }); }
+  }, [tagEditName, updateTag]);
+
+  const handleDeleteTag = useCallback(async (id: number) => {
+    try { await deleteTag.mutateAsync(id); showToast({ type: 'success', text: '标签已删除' }); }
+    catch { showToast({ type: 'error', text: '删除失败' }); }
+  }, [deleteTag]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {tags.data ? `${tags.data.length} 个标签` : '加载中…'}
-        </p>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          新建标签
-        </Button>
-      </div>
-
-      {tags.isError && (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-8 text-center text-sm text-muted-foreground">
-          加载标签失败
+    <div className="space-y-8">
+      {toast && (
+        <div className={cn('rounded-lg px-4 py-3 text-sm font-medium', toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-destructive/10 text-destructive')}>
+          {toast.text}
         </div>
       )}
 
-      {tags.data?.map((tag: TagItem) => (
-        <Card key={tag.id}>
-          <CardContent className="flex items-center gap-4 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
-              <Tags className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {editingId === tag.id ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    className="h-8 flex-1 text-sm"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                  />
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdate(tag.id)}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm font-medium text-foreground">#{tag.name}</p>
-              )}
-              <p className="text-xs text-muted-foreground">{tag.book_count} 本书</p>
-            </div>
-
-            {editingId !== tag.id && (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setEditingId(tag.id);
-                    setEditingName(tag.name);
-                  }}
-                >
-                  <Pencil className="mr-1 h-3 w-3" />
-                  编辑
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(tag.id)}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  删除
-                </Button>
+      <Card>
+        <CardHeader className="pb-4 flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">分类</CardTitle>
+            <p className="text-xs text-muted-foreground">管理书籍分类，一书一分类</p>
+          </div>
+          <Button size="sm" onClick={() => setCatShow(true)}><Plus className="mr-1.5 h-4 w-4" />新建</Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {categories.isError && <p className="text-sm text-muted-foreground">加载失败</p>}
+          {categories.data && categories.data.length === 0 && !catShow && (
+            <p className="text-sm text-muted-foreground">还没有分类</p>
+          )}
+          {categories.data?.map((cat: CategoryItem) => (
+            <div key={cat.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+              <FolderTree className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                {catEditId === cat.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input className="h-8 flex-1 text-sm" value={catEditName} onChange={(e) => setCatEditName(e.target.value)} />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdateCat(cat.id)}><Check className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setCatEditId(null)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">{cat.name}</p>
+                )}
+                <p className="text-xs text-muted-foreground">{cat.book_count} 本书</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-
-      {showCreate && (
-        <Card>
-          <CardContent className="space-y-3 px-4 py-4">
-            <Input
-              className="h-9 text-sm"
-              placeholder="标签名称"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCreate(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={createTag.isPending}>
-                {createTag.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                创建
-              </Button>
+              {catEditId !== cat.id && (
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setCatEditId(cat.id); setCatEditName(cat.name); }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteCat(cat.id)}><Trash2 className="mr-1 h-3 w-3" />删除</Button>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ))}
+          {catShow && (
+            <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
+              <Input className="h-8 flex-1 text-sm" placeholder="分类名称" value={catName} onChange={(e) => setCatName(e.target.value)} />
+              <Button size="sm" className="h-8" onClick={handleCreateCat} disabled={createCategory.isPending}>创建</Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setCatShow(false)}>取消</Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4 flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">标签</CardTitle>
+            <p className="text-xs text-muted-foreground">管理书籍标签，一书本可多标签</p>
+          </div>
+          <Button size="sm" onClick={() => setTagShow(true)}><Plus className="mr-1.5 h-4 w-4" />新建</Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {tags.isError && <p className="text-sm text-muted-foreground">加载失败</p>}
+          {tags.data && tags.data.length === 0 && !tagShow && (
+            <p className="text-sm text-muted-foreground">还没有标签</p>
+          )}
+          {tags.data?.map((tag: TagItem) => (
+            <div key={tag.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+              <Tags className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                {tagEditId === tag.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input className="h-8 flex-1 text-sm" value={tagEditName} onChange={(e) => setTagEditName(e.target.value)} />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdateTag(tag.id)}><Check className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTagEditId(null)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">#{tag.name}</p>
+                )}
+                <p className="text-xs text-muted-foreground">{tag.book_count} 本书</p>
+              </div>
+              {tagEditId !== tag.id && (
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setTagEditId(tag.id); setTagEditName(tag.name); }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteTag(tag.id)}><Trash2 className="mr-1 h-3 w-3" />删除</Button>
+                </div>
+              )}
+            </div>
+          ))}
+          {tagShow && (
+            <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
+              <Input className="h-8 flex-1 text-sm" placeholder="标签名称" value={tagName} onChange={(e) => setTagName(e.target.value)} />
+              <Button size="sm" className="h-8" onClick={handleCreateTag} disabled={createTag.isPending}>创建</Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setTagShow(false)}>取消</Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1439,68 +1147,7 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">远程存储</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {storage.data ? (
-            storage.data.oss.configured ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200/50 bg-emerald-50/95 px-4 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/95">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  <div>
-                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                      对象存储已配置
-                    </p>
-                    <p className="text-xs text-emerald-600/80 dark:text-emerald-300/80">
-                      {storage.data.oss.provider === 'aliyun'
-                        ? '阿里云 OSS'
-                        : storage.data.oss.provider === 's3'
-                          ? 'S3 兼容'
-                          : storage.data.oss.provider === 'minio'
-                            ? 'MinIO'
-                            : storage.data.oss.provider}
-                    </p>
-                  </div>
-                </div>
-                {storage.data.oss.endpoint && (
-                  <div className="rounded-lg border border-border px-4 py-3">
-                    <p className="text-xs text-muted-foreground">Endpoint</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {storage.data.oss.endpoint}
-                    </p>
-                  </div>
-                )}
-                {storage.data.oss.bucket && (
-                  <div className="rounded-lg border border-border px-4 py-3">
-                    <p className="text-xs text-muted-foreground">Bucket</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {storage.data.oss.bucket}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">未配置对象存储</p>
-                  <p className="text-xs text-muted-foreground">
-                    前往「云备份」Tab 配置 S3 兼容的对象存储
-                  </p>
-                </div>
-              </div>
-            )
-          ) : (
-            <p className="text-sm text-muted-foreground">加载中…</p>
-          )}
-        </CardContent>
-      </Card>
-
       <DefaultStorageCard onToast={onToast} />
-      <BatchUploadCard onToast={onToast} />
-      <CloudStorageCard onToast={onToast} />
     </div>
   );
 }
@@ -1993,6 +1640,24 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   const ftsRebuild = useFtsRebuild();
   const clearCache = useClearCache();
 
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (!resetPassword) return;
+    setResetLoading(true);
+    try {
+      await api.post('/system/reset', { password: resetPassword });
+      onToast({ type: 'success', text: '应用已重置，即将刷新页面...' });
+      setTimeout(() => window.location.href = '/', 1500);
+    } catch (err) {
+      onToast({ type: 'error', text: err instanceof Error ? err.message : '重置失败' });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -2187,206 +1852,34 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
-}
 
-function QuickLinksTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
-  const { data: links } = useQuickLinks();
-  const addLink = useAddQuickLink();
-  const updateLink = useUpdateQuickLink();
-  const deleteLink = useDeleteQuickLink();
-  const reorder = useReorderQuickLink();
-
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newUrl, setNewUrl] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [editingUrl, setEditingUrl] = useState('');
-
-  const handleCreate = useCallback(async () => {
-    if (!newName.trim() || !newUrl.trim()) return;
-    try {
-      await addLink.mutateAsync({ name: newName.trim(), url: newUrl.trim() });
-      onToast({ type: 'success', text: '快捷链接已添加' });
-      setShowCreate(false);
-      setNewName('');
-      setNewUrl('');
-    } catch {
-      onToast({ type: 'error', text: '添加失败' });
-    }
-  }, [newName, newUrl, addLink, onToast]);
-
-  const handleUpdate = useCallback(
-    async (id: number) => {
-      if (!editingName.trim() || !editingUrl.trim()) return;
-      try {
-        await updateLink.mutateAsync({ id, name: editingName.trim(), url: editingUrl.trim() });
-        onToast({ type: 'success', text: '已更新' });
-        setEditingId(null);
-      } catch {
-        onToast({ type: 'error', text: '更新失败' });
-      }
-    },
-    [editingName, editingUrl, updateLink, onToast],
-  );
-
-  const handleDelete = useCallback(
-    async (id: number) => {
-      try {
-        await deleteLink.mutateAsync(id);
-        onToast({ type: 'success', text: '已删除' });
-      } catch {
-        onToast({ type: 'error', text: '删除失败' });
-      }
-    },
-    [deleteLink, onToast],
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {links ? `${links.length} 个链接` : '加载中…'}
-        </p>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          添加链接
-        </Button>
-      </div>
-
-      {!links && (
-        <div className="rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-8 text-center text-sm text-muted-foreground">
-          加载失败
-        </div>
-      )}
-
-      {links && links.length === 0 && !showCreate && (
-        <div className="rounded-lg border border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          还没有快捷链接，点击上方按钮添加
-        </div>
-      )}
-
-      {links?.map((link: QuickLink, index: number) => (
-        <Card key={link.id}>
-          <CardContent className="flex items-center gap-4 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
-              <ExternalLink className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              {editingId === link.id ? (
-                <div className="space-y-2">
-                  <Input
-                    className="h-8 text-sm"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    placeholder="链接名称"
-                  />
-                  <Input
-                    className="h-8 text-sm"
-                    value={editingUrl}
-                    onChange={(e) => setEditingUrl(e.target.value)}
-                    placeholder="URL"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" className="h-7 text-xs" onClick={() => handleUpdate(link.id)}>
-                      <Check className="mr-1 h-3 w-3" />
-                      保存
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs"
-                      onClick={() => setEditingId(null)}
-                    >
-                      取消
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="truncate text-sm font-medium text-foreground">{link.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{link.url}</p>
-                </>
-              )}
-            </div>
-
-            {editingId !== link.id && (
-              <div className="flex items-center gap-0.5">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => reorder.moveUp(link.id)}
-                  disabled={index === 0}
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
+      <Card className="border-destructive/30">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base text-destructive">重置应用</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">重置将清空所有数据并恢复为首次部署状态，此操作不可撤销。需要输入管理员口令进行二次验证。</p>
+          {!resetConfirm ? (
+            <Button variant="destructive" size="sm" onClick={() => setResetConfirm(true)}>开始重置</Button>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-foreground">管理员口令</p>
+                <Input type="password" className="h-9" placeholder="输入当前管理员口令以确认" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="destructive" size="sm" onClick={handleReset} disabled={resetLoading || !resetPassword}>
+                  {resetLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+                  确认重置
                 </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => reorder.moveDown(link.id)}
-                  disabled={index === links.length - 1}
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setEditingId(link.id);
-                    setEditingName(link.name);
-                    setEditingUrl(link.url);
-                  }}
-                >
-                  <Pencil className="mr-1 h-3 w-3" />
-                  编辑
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(link.id)}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  删除
+                <Button variant="ghost" size="sm" onClick={() => { setResetConfirm(false); setResetPassword(''); }}>
+                  取消
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-
-      {showCreate && (
-        <Card>
-          <CardContent className="space-y-3 px-4 py-4">
-            <Input
-              className="h-9 text-sm"
-              placeholder="链接名称（如：豆瓣读书）"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <Input
-              className="h-9 text-sm"
-              placeholder="URL（如：https://book.douban.com）"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCreate(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={addLink.isPending || !newName.trim() || !newUrl.trim()}>
-                {addLink.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                添加
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
