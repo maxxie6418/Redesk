@@ -55,7 +55,7 @@ import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag, type TagItem } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
 import { Select } from '@/components/ui/select';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import {
   useQuickLinks,
   useAddQuickLink,
@@ -764,11 +764,11 @@ function BackupTab({ settings: _settings, onToast }: { settings: Record<string, 
   }, [backupList, onToast]);
 
   const handleExportJson = useCallback(() => {
-    window.open('/api/v1/export/books?format=json', '_self');
+    window.open(`${API_BASE}/export/books?format=json`, '_self');
   }, []);
 
   const handleExportCsv = useCallback(() => {
-    window.open('/api/v1/export/books?format=csv', '_self');
+    window.open(`${API_BASE}/export/books?format=csv`, '_self');
   }, []);
 
   const handleFullBackup = useCallback(async () => {

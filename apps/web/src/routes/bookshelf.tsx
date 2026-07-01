@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY, type ImportBooksResult } from '@redesk/shared';
-import { ApiError, api } from '@/lib/api';
+import { ApiError, api, API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useBooks,
@@ -80,7 +80,7 @@ const COVER_TONES = [
   'bg-[#d6d0c6] text-[#332f28]',
 ];
 
-const COVER_URL_BASE = '/api/v1';
+const COVER_URL_BASE = API_BASE;
 
 interface ParsedBookMetadata {
   title?: string;
@@ -688,7 +688,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         });
         form.append('file', selectedFile);
 
-        const res = await fetch('/api/v1/books', {
+        const res = await fetch(`${API_BASE}/books`, {
           method: 'POST',
           credentials: 'include',
           body: form,
@@ -1152,7 +1152,7 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
               variant="outline"
               size="sm"
               className="mt-3"
-              onClick={() => { window.location.href = '/api/v1/books/import/template'; }}
+              onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
             >
               下载参考 CSV
             </Button>

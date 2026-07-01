@@ -6,8 +6,7 @@ import ePub from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
-
-const API_BASE = '/api/v1';
+import { API_BASE } from '@/lib/api';
 
 interface TocItem {
   id: string;

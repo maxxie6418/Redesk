@@ -5,7 +5,9 @@ import { ensureDefaultAdmin } from './lib/auth';
 
 async function main(): Promise<void> {
   if (config.isProd && config.isDefaultSessionSecret) {
-    console.warn('[redesk] 警告：SESSION_SECRET 使用默认值，生产环境请设置强随机密钥');
+    console.error('[redesk] 致命错误：生产环境必须设置强随机 SESSION_SECRET');
+    console.error('[redesk] 请通过环境变量或 .env 文件设置 SESSION_SECRET（建议 32+ 字节随机字符串）');
+    process.exit(1);
   }
 
   initDatabase();

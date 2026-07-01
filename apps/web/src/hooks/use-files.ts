@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 
 export type StorageMode = 'local_only' | 'cloud_only' | 'dual';
 export type SyncStatus = 'synced' | 'pending' | 'partial_failed' | 'failed';
@@ -41,7 +41,7 @@ export function useUploadFile() {
       if (isPrimary) form.append('is_primary', 'true');
       if (storageMode) form.append('storage_mode', storageMode);
 
-      const res = await fetch(`/api/v1/books/${bookId}/files`, {
+      const res = await fetch(`${API_BASE}/books/${bookId}/files`, {
         method: 'POST',
         credentials: 'include',
         body: form,
@@ -69,7 +69,7 @@ export function useReplaceFile() {
       const form = new FormData();
       form.append('file', file);
 
-      const res = await fetch(`/api/v1/books/${bookId}/files/${fileId}/replace`, {
+      const res = await fetch(`${API_BASE}/books/${bookId}/files/${fileId}/replace`, {
         method: 'POST',
         credentials: 'include',
         body: form,
@@ -164,7 +164,7 @@ export function useUploadUnassociatedFile() {
       const form = new FormData();
       form.append('file', file);
 
-      const res = await fetch('/api/v1/files/unassociated', {
+      const res = await fetch(`${API_BASE}/files/unassociated`, {
         method: 'POST',
         credentials: 'include',
         body: form,

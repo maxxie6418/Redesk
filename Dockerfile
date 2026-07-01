@@ -20,6 +20,8 @@ ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8787
 
+RUN addgroup --system --gid 1000 redesk && adduser --system --uid 1000 --ingroup redesk --no-create-home redesk
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/
 COPY packages/shared/package.json packages/shared/
@@ -31,6 +33,10 @@ COPY packages/shared/src packages/shared/src
 COPY packages/db/src packages/db/src
 COPY packages/db/drizzle packages/db/drizzle
 COPY --from=web-builder /app/apps/web/dist apps/web/dist
+
+RUN chown -R redesk:redesk /app
+
+USER redesk
 
 EXPOSE 8787
 CMD ["pnpm", "--filter", "@redesk/api", "start"]

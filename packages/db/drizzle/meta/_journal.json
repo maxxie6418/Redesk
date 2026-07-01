@@ -27,6 +27,7 @@
     { "idx": 22, "version": "6", "when": 1783311600012, "tag": "0010_storage_mode_m", "breakpoints": true },
     { "idx": 23, "version": "6", "when": 1783311600013, "tag": "0010_storage_mode_n", "breakpoints": true },
     { "idx": 24, "version": "6", "when": 1783311600014, "tag": "0010_storage_mode_o", "breakpoints": true },
-    { "idx": 25, "version": "6", "when": 1783311600015, "tag": "0010_storage_mode_p", "breakpoints": true }
+    { "idx": 25, "version": "6", "when": 1783311600015, "tag": "0010_storage_mode_p", "breakpoints": true },
+    { "idx": 26, "version": "6", "when": 1783315200000, "tag": "0011_book_relations_unique", "breakpoints": true }
   ]
 }

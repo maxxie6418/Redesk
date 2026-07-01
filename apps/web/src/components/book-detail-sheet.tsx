@@ -46,8 +46,9 @@ import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags, type TagItem } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
+import { API_BASE } from '@/lib/api';
 
-const COVER_URL_BASE = '/api/v1';
+const COVER_URL_BASE = API_BASE;
 
 const COVER_TONES = [
   'bg-[#d8c6b7] text-[#3d2f28]',

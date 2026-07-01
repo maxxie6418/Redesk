@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-auth';
 import { ForcedPasswordChange } from '@/components/forced-password-change';
 import { ShellUserContext } from '@/components/shell-user-context';
@@ -21,7 +22,13 @@ export function ChangePasswordRoute() {
 
   if (AUTH_DISABLED) return <Navigate to={target} replace />;
 
-  if (currentUser.isLoading) return null;
+  if (currentUser.isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!currentUser.data || !currentUser.data.must_change_password) {
     return <Navigate to={target} replace />;

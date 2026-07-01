@@ -17,7 +17,7 @@ export interface ApiErrorShape {
   details?: { field: string; issue: string }[];
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 
 export class ApiError extends Error {
   readonly code: string;
@@ -38,7 +38,7 @@ async function requestBody(path: string, init?: RequestInit): Promise<unknown> {
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
     ...init,
     headers,
