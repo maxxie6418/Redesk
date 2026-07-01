@@ -4,7 +4,8 @@ services:
     image: redesk:latest
     container_name: redesk
     restart: unless-stopped
-    user: '6418:6418'
+    # 容器以 root 启动，entrypoint 会 chown /data 给 redesk 后再降权运行应用。
+    # 若在此处强制 user: '6418:6418'，chown 会失败，命名卷仍归 root 所有。
     ports:
       - '8787:8787'
     volumes:

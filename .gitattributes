@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+# Shell 脚本必须 LF，CRLF 会让容器内 #!/bin/sh 找不到解释器
+*.sh text eol=lf
+
+# Windows 专属
+*.bat text eol=crlf
+*.ps1 text eol=crlf

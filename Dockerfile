@@ -15,6 +15,9 @@ RUN pnpm --filter @redesk/web build
 # ---- Stage 2: 运行时 ----
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm@11.9.0
 ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
@@ -36,7 +39,10 @@ COPY --from=web-builder /app/apps/web/dist apps/web/dist
 
 RUN chown -R redesk:redesk /app
 
-USER redesk
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 EXPOSE 8787
 CMD ["pnpm", "--filter", "@redesk/api", "start"]
