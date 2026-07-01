@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
@@ -19,6 +20,7 @@ import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
 import { useQuickLinks, type QuickLink } from '@/hooks/use-quick-links';
+import { LoginDialog } from '@/components/login-dialog';
 
 export type AppSidebarKey =
   | 'overview'
@@ -48,6 +50,7 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
   const authInit = useAuthInit();
+  const [loginOpen, setLoginOpen] = useState(false);
   const loggedIn = !!currentUser.data;
   const initial = authInit.data?.initial === true;
   const authLabel = loggedIn ? '设置' : initial ? '设置管理口令' : '登录';
@@ -106,9 +109,17 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
           active={activeKey === 'settings' || activeKey === 'login'}
           icon={<AuthIcon className="h-4 w-4" />}
           label={authLabel}
-          onClick={() => navigate(loggedIn ? '/settings' : '/login')}
+          onClick={() => {
+            if (loggedIn) {
+              navigate('/settings');
+            } else {
+              setLoginOpen(true);
+            }
+          }}
         />
       </div>
+
+      <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </aside>
   );
 }

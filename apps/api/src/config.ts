@@ -64,7 +64,7 @@ export const config = {
 };
 
 export const DEFAULT_ADMIN_USERNAME = 'admin';
-export const DEFAULT_ADMIN_PASSWORD = 'redesk';
+export const DEFAULT_ADMIN_PASSWORD = 'admin';
 
 export const bootstrapConfig = {
   username: env.BOOTSTRAP_USERNAME ?? DEFAULT_ADMIN_USERNAME,
