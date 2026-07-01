@@ -36,51 +36,41 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
     }
   };
 
-  const handleBackdropClick = () => {
-    if (!login.isPending) {
-      setPassword('');
-      setError(null);
-      onClose();
-    }
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleBackdropClick}
-    >
-      <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-display text-xl font-medium text-primary-foreground">
-            R
+    <Card className="w-64 shadow-xl border-sidebar-border bg-sidebar">
+      <CardHeader className="px-3 pb-0 pt-3">
+        <CardTitle className="text-sm font-medium">输入口令</CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 pt-2">
+        <form onSubmit={onSubmit} className="space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor="dialog-password" className="text-xs text-sidebar-foreground/70">口令</Label>
+            <Input
+              id="dialog-password"
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError(null);
+              }}
+              autoComplete="current-password"
+              autoFocus
+              required
+              className="h-8 text-sm"
+            />
           </div>
-          <CardTitle>登录</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="dialog-password">口令</Label>
-              <Input
-                id="dialog-password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(null);
-                }}
-                autoComplete="current-password"
-                autoFocus
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={login.isPending}>
-              {login.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1 h-8 text-sm" disabled={login.isPending}>
+              {login.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               登录
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            <Button type="button" variant="ghost" className="h-8 text-sm px-2" onClick={() => { setPassword(''); setError(null); onClose(); }}>
+              取消
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

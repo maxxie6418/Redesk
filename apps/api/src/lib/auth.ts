@@ -57,28 +57,50 @@ export function userCount(): number {
 
 export async function ensureDefaultAdmin(): Promise<void> {
   if (isMultiUserEnabled()) return;
-  if (userCount() > 0) return;
 
-  const ts = new Date().toISOString();
-  const username = bootstrapConfig.username;
-  const password = bootstrapConfig.password;
-  const passwordHash = await hashPassword(password);
+  const count = userCount();
+  if (count === 0) {
+    const ts = new Date().toISOString();
+    const username = bootstrapConfig.username;
+    const password = bootstrapConfig.password;
+    const passwordHash = await hashPassword(password);
 
-  getDb()
-    .insert(users)
-    .values({
-      username,
-      password_hash: passwordHash,
-      display_name: '管理员',
-      must_change_password: 1,
-      created_at: ts,
-      updated_at: ts,
-    })
-    .run();
+    getDb()
+      .insert(users)
+      .values({
+        username,
+        password_hash: passwordHash,
+        display_name: '管理员',
+        must_change_password: 1,
+        created_at: ts,
+        updated_at: ts,
+      })
+      .run();
 
-  console.log(
-    `[redesk] 单口令模式默认管理员已创建：username=${username}，登录后必须先修改口令。`,
-  );
+    console.log(
+      `[redesk] 单口令模式默认管理员已创建：username=${username}，登录后必须先修改口令。`,
+    );
+    return;
+  }
+
+  if (count === 1) {
+    const existing = getDb()
+      .select({ id: users.id, mcp: users.must_change_password })
+      .from(users)
+      .limit(1)
+      .get();
+    if (existing?.mcp === 1) {
+      const passwordHash = await hashPassword(bootstrapConfig.password);
+      getDb()
+        .update(users)
+        .set({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+        .where(sql`id = ${existing.id}`)
+        .run();
+      console.log(
+        `[redesk] 已同步默认管理员口令至当前配置值（username=${bootstrapConfig.username}）`,
+      );
+    }
+  }
 }
 
 export function requireUserId(req: FastifyRequest): number {

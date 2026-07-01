@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/use-auth';
 import { ForcedPasswordChange } from '@/components/forced-password-change';
+import { ShellUserContext } from '@/components/shell-user-context';
 import { AUTH_DISABLED } from '@/lib/auth-mode';
 
 export function ChangePasswordRoute() {
@@ -27,10 +28,12 @@ export function ChangePasswordRoute() {
   }
 
   return (
-    <ForcedPasswordChange
-      onComplete={() => {
-        navigate(target, { replace: true });
-      }}
-    />
+    <ShellUserContext.Provider value={currentUser.data}>
+      <ForcedPasswordChange
+        onComplete={() => {
+          navigate(target, { replace: true });
+        }}
+      />
+    </ShellUserContext.Provider>
   );
 }

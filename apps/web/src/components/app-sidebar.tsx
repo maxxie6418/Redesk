@@ -105,21 +105,26 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
 
-        <SidebarItem
-          active={activeKey === 'settings' || activeKey === 'login'}
-          icon={<AuthIcon className="h-4 w-4" />}
-          label={authLabel}
-          onClick={() => {
-            if (loggedIn) {
-              navigate('/settings');
-            } else {
-              setLoginOpen(true);
-            }
-          }}
-        />
+        <div className="relative">
+          <SidebarItem
+            active={activeKey === 'settings' || activeKey === 'login'}
+            icon={<AuthIcon className="h-4 w-4" />}
+            label={authLabel}
+            onClick={() => {
+              if (loggedIn) {
+                navigate('/settings');
+              } else {
+                setLoginOpen((prev) => !prev);
+              }
+            }}
+          />
+          {loginOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 z-[60]">
+              <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
+            </div>
+          )}
+        </div>
       </div>
-
-      <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </aside>
   );
 }
