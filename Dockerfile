@@ -13,7 +13,7 @@ COPY . .
 RUN pnpm --filter @redesk/web build
 
 # ---- Stage 2: 运行时 ----
-FROM node:20-bookworm-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 RUN npm install -g pnpm@11.9.0
 ENV NODE_ENV=production
