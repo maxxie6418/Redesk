@@ -12,9 +12,9 @@ function Write-Info($message) {
 
 $currentNodeVersion = (node --version).TrimStart('v')
 $nodeMajor = $currentNodeVersion.Split('.')[0]
-if ($nodeMajor -lt 20 -or $nodeMajor -ge 25) {
+if ($nodeMajor -lt 22 -or $nodeMajor -ge 25) {
   Write-Host "[Redesk] Node.js version $currentNodeVersion is NOT supported."
-  Write-Host "[Redesk] This project requires Node.js >= 20 and < 25 (LTS recommended: 22.x)."
+  Write-Host "[Redesk] This project requires Node.js >= 22.13 and < 25 (LTS recommended: 22.x)."
   Write-Host "[Redesk] better-sqlite3 does not have prebuilt binaries for Node >= 25."
   Write-Host "[Redesk] Switch Node version using nvm-windows:"
   Write-Host "  nvm install 22"

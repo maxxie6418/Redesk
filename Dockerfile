@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Stage 1: 构建前端 ----
-FROM node:20-bookworm-slim AS web-builder
+FROM node:22-bookworm-slim AS web-builder
 WORKDIR /app
 RUN npm install -g pnpm@11.9.0
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./

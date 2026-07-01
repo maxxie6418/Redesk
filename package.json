@@ -5,7 +5,7 @@
   "type": "module",
   "description": "自托管个人阅读管理与 AI 陪读系统",
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22.13 <25"
   },
   "scripts": {
     "dev": "pnpm --parallel --filter @redesk/api --filter @redesk/web dev",
