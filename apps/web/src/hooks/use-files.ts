@@ -47,7 +47,7 @@ export function useUploadFile() {
 
       return (await res.json()) as { data: { id: number; file_format: string } };
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: { data: { id: number; file_format: string } }, vars: { bookId: number; file: File; isPrimary?: boolean }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -75,7 +75,7 @@ export function useReplaceFile() {
 
       return (await res.json()) as { data: { id: number; file_format: string } };
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: { data: { id: number; file_format: string } }, vars: { bookId: number; fileId: number; file: File }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -87,7 +87,7 @@ export function useUpdateFile() {
   return useMutation({
     mutationFn: ({ bookId, fileId, ...input }: { bookId: number; fileId: number; is_primary?: boolean; original_filename?: string }) =>
       api.patch<BookFileItem>(`/books/${bookId}/files/${fileId}`, input),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookFileItem, vars: { bookId: number; fileId: number; is_primary?: boolean; original_filename?: string }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -99,7 +99,7 @@ export function useDeleteFile() {
   return useMutation({
     mutationFn: ({ bookId, fileId }: { bookId: number; fileId: number }) =>
       api.delete<{ id: number; deleted: boolean }>(`/books/${bookId}/files/${fileId}`),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: { id: number; deleted: boolean }, vars: { bookId: number; fileId: number }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },

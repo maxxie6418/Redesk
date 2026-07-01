@@ -179,7 +179,7 @@ export function useUpdateBook() {
   return useMutation({
     mutationFn: ({ id, ...input }: { id: number } & UpdateBookInput) =>
       api.patch<BookDetail>(`/books/${id}`, input),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookDetail, vars: { id: number } & UpdateBookInput) => {
       qc.invalidateQueries({ queryKey: ['books', vars.id] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -289,7 +289,7 @@ export function useFavoriteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (bookId: number) => api.post<BookDetail>(`/books/${bookId}/favorite`),
-    onSuccess: (_data, bookId) => {
+    onSuccess: (_data: BookDetail, bookId: number) => {
       qc.invalidateQueries({ queryKey: ['books', bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -300,7 +300,7 @@ export function useUnfavoriteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (bookId: number) => api.delete<BookDetail>(`/books/${bookId}/favorite`),
-    onSuccess: (_data, bookId) => {
+    onSuccess: (_data: BookDetail, bookId: number) => {
       qc.invalidateQueries({ queryKey: ['books', bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -320,7 +320,7 @@ export function useFetchBookCover() {
   return useMutation({
     mutationFn: ({ bookId, force = false }: { bookId: number; force?: boolean }) =>
       api.post<BookCoverItem>(`/books/${bookId}/covers/fetch`, { force }),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookCoverItem, vars: { bookId: number; force?: boolean }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
@@ -333,7 +333,7 @@ export function useActivateBookCover() {
   return useMutation({
     mutationFn: ({ bookId, coverId }: { bookId: number; coverId: number }) =>
       api.patch<BookCoverItem>(`/books/${bookId}/covers/${coverId}`, { is_active: true }),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookCoverItem, vars: { bookId: number; coverId: number }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
@@ -346,7 +346,7 @@ export function useDeleteBookCover() {
   return useMutation({
     mutationFn: ({ bookId, coverId }: { bookId: number; coverId: number }) =>
       api.delete<{ id: number; deleted: boolean }>(`/books/${bookId}/covers/${coverId}`),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: { id: number; deleted: boolean }, vars: { bookId: number; coverId: number }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
@@ -378,7 +378,7 @@ export function useUploadBookCover() {
       formData.append('file', file);
       return api.postForm<BookCoverItem>(`/books/${bookId}/covers/upload`, formData);
     },
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookCoverItem, vars: { bookId: number; file: File }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books'] });
@@ -410,7 +410,7 @@ export function useApplyBookMetadata() {
   return useMutation({
     mutationFn: ({ bookId, fields, fetchCover }: { bookId: number; fields: Record<string, unknown>; fetchCover?: boolean }) =>
       api.post<BookDetail>(`/books/${bookId}/metadata/apply`, { fields, fetch_cover: fetchCover ?? false }),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: BookDetail, vars: { bookId: number; fields: Record<string, unknown>; fetchCover?: boolean }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'covers'] });
       qc.invalidateQueries({ queryKey: ['books'] });

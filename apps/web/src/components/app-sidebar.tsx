@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
-import { useQuickLinks } from '@/hooks/use-quick-links';
+import { useQuickLinks, type QuickLink } from '@/hooks/use-quick-links';
 
 export type AppSidebarKey =
   | 'overview'
@@ -165,7 +165,7 @@ function QuickLinksSection() {
       <div className="mb-1.5 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
         快捷链接
       </div>
-      {links.map((link) => (
+      {links.map((link: QuickLink) => (
         <a
           key={link.id}
           href={link.url}

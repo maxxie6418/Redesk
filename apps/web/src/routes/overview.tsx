@@ -13,12 +13,14 @@ import {
 } from 'lucide-react';
 import { BOOK_STATUS } from '@redesk/shared';
 import { useOverview } from '@/hooks/use-overview';
+import type { OverviewData } from '@/hooks/use-overview';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useShellUser } from '@/components/shell-user-context';
 import { AppShell } from '@/components/app-shell';
 import { cn } from '@/lib/utils';
+import type { CategoryItem } from '@/hooks/use-categories';
 
 const COVER_TONES = [
   'bg-[#d8c6b7] text-[#3d2f28]',
@@ -112,8 +114,8 @@ export function OverviewPage() {
 
   const categoryItems = useMemo(() => {
     const items = (categories.data ?? [])
-      .filter((c) => c.book_count > 0)
-      .sort((a, b) => b.book_count - a.book_count)
+      .filter((c: CategoryItem) => c.book_count > 0)
+      .sort((a: CategoryItem, b: CategoryItem) => b.book_count - a.book_count)
       .slice(0, 6);
     if (items.length === 0 && total > 0) {
       return [{ name: '未分类', book_count: total, id: 0 }];
@@ -122,7 +124,7 @@ export function OverviewPage() {
   }, [categories.data, total]);
 
   const timeline = useMemo(() => {
-    return recentAdded.slice(0, 6).map((b) => ({
+    return recentAdded.slice(0, 6).map((b: OverviewData['recent_added'][number]) => ({
       type: 'add' as const,
       time: b.created_at,
       title: b.title,
@@ -180,7 +182,7 @@ export function OverviewPage() {
                 <CardContent className="px-[18px] py-3.5">
                   <div className="relative pl-5">
                     <div className="absolute bottom-1 left-[4px] top-1 w-[2px] rounded-sm bg-border" />
-                    {timeline.map((item, i) => (
+                    {timeline.map((item: { type: 'add'; time: string; title: string }, i: number) => (
                       <ActivityItem key={i} dotClass="bg-success" time={formatActivityDate(item.time)}>
                         <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => navigate('/')}>
                           {item.title}
@@ -206,7 +208,7 @@ export function OverviewPage() {
                 </CardHeader>
                 <CardContent className="px-[18px] py-3.5">
                   <div className="flex flex-col gap-2">
-                    {recentReading.map((b, i) => (
+                    {recentReading.map((b: OverviewData['recent_reading'][number], i: number) => (
                       <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
                         <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[i % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}
@@ -235,13 +237,13 @@ export function OverviewPage() {
                 </CardHeader>
                 <CardContent className="px-[18px] py-3.5">
                   <div className="flex flex-col gap-2.5">
-                    {categoryItems.map((cat) => {
+                    {categoryItems.map((cat: CategoryItem | { name: string; book_count: number; id: number }) => {
                       const pct = total > 0 ? (cat.book_count / total) * 100 : 0;
                       return (
                         <div key={cat.id} className="flex items-center gap-2.5">
                           <span className="min-w-[52px] text-[12.5px] text-foreground">{cat.name}</span>
                           <div className="h-2 flex-1 overflow-hidden rounded-sm bg-muted">
-                            <div className="h-full rounded-sm bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
+                            <div className="h-full rounded-sm bg-primary transition-all duration-300" style={{ width: `${pct}%` } as React.CSSProperties} />
                           </div>
                           <span className="min-w-[24px] text-right text-xs tabular-nums text-muted-foreground">{cat.book_count}</span>
                         </div>
@@ -264,7 +266,7 @@ export function OverviewPage() {
                   <p className="py-4 text-center text-sm text-muted-foreground">暂无数据</p>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {recentAdded.slice(0, 4).map((b, i) => (
+                    {recentAdded.slice(0, 4).map((b: OverviewData['recent_added'][number], i: number) => (
                       <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
                         <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[(i + 3) % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}

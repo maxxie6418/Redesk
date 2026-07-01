@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   BookPlus,
@@ -22,8 +22,8 @@ import {
   useEmptyTrash,
   type BookSummary,
 } from '@/hooks/use-books';
-import { useCategories } from '@/hooks/use-categories';
-import { useTags } from '@/hooks/use-tags';
+import { useCategories, type CategoryItem } from '@/hooks/use-categories';
+import { useTags, type TagItem } from '@/hooks/use-tags';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
@@ -274,7 +274,7 @@ function ProgressBar({ progress, trackWidth = 'w-[70px]', trackHeight = 'h-1' }:
       <div className={cn('overflow-hidden rounded-full bg-muted', trackWidth, trackHeight)}>
         <div
           className="h-full rounded-full bg-[#2f7af5] transition-[width] duration-500"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${progress}%` } as CSSProperties}
         />
       </div>
       <span className="min-w-[32px] text-right text-[13px] font-medium tabular-nums text-muted-foreground">{progress}%</span>
@@ -305,7 +305,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   return (
     <article
       className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
-      style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+      style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' } as CSSProperties}
     >
       {!isTrash && <MenuMore onClick={onOpenDetail} />}
       <button
@@ -413,7 +413,7 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${progress}%` } as CSSProperties}
               />
             </div>
           </div>
@@ -521,7 +521,7 @@ function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       {/* 进度 */}
       <div className="flex w-[80px] shrink-0 items-center gap-2">
         <div className="h-1.5 w-[50px] overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` } as CSSProperties} />
         </div>
         <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
       </div>
@@ -762,7 +762,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 <option value="">未分类</option>
-                {personalCategories.data?.map((c) => (
+                {personalCategories.data?.map((c: CategoryItem) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
@@ -927,7 +927,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
                 className="h-9 w-full appearance-none rounded-lg border border-border bg-muted px-3 text-[13px] text-foreground outline-none transition focus:border-primary focus:shadow-[0_0_0_3px_rgba(217,119,87,0.1)]"
               >
                 <option value="">未分类</option>
-                {genreCategories.data?.map((c) => (
+                {genreCategories.data?.map((c: CategoryItem) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
@@ -974,7 +974,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             <div className="col-span-2 space-y-1.5">
               <label className="text-xs font-medium text-foreground">标签</label>
               <div className="flex flex-wrap gap-1.5">
-                {tags.data?.map((t) => {
+                {tags.data?.map((t: TagItem) => {
                   const on = tagIds.includes(t.id);
                   return (
                     <button
@@ -1273,7 +1273,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const permanentDeleteBook = usePermanentDeleteBook();
   const emptyTrash = useEmptyTrash();
 
-  const rawBooks = useMemo(() => {
+  const rawBooks = useMemo<BookSummary[]>(() => {
     if (pageView === 'trash') {
       return trashQuery.data?.data ?? [];
     }
@@ -1287,11 +1287,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const total = pageView === 'trash' ? trashQuery.data?.pagination.total : booksQuery.data?.pagination.total;
 
   const categoryOptions = useMemo(
-    () => ['ALL', ...new Set(rawBooks.map((book) => book.category_name).filter((value): value is string => Boolean(value)))],
+    (): string[] => ['ALL', ...new Set(rawBooks.map((book: BookSummary) => book.category_name).filter((value: string | null): value is string => Boolean(value)))],
     [rawBooks],
   );
 
-  const tagOptions = useMemo(() => ['ALL', ...new Set(rawBooks.flatMap((book) => book.tag_names))], [rawBooks]);
+  const tagOptions = useMemo((): string[] => ['ALL', ...new Set(rawBooks.flatMap((book: BookSummary) => book.tag_names))], [rawBooks]);
 
   const sidebarStats = useSidebarStats();
 
@@ -1374,10 +1374,10 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               <FilterSelect
                 value={category}
                 onChange={setCategory}
-                options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item])}
+                options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item] as const)}
               />
-              <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item])} />
-              <FilterSelect value={visibility} onChange={setVisibility} options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label])} />
+              <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item] as const)} />
+              <FilterSelect value={visibility} onChange={setVisibility} options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label] as const)} />
               <button
                 type="button"
                 title="收藏"
@@ -1392,7 +1392,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 <Heart className={cn('h-3.5 w-3.5', favorited ? 'fill-current' : '')} />
                 收藏
               </button>
-              <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label])} />
+              <FilterSelect value={sort} onChange={(value) => setSort(value as SortMode)} options={SORT_OPTIONS.map((item) => [item.value, item.label] as const)} />
             </div>
 
             <div className="flex-1" />
@@ -1457,7 +1457,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'A' && (
           <section className="grid grid-cols-1 gap-y-3 gap-x-2 xl:grid-cols-2 2xl:grid-cols-3">
-            {books.map((book, index) => (
+            {books.map((book: BookSummary, index: number) => (
               <BookCardA
                 key={book.id}
                 book={book}
@@ -1473,7 +1473,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'B' && (
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
-            {books.map((book, index) => (
+            {books.map((book: BookSummary, index: number) => (
               <BookCardB
                 key={book.id}
                 book={book}
@@ -1489,7 +1489,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
         {!isLoading && !isError && books.length > 0 && viewMode === 'C' && (
           <section className="grid grid-cols-3 gap-y-3 gap-x-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-            {books.map((book, index) => (
+            {books.map((book: BookSummary, index: number) => (
               <BookCardC
                 key={book.id}
                 book={book}
@@ -1516,7 +1516,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               <div className="w-[100px] shrink-0">标签</div>
               <div className="w-[70px] shrink-0 text-right">更新</div>
             </div>
-            {books.map((book, index) => (
+            {books.map((book: BookSummary, index: number) => (
               <BookCardD
                 key={book.id}
                 book={book}
@@ -1545,7 +1545,7 @@ function StatusPills({ value, onChange }: { value: string; onChange: (v: string)
   ];
   return (
     <div className="flex items-center gap-1.5">
-      {items.map((opt) => (
+      {items.map((opt: (typeof items)[number]) => (
         <button
           key={opt.value}
           type="button"

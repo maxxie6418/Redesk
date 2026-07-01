@@ -29,7 +29,9 @@ const MULTIPART_THRESHOLD = 8 * 1024 * 1024;
 
 export class S3Storage implements Storage {
   readonly driver = 's3' as const;
-  private readonly client: S3Client;
+  private readonly client: S3Client & {
+    send: <TCommand>(command: TCommand) => Promise<unknown>;
+  };
   private readonly bucket: string;
   private readonly publicUrlBase: string | null;
 
@@ -46,7 +48,7 @@ export class S3Storage implements Storage {
       region: config.region || 'auto',
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
       forcePathStyle: config.forcePathStyle ?? true,
-    });
+    }) as S3Storage['client'];
   }
 
   private buildKey(key: string): string {

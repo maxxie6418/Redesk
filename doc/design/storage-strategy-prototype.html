@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redesk 存储策略原型</title>
+  <style>
+    :root {
+      --bg: #efe7d8;
+      --paper: #f8f3ea;
+      --card: #fffdf8;
+      --line: #dbcdb8;
+      --text: #2e251d;
+      --muted: #706252;
+      --accent: #bf6d3b;
+      --accent-weak: #f4e2d4;
+      --green: #2f7d4a;
+      --amber: #9b6b15;
+      --red: #a34237;
+      --shadow: 0 18px 40px rgba(76, 52, 28, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font: 15px/1.6 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #fbf7f0 0, var(--bg) 52%),
+        linear-gradient(180deg, #f6efe4 0, #ece2d1 100%);
+    }
+
+    .page {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 28px 24px 40px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 780px;
+      color: var(--muted);
+    }
+
+    .summary {
+      min-width: 240px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 253, 248, 0.85);
+      box-shadow: var(--shadow);
+    }
+
+    .summary strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .summary div {
+      color: var(--text);
+    }
+
+    .screens {
+      display: grid;
+      grid-template-columns: 280px 1fr 360px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .surface {
+      background: var(--paper);
+      border: 1px solid rgba(114, 93, 66, 0.08);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .screen-title {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .sidebar {
+      min-height: 960px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, #faf3e9 0, #f3eadc 100%);
+    }
+
+    .brand {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      margin-bottom: 18px;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .brand span,
+    .nav-item small,
+    .hint,
+    .field-note,
+    .subline,
+    .badge-note {
+      color: var(--muted);
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+    }
+
+    .nav-item {
+      padding: 14px 14px 13px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+    }
+
+    .nav-item.active {
+      background: var(--card);
+      border-color: var(--line);
+      box-shadow: 0 8px 24px rgba(76, 52, 28, 0.06);
+    }
+
+    .nav-item strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+
+    .settings {
+      min-height: 960px;
+      padding: 24px;
+    }
+
+    .section {
+      margin-bottom: 22px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+
+    .section h2,
+    .panel h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.3;
+    }
+
+    .section p,
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .field {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fffdf9;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .field-value {
+      font-weight: 600;
+    }
+
+    .mode-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .mode-card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fffefb;
+    }
+
+    .mode-card.selected {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, #fff9f4 0, #fff4eb 100%);
+    }
+
+    .mode-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 6px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--accent-weak);
+      color: var(--accent);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .mode-card strong,
+    .sheet-title strong,
+    .detail-card strong {
+      font-size: 16px;
+    }
+
+    .mode-card ul,
+    .callout ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn.soft {
+      background: #f9f1e7;
+    }
+
+    .preview {
+      min-height: 960px;
+      padding: 24px 22px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.38) 0, rgba(255, 255, 255, 0) 100%),
+        var(--paper);
+      position: relative;
+    }
+
+    .panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      margin-bottom: 18px;
+    }
+
+    .sheet {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: #fffefb;
+      box-shadow: 0 10px 24px rgba(76, 52, 28, 0.06);
+      margin-bottom: 18px;
+    }
+
+    .sheet-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .upload-box {
+      padding: 20px;
+      border: 1.5px dashed #cbb395;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffaf4 0, #fffdf9 100%);
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .upload-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .file-list {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .file-item,
+    .status-item,
+    .timeline-item,
+    .book-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .status-line {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #f3ede4;
+      color: var(--text);
+    }
+
+    .badge.local {
+      background: #ede8de;
+    }
+
+    .badge.cloud {
+      background: #e4eef8;
+      color: #2d5f88;
+    }
+
+    .badge.dual {
+      background: #e8f4ea;
+      color: var(--green);
+    }
+
+    .badge.warn {
+      background: #f8efdb;
+      color: var(--amber);
+    }
+
+    .badge.fail {
+      background: #f7e1de;
+      color: var(--red);
+    }
+
+    .collapsed {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fffcf7;
+      margin-bottom: 12px;
+    }
+
+    .choice-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .choice {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 12px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .choice.active {
+      border-color: var(--accent);
+      background: #fff7f1;
+    }
+
+    .radio {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid #bca48a;
+      margin-top: 3px;
+      position: relative;
+      background: #fff;
+    }
+
+    .choice.active .radio::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .detail-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    .book-header {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .cover {
+      height: 156px;
+      border-radius: 16px;
+      background:
+        linear-gradient(160deg, #d77c47 0, #8b4f31 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .meta-cell {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fffdf9;
+    }
+
+    .meta-cell span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .status-stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      background: #fff5ec;
+    }
+
+    .legend {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 1220px) {
+      .screens {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar,
+      .settings,
+      .preview {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .hero {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .grid-2,
+      .meta-grid,
+      .book-header {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div>
+        <h1>Redesk 存储策略原型页</h1>
+        <p>
+          目标是把“默认最短路径 + 本次临时覆盖 + 上传后状态清晰”三件事放进一个完整界面里。
+          左侧是设置页长期偏好，中间是批量上传弹窗，右侧是书籍详情里的存储状态区。
+        </p>
+      </div>
+      <div class="summary">
+        <strong>当前讨论结论</strong>
+        <div>默认以设置页长期策略为准</div>
+        <div>批量上传整批统一策略</div>
+        <div>文件详情展示实际落点与异常状态</div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <section class="surface">
+        <div class="screen-title">左栏：设置页 / 长期偏好</div>
+        <div class="sidebar">
+          <div class="brand">
+            <strong>Redesk</strong>
+            <span>个人阅读管理与 AI 陪读系统</span>
+          </div>
+
+          <div class="nav">
+            <div class="nav-item">
+              <strong>概览</strong>
+              <small>书架总览与近期动态</small>
+            </div>
+            <div class="nav-item">
+              <strong>书架</strong>
+              <small>书籍、文件与匹配管理</small>
+            </div>
+            <div class="nav-item active">
+              <strong>设置</strong>
+              <small>云存储、备份与默认策略</small>
+            </div>
+            <div class="nav-item">
+              <strong>备份</strong>
+              <small>导出与 SQLite 副本</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="screen-title">中间：设置页主体 + 批量上传弹窗布局</div>
+        <div class="settings">
+          <div class="section">
+            <h2>默认存储方式</h2>
+            <p>这里定义以后上传书籍时的默认路径，平时上传不再重复询问。</p>
+
+            <div class="mode-list">
+              <div class="mode-card selected">
+                <div class="mode-top">
+                  <strong>仅保存在当前设备</strong>
+                  <span class="pill">当前默认</span>
+                </div>
+                <div class="subline">适合多数自托管部署，最快，最符合本地优先。</div>
+                <ul>
+                  <li>上传直接落本地目录</li>
+                  <li>不依赖云端连通性</li>
+                  <li>适合作为系统默认值</li>
+                </ul>
+              </div>
+
+              <div class="mode-card">
+                <div class="mode-top">
+                  <strong>仅保存在云端</strong>
+                  <span class="pill">可选</span>
+                </div>
+                <div class="subline">适合轻量服务器或本地存储空间紧张的部署。</div>
+              </div>
+
+              <div class="mode-card">
+                <div class="mode-top">
+                  <strong>本地和云端都保留</strong>
+                  <span class="pill">可选</span>
+                </div>
+                <div class="subline">适合重要资料、长期留存和重视冗余的用户。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>云存储配置</h2>
+            <p>只有这里配置完整后，上传弹窗里的云端选项才可用。</p>
+
+            <div class="grid-2">
+              <div class="field">
+                <span class="field-label">对象存储提供商</span>
+                <div class="field-value">Cloudflare R2</div>
+              </div>
+              <div class="field">
+                <span class="field-label">Bucket</span>
+                <div class="field-value">redesk-library</div>
+              </div>
+              <div class="field">
+                <span class="field-label">Endpoint</span>
+                <div class="field-value">https://example.r2.cloudflarestorage.com</div>
+              </div>
+              <div class="field">
+                <span class="field-label">连接状态</span>
+                <div class="field-value">已通过测试</div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <div class="hint">云配置不完整时，上传弹窗中的“仅云端 / 双端保留”应置灰。</div>
+              <div class="btn-row">
+                <div class="btn soft">测试连接</div>
+                <div class="btn primary">保存设置</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet">
+            <div class="sheet-title">
+              <div>
+                <strong>批量上传书籍</strong>
+                <div class="subline">主流程只做两件事：选文件，然后上传。存储方式默认沿用设置。</div>
+              </div>
+              <span class="pill">整批统一策略</span>
+            </div>
+
+            <div class="upload-box">
+              <strong>拖拽文件到这里，或点击选择</strong>
+              <div class="field-note">支持 EPUB / PDF / MOBI / TXT / AZW3 / FB2</div>
+            </div>
+
+            <div class="file-list">
+              <div class="file-item">
+                <div>
+                  <strong>洞穴奇案.epub</strong>
+                  <div class="field-note">已识别元数据 · 预计创建新书</div>
+                </div>
+                <span class="badge local">默认：仅本地</span>
+              </div>
+              <div class="file-item">
+                <div>
+                  <strong>刑法学讲义.pdf</strong>
+                  <div class="field-note">待匹配现有书籍</div>
+                </div>
+                <span class="badge local">默认：仅本地</span>
+              </div>
+              <div class="file-item">
+                <div>
+                  <strong>古希腊悲剧集.mobi</strong>
+                  <div class="field-note">将与《古希腊悲剧》关联</div>
+                </div>
+                <span class="badge local">默认：仅本地</span>
+              </div>
+            </div>
+
+            <div class="collapsed">
+              <div>
+                <strong>存储方式：使用默认（仅保存在当前设备）</strong>
+                <div class="field-note">大多数时候不需要改。本次例外才展开。</div>
+              </div>
+              <div class="btn">更改</div>
+            </div>
+
+            <div class="choice-list">
+              <div class="choice">
+                <div class="radio"></div>
+                <div>
+                  <strong>仅保存在当前设备</strong>
+                  <div class="field-note">最快，适合日常上传。</div>
+                </div>
+              </div>
+              <div class="choice">
+                <div class="radio"></div>
+                <div>
+                  <strong>仅保存在云端</strong>
+                  <div class="field-note">节省本地空间，依赖云端可用。</div>
+                </div>
+              </div>
+              <div class="choice active">
+                <div class="radio"></div>
+                <div>
+                  <strong>本地和云端都保留</strong>
+                  <div class="field-note">本次整批采用双端保留，不改系统默认。</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <div class="hint">建议规则：第一版不支持逐文件单独改存储方式，避免批量流程过重。</div>
+              <div class="btn-row">
+                <div class="btn">取消</div>
+                <div class="btn primary">上传 3 个文件</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="screen-title">右栏：书籍详情 / 文件实际存储状态</div>
+        <div class="preview">
+          <div class="panel">
+            <h2>书籍详情里的状态区</h2>
+            <p>这里不展示“用户当时选了什么”，而展示“现在真实存在哪、有没有异常”。</p>
+            <div class="legend">
+              <span class="badge local">仅本地</span>
+              <span class="badge cloud">仅云端</span>
+              <span class="badge dual">本地 + 云端</span>
+              <span class="badge warn">同步中</span>
+              <span class="badge fail">部分失败</span>
+            </div>
+          </div>
+
+          <div class="detail-grid">
+            <div class="detail-card">
+              <div class="book-header">
+                <div class="cover"></div>
+                <div>
+                  <strong>洞穴奇案</strong>
+                  <div class="subline">作者：富勒 · 分类：法学 · 状态：已读</div>
+                  <div class="status-line">
+                    <span class="badge dual">本地 + 云端</span>
+                    <span class="badge-note">主读取位置：本地</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="meta-grid">
+                <div class="meta-cell">
+                  <span>主文件</span>
+                  洞穴奇案.epub
+                </div>
+                <div class="meta-cell">
+                  <span>文件大小</span>
+                  3.8 MB
+                </div>
+                <div class="meta-cell">
+                  <span>上传策略</span>
+                  双端保留
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <strong>文件与存储状态</strong>
+              <div class="status-stack">
+                <div class="status-item">
+                  <div>
+                    <strong>洞穴奇案.epub</strong>
+                    <div class="field-note">主文件 · 实际存在于本地与云端</div>
+                  </div>
+                  <span class="badge dual">已双端保存</span>
+                </div>
+
+                <div class="status-item">
+                  <div>
+                    <strong>封面图 cover.jpg</strong>
+                    <div class="field-note">主端已落本地，云端副本还在补传</div>
+                  </div>
+                  <span class="badge warn">双端同步中</span>
+                </div>
+
+                <div class="status-item">
+                  <div>
+                    <strong>作者访谈.pdf</strong>
+                    <div class="field-note">文件可下载，但云端副本写入失败</div>
+                  </div>
+                  <span class="badge fail">双端部分失败</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <strong>最近处理记录</strong>
+              <div class="status-stack">
+                <div class="timeline-item">
+                  <div>
+                    <strong>2026-07-01 13:28</strong>
+                    <div class="field-note">本次批量上传采用“本地和云端都保留”</div>
+                  </div>
+                  <span class="badge dual">整批策略</span>
+                </div>
+                <div class="timeline-item">
+                  <div>
+                    <strong>2026-07-01 13:29</strong>
+                    <div class="field-note">主文件写入本地成功，云端副本完成</div>
+                  </div>
+                  <span class="badge dual">完成</span>
+                </div>
+                <div class="timeline-item">
+                  <div>
+                    <strong>2026-07-01 13:31</strong>
+                    <div class="field-note">附属 PDF 云端写入失败，待补偿</div>
+                  </div>
+                  <span class="badge fail">需处理</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <strong>文件库列表视图中的大致呈现</strong>
+              <div class="status-stack">
+                <div class="book-row">
+                  <div>
+                    <strong>哲学的慰藉.epub</strong>
+                    <div class="field-note">书库文件 · 已关联《哲学的慰藉》</div>
+                  </div>
+                  <span class="badge local">仅本地</span>
+                </div>
+                <div class="book-row">
+                  <div>
+                    <strong>诗学.pdf</strong>
+                    <div class="field-note">书库文件 · 已关联《诗学》</div>
+                  </div>
+                  <span class="badge cloud">仅云端</span>
+                </div>
+                <div class="book-row">
+                  <div>
+                    <strong>正义论.epub</strong>
+                    <div class="field-note">书库文件 · 已关联《正义论》</div>
+                  </div>
+                  <span class="badge dual">本地 + 云端</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout">
+            <strong>交互要点</strong>
+            <ul>
+              <li>上传入口默认不打断，先让用户完成主任务。</li>
+              <li>本次覆盖只影响当前批次，不反写设置页默认值。</li>
+              <li>详情页和文件列表都要显示实际存储状态，而不是只显示“上传成功”。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

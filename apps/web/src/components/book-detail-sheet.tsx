@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, type ChangeEvent } from 'react';
+import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -39,9 +39,9 @@ import {
   type BookCoverItem,
   type LinkMetadata,
 } from '@/hooks/use-books';
-import { useBookFiles } from '@/hooks/use-files';
-import { useCategories } from '@/hooks/use-categories';
-import { useTags } from '@/hooks/use-tags';
+import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
+import { useCategories, type CategoryItem } from '@/hooks/use-categories';
+import { useTags, type TagItem } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 
 const COVER_URL_BASE = '/api/v1';
@@ -335,14 +335,14 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const b = book.data;
   const hasCover = Boolean(b?.cover_path);
   const progress = b ? bookProgress(b) : 0;
-  const primaryEpub = files.data?.find((f) => f.is_primary === 1 && f.file_format === 'EPUB');
+  const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
 
   const customAttrs = useMemo(() => {
     if (!b?.custom_attributes) return [];
     try {
       const parsed = JSON.parse(b.custom_attributes);
       if (typeof parsed === 'object' && parsed !== null) {
-        return Object.entries(parsed).map(([k, v]) => {
+        return Object.entries(parsed).map(([k, v]: [string, unknown]) => {
           const label = k === 'douban_rating' ? '豆瓣评分' : k === 'neodb_rating' ? 'NeoDB 评分' : k;
           return `${label}: ${String(v)}`;
         });
@@ -365,7 +365,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       if (g) g.items.push(cover);
       else groups[cover.source_type] = { label: cover.source_type, items: [cover] };
     }
-    return Object.entries(groups).filter(([, { items }]) => items.length > 0);
+    return Object.entries(groups).filter(([, { items }]: [string, { label: string; items: BookCoverItem[] }]) => items.length > 0);
   }, [covers.data]);
 
   if (!open) return null;
@@ -611,7 +611,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 <div className="h-[6px] overflow-hidden rounded-full bg-border">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${progress}%` } as CSSProperties}
                   />
                 </div>
               </div>
@@ -792,7 +792,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
                 {files.data && files.data.length > 0 ? (
                   <div className="space-y-1">
-                    {files.data.map((f) => (
+                    {files.data.map((f: BookFileItem) => (
                       <div key={f.id} className="flex items-center gap-2 py-1.5">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', f.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
                         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</span>
@@ -943,7 +943,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       className="flex min-w-0 flex-1 flex-wrap gap-1.5 text-left"
                     >
                       {b.tag_names.length > 0 ? (
-                        b.tag_names.map((tag) => (
+                        b.tag_names.map((tag: string) => (
                           <TagAtom key={tag} size="small">{tag}</TagAtom>
                         ))
                       ) : (
@@ -953,7 +953,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   ) : (
                     <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                       {b.tag_names.length > 0 ? (
-                        b.tag_names.map((tag) => (
+                        b.tag_names.map((tag: string) => (
                           <TagAtom key={tag} size="small">{tag}</TagAtom>
                         ))
                       ) : (
@@ -965,7 +965,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {editingField === ('tags' as unknown as EditableField) && (
                   <div className="mt-2 rounded-lg border border-border bg-muted p-3">
                     <div className="mb-2 flex flex-wrap gap-1.5">
-                      {tags.data?.map((t) => (
+                      {tags.data?.map((t: TagItem) => (
                         <button
                           key={t.id}
                           type="button"
@@ -1035,7 +1035,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     value={b.category_id ? String(b.category_id) : ''}
                     options={[
                       { value: '', label: '未分类' },
-                      ...(categories.data?.map((c) => ({ value: String(c.id), label: c.name })) ?? []),
+                      ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
                     ]}
                   />
                   <InlineEditText field="readingPurpose" label="阅读目的" value={b.reading_purpose ?? ''} />

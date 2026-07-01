@@ -29,7 +29,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (input: { password: string; username?: string }) =>
       api.post<AuthUser>('/auth/login', input),
-    onSuccess: (user) => {
+    onSuccess: (user: AuthUser) => {
       qc.setQueryData(['current-user'], user);
       qc.invalidateQueries({ queryKey: ['auth-status'] });
     },
@@ -49,7 +49,7 @@ export function useSetup() {
   return useMutation({
     mutationFn: (input: { username: string; password: string; display_name?: string }) =>
       api.post<AuthUser>('/auth/setup', input),
-    onSuccess: (user) => {
+    onSuccess: (user: AuthUser) => {
       qc.setQueryData(['current-user'], user);
       qc.invalidateQueries({ queryKey: ['auth-status'] });
     },
@@ -72,7 +72,7 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: (input: { newPassword: string }) =>
       api.post<AuthUser>('/auth/change-password', input),
-    onSuccess: (user) => {
+    onSuccess: (user: AuthUser) => {
       qc.setQueryData(['current-user'], user);
     },
   });

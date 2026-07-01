@@ -4,7 +4,7 @@ import { ApiError } from './api';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error) => {
+      retry: (failureCount: number, error: unknown) => {
         if (error instanceof ApiError && (error.code === 'UNAUTHORIZED' || error.code === 'INVALID_CREDENTIALS')) {
           return false;
         }

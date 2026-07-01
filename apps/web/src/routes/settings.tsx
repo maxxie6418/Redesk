@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type CSSProperties } from 'react';
 import {
   Monitor,
   Moon,
@@ -52,16 +52,18 @@ import {
   useUpdateStorageSettings,
   useTestStorage,
 } from '@/hooks/use-storage-config';
-import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/use-categories';
-import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-tags';
-import { useBackupList, triggerAutoBackup, triggerFullBackup } from '@/hooks/use-export';
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, type CategoryItem } from '@/hooks/use-categories';
+import { useTags, useCreateTag, useUpdateTag, useDeleteTag, type TagItem } from '@/hooks/use-tags';
+import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
 import {
   useQuickLinks,
   useAddQuickLink,
   useUpdateQuickLink,
   useDeleteQuickLink,
   useReorderQuickLink,
+  type QuickLink,
 } from '@/hooks/use-quick-links';
+import type { DirInfo } from '@/hooks/use-system';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -653,7 +655,7 @@ function UsersTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </div>
       )}
 
-      {users.data?.map((u) => (
+      {users.data?.map((u: UserAdminSummary) => (
         <Card key={u.id}>
           <CardContent className="flex items-center gap-4 px-4 py-3">
             <div
@@ -914,7 +916,7 @@ function BackupTab({ settings, onToast }: { settings: Record<string, string>; on
                 已有 {backupList.data.length} 份备份
               </p>
               <div className="space-y-1">
-                {backupList.data.slice(0, 5).map((b) => (
+                {backupList.data.slice(0, 5).map((b: BackupItem) => (
                   <div key={b.name} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                     <span className="truncate text-foreground">{b.name}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
@@ -1067,7 +1069,7 @@ function CategoriesTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </div>
       )}
 
-      {categories.data?.map((cat) => (
+      {categories.data?.map((cat: CategoryItem) => (
         <Card key={cat.id}>
           <CardContent className="flex items-center gap-4 px-4 py-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
@@ -1213,7 +1215,7 @@ function TagsTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </div>
       )}
 
-      {tags.data?.map((tag) => (
+      {tags.data?.map((tag: TagItem) => (
         <Card key={tag.id}>
           <CardContent className="flex items-center gap-4 px-4 py-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">
@@ -1339,7 +1341,7 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
               </div>
 
               <div className="space-y-2">
-                {Object.entries(storage.data.breakdown).map(([key, info]) => {
+                {(Object.entries(storage.data.breakdown) as [string, DirInfo][]).map(([key, info]) => {
                   const percentage = totalSize > 0 ? ((info.size_bytes / totalSize) * 100).toFixed(1) : '0';
                   const dir = dirLabels[key] ?? { label: key, icon: <FolderTree className="h-4 w-4" /> };
                   return (
@@ -1362,7 +1364,7 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
                                   ? 'bg-blue-400'
                                   : 'bg-emerald-400',
                             )}
-                            style={{ width: `${Math.max(Number(percentage), 1)}%` }}
+                            style={{ width: `${Math.max(Number(percentage), 1)}%` } as CSSProperties}
                           />
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">{info.file_count} 个文件</p>
@@ -2007,7 +2009,7 @@ function QuickLinksTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
         </div>
       )}
 
-      {links?.map((link, index) => (
+      {links?.map((link: QuickLink, index: number) => (
         <Card key={link.id}>
           <CardContent className="flex items-center gap-4 px-4 py-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-sm font-medium text-foreground">

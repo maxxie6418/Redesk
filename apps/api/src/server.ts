@@ -47,7 +47,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     trustProxy: true,
   });
 
-  await app.register(cookie, { secret: config.sessionSecret });
+  await app.register(cookie as unknown as Parameters<typeof app.register>[0], { secret: config.sessionSecret });
   await app.register(cors, {
     origin: [config.webUrl],
     credentials: true,

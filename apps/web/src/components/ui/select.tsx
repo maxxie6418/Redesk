@@ -17,7 +17,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'right 8px center',
           backgroundSize: '16px',
-        }}
+        } as React.CSSProperties}
         {...props}
       >
         {children}

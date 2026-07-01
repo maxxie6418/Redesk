@@ -32,7 +32,7 @@ export function useCreateRelation() {
   return useMutation({
     mutationFn: ({ bookId, ...input }: { bookId: number; target_book_id: number; relation_type?: string; note?: string }) =>
       api.post(`/books/${bookId}/relations`, input),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: unknown, vars: { bookId: number; target_book_id: number; relation_type?: string; note?: string }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'relations'] });
     },
   });
@@ -43,7 +43,7 @@ export function useDeleteRelation() {
   return useMutation({
     mutationFn: ({ bookId, relationId }: { bookId: number; relationId: number }) =>
       api.delete(`/books/${bookId}/relations/${relationId}`),
-    onSuccess: (_data, vars) => {
+    onSuccess: (_data: unknown, vars: { bookId: number; relationId: number }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'relations'] });
     },
   });

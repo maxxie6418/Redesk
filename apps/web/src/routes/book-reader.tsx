@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Loader2, Menu, X } from 'lucide-react';
 import ePub from 'epubjs';
-import { useBookFiles } from '@/hooks/use-files';
+import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
 
@@ -33,7 +33,7 @@ export function BookReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const primaryEpub = files.data?.find((f) => f.is_primary === 1 && f.file_format === 'EPUB');
+  const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
   const primaryEpubId = primaryEpub?.id;
   const bookTitle = book.data?.title ?? '';
 
