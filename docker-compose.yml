@@ -4,7 +4,7 @@ services:
     image: redesk:latest
     container_name: redesk
     restart: unless-stopped
-    user: '1000:1000'
+    user: '6418:6418'
     ports:
       - '8787:8787'
     volumes:

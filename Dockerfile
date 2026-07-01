@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8787
 
-RUN addgroup --system --gid 1000 redesk && adduser --system --uid 1000 --ingroup redesk --no-create-home redesk
+RUN addgroup --system --gid 6418 redesk && adduser --system --uid 6418 --ingroup redesk --no-create-home redesk
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/
