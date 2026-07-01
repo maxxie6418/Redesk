@@ -48,7 +48,8 @@ export type SetupInput = z.infer<typeof setupSchema>;
 
 export const changePasswordSchema = z
   .object({
-    newPassword: z.string().min(8).max(128),
+    current_password: z.string().min(1).max(128).optional(),
+    new_password: z.string().min(8).max(128),
   })
   .strict();
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

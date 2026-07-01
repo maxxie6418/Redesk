@@ -1,6 +1,6 @@
 {
   "name": "redesk",
-  "version": "1.5.1",
+  "version": "1.6.3",
   "private": true,
   "type": "module",
   "description": "自托管个人阅读管理与 AI 陪读系统",
@@ -19,7 +19,8 @@
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @redesk/db generate",
     "db:migrate": "pnpm --filter @redesk/db migrate",
-    "db:seed": "pnpm --filter @redesk/db seed"
+    "db:seed": "pnpm --filter @redesk/db seed",
+    "bump": "node scripts/bump-version.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

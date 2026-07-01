@@ -10,31 +10,37 @@ import { validate } from '../lib/zod';
 import { AppError, businessError } from '../lib/errors';
 import { ERROR_CODE } from '@redesk/shared';
 import {
-  STORAGE_SETTINGS_OWNER_ID,
   SETTINGS_KEYS,
   getStorageStatus,
   refreshStorage,
   resetStorageCache,
   getS3Storage,
+  getSettingsOwnerId,
 } from '../lib/storage-factory';
 import { S3Storage, type S3StorageConfig } from '../lib/s3-storage';
 
 const SENSITIVE_KEYS = new Set(['oss_secret_key', 'oss_access_key']);
 
 function readSetting(key: string): string | null {
+  const ownerId = getSettingsOwnerId();
+  if (!ownerId) return null;
   const row = getDb()
     .select({ value: settings.value })
     .from(settings)
-    .where(and(eq(settings.owner_id, STORAGE_SETTINGS_OWNER_ID), eq(settings.key, key)))
+    .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
     .get();
   return row?.value ?? null;
 }
 
 function writeSetting(key: string, value: string | null): void {
   const db = getDb();
+  const ownerId = getSettingsOwnerId();
+  if (!ownerId) {
+    throw businessError('系统设置归属用户不存在');
+  }
   if (value == null || value === '') {
     db.delete(settings)
-      .where(and(eq(settings.owner_id, STORAGE_SETTINGS_OWNER_ID), eq(settings.key, key)))
+      .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
       .run();
     return;
   }
@@ -42,11 +48,11 @@ function writeSetting(key: string, value: string | null): void {
   if (existing != null) {
     db.update(settings)
       .set({ value, updated_at: new Date().toISOString() })
-      .where(and(eq(settings.owner_id, STORAGE_SETTINGS_OWNER_ID), eq(settings.key, key)))
+      .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
       .run();
   } else {
     db.insert(settings)
-      .values({ owner_id: STORAGE_SETTINGS_OWNER_ID, key, value, updated_at: new Date().toISOString() })
+      .values({ owner_id: ownerId, key, value, updated_at: new Date().toISOString() })
       .run();
   }
 }

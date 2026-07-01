@@ -128,6 +128,11 @@ export interface PaginatedFiles {
     page_size: number;
     total: number;
   };
+  summary?: {
+    linked: number;
+    unlinked: number;
+    total_size: number;
+  };
 }
 
 export function useFileLibrary(params?: FileLibraryParams) {

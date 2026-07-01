@@ -70,7 +70,7 @@ export function useLogout() {
 export function useChangePassword() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { newPassword: string }) =>
+    mutationFn: (input: { current_password?: string; new_password: string }) =>
       api.post<AuthUser>('/auth/change-password', input),
     onSuccess: (user: AuthUser) => {
       qc.setQueryData(['current-user'], user);

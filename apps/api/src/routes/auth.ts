@@ -202,8 +202,30 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const userId = getSessionUserId(req);
     if (!userId) throw unauthorized();
     const input = validate(changePasswordSchema, req.body);
+    const existing = getDb()
+      .select({
+        id: users.id,
+        password_hash: users.password_hash,
+        must_change_password: users.must_change_password,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    if (!existing) throw unauthorized();
+
+    const needsForcedChange = existing.must_change_password === 1;
+    if (!needsForcedChange) {
+      if (!input.current_password) {
+        throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少当前密码');
+      }
+      const ok = await verifyPassword(input.current_password, existing.password_hash);
+      if (!ok) {
+        throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '当前密码错误');
+      }
+    }
+
     const ts = new Date().toISOString();
-    const newHash = await hashPassword(input.newPassword);
+    const newHash = await hashPassword(input.new_password);
     const updated = getDb()
       .update(users)
       .set({

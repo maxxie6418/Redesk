@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, count, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { extname, basename } from 'node:path';
 import { bookCovers, bookFiles, books, type StorageMode } from '@redesk/db';
@@ -20,9 +20,8 @@ import {
   assertStorageModeAvailable,
   getDefaultStorageMode,
   getStorageByDriver,
-  getStorageForMode,
+  getStorageDriversForMode,
   resolvePrimaryLocation,
-  resolveStorageDriverForMode,
 } from '../lib/storage-factory';
 import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
@@ -67,10 +66,6 @@ function bookFileKey(bookId: number, ext: string): string {
 
 function unassociatedFileKey(ext: string): string {
   return `unassociated/${safeName(ext)}`;
-}
-
-function tmpCoverUploadKey(ext: string): string {
-  return `tmp/cover_upload_${safeName(ext)}`;
 }
 
 function bookCoverKey(bookId: number, ext: string): string {
@@ -124,11 +119,80 @@ function coverExtFromResponse(url: string, contentType: string | null): string {
 }
 
 function filePathForStorage(mode: StorageMode, key: string): { localPath: string | null; remoteKey: string | null } {
-  const primary = resolvePrimaryLocation(mode);
   return {
-    localPath: primary === 'local' ? key : null,
-    remoteKey: primary === 'cloud' ? key : null,
+    localPath: mode === 'cloud_only' ? null : key,
+    remoteKey: mode === 'local_only' ? null : key,
   };
+}
+
+async function writeBytesForMode(
+  mode: StorageMode,
+  key: string,
+  bytes: Buffer,
+  contentType: string,
+): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
+  const drivers = getStorageDriversForMode(mode);
+  const results = await Promise.allSettled(
+    drivers.map(async (driver) => {
+      const storage = getStorageByDriver(driver);
+      const { size } = await storage.putBytes(key, bytes, { contentType });
+      const checksum = await fileSha256(storage, key);
+      return { driver, size, checksum };
+    }),
+  );
+
+  const successes = results
+    .filter((item): item is PromiseFulfilledResult<{ driver: 'local' | 's3'; size: number; checksum: string }> => item.status === 'fulfilled')
+    .map((item) => item.value);
+
+  if (successes.length === 0) {
+    throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件写入失败');
+  }
+
+  return {
+    size: successes[0].size,
+    checksum: successes[0].checksum,
+    localPath: successes.some((item) => item.driver === 'local') ? key : null,
+    remoteKey: successes.some((item) => item.driver === 's3') ? key : null,
+    syncStatus: successes.length === drivers.length ? 'synced' : 'partial_failed',
+  };
+}
+
+async function writeStreamForMode(
+  mode: StorageMode,
+  key: string,
+  stream: NodeJS.ReadableStream,
+  contentType: string,
+): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return writeBytesForMode(mode, key, Buffer.concat(chunks), contentType);
+}
+
+async function resolveReadableAsset(input: { local_path: string | null; remote_key: string | null; primary_location: 'local' | 'cloud' }) {
+  const candidates =
+    input.primary_location === 'cloud'
+      ? [
+          { driver: 's3' as const, key: input.remote_key },
+          { driver: 'local' as const, key: input.local_path },
+        ]
+      : [
+          { driver: 'local' as const, key: input.local_path },
+          { driver: 's3' as const, key: input.remote_key },
+        ];
+
+  for (const candidate of candidates) {
+    if (!candidate.key) continue;
+    const storage = getStorageByDriver(candidate.driver);
+    const exists = await storage.exists(candidate.key).catch(() => false);
+    if (exists) {
+      return { storage, key: candidate.key };
+    }
+  }
+
+  return null;
 }
 
 function syncBookCoverPath(bookId: number): void {
@@ -374,10 +438,8 @@ export async function downloadRemoteCover(input: {
     if (bytes.length === 0 || bytes.length > 10 * 1024 * 1024) return null;
 
     const ext = coverExtFromResponse(url.toString(), contentType);
-    const storage = getStorageForMode(defaultMode);
     const key = remoteCoverKey(input.bookId, ext);
-    await storage.putBytes(key, bytes, { contentType: contentType ?? coverMimeFromExt(ext) });
-    const checksum = await fileSha256(storage, key);
+    const writeResult = await writeBytesForMode(defaultMode, key, bytes, contentType ?? coverMimeFromExt(ext));
 
     const coverId = upsertBookCover({
       ownerId: input.ownerId,
@@ -388,15 +450,15 @@ export async function downloadRemoteCover(input: {
       key,
       storageMode: defaultMode,
       mimeType: contentType ?? coverMimeFromExt(ext),
-      fileSize: bytes.length,
-      checksum,
+      fileSize: writeResult.size,
+      checksum: writeResult.checksum,
       activate: input.activate ?? true,
     });
 
     return {
       id: coverId,
-      local_path: defaultMode === 'cloud_only' ? null : key,
-      remote_key: defaultMode === 'cloud_only' ? key : null,
+      local_path: writeResult.localPath,
+      remote_key: writeResult.remoteKey,
       storage_mode: defaultMode,
     };
   } catch {
@@ -421,12 +483,7 @@ export async function saveUploadedFile(
   const format = detectFormat(filename);
   const mime = detectMime(filename);
   const key = bookId != null ? bookFileKey(bookId, ext) : unassociatedFileKey(ext);
-  const storage = getStorageForMode(mode);
-
-  const { size } = await storage.putStream(key, stream, { contentType: mime });
-  const checksum = await fileSha256(storage, key);
-
-  const { localPath, remoteKey } = filePathForStorage(mode, key);
+  const writeResult = await writeStreamForMode(mode, key, stream, mime);
   const primary = resolvePrimaryLocation(mode);
   const timestamp = now();
 
@@ -437,15 +494,15 @@ export async function saveUploadedFile(
       owner_id: ownerId,
       book_id: bookId,
       storage_mode: mode,
-      local_path: localPath,
-      remote_key: remoteKey,
+      local_path: writeResult.localPath,
+      remote_key: writeResult.remoteKey,
       primary_location: primary,
-      sync_status: 'synced',
+      sync_status: writeResult.syncStatus,
       original_filename: basename(filename),
       file_format: format,
       mime_type: mime,
-      file_size: size,
-      checksum,
+      file_size: writeResult.size,
+      checksum: writeResult.checksum,
       is_primary: makePrimary ? 1 : 0,
       created_at: timestamp,
       updated_at: timestamp,
@@ -462,11 +519,10 @@ export async function saveUploadedFile(
 
   if (bookId != null) {
     try {
-      const coverInfo = await extractEpubCover(storage, key, bookId);
+      const primaryStorage = getStorageByDriver(primary === 'cloud' ? 's3' : 'local');
+      const coverInfo = await extractEpubCover(primaryStorage, key, bookId);
       if (coverInfo) {
-        const coverStorage = getStorageForMode(mode);
-        await coverStorage.putBytes(coverInfo.key, coverInfo.bytes, { contentType: coverMimeFromExt(coverInfo.ext) });
-        const coverChecksum = await fileSha256(coverStorage, coverInfo.key);
+        const coverWriteResult = await writeBytesForMode(mode, coverInfo.key, coverInfo.bytes, coverMimeFromExt(coverInfo.ext));
         upsertBookCover({
           ownerId,
           bookId,
@@ -477,7 +533,7 @@ export async function saveUploadedFile(
           storageMode: mode,
           mimeType: coverMimeFromExt(coverInfo.ext),
           fileSize: coverInfo.bytes.length,
-          checksum: coverChecksum,
+          checksum: coverWriteResult.checksum,
           activate: true,
         });
       }
@@ -564,7 +620,106 @@ export function fileRoutes(app: FastifyInstance): void {
     };
   });
 
+  app.get('/files', async (req) => {
+    const userId = requireUserId(req);
+    const query = req.query as { page?: string; page_size?: string; format?: string; associated?: string };
+    const page = Number(query.page ?? '1');
+    const pageSize = Number(query.page_size ?? '20');
+    const conditions = [eq(bookFiles.owner_id, userId)];
+
+    if (query.format) {
+      conditions.push(eq(bookFiles.file_format, query.format));
+    }
+    if (query.associated === 'true') {
+      conditions.push(sql`${bookFiles.book_id} IS NOT NULL`);
+    } else if (query.associated === 'false') {
+      conditions.push(isNull(bookFiles.book_id));
+    }
+
+    const db = getDb();
+    const where = and(...conditions);
+    const total = db.select({ value: count() }).from(bookFiles).where(where).get()?.value ?? 0;
+    const linked = db
+      .select({ value: count() })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.owner_id, userId), sql`${bookFiles.book_id} IS NOT NULL`))
+      .get()?.value ?? 0;
+    const unlinked = db
+      .select({ value: count() })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .get()?.value ?? 0;
+    const totalSize = db
+      .select({ value: sql<number>`coalesce(sum(${bookFiles.file_size}), 0)` })
+      .from(bookFiles)
+      .where(eq(bookFiles.owner_id, userId))
+      .get()?.value ?? 0;
+
+    const rows = db
+      .select({
+        id: bookFiles.id,
+        owner_id: bookFiles.owner_id,
+        book_id: bookFiles.book_id,
+        storage_mode: bookFiles.storage_mode,
+        local_path: bookFiles.local_path,
+        remote_key: bookFiles.remote_key,
+        primary_location: bookFiles.primary_location,
+        sync_status: bookFiles.sync_status,
+        original_filename: bookFiles.original_filename,
+        file_format: bookFiles.file_format,
+        mime_type: bookFiles.mime_type,
+        file_size: bookFiles.file_size,
+        checksum: bookFiles.checksum,
+        is_primary: bookFiles.is_primary,
+        created_at: bookFiles.created_at,
+        updated_at: bookFiles.updated_at,
+        book_title: books.title,
+      })
+      .from(bookFiles)
+      .leftJoin(books, eq(bookFiles.book_id, books.id))
+      .where(where)
+      .orderBy(desc(bookFiles.created_at))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .all();
+
+    return {
+      data: rows,
+      pagination: { page, page_size: pageSize, total },
+      summary: {
+        linked,
+        unlinked,
+        total_size: totalSize,
+      },
+    };
+  });
+
   app.post('/files/unassociated/:id/associate', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const fileId = Number(id);
+    if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
+
+    const { book_id } = req.body as { book_id?: unknown };
+    if (typeof book_id !== 'number') throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 book_id');
+
+    const db = getDb();
+    const file = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .get();
+    if (!file) throw notFound('文件不存在或已关联');
+
+    db.update(bookFiles)
+      .set({ book_id, updated_at: now() })
+      .where(eq(bookFiles.id, fileId))
+      .run();
+
+    return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
+  });
+
+  app.post('/files/:id/match', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const fileId = Number(id);
@@ -733,14 +888,12 @@ export function fileRoutes(app: FastifyInstance): void {
     const key = file.primary_location === 'cloud' ? file.remote_key : file.local_path;
     if (!key) throw new AppError(ERROR_CODE.BUSINESS_ERROR, '文件路径不存在');
 
-    const driver = resolveStorageDriverForMode(file.storage_mode);
-    const storage = getStorageByDriver(driver);
+    const readable = await resolveReadableAsset(file);
+    if (!readable) throw new AppError(ERROR_CODE.BUSINESS_ERROR, '文件不可用');
 
-    const exists = await storage.exists(key).catch(() => false);
-    if (!exists) throw new AppError(ERROR_CODE.BUSINESS_ERROR, '文件不可用');
+    const stream = await readable.storage.getStream(readable.key);
 
-    const stream = await storage.getStream(key);
-    const filename = encodeURIComponent(file.original_filename ?? `book${extname(key)}`);
+    const filename = encodeURIComponent(file.original_filename ?? `book${extname(readable.key)}`);
     return reply
       .header('Content-Type', file.mime_type ?? 'application/octet-stream')
       .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
@@ -802,18 +955,18 @@ export function fileRoutes(app: FastifyInstance): void {
     const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
     assertStorageModeAvailable(mode);
 
-    const storage = getStorageForMode(mode);
-    const tmpKey = tmpCoverUploadKey(ext);
-    const { size } = await storage.putStream(tmpKey, data.file, { contentType: coverMimeFromExt(ext) });
+    const chunks: Buffer[] = [];
+    for await (const chunk of data.file) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const bytes = Buffer.concat(chunks);
 
-    if (size > 5 * 1024 * 1024) {
-      try { await storage.delete(tmpKey); } catch { /* ignore */ }
+    if (bytes.length > 5 * 1024 * 1024) {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, '图片大小不能超过 5MB');
     }
 
     const finalKey = bookCoverKey(bookId, ext);
-    await storage.move(tmpKey, finalKey);
-    const checksum = await fileSha256(storage, finalKey);
+    const writeResult = await writeBytesForMode(mode, finalKey, bytes, coverMimeFromExt(ext));
 
     const coverId = upsertBookCover({
       ownerId: userId,
@@ -823,8 +976,8 @@ export function fileRoutes(app: FastifyInstance): void {
       key: finalKey,
       storageMode: mode,
       mimeType: coverMimeFromExt(ext),
-      fileSize: size,
-      checksum,
+      fileSize: writeResult.size,
+      checksum: writeResult.checksum,
       activate: false,
     });
 

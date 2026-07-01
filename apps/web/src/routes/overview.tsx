@@ -108,6 +108,7 @@ export function OverviewPage() {
   const recentAdded = useMemo(() => overview.data?.recent_added ?? [], [overview.data?.recent_added]);
   const recentReading = useMemo(() => overview.data?.recent_reading ?? [], [overview.data?.recent_reading]);
 
+  const favoriteCount = overview.data?.favorite_count ?? 0;
   const readingCount = counts[BOOK_STATUS.READING] ?? 0;
   const plannedCount = counts[BOOK_STATUS.PLANNED] ?? 0;
   const storedCount = counts[BOOK_STATUS.STORED] ?? 0;
@@ -126,6 +127,7 @@ export function OverviewPage() {
   const timeline = useMemo(() => {
     return recentAdded.slice(0, 6).map((b: OverviewData['recent_added'][number]) => ({
       type: 'add' as const,
+      id: b.id,
       time: b.created_at,
       title: b.title,
     }));
@@ -156,13 +158,13 @@ export function OverviewPage() {
           <KpiCard label="正在阅读" value={readingCount} colorClass="reading" />
           <KpiCard label="计划阅读" value={plannedCount} colorClass="planned" />
           <KpiCard label="已存档" value={storedCount} colorClass="stored" />
-          <KpiCard label="收藏" value={0} colorClass="fav" />
+          <KpiCard label="收藏" value={favoriteCount} colorClass="fav" />
         </div>
 
         <div className="mb-5 grid grid-cols-4 gap-3">
-          <QuickAction icon={<BookPlus className="h-[18px] w-[18px]" />} title="添加书籍" subtitle="手动录入或从链接获取" onClick={() => navigate('/')} />
-          <QuickAction icon={<Import className="h-[18px] w-[18px]" />} title="导入笔记" subtitle="从 Markdown / Notion 导入" />
-          <QuickAction icon={<FileUp className="h-[18px] w-[18px]" />} title="上传文件" subtitle="EPUB / PDF / MOBI 等" onClick={() => navigate('/files')} />
+          <QuickAction icon={<BookPlus className="h-[18px] w-[18px]" />} title="添加书籍" subtitle="手动录入或从链接获取" onClick={() => navigate('/?create=1')} />
+          <QuickAction icon={<Import className="h-[18px] w-[18px]" />} title="导入笔记" subtitle="进入读书笔记页查看规划" onClick={() => navigate('/reading-notes')} />
+          <QuickAction icon={<FileUp className="h-[18px] w-[18px]" />} title="上传文件" subtitle="EPUB / PDF / MOBI 等" onClick={() => navigate('/?import=1')} />
           <QuickAction icon={<Download className="h-[18px] w-[18px]" />} title="导出数据" subtitle="元数据 / 笔记 / 备份" onClick={() => navigate('/settings')} />
         </div>
 
@@ -182,9 +184,9 @@ export function OverviewPage() {
                 <CardContent className="px-[18px] py-3.5">
                   <div className="relative pl-5">
                     <div className="absolute bottom-1 left-[4px] top-1 w-[2px] rounded-sm bg-border" />
-                    {timeline.map((item: { type: 'add'; time: string; title: string }, i: number) => (
-                      <ActivityItem key={i} dotClass="bg-success" time={formatActivityDate(item.time)}>
-                        <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => navigate('/')}>
+                    {timeline.map((item: { type: 'add'; id: number; time: string; title: string }) => (
+                      <ActivityItem key={item.id} dotClass="bg-success" time={formatActivityDate(item.time)}>
+                        <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => navigate(`/books/${item.id}`)}>
                           {item.title}
                         </span>
                         <span className="text-muted-foreground"> 被添加到书架</span>

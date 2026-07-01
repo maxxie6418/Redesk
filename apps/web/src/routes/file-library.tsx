@@ -234,8 +234,8 @@ function levelLabel(level: MatchLevel): string {
 }
 
 function levelClassName(level: MatchLevel): string {
-  if (level === 'high') return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300';
-  if (level === 'medium') return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300';
+  if (level === 'high') return 'border-primary/20 bg-primary/5 text-foreground dark:border-primary/30 dark:bg-primary/10';
+  if (level === 'medium') return 'border-amber-200/60 bg-amber-50/95 text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200';
   return 'border-muted bg-muted/60 text-muted-foreground';
 }
 
@@ -303,9 +303,9 @@ export function FileLibraryPage() {
   const allFiles: BookFileItem[] = files.data?.data ?? [];
   const pagination = files.data?.pagination ?? { page: 1, page_size: 50, total: 0 };
   const totalCount = pagination.total;
-  const linkedCount = allFiles.filter((file: BookFileItem) => file.book_id != null).length;
-  const unlinkedCount = allFiles.filter((file: BookFileItem) => file.book_id == null).length;
-  const totalSize = allFiles.reduce((sum: number, file: BookFileItem) => sum + (file.file_size ?? 0), 0);
+  const linkedCount = files.data?.summary?.linked ?? allFiles.filter((file: BookFileItem) => file.book_id != null).length;
+  const unlinkedCount = files.data?.summary?.unlinked ?? allFiles.filter((file: BookFileItem) => file.book_id == null).length;
+  const totalSize = files.data?.summary?.total_size ?? allFiles.reduce((sum: number, file: BookFileItem) => sum + (file.file_size ?? 0), 0);
   const currentMatchFile = matchDialog == null ? null : allFiles.find((file: BookFileItem) => file.id === matchDialog) ?? null;
 
   const preliminaryCandidates = (bookSearch.data?.data ?? [])
@@ -630,9 +630,9 @@ export function FileLibraryPage() {
                   className={cn(
                     'rounded-lg border px-3 py-3',
                     recommendedCandidate.level === 'high'
-                      ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
+                      ? 'border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10'
                       : recommendedCandidate.level === 'medium'
-                        ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30'
+                        ? 'border-amber-200/60 bg-amber-50/95 dark:border-amber-800/60 dark:bg-amber-950/30'
                         : 'border-border bg-muted/30',
                   )}
                 >

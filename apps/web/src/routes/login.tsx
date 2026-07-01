@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuthStatus, useAuthMode, useLogin } from '@/hooks/use-auth';
 import { FullScreenLoader } from '@/components/full-screen-loader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +31,7 @@ export function LoginRoute() {
     setError(null);
     try {
       const user = await login.mutateAsync(isMultiToken ? { username, password } : { password });
+      toast.success('登录成功', { description: user.display_name ? `欢迎回来，${user.display_name}` : '欢迎回到 Redesk' });
       if (user.must_change_password) {
         navigate('/change-password', { replace: true });
       } else {

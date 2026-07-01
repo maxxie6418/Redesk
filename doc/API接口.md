@@ -378,7 +378,7 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 { "data": [ { "from_status": "PLANNED", "to_status": "READING", "changed_at": "..." } ] }
 ```
 
-> 删除书籍（§3 DELETE /books/{id}）= 移入回收站（置 deleted_at），与 `存` 状态完全不同路径。
+> 删除书籍（§3 DELETE /books/{id}）= 移入回收站（置 deleted_at），与 `存档` 状态完全不同路径。
 
 ---
 

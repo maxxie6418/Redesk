@@ -22,7 +22,7 @@ export interface BookSummary {
   publisher: string | null;
   language: string | null;
   reading_purpose: string | null;
-  custom_attributes: string | null;
+  custom_attributes: Record<string, unknown> | null;
   metadata_source: string | null;
   source_url: string | null;
   translator: string | null;
@@ -102,7 +102,7 @@ export interface CreateBookInput {
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
-  custom_attributes?: string | null;
+  custom_attributes?: Record<string, unknown> | null;
   source_url?: string | null;
   translator?: string | null;
   original_title?: string | null;
@@ -125,7 +125,7 @@ export interface UpdateBookInput {
   reading_purpose?: string | null;
   rating?: number | null;
   tag_ids?: number[];
-  custom_attributes?: string | null;
+  custom_attributes?: Record<string, unknown> | null;
   source_url?: string | null;
   translator?: string | null;
   original_title?: string | null;

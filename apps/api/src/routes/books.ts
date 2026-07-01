@@ -365,9 +365,49 @@ function recordStatusChange(bookId: number, fromStatus: string | null, toStatus:
     .run();
 }
 
+function normalizeTagIds(tagIds: number[] | undefined): number[] {
+  return [...new Set((tagIds ?? []).filter((tagId) => Number.isInteger(tagId)))];
+}
+
+function validateCategoryOwnership(ownerId: number, categoryId: number | null | undefined, expectedType: 'PERSONAL' | 'GENRE'): number | null {
+  if (categoryId == null) return null;
+  const category = getDb()
+    .select({ id: categories.id, type: categories.type })
+    .from(categories)
+    .where(and(eq(categories.id, categoryId), eq(categories.owner_id, ownerId)))
+    .get();
+
+  if (!category) {
+    throw businessError('分类不存在或无权限访问');
+  }
+  if (category.type !== expectedType) {
+    throw businessError(expectedType === 'PERSONAL' ? '个人分类类型不正确' : '常规分类类型不正确');
+  }
+  return category.id;
+}
+
+function validateTagOwnership(ownerId: number, tagIds: number[] | undefined): number[] {
+  const normalized = normalizeTagIds(tagIds);
+  if (normalized.length === 0) return [];
+
+  const rows = getDb()
+    .select({ id: tags.id })
+    .from(tags)
+    .where(and(eq(tags.owner_id, ownerId), inArray(tags.id, normalized)))
+    .all();
+
+  if (rows.length !== normalized.length) {
+    throw businessError('标签不存在或无权限访问');
+  }
+  return normalized;
+}
+
 async function createBookRecord(userId: number, input: CreateBookInput, uploadedFile?: { stream: NodeJS.ReadableStream; filename: string } | null, uploadMode?: StorageMode) {
   const db = getDb();
   const timestamp = now();
+  const categoryId = validateCategoryOwnership(userId, input.category_id, 'PERSONAL');
+  const genreCategoryId = validateCategoryOwnership(userId, input.genre_category_id, 'GENRE');
+  const tagIds = validateTagOwnership(userId, input.tag_ids);
   const book = db
     .insert(books)
     .values({
@@ -380,8 +420,8 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
       publish_year: input.publish_year ?? null,
       description: input.description ?? null,
       language: input.language ?? null,
-      category_id: input.category_id ?? null,
-      genre_category_id: input.genre_category_id ?? null,
+      category_id: categoryId,
+      genre_category_id: genreCategoryId,
       status: input.status ?? 'COLLECTED',
       visibility: input.visibility ?? 'PRIVATE',
       reading_purpose: input.reading_purpose ?? null,
@@ -398,7 +438,7 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
     .returning(bookSelect())
     .get();
 
-  syncBookTags(book.id, input.tag_ids);
+  syncBookTags(book.id, tagIds);
   recordStatusChange(book.id, null, book.status);
 
   if (uploadedFile) {
@@ -468,7 +508,7 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
     })
     .from(bookTags)
     .innerJoin(tags, eq(bookTags.tag_id, tags.id))
-    .where(inArray(bookTags.book_id, bookIds))
+    .where(and(inArray(bookTags.book_id, bookIds), eq(tags.owner_id, ownerId)))
     .all();
 
   for (const tagRow of tagRows) {
@@ -545,9 +585,13 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
       .filter((tagId) => !Number.isNaN(tagId));
 
     if (tagIds.length > 0) {
-      conditions.push(
-        sql`${books.id} IN (SELECT book_id FROM book_tags WHERE tag_id IN (${sql.join(tagIds, sql`, `)}))`,
-      );
+      conditions.push(sql`${books.id} IN (
+        SELECT book_id
+        FROM book_tags
+        WHERE tag_id IN (${sql.join(tagIds, sql`, `)})
+        GROUP BY book_id
+        HAVING COUNT(DISTINCT tag_id) = ${tagIds.length}
+      )`);
     }
   }
 
@@ -1211,6 +1255,15 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const updateData: Record<string, unknown> = { updated_at: now() };
+    const categoryId = input.category_id !== undefined
+      ? validateCategoryOwnership(userId, input.category_id, 'PERSONAL')
+      : undefined;
+    const genreCategoryId = input.genre_category_id !== undefined
+      ? validateCategoryOwnership(userId, input.genre_category_id, 'GENRE')
+      : undefined;
+    const tagIds = input.tag_ids !== undefined
+      ? validateTagOwnership(userId, input.tag_ids)
+      : undefined;
 
     if (input.title !== undefined) updateData.title = input.title;
     if (input.author !== undefined) updateData.author = input.author;
@@ -1220,8 +1273,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     if (input.publish_year !== undefined) updateData.publish_year = input.publish_year;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.language !== undefined) updateData.language = input.language;
-    if (input.category_id !== undefined) updateData.category_id = input.category_id;
-    if (input.genre_category_id !== undefined) updateData.genre_category_id = input.genre_category_id;
+    if (categoryId !== undefined) updateData.category_id = categoryId;
+    if (genreCategoryId !== undefined) updateData.genre_category_id = genreCategoryId;
     if (input.visibility !== undefined) updateData.visibility = input.visibility;
     if (input.reading_purpose !== undefined) updateData.reading_purpose = input.reading_purpose;
     if (input.rating !== undefined) updateData.rating = input.rating;
@@ -1255,8 +1308,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       db.update(books).set(updateData).where(eq(books.id, bookId)).run();
     }
 
-    if (input.tag_ids !== undefined) {
-      syncBookTags(bookId, input.tag_ids);
+    if (tagIds !== undefined) {
+      syncBookTags(bookId, tagIds);
     }
 
     const updated = db.select(bookSelect()).from(books).where(eq(books.id, bookId)).get();
@@ -1309,7 +1362,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const timestamp = now();
 
     const ownedBooks = db
-      .select({ id: books.id, status: books.status })
+      .select({ id: books.id, status: books.status, started_at: books.started_at, finished_at: books.finished_at })
       .from(books)
       .where(and(eq(books.owner_id, userId), inArray(books.id, input.ids)))
       .all();
@@ -1326,13 +1379,12 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         if (!newStatus) {
           throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 status 参数');
         }
-        db.update(books)
-          .set({ status: newStatus, updated_at: timestamp })
-          .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
-          .run();
-
         for (const book of ownedBooks) {
           if (book.status !== newStatus) {
+            const updates: Record<string, unknown> = { status: newStatus, updated_at: timestamp };
+            if (newStatus === 'READING' && !book.started_at) updates.started_at = timestamp;
+            if (newStatus === 'READ' && !book.finished_at) updates.finished_at = timestamp;
+            db.update(books).set(updates).where(eq(books.id, book.id)).run();
             recordStatusChange(book.id, book.status, newStatus);
           }
         }
@@ -1344,7 +1396,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 category_id 参数');
         }
         db.update(books)
-          .set({ category_id: categoryId, updated_at: timestamp })
+          .set({ category_id: validateCategoryOwnership(userId, categoryId, 'PERSONAL'), updated_at: timestamp })
           .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
           .run();
         break;
@@ -1355,7 +1407,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 genre_category_id 参数');
         }
         db.update(books)
-          .set({ genre_category_id: genreCategoryId, updated_at: timestamp })
+          .set({ genre_category_id: validateCategoryOwnership(userId, genreCategoryId, 'GENRE'), updated_at: timestamp })
           .where(and(eq(books.owner_id, userId), inArray(books.id, ownedIds)))
           .run();
         break;
@@ -1365,8 +1417,9 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         if (!tagIds) {
           throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 tag_ids 参数');
         }
+        const validatedTagIds = validateTagOwnership(userId, tagIds);
         for (const bookId of ownedIds) {
-          syncBookTags(bookId, tagIds);
+          syncBookTags(bookId, validatedTagIds);
         }
         db.update(books)
           .set({ updated_at: timestamp })
@@ -1410,7 +1463,13 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    return { data: { affected: ownedIds.length } };
+    return {
+      data: {
+        affected: input.action === 'delete'
+          ? ownedBooks.filter((book) => book.status !== 'STORED').length
+          : ownedIds.length,
+      },
+    };
   });
 
   app.get('/books/:id/status-history', async (req) => {

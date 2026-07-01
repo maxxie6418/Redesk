@@ -29,7 +29,6 @@ import {
   Ban,
   CheckCircle,
   Image,
-  KeyRound,
   LogOut,
   Upload,
 } from 'lucide-react';
@@ -89,27 +88,38 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(1)} ${units[i]}`;
 }
 
-type StatusMessage = { type: 'success' | 'error'; text: string } | null;
+type ToastType = 'info' | 'warning' | 'error';
+type StatusMessage = { type: ToastType; text: string } | null;
 
-function StatusToast({ message, onClose }: { message: StatusMessage; onClose: () => void }) {
+const TOAST_ICONS: Record<ToastType, React.ReactNode> = {
+  info: <Check className="h-4 w-4" />,
+  warning: <AlertTriangle className="h-4 w-4" />,
+  error: <X className="h-4 w-4" />,
+};
+
+function StatusToast({ message, onClose, className }: { message: StatusMessage; onClose: () => void; className?: string }) {
   if (!message) return null;
+  const typeStyles: Record<ToastType, string> = {
+    info: 'border-primary/15 bg-primary/5 text-foreground dark:border-primary/30 dark:bg-primary/10',
+    warning: 'border-amber-200/60 bg-amber-50/95 text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200',
+    error: 'border-destructive/20 bg-destructive/10 text-destructive dark:border-destructive/30 dark:bg-destructive/15',
+  };
+  const iconColors: Record<ToastType, string> = {
+    info: 'text-primary',
+    warning: 'text-amber-600 dark:text-amber-400',
+    error: 'text-destructive',
+  };
   return (
-    <div className="pointer-events-auto fixed right-6 top-6 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-      <div
-        className={cn(
-          'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg',
-          message.type === 'success'
-            ? 'border-emerald-200/50 bg-emerald-50/95 text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/95 dark:text-emerald-200'
-            : 'border-red-200/50 bg-red-50/95 text-red-800 dark:border-red-800/50 dark:bg-red-950/95 dark:text-red-200',
-        )}
-      >
+    <div className={cn('pointer-events-auto fixed left-1/2 top-4 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-200', className)}>
+      <div className={cn('flex items-center gap-2.5 rounded-lg border px-4 py-2.5 shadow-lg backdrop-blur-sm', typeStyles[message.type])}>
+        <span className={cn('shrink-0', iconColors[message.type])}>{TOAST_ICONS[message.type]}</span>
         <span className="text-sm font-medium">{message.text}</span>
         <button
           type="button"
           onClick={onClose}
-          className="ml-1 rounded-md p-0.5 opacity-60 transition-opacity hover:opacity-100"
+          className="ml-1 rounded-md p-0.5 opacity-50 transition-opacity hover:opacity-100"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -165,10 +175,10 @@ function AdminSettingsPage() {
   return (
     <>
       {mcp && (
-        <div className="border-b border-amber-200/50 bg-amber-50/95 px-6 py-3 dark:border-amber-800/50 dark:bg-amber-950/95">
+        <div className="border-b border-amber-200/60 bg-amber-50/95 px-6 py-3 dark:border-amber-800/60 dark:bg-amber-950/40">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-              <KeyRound className="h-4 w-4 shrink-0" />
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
                 你正在使用初始口令。请先设置一个新口令后再继续。
               </span>
@@ -177,7 +187,7 @@ function AdminSettingsPage() {
               size="sm"
               variant="outline"
               onClick={() => navigate('/change-password?return=/settings')}
-              className="shrink-0 border-amber-300 dark:border-amber-700"
+              className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/30"
             >
               立即设置
             </Button>
@@ -238,7 +248,7 @@ function GeneralTab({ settings, onToast }: { settings: Record<string, string>; o
   const handleSave = useCallback(async () => {
     try {
       await updateSettings.mutateAsync({ recycle_retention_days: recycleDays });
-      onToast({ type: 'success', text: '设置已保存' });
+      onToast({ type: 'info', text: '设置已保存' });
     } catch {
       onToast({ type: 'error', text: '保存失败' });
     }
@@ -329,7 +339,7 @@ function QuickLinksSection({ onToast }: { onToast: (msg: StatusMessage) => void 
     if (!newName.trim() || !newUrl.trim()) return;
     try {
       await addLink.mutateAsync({ name: newName.trim(), url: newUrl.trim() });
-      onToast({ type: 'success', text: '快捷链接已添加' });
+      onToast({ type: 'info', text: '快捷链接已添加' });
       setShowCreate(false);
       setNewName('');
       setNewUrl('');
@@ -340,7 +350,7 @@ function QuickLinksSection({ onToast }: { onToast: (msg: StatusMessage) => void 
     if (!editingName.trim() || !editingUrl.trim()) return;
     try {
       await updateLink.mutateAsync({ id, name: editingName.trim(), url: editingUrl.trim() });
-      onToast({ type: 'success', text: '已更新' });
+      onToast({ type: 'info', text: '已更新' });
       setEditingId(null);
     } catch { onToast({ type: 'error', text: '更新失败' }); }
   }, [editingName, editingUrl, updateLink, onToast]);
@@ -348,7 +358,7 @@ function QuickLinksSection({ onToast }: { onToast: (msg: StatusMessage) => void 
   const handleDelete = useCallback(async (id: number) => {
     try {
       await deleteLink.mutateAsync(id);
-      onToast({ type: 'success', text: '已删除' });
+      onToast({ type: 'info', text: '已删除' });
     } catch { onToast({ type: 'error', text: '删除失败' }); }
   }, [deleteLink, onToast]);
 
@@ -429,7 +439,7 @@ function AiTab({ settings, onToast }: { settings: Record<string, string>; onToas
       if (apiKey) data.llm_api_key = apiKey;
       await updateSettings.mutateAsync(data);
       setApiKey('');
-      onToast({ type: 'success', text: 'AI 配置已保存' });
+      onToast({ type: 'info', text: 'AI 配置已保存' });
     } catch {
       onToast({ type: 'error', text: '保存失败' });
     }
@@ -571,9 +581,9 @@ function LoginManagementTab() {
         brute_force_max_attempts: bfMaxAttempts,
         brute_force_lock_minutes: bfLock,
       });
-      showToast({ type: 'success', text: '登录管理设置已保存' });
+      showToast({ type: 'info', text: '登录管理设置已保存' });
     } catch { showToast({ type: 'error', text: '保存失败' }); }
-  }, [authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings]);
+  }, [authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings, showToast]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -587,46 +597,42 @@ function LoginManagementTab() {
   const handleCreate = useCallback(async () => {
     try {
       await createUser.mutateAsync({ username: newUsername, password: newPassword, display_name: newDisplayName || undefined });
-      showToast({ type: 'success', text: '用户已创建' });
+      showToast({ type: 'info', text: '用户已创建' });
       setShowCreate(false); setNewUsername(''); setNewPassword(''); setNewDisplayName('');
     } catch { showToast({ type: 'error', text: '创建失败' }); }
-  }, [newUsername, newPassword, newDisplayName, createUser]);
+  }, [newUsername, newPassword, newDisplayName, createUser, showToast]);
 
   const handleUpdate = useCallback(async (id: number) => {
     try {
       await updateUser.mutateAsync({ id, display_name: editingName || null });
-      showToast({ type: 'success', text: '已更新' });
+      showToast({ type: 'info', text: '已更新' });
       setEditingId(null);
     } catch { showToast({ type: 'error', text: '更新失败' }); }
-  }, [editingName, updateUser]);
+  }, [editingName, updateUser, showToast]);
 
   const handleDelete = useCallback(async (id: number) => {
-    try { await deleteUser.mutateAsync(id); showToast({ type: 'success', text: '用户已删除' }); }
+    try { await deleteUser.mutateAsync(id); showToast({ type: 'info', text: '用户已删除' }); }
     catch { showToast({ type: 'error', text: '删除失败' }); }
-  }, [deleteUser]);
+  }, [deleteUser, showToast]);
 
   const handleResetPassword = useCallback(async (id: number) => {
     try {
       await resetPassword.mutateAsync({ id, password: resetPwd });
-      showToast({ type: 'success', text: '密码已重置' });
+      showToast({ type: 'info', text: '密码已重置' });
       setResetId(null); setResetPwd('');
     } catch { showToast({ type: 'error', text: '重置失败' }); }
-  }, [resetPwd, resetPassword]);
+  }, [resetPwd, resetPassword, showToast]);
 
   const handleToggleActive = useCallback(async (u: UserAdminSummary) => {
     try {
       await toggleActive.mutateAsync(u.id);
-      showToast({ type: 'success', text: u.is_active ? '用户已停用' : '用户已启用' });
+      showToast({ type: 'info', text: u.is_active ? '用户已停用' : '用户已启用' });
     } catch { showToast({ type: 'error', text: '操作失败' }); }
-  }, [toggleActive]);
+  }, [toggleActive, showToast]);
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div className={cn('rounded-lg px-4 py-3 text-sm font-medium', toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-destructive/10 text-destructive')}>
-          {toast.text}
-        </div>
-      )}
+      <StatusToast message={toast} onClose={() => setToast(null)} className="absolute left-1/2 top-0 -translate-x-1/2" />
 
       <Card>
         <CardHeader className="pb-4">
@@ -750,7 +756,7 @@ function BackupTab({ settings: _settings, onToast }: { settings: Record<string, 
   const handleAutoBackup = useCallback(async () => {
     try {
       await triggerAutoBackup();
-      onToast({ type: 'success', text: '自动备份完成' });
+      onToast({ type: 'info', text: '自动备份完成' });
       backupList.refetch();
     } catch {
       onToast({ type: 'error', text: '备份失败' });
@@ -776,7 +782,7 @@ function BackupTab({ settings: _settings, onToast }: { settings: Record<string, 
       a.download = `redesk-backup-${Date.now()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      onToast({ type: 'success', text: '全量备份已下载' });
+      onToast({ type: 'info', text: '全量备份已下载' });
     } catch {
       onToast({ type: 'error', text: '全量备份失败' });
     }
@@ -876,42 +882,38 @@ function PropertiesTab() {
   const showToast = useCallback((m: StatusMessage) => { setToast(m); if (m) setTimeout(() => setToast(null), 3000); }, []);
 
   const handleCreateCat = useCallback(async () => {
-    try { await createCategory.mutateAsync({ name: catName }); showToast({ type: 'success', text: '分类已创建' }); setCatShow(false); setCatName(''); }
+    try { await createCategory.mutateAsync({ name: catName }); showToast({ type: 'info', text: '分类已创建' }); setCatShow(false); setCatName(''); }
     catch { showToast({ type: 'error', text: '创建失败' }); }
-  }, [catName, createCategory]);
+  }, [catName, createCategory, showToast]);
 
   const handleUpdateCat = useCallback(async (id: number) => {
-    try { await updateCategory.mutateAsync({ id, name: catEditName }); showToast({ type: 'success', text: '已更新' }); setCatEditId(null); }
+    try { await updateCategory.mutateAsync({ id, name: catEditName }); showToast({ type: 'info', text: '已更新' }); setCatEditId(null); }
     catch { showToast({ type: 'error', text: '更新失败' }); }
-  }, [catEditName, updateCategory]);
+  }, [catEditName, updateCategory, showToast]);
 
   const handleDeleteCat = useCallback(async (id: number) => {
-    try { await deleteCategory.mutateAsync(id); showToast({ type: 'success', text: '分类已删除' }); }
+    try { await deleteCategory.mutateAsync(id); showToast({ type: 'info', text: '分类已删除' }); }
     catch { showToast({ type: 'error', text: '删除失败' }); }
-  }, [deleteCategory]);
+  }, [deleteCategory, showToast]);
 
   const handleCreateTag = useCallback(async () => {
-    try { await createTag.mutateAsync({ name: tagName }); showToast({ type: 'success', text: '标签已创建' }); setTagShow(false); setTagName(''); }
+    try { await createTag.mutateAsync({ name: tagName }); showToast({ type: 'info', text: '标签已创建' }); setTagShow(false); setTagName(''); }
     catch { showToast({ type: 'error', text: '创建失败' }); }
-  }, [tagName, createTag]);
+  }, [tagName, createTag, showToast]);
 
   const handleUpdateTag = useCallback(async (id: number) => {
-    try { await updateTag.mutateAsync({ id, name: tagEditName }); showToast({ type: 'success', text: '已更新' }); setTagEditId(null); }
+    try { await updateTag.mutateAsync({ id, name: tagEditName }); showToast({ type: 'info', text: '已更新' }); setTagEditId(null); }
     catch { showToast({ type: 'error', text: '更新失败' }); }
-  }, [tagEditName, updateTag]);
+  }, [tagEditName, updateTag, showToast]);
 
   const handleDeleteTag = useCallback(async (id: number) => {
-    try { await deleteTag.mutateAsync(id); showToast({ type: 'success', text: '标签已删除' }); }
+    try { await deleteTag.mutateAsync(id); showToast({ type: 'info', text: '标签已删除' }); }
     catch { showToast({ type: 'error', text: '删除失败' }); }
-  }, [deleteTag]);
+  }, [deleteTag, showToast]);
 
   return (
     <div className="space-y-8">
-      {toast && (
-        <div className={cn('rounded-lg px-4 py-3 text-sm font-medium', toast.type === 'success' ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-destructive/10 text-destructive')}>
-          {toast.text}
-        </div>
-      )}
+      <StatusToast message={toast} onClose={() => setToast(null)} className="absolute left-1/2 top-0 -translate-x-1/2" />
 
       <Card>
         <CardHeader className="pb-4 flex-row items-center justify-between">
@@ -1123,7 +1125,7 @@ function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
                     try {
                       const result = await clearCache.mutateAsync();
                       onToast({
-                        type: 'success',
+                        type: 'info',
                         text: `已清理 ${formatBytes(result.freed_bytes)}（${result.removed_files} 个文件）`,
                       });
                     } catch {
@@ -1187,7 +1189,7 @@ function DefaultStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void
     }
     try {
       await update.mutateAsync({ default_storage_mode: mode });
-      onToast({ type: 'success', text: '默认存储方式已保存' });
+      onToast({ type: 'info', text: '默认存储方式已保存' });
     } catch (err) {
       onToast({ type: 'error', text: err instanceof Error ? err.message : '保存失败' });
     }
@@ -1317,7 +1319,7 @@ function BatchUploadCard({ onToast }: { onToast: (msg: StatusMessage) => void })
     const success = results.filter((r) => r.status === 'success').length;
     const failed = results.filter((r) => r.status === 'error').length;
     if (failed === 0) {
-      onToast({ type: 'success', text: `全部上传成功：${success} 个文件` });
+      onToast({ type: 'info', text: `全部上传成功：${success} 个文件` });
     } else {
       onToast({ type: 'error', text: `上传完成：成功 ${success} 个，失败 ${failed} 个` });
     }
@@ -1447,7 +1449,7 @@ function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }
       });
       setAccessKey('');
       setSecretKey('');
-      onToast({ type: 'success', text: '云存储配置已保存' });
+      onToast({ type: 'info', text: '云存储配置已保存' });
     } catch (err) {
       onToast({ type: 'error', text: `保存失败: ${err instanceof Error ? err.message : '未知错误'}` });
     }
@@ -1466,7 +1468,7 @@ function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }
         public_url: publicUrl || undefined,
       });
       if (res.ok) {
-        onToast({ type: 'success', text: res.message });
+        onToast({ type: 'info', text: res.message });
       } else {
         onToast({ type: 'error', text: res.message });
       }
@@ -1649,7 +1651,7 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
     setResetLoading(true);
     try {
       await api.post('/system/reset', { password: resetPassword });
-      onToast({ type: 'success', text: '应用已重置，即将刷新页面...' });
+      onToast({ type: 'info', text: '应用已重置，即将刷新页面...' });
       setTimeout(() => window.location.href = '/', 1500);
     } catch (err) {
       onToast({ type: 'error', text: err instanceof Error ? err.message : '重置失败' });
@@ -1658,6 +1660,40 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
     }
   };
 
+  if (stats.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (stats.isError) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-destructive/30">
+          <CardContent className="py-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <div>
+                <p className="text-sm font-medium text-foreground">系统信息加载失败</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {stats.error instanceof Error ? stats.error.message : '未知错误'}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => stats.refetch()}>
+                <RotateCw className="mr-1 h-4 w-4" />
+                重试
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!stats.data) return null;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1665,47 +1701,44 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
           <CardTitle className="text-base">应用信息</CardTitle>
         </CardHeader>
         <CardContent>
-          {stats.isLoading && <p className="text-sm text-muted-foreground">加载中…</p>}
-          {stats.data && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">版本</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  v{stats.data.version}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">运行环境</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {stats.data.node_env === 'production' ? '生产' : '开发'}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">运行时长</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {formatUptime(stats.data.uptime_seconds)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">Node.js</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {stats.data.node_version}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">SQLite</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {stats.data.sqlite_version}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">数据库路径</p>
-                <p className="mt-1 truncate text-xs font-medium text-foreground">
-                  {stats.data.db_path}
-                </p>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">版本</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                v{stats.data.version}
+              </p>
             </div>
-          )}
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">运行环境</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {stats.data.node_env === 'production' ? '生产' : '开发'}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">运行时长</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {formatUptime(stats.data.uptime_seconds)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">Node.js</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {stats.data.node_version}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">SQLite</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {stats.data.sqlite_version}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">数据库路径</p>
+              <p className="mt-1 truncate text-xs font-medium text-foreground">
+                {stats.data.db_path}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -1714,34 +1747,32 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
           <CardTitle className="text-base">数据概览</CardTitle>
         </CardHeader>
         <CardContent>
-          {stats.data && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">书籍总数</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.book_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">文件数</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.file_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">分类</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.category_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">标签</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.tag_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">用户</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.user_count}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">回收站</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.trash_count}</p>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">书籍总数</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.book_count}</p>
             </div>
-          )}
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">文件数</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.file_count}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">分类</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.category_count}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">标签</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.tag_count}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">用户</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.user_count}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">回收站</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{stats.data.trash_count}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -1750,22 +1781,20 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
           <CardTitle className="text-base">存储概况</CardTitle>
         </CardHeader>
         <CardContent>
-          {stats.data && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">数据库大小</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">
-                  {formatBytes(stats.data.db_size_bytes)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-popover p-3">
-                <p className="text-xs text-muted-foreground">文件存储</p>
-                <p className="mt-1 text-lg font-semibold text-foreground">
-                  {formatBytes(stats.data.storage_size_bytes)}
-                </p>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">数据库大小</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                {formatBytes(stats.data.db_size_bytes)}
+              </p>
             </div>
-          )}
+            <div className="rounded-lg border border-border bg-popover p-3">
+              <p className="text-xs text-muted-foreground">文件存储</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">
+                {formatBytes(stats.data.storage_size_bytes)}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -1785,7 +1814,7 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
               onClick={async () => {
                 try {
                   const r = await backup.mutateAsync();
-                  onToast({ type: 'success', text: `备份完成：${r.path}` });
+                  onToast({ type: 'info', text: `备份完成：${r.path}` });
                 } catch {
                   onToast({ type: 'error', text: '备份失败' });
                 }
@@ -1807,7 +1836,7 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
               onClick={async () => {
                 try {
                   await ftsRebuild.mutateAsync();
-                  onToast({ type: 'success', text: '索引重建完成' });
+                  onToast({ type: 'info', text: '索引重建完成' });
                 } catch {
                   onToast({ type: 'error', text: '重建失败' });
                 }
@@ -1834,7 +1863,7 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
                 try {
                   const result = await clearCache.mutateAsync();
                   onToast({
-                    type: 'success',
+                    type: 'info',
                     text: `已清理 ${formatBytes(result.freed_bytes)}（${result.removed_files} 个文件）`,
                   });
                 } catch {
@@ -1959,25 +1988,18 @@ function SimpleSettingsPage({ user }: SimpleSettingsPageProps) {
                 variant="outline"
                 className="w-full justify-start text-destructive"
                 onClick={() => {
-                  logout.mutate(undefined, {
-                    onSuccess: () => navigate('/'),
+                  logout.mutateAsync().then(() => {
+                    navigate('/login', { replace: true });
+                  }).catch(() => {
+                    // ignore
                   });
                 }}
-                disabled={logout.isPending}
               >
-                {logout.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <LogOut className="mr-2 h-4 w-4" />
-                )}
+                <LogOut className="mr-2 h-4 w-4" />
                 退出登录
               </Button>
             </CardContent>
           </Card>
-
-          <p className="text-center text-xs text-muted-foreground">
-            这里是个人设置页面。更多设置项待规划。
-          </p>
         </div>
       </main>
     </div>
@@ -1986,83 +2008,46 @@ function SimpleSettingsPage({ user }: SimpleSettingsPageProps) {
 
 function SimpleChangePassword({ onClose }: { onClose: () => void }) {
   const changePassword = useChangePassword();
+  const [current, setCurrent] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
-  const trimmed = newPwd.trim();
-  const longEnough = trimmed.length >= 8;
-  const matches = newPwd === confirmPwd && confirmPwd.length > 0;
-  const canSubmit = longEnough && matches && !changePassword.isPending;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) return;
+  const handleSubmit = async () => {
+    if (newPwd !== confirmPwd) {
+      setError('两次输入不一致');
+      return;
+    }
     try {
-      await changePassword.mutateAsync({ newPassword: trimmed });
-      setSaved(true);
+      await changePassword.mutateAsync({ current_password: current, new_password: newPwd });
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '修改失败');
     }
   };
 
-  if (saved) {
-    return (
-      <div className="space-y-3 text-sm text-emerald-700 dark:text-emerald-400">
-        <p>口令已更新。</p>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          完成
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="simple-new-password">新口令</Label>
-        <Input
-          id="simple-new-password"
-          type="password"
-          placeholder="至少 8 位字符"
-          value={newPwd}
-          onChange={(e) => {
-            setNewPwd(e.target.value);
-            setError(null);
-          }}
-          autoFocus
-        />
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">当前口令</Label>
+        <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="simple-confirm-password">确认新口令</Label>
-        <Input
-          id="simple-confirm-password"
-          type="password"
-          placeholder="再次输入"
-          value={confirmPwd}
-          onChange={(e) => {
-            setConfirmPwd(e.target.value);
-            setError(null);
-          }}
-        />
-        {confirmPwd.length > 0 && !matches && (
-          <p className="text-xs text-destructive">两次输入不一致</p>
-        )}
+      <div>
+        <Label className="text-xs">新口令</Label>
+        <Input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
+      </div>
+      <div>
+        <Label className="text-xs">确认新口令</Label>
+        <Input type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-2">
-        <Button type="submit" disabled={!canSubmit} className="flex-1">
-          {changePassword.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            '保存'
-          )}
+        <Button size="sm" onClick={handleSubmit} disabled={changePassword.isPending}>
+          {changePassword.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+          确认修改
         </Button>
-        <Button type="button" variant="ghost" onClick={onClose}>
-          取消
-        </Button>
+        <Button size="sm" variant="ghost" onClick={onClose}>取消</Button>
       </div>
-    </form>
+    </div>
   );
 }

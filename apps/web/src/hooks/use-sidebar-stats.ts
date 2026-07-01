@@ -9,12 +9,13 @@ export function useSidebarStats(): AppSidebarStat[] {
   return useMemo(() => {
     const counts = overview.data?.status_counts ?? {};
     const total = overview.data?.total ?? 0;
+    const favoriteCount = overview.data?.favorite_count ?? 0;
 
     return [
       { label: '总数', value: total, valueClass: 'text-foreground' },
       { label: '在读', value: counts[BOOK_STATUS.READING] ?? 0, valueClass: 'text-success' },
+      { label: '收藏', value: favoriteCount, valueClass: 'text-amber-500' },
       { label: '已读', value: counts[BOOK_STATUS.READ] ?? 0, valueClass: 'text-primary' },
-      { label: '话题', value: 0, valueClass: 'text-muted-foreground' },
     ];
   }, [overview.data]);
 }

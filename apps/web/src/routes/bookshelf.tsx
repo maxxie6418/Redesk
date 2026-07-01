@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   BookPlus,
@@ -10,6 +11,7 @@ import {
   Star,
   X,
   Heart,
+  AlertTriangle,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY, type ImportBooksResult } from '@redesk/shared';
 import { ApiError, api } from '@/lib/api';
@@ -999,7 +1001,10 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
             </div>
 
             {error && (
-              <div className="col-span-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+              <div className="col-span-2 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive dark:border-destructive/30 dark:bg-destructive/15">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {error}
+              </div>
             )}
           </form>
         </div>
@@ -1174,7 +1179,8 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
           </label>
 
           {error && (
-            <div className="rounded-md bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive dark:border-destructive/30 dark:bg-destructive/15">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               {error}
             </div>
           )}
@@ -1192,7 +1198,10 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
                     <div key={row.row} className="border-b border-border px-3 py-2 text-xs last:border-b-0">
                       <span className="font-medium text-foreground">第 {row.row} 行</span>
                       <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
-                      <div className="mt-1 text-red-700">{row.error}</div>
+                      <div className="mt-1 flex items-center gap-1 text-destructive">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        {row.error}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1216,11 +1225,14 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const user = useShellUser();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
   const [visibility, setVisibility] = useState('ALL');
   const [category, setCategory] = useState('ALL');
   const [tag, setTag] = useState('ALL');
+   const personalCategories = useCategories('PERSONAL');
+  const tags = useTags();
   const [favorited, setFavorited] = useState(false);
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
@@ -1235,6 +1247,21 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   useEffect(() => {
     setPageView(initialPageView);
   }, [initialPageView]);
+
+  useEffect(() => {
+    const shouldOpenCreate = searchParams.get('create') === '1';
+    const shouldOpenImport = searchParams.get('import') === '1';
+
+    if (!shouldOpenCreate && !shouldOpenImport) return;
+
+    if (shouldOpenCreate) setShowCreate(true);
+    if (shouldOpenImport) setShowImport(true);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('create');
+    nextParams.delete('import');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -1287,11 +1314,20 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const total = pageView === 'trash' ? trashQuery.data?.pagination.total : booksQuery.data?.pagination.total;
 
   const categoryOptions = useMemo(
-    (): string[] => ['ALL', ...new Set(rawBooks.map((book: BookSummary) => book.category_name).filter((value: string | null): value is string => Boolean(value)))],
-    [rawBooks],
+    () => [
+      ['ALL', '全部分类'] as const,
+      ...((personalCategories.data ?? []).map((item: CategoryItem) => [String(item.id), item.name] as const)),
+    ],
+    [personalCategories.data],
   );
 
-  const tagOptions = useMemo((): string[] => ['ALL', ...new Set(rawBooks.flatMap((book: BookSummary) => book.tag_names))], [rawBooks]);
+  const tagOptions = useMemo(
+    () => [
+      ['ALL', '全部标签'] as const,
+      ...((tags.data ?? []).map((item: TagItem) => [String(item.id), item.name] as const)),
+    ],
+    [tags.data],
+  );
 
   const sidebarStats = useSidebarStats();
 
@@ -1374,9 +1410,9 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               <FilterSelect
                 value={category}
                 onChange={setCategory}
-                options={categoryOptions.map((item) => [item, item === 'ALL' ? '全部分类' : item] as const)}
+                options={categoryOptions}
               />
-              <FilterSelect value={tag} onChange={setTag} options={tagOptions.map((item) => [item, item === 'ALL' ? '全部标签' : item] as const)} />
+              <FilterSelect value={tag} onChange={setTag} options={tagOptions} />
               <FilterSelect value={visibility} onChange={setVisibility} options={VISIBILITY_OPTIONS.map((item) => [item.value, item.label] as const)} />
               <button
                 type="button"

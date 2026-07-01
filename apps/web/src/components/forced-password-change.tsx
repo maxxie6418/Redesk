@@ -37,7 +37,7 @@ export function ForcedPasswordChange({ onComplete }: ForcedPasswordChangeProps =
       return;
     }
     try {
-      await changePassword.mutateAsync({ newPassword: trimmed });
+      await changePassword.mutateAsync({ new_password: trimmed });
       onComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '修改失败，请重试');

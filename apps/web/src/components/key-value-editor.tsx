@@ -24,7 +24,7 @@ function parseJsonPairs(json: string): KeyValuePair[] {
       }));
     }
   } catch {
-    // ignore
+    return [{ key: '', value: json }];
   }
   return [];
 }

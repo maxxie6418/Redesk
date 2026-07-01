@@ -4,11 +4,10 @@ import { settings } from '@redesk/db';
 import { updateSettingsSchema } from '@redesk/shared';
 import { getDb } from '../db';
 import { requireUserId } from '../lib/auth';
+import { getSettingsOwnerId } from '../lib/storage-factory';
 import { validate } from '../lib/zod';
 
 const SENSITIVE_KEYS = new Set(['oss_secret_key', 'oss_access_key', 'llm_api_key']);
-
-const SETTINGS_OWNER_ID = 1;
 
 function redactValue(key: string, value: string): string {
   if (!SENSITIVE_KEYS.has(key)) return value;
@@ -24,10 +23,12 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/settings', async (req) => {
     requireUserId(req);
     const db = getDb();
+    const ownerId = getSettingsOwnerId();
+    if (!ownerId) return { data: {} };
     const rows = db
       .select({ key: settings.key, value: settings.value })
       .from(settings)
-      .where(eq(settings.owner_id, SETTINGS_OWNER_ID))
+      .where(eq(settings.owner_id, ownerId))
       .all();
 
     if (rows.length === 0) {
@@ -47,6 +48,10 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     const input = validate(updateSettingsSchema, req.body);
     const db = getDb();
     const timestamp = now();
+    const ownerId = getSettingsOwnerId();
+    if (!ownerId) {
+      throw new Error('settings owner not found');
+    }
 
     for (const [key, value] of Object.entries(input)) {
       if (value === undefined) continue;
@@ -54,18 +59,18 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       const existing = db
         .select({ key: settings.key })
         .from(settings)
-        .where(and(eq(settings.owner_id, SETTINGS_OWNER_ID), eq(settings.key, key)))
+        .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
         .get();
 
       if (existing) {
         db.update(settings)
           .set({ value, updated_at: timestamp })
-          .where(and(eq(settings.owner_id, SETTINGS_OWNER_ID), eq(settings.key, key)))
+          .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
           .run();
       } else {
         db.insert(settings)
           .values({
-            owner_id: SETTINGS_OWNER_ID,
+            owner_id: ownerId,
             key,
             value,
             updated_at: timestamp,
@@ -77,7 +82,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     const rows = db
       .select({ key: settings.key, value: settings.value })
       .from(settings)
-      .where(eq(settings.owner_id, SETTINGS_OWNER_ID))
+      .where(eq(settings.owner_id, ownerId))
       .all();
 
     const result: Record<string, string> = {};

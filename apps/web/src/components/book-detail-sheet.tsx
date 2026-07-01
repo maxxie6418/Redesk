@@ -19,6 +19,8 @@ import {
   Sparkles,
   Tags,
   Cloud,
+  Check,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
@@ -56,7 +58,8 @@ const COVER_TONES = [
   'bg-[#d6d0c6] text-[#332f28]',
 ];
 
-type StatusMessage = { type: 'success' | 'error'; text: string } | null;
+type ToastType = 'info' | 'warning' | 'error';
+type StatusMessage = { type: ToastType; text: string } | null;
 
 function bookProgress(book: BookSummary) {
   if (book.status === BOOK_STATUS.READ) return 100;
@@ -119,7 +122,7 @@ function TagAtom({ children, size = 'default' }: { children: React.ReactNode; si
   );
 }
 
-type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 'readingPurpose' | 'visibility' | 'sourceUrl' | 'customAttributes' | null;
+type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 'readingPurpose' | 'visibility' | 'sourceUrl' | 'customAttributes' | 'description' | null;
 
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
@@ -138,6 +141,22 @@ function extractDomain(url: string) {
     return url;
   }
 }
+
+const ATTR_LABELS: Record<string, string> = {
+  douban_rating: '豆瓣评分',
+  neodb_rating: 'NeoDB 评分',
+  douban_id: '豆瓣 ID',
+  isbn: 'ISBN',
+  asin: 'ASIN',
+  series: '丛书',
+  edition: '版次',
+  language: '语言',
+  original_language: '原作语言',
+  format: '装帧',
+  price: '定价',
+  douban_url: '豆瓣链接',
+  neodb_url: 'NeoDB 链接',
+};
 
 export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
@@ -210,14 +229,17 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         case 'sourceUrl':
           payload.source_url = value || null;
           break;
+        case 'description':
+          payload.description = value || null;
+          break;
         case 'customAttributes':
-          payload.custom_attributes = value || null;
+          payload.custom_attributes = value ? JSON.parse(value) as Record<string, unknown> : null;
           break;
         default:
           return;
       }
       await updateBook.mutateAsync({ id: bookId, ...payload });
-      setMessage({ type: 'success', text: '已更新' });
+      setMessage({ type: 'info', text: '已更新' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
@@ -231,7 +253,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     if (!bookId) return;
     try {
       await updateBook.mutateAsync({ id: bookId, tag_ids: editTagIds });
-      setMessage({ type: 'success', text: '标签已更新' });
+      setMessage({ type: 'info', text: '标签已更新' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
@@ -266,7 +288,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     if (!bookId) return;
     try {
       await fetchCover.mutateAsync({ bookId });
-      setMessage({ type: 'success', text: '封面已下载' });
+      setMessage({ type: 'info', text: '封面已下载' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '封面下载失败' });
@@ -277,7 +299,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     if (!bookId) return;
     try {
       await activateCover.mutateAsync({ bookId, coverId });
-      setMessage({ type: 'success', text: '已切换当前封面' });
+      setMessage({ type: 'info', text: '已切换当前封面' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '切换封面失败' });
@@ -288,7 +310,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     if (!bookId) return;
     try {
       await deleteCover.mutateAsync({ bookId, coverId });
-      setMessage({ type: 'success', text: '封面已删除' });
+      setMessage({ type: 'info', text: '封面已删除' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除封面失败' });
@@ -301,7 +323,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       if (!file || !bookId) return;
       try {
         await uploadCover.mutateAsync({ bookId, file });
-        setMessage({ type: 'success', text: '封面已上传' });
+        setMessage({ type: 'info', text: '封面已上传' });
         setTimeout(() => setMessage(null), 2000);
       } catch (err) {
         setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '上传封面失败' });
@@ -350,7 +372,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     }
     try {
       await applyMetadata.mutateAsync({ bookId, fields, fetchCover: fetchCoverChecked });
-      setMessage({ type: 'success', text: '元数据已更新' });
+      setMessage({ type: 'info', text: '元数据已更新' });
       setTimeout(() => setMessage(null), 2000);
       setShowMetadataDialog(false);
       setMetadataResult(null);
@@ -366,16 +388,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
 
   const customAttrs = useMemo(() => {
     if (!b?.custom_attributes) return [];
-    try {
-      const parsed = JSON.parse(b.custom_attributes);
-      if (typeof parsed === 'object' && parsed !== null) {
-        return Object.entries(parsed).map(([k, v]: [string, unknown]) => {
-          const label = k === 'douban_rating' ? '豆瓣评分' : k === 'neodb_rating' ? 'NeoDB 评分' : k;
-          return `${label}: ${String(v)}`;
-        });
-      }
-    } catch {
-      // ignore
+    if (typeof b.custom_attributes === 'object' && b.custom_attributes !== null) {
+      return Object.entries(b.custom_attributes).map(([k, v]: [string, unknown]) => {
+          const label = ATTR_LABELS[k] ?? k;
+          return { label, value: String(v) };
+      });
     }
     return [];
   }, [b?.custom_attributes]);
@@ -602,13 +619,18 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               {message && (
                 <div
                   className={cn(
-                    'fixed top-4 right-4 z-50 rounded-lg px-4 py-2.5 text-sm shadow-lg transition-all duration-300',
-                    message.type === 'success'
-                      ? 'bg-emerald-500 text-white dark:bg-emerald-600'
-                      : 'bg-red-500 text-white dark:bg-red-600'
+                    'fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg border px-4 py-2.5 text-sm shadow-lg backdrop-blur-sm transition-all duration-300',
+                    message.type === 'info'
+                      ? 'border-primary/15 bg-primary/5 text-foreground dark:border-primary/30 dark:bg-primary/10'
+                      : message.type === 'warning'
+                        ? 'border-amber-200/60 bg-amber-50/95 text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200'
+                        : 'border-destructive/20 bg-destructive/10 text-destructive dark:border-destructive/30 dark:bg-destructive/15'
                   )}
                 >
-                  {message.text}
+                  <span className="flex items-center gap-2">
+                    {message.type === 'info' ? <Check className="h-4 w-4 text-primary" /> : message.type === 'warning' ? <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" /> : <X className="h-4 w-4 text-destructive" />}
+                    <span className="font-medium">{message.text}</span>
+                  </span>
                 </div>
               )}
 
@@ -1118,7 +1140,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   {editMode ? (
                     <button
                       type="button"
-                      onClick={() => startEdit('customAttributes', b.description ?? '')}
+                      onClick={() => startEdit('description', b.description ?? '')}
                       className="mt-2 block w-full text-left"
                     >
                       <p className="text-[14px] leading-relaxed text-muted-foreground hover:text-foreground transition-colors">
@@ -1142,7 +1164,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {customAttrs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
                     {customAttrs.map((attr) => (
-                      <span key={attr} className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{attr}</span>
+                      <span key={attr.label} className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{attr.label}: {attr.value}</span>
                     ))}
                   </div>
                 )}

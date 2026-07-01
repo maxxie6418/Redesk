@@ -2,11 +2,9 @@ import type { Storage } from './storage';
 import { LocalStorage } from './storage';
 import { S3Storage, type S3StorageConfig } from './s3-storage';
 import { config } from '../config';
-import { eq, and } from 'drizzle-orm';
-import { settings, type StorageMode } from '@redesk/db';
+import { eq, and, asc } from 'drizzle-orm';
+import { settings, users, type StorageMode } from '@redesk/db';
 import { getDb } from '../db';
-
-export const STORAGE_SETTINGS_OWNER_ID = 1;
 
 export const SETTINGS_KEYS = {
   defaultStorageMode: 'default_storage_mode',
@@ -51,12 +49,28 @@ export class StorageModeNotAvailableError extends Error {
 
 function readSettingsValue(key: string): string | null {
   try {
+    const ownerId = getSettingsOwnerId();
+    if (!ownerId) return null;
     const row = getDb()
       .select({ value: settings.value })
       .from(settings)
-      .where(and(eq(settings.owner_id, STORAGE_SETTINGS_OWNER_ID), eq(settings.key, key)))
+      .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
       .get();
     return row?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getSettingsOwnerId(): number | null {
+  try {
+    const row = getDb()
+      .select({ id: users.id })
+      .from(users)
+      .orderBy(asc(users.id))
+      .limit(1)
+      .get();
+    return row?.id ?? null;
   } catch {
     return null;
   }
@@ -153,6 +167,12 @@ export function resolvePrimaryLocation(mode: StorageMode): StorageLocation {
 
 export function resolveStorageDriverForMode(mode: StorageMode): StorageDriver {
   return resolvePrimaryLocation(mode) === 'cloud' ? 's3' : 'local';
+}
+
+export function getStorageDriversForMode(mode: StorageMode): StorageDriver[] {
+  if (mode === 'cloud_only') return ['s3'];
+  if (mode === 'dual') return ['local', 's3'];
+  return ['local'];
 }
 
 export function getStorageForMode(mode: StorageMode): Storage {

@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 export interface OverviewData {
   total: number;
   status_counts: Record<string, number>;
+  favorite_count: number;
   recent_added: { id: number; title: string; author: string; status: string; created_at: string }[];
   recent_reading: { id: number; title: string; author: string; status: string; updated_at: string }[];
 }

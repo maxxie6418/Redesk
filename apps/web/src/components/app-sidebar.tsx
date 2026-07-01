@@ -22,7 +22,7 @@ import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
 import { useQuickLinks, type QuickLink } from '@/hooks/use-quick-links';
-import { useTheme } from '@/components/theme-provider';
+import { useTheme } from '@/components/use-theme';
 import { LoginDialog } from '@/components/login-dialog';
 
 export type AppSidebarKey =

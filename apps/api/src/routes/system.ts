@@ -8,6 +8,7 @@ import { config, MONOREPO_ROOT } from '../config';
 import { getDb, getSqlite } from '../db';
 import { requireUserId, verifyPassword } from '../lib/auth';
 import { AppError } from '../lib/errors';
+import { getSettingsOwnerId } from '../lib/storage-factory';
 import { join } from 'node:path';
 import { statSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync, readFileSync } from 'node:fs';
 
@@ -75,34 +76,37 @@ function getAppVersion(): string {
 
 export async function systemRoutes(app: FastifyInstance): Promise<void> {
   app.get('/system/stats', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const db = getDb();
 
     const totalBooks = db
       .select({ c: sql<number>`count(*)` })
       .from(books)
-      .where(isNull(books.deleted_at))
+      .where(and(eq(books.owner_id, userId), isNull(books.deleted_at)))
       .get()?.c ?? 0;
 
     const trashBooks = db
       .select({ c: sql<number>`count(*)` })
       .from(books)
-      .where(sql`${books.deleted_at} IS NOT NULL`)
+      .where(and(eq(books.owner_id, userId), sql`${books.deleted_at} IS NOT NULL`))
       .get()?.c ?? 0;
 
     const fileStats = db
-      .select({ count: sql<number>`count(*)`, total: sql<number>`coalesce(sum(size_bytes), 0)` })
+      .select({ count: sql<number>`count(*)`, total: sql<number>`coalesce(sum(file_size), 0)` })
       .from(bookFiles)
+      .where(eq(bookFiles.owner_id, userId))
       .get();
 
     const tagCount = db
       .select({ c: sql<number>`count(*)` })
       .from(tags)
+      .where(eq(tags.owner_id, userId))
       .get()?.c ?? 0;
 
     const categoryCount = db
       .select({ c: sql<number>`count(*)` })
       .from(categories)
+      .where(eq(categories.owner_id, userId))
       .get()?.c ?? 0;
 
     const userCount = db
@@ -122,7 +126,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
         uptime_seconds: getUptimeSeconds(),
         db_path: config.databaseUrl,
         db_size_bytes: dbSize,
-        storage_size_bytes: filesOnDisk.size_bytes + (fileStats?.total ?? 0),
+        storage_size_bytes: filesOnDisk.size_bytes,
         book_count: totalBooks,
         trash_count: trashBooks,
         file_count: fileStats?.count ?? 0,
@@ -135,6 +139,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/system/storage', async (req) => {
     requireUserId(req);
+    const settingsOwnerId = getSettingsOwnerId();
 
     const storageDir = config.storageDir;
     const dirs = ['books', 'covers', 'backups', 'tmp', 'unassociated'];
@@ -155,7 +160,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const ossRow = getDb()
       .select({ value: settings.value })
       .from(settings)
-      .where(and(eq(settings.owner_id, 1), eq(settings.key, 'oss_provider')))
+      .where(and(eq(settings.owner_id, settingsOwnerId ?? -1), eq(settings.key, 'oss_provider')))
       .get();
 
     const ossConfigured = Boolean(ossRow?.value && ossRow.value !== '');
@@ -168,13 +173,13 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
       const ep = getDb()
         .select({ value: settings.value })
         .from(settings)
-        .where(and(eq(settings.owner_id, 1), eq(settings.key, 'oss_endpoint')))
+        .where(and(eq(settings.owner_id, settingsOwnerId ?? -1), eq(settings.key, 'oss_endpoint')))
         .get();
       ossEndpoint = ep?.value ?? '';
       const bk = getDb()
         .select({ value: settings.value })
         .from(settings)
-        .where(and(eq(settings.owner_id, 1), eq(settings.key, 'oss_bucket')))
+        .where(and(eq(settings.owner_id, settingsOwnerId ?? -1), eq(settings.key, 'oss_bucket')))
         .get();
       ossBucket = bk?.value ?? '';
     }
@@ -269,7 +274,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/system/reset', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const body = req.body as { password?: string } | undefined;
     const inputPassword = body?.password;
     if (!inputPassword) {
@@ -279,7 +284,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const admin = getDb()
       .select({ id: users.id, password_hash: users.password_hash })
       .from(users)
-      .where(eq(users.id, 1))
+      .where(eq(users.id, userId))
       .get();
     if (!admin) {
       throw new AppError(ERROR_CODE.INVALID_CREDENTIALS, '管理员账户不存在');
@@ -297,8 +302,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const tables = [
       'bookmarks', 'book_files', 'book_covers', 'book_relations',
       'book_tags', 'status_history', 'categories', 'tags',
-      'books_fts_data', 'books_fts_idx', 'books_fts_content',
-      'books_fts_config', 'books_fts_docsize', 'books_fts',
+      'books_fts',
       'books', 'settings', 'users',
     ];
     for (const t of tables) {

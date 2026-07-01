@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Star, Loader2 } from 'lucide-react';
+import { Star, Loader2, Check, X, AlertTriangle } from 'lucide-react';
 import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,8 @@ import type { UpdateBookInput } from '@/hooks/use-books';
 import type { CategoryItem } from '@/hooks/use-categories';
 import type { TagItem } from '@/hooks/use-tags';
 
-type StatusMessage = { type: 'success' | 'error'; text: string } | null;
+type ToastType = 'info' | 'warning' | 'error';
+type StatusMessage = { type: ToastType; text: string } | null;
 
 interface BookEditFormProps {
   book: BookDetail;
@@ -64,7 +65,7 @@ function toFormState(book: BookDetail): FormState {
     startedAt: book.started_at ? book.started_at.slice(0, 10) : '',
     finishedAt: book.finished_at ? book.finished_at.slice(0, 10) : '',
     tagIds: book.tag_ids,
-    customAttributes: book.custom_attributes ?? '',
+    customAttributes: book.custom_attributes ? JSON.stringify(book.custom_attributes) : '',
   };
 }
 
@@ -173,7 +174,7 @@ export function BookEditForm({
       rating: form.rating,
       reading_purpose: form.readingPurpose || null,
       tag_ids: form.tagIds,
-      custom_attributes: form.customAttributes || null,
+      custom_attributes: form.customAttributes ? JSON.parse(form.customAttributes) as Record<string, unknown> : null,
       started_at: form.startedAt ? new Date(form.startedAt).toISOString() : null,
       finished_at: form.finishedAt ? new Date(form.finishedAt).toISOString() : null,
     };
@@ -205,12 +206,15 @@ export function BookEditForm({
       {statusMessage && (
         <div
           className={cn(
-            'mb-4 rounded-md px-4 py-2.5 text-sm',
-            statusMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-              : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+            'mb-4 flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium',
+            statusMessage.type === 'info'
+              ? 'border-primary/15 bg-primary/5 text-foreground dark:border-primary/30 dark:bg-primary/10'
+              : statusMessage.type === 'warning'
+                ? 'border-amber-200/60 bg-amber-50/95 text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200'
+                : 'border-destructive/20 bg-destructive/10 text-destructive dark:border-destructive/30 dark:bg-destructive/15'
           )}
         >
+          {statusMessage.type === 'info' ? <Check className="h-4 w-4 text-primary" /> : statusMessage.type === 'warning' ? <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" /> : <X className="h-4 w-4 text-destructive" />}
           {statusMessage.text}
         </div>
       )}
