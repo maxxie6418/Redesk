@@ -127,100 +127,146 @@
 
       <!-- 视图 1：话题列表 -->
       <div id="view-list" class="view active p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
           <!-- 话题卡片 1 -->
-          <div class="group rounded-lg border bg-card p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
-            <div class="flex items-start gap-4">
-              <div class="flex -space-x-2 shrink-0">
-                <div class="w-12 h-16 rounded bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
-                <div class="w-12 h-16 rounded bg-[#c7d4dc] border-2 border-background shadow-sm"></div>
-                <div class="w-12 h-16 rounded bg-[#ded7c2] border-2 border-background shadow-sm"></div>
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#c7d4dc] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#ded7c2] border-2 border-background shadow-sm"></div>
               </div>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-foreground truncate group-hover:text-primary transition-colors">决策与认知偏差</h3>
-                <p class="text-xs text-muted-foreground mt-1 line-clamp-2">整理行为经济学中关于人类决策偏差的经典论述，比较卡尼曼、塞勒、艾瑞里的不同视角。</p>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">决策与认知偏差</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">2 天前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">整理行为经济学中关于人类决策偏差的经典论述，比较卡尼曼、塞勒、艾瑞里三位作者的不同视角与互补观点。</p>
+
+                <!-- 统计条 -->
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    18 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    5 条沉淀
+                  </span>
+                </div>
+
+                <!-- 最近动态 -->
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">《助推》选择架构无处不在，默认选项的设计本质上是把系统 1 的惯性引导向更好的方向。</div>
+                </div>
+
+                <!-- 标签 -->
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">行为经济学</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">决策科学</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">认知心理学</span>
+                </div>
               </div>
-            </div>
-            <div class="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
-                3 本书
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
-                18 条痕迹
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
-                5 条沉淀
-              </span>
-              <span class="ml-auto">2 天前更新</span>
             </div>
           </div>
 
           <!-- 话题卡片 2 -->
-          <div class="group rounded-lg border bg-card p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
-            <div class="flex items-start gap-4">
-              <div class="flex -space-x-2 shrink-0">
-                <div class="w-12 h-16 rounded bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
-                <div class="w-12 h-16 rounded bg-[#d7c8d5] border-2 border-background shadow-sm"></div>
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#d7c8d5] border-2 border-background shadow-sm"></div>
               </div>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-foreground truncate group-hover:text-primary transition-colors">地方政府与经济发展</h3>
-                <p class="text-xs text-muted-foreground mt-1 line-clamp-2">从《置身事内》《小镇喧嚣》《乡土中国》中提炼中国地方政府行为逻辑的异同。</p>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">地方政府与经济发展</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">1 周前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">从《置身事内》《小镇喧嚣》《乡土中国》中提炼中国地方政府行为逻辑的异同，理解中央与地方的激励结构。</p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    12 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    3 条沉淀
+                  </span>
+                </div>
+
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">《置身事内》强调政府作为“运动员”的角色，这种双重身份在土地财政上体现得最为明显。</div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">中国经济</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">地方政府</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">制度分析</span>
+                </div>
               </div>
-            </div>
-            <div class="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
-                3 本书
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
-                12 条痕迹
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
-                3 条沉淀
-              </span>
-              <span class="ml-auto">1 周前更新</span>
             </div>
           </div>
 
           <!-- 话题卡片 3 -->
-          <div class="group rounded-lg border bg-card p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
-            <div class="flex items-start gap-4">
-              <div class="flex -space-x-2 shrink-0">
-                <div class="w-12 h-16 rounded bg-[#d6d0c6] border-2 border-background shadow-sm"></div>
-                <div class="w-12 h-16 rounded bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
-                <div class="w-12 h-16 rounded bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#d6d0c6] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
               </div>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-foreground truncate group-hover:text-primary transition-colors">文明发展的地理因素</h3>
-                <p class="text-xs text-muted-foreground mt-1 line-clamp-2">对比《枪炮、病菌与钢铁》《崩溃》《文明的冲突》中关于文明兴衰的解释框架。</p>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">文明发展的地理因素</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">2 周前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">对比《枪炮、病菌与钢铁》《崩溃》《文明的冲突》中关于文明兴衰的解释框架，辨析地理、制度与文化的权重。</p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    9 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    2 条沉淀
+                  </span>
+                </div>
+
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">欧亚大陆的东西轴线促进了作物与技术的传播，而美洲的南北轴线则受到气候带的阻隔。</div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">地理决定论</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">文明史</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">制度比较</span>
+                </div>
               </div>
-            </div>
-            <div class="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
-                3 本书
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
-                9 条痕迹
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
-                2 条沉淀
-              </span>
-              <span class="ml-auto">2 周前更新</span>
             </div>
           </div>
 
           <!-- 新建占位 -->
-          <div class="rounded-lg border border-dashed p-5 flex flex-col items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-colors cursor-pointer min-h-[152px]">
-            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-            <span class="text-sm font-medium">创建新话题</span>
+          <div class="rounded-xl border border-dashed p-6 flex flex-col items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-colors cursor-pointer min-h-[240px]">
+            <svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+            <span class="text-base font-medium">创建新话题</span>
+            <span class="text-xs mt-1">围绕一个问题聚合多本书</span>
           </div>
         </div>
       </div>

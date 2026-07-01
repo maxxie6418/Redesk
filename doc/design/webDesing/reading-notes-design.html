@@ -154,15 +154,48 @@
             <button class="hover:text-destructive"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </span>
         </div>
+
+        <!-- 书源快速切换 -->
+        <div class="mt-5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-medium text-muted-foreground">书源</span>
+            <span class="text-xs text-muted-foreground">点击快速筛选该书笔记</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
+              <span>全部</span>
+              <span class="text-xs text-muted-foreground">24</span>
+            </button>
+            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-primary bg-primary text-primary-foreground text-sm">
+              <div class="w-4 h-5 rounded-sm bg-[#d8c6b7]"></div>
+              <span>思考，快与慢</span>
+              <span class="text-xs text-primary-foreground/80">18</span>
+            </button>
+            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
+              <div class="w-4 h-5 rounded-sm bg-[#cfd8c8]"></div>
+              <span>置身事内</span>
+              <span class="text-xs text-muted-foreground">3</span>
+            </button>
+            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
+              <div class="w-4 h-5 rounded-sm bg-[#d6d0c6]"></div>
+              <span>枪炮、病菌与钢铁</span>
+              <span class="text-xs text-muted-foreground">3</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="flex flex-col xl:flex-row">
         <!-- 笔记列表 -->
         <div class="flex-1 p-6">
           <div class="flex items-center justify-between mb-4">
-            <p class="text-sm text-muted-foreground">共 24 条笔记</p>
+            <div>
+              <p class="text-sm font-medium text-foreground">《思考，快与慢》</p>
+              <p class="text-xs text-muted-foreground">共 18 条笔记</p>
+            </div>
             <select class="h-8 px-2 rounded-md border border-input bg-background text-xs focus:outline-none">
               <option>按时间倒序</option>
+              <option>按阅读章节</option>
               <option>按书籍分组</option>
               <option>按标签分组</option>
             </select>
