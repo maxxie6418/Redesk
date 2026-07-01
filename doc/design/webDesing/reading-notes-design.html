@@ -4,44 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>阅读笔记 - Redesk 设计稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Newsreader:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          colors: {
-            border: 'hsl(240 5.9% 90%)',
-            input: 'hsl(240 5.9% 90%)',
-            ring: 'hsl(240 5.9% 10%)',
-            background: 'hsl(0 0% 100%)',
-            foreground: 'hsl(240 10% 3.9%)',
-            primary: { DEFAULT: 'hsl(240 5.9% 10%)', foreground: 'hsl(0 0% 98%)' },
-            secondary: { DEFAULT: 'hsl(240 4.8% 95.9%)', foreground: 'hsl(240 5.9% 10%)' },
-            muted: { DEFAULT: 'hsl(240 4.8% 95.9%)', foreground: 'hsl(240 3.8% 46.1%)' },
-            accent: { DEFAULT: 'hsl(240 4.8% 95.9%)', foreground: 'hsl(240 5.9% 10%)' },
-            destructive: { DEFAULT: 'hsl(0 84.2% 60.2%)', foreground: 'hsl(0 0% 98%)' },
-            card: { DEFAULT: 'hsl(0 0% 100%)', foreground: 'hsl(240 10% 3.9%)' },
-            popover: { DEFAULT: 'hsl(0 0% 100%)', foreground: 'hsl(240 10% 3.9%)' },
+          fontFamily: {
+            sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['Newsreader', 'Georgia', 'ui-serif', 'serif'],
           },
-          borderRadius: { lg: '0.5rem', md: '0.375rem', sm: '0.25rem' }
+          colors: {
+            border: '#e0ddd4',
+            input: '#b0aea5',
+            ring: '#d97757',
+            background: '#faf9f5',
+            foreground: '#141413',
+            primary: { DEFAULT: '#d97757', foreground: '#ffffff' },
+            secondary: { DEFAULT: '#e8e6dc', foreground: '#535146' },
+            muted: { DEFAULT: '#f0eee8', foreground: '#6e6d68' },
+            accent: { DEFAULT: '#e8e6dc', foreground: '#141413' },
+            destructive: { DEFAULT: '#d64545', foreground: '#ffffff' },
+            success: { DEFAULT: '#788c5d', foreground: '#ffffff' },
+            card: { DEFAULT: '#ffffff', foreground: '#141413' },
+            popover: { DEFAULT: '#ffffff', foreground: '#141413' },
+            sidebar: { DEFAULT: '#f5f4f0', foreground: '#141413' },
+          },
+          borderRadius: { lg: '0.75rem', md: '0.5rem', sm: '0.25rem' }
         }
       }
     }
   </script>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    .highlight-yellow { background: linear-gradient(180deg, transparent 60%, rgba(250, 204, 21, 0.35) 60%); }
-    .highlight-green { background: linear-gradient(180deg, transparent 60%, rgba(134, 239, 172, 0.35) 60%); }
-    .highlight-blue { background: linear-gradient(180deg, transparent 60%, rgba(147, 197, 253, 0.35) 60%); }
-    .highlight-pink { background: linear-gradient(180deg, transparent 60%, rgba(249, 168, 212, 0.35) 60%); }
+    body { font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif; }
+    .highlight-yellow { background: linear-gradient(180deg, transparent 60%, rgba(217, 119, 87, 0.22) 60%); }
+    .highlight-green { background: linear-gradient(180deg, transparent 60%, rgba(120, 140, 93, 0.22) 60%); }
+    .highlight-blue { background: linear-gradient(180deg, transparent 60%, rgba(90, 122, 140, 0.22) 60%); }
+    .highlight-pink { background: linear-gradient(180deg, transparent 60%, rgba(201, 162, 62, 0.22) 60%); }
   </style>
 </head>
 <body class="bg-background text-foreground">
   <!-- 顶部导航栏 -->
-  <header class="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
+  <header class="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur">
     <div class="flex h-14 items-center px-4 lg:px-6 gap-4">
       <div class="flex items-center gap-2 font-semibold text-lg tracking-tight">
-        <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">R</div>
+        <div class="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">R</div>
         Redesk
       </div>
       <nav class="hidden md:flex items-center gap-1 text-sm text-muted-foreground">
@@ -51,7 +60,7 @@
         <a href="#" class="px-3 py-2 rounded-md hover:text-foreground hover:bg-accent">阅读话题</a>
       </nav>
       <div class="ml-auto flex items-center gap-2">
-        <button class="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+        <button class="inline-flex items-center justify-center h-9 px-3 rounded-full border border-border bg-card text-sm font-medium hover:bg-accent hover:text-accent-foreground">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
           全局搜索
         </button>
@@ -61,8 +70,8 @@
   </header>
 
   <div class="flex min-h-[calc(100vh-3.5rem)]">
-    <!-- 侧边栏（小屏折叠，大屏固定） -->
-    <aside class="hidden lg:flex w-60 flex-col border-r bg-background p-4 gap-1">
+    <!-- 侧边栏 -->
+    <aside class="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar p-4 gap-1">
       <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         书架
@@ -71,7 +80,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
         文件库
       </a>
-      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm bg-accent text-foreground font-medium">
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm bg-primary text-primary-foreground font-medium">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
         阅读笔记
       </a>
@@ -87,125 +96,130 @@
 
     <!-- 主内容区 -->
     <main class="flex-1 min-w-0">
-      <!-- 页面头部 -->
-      <div class="border-b px-6 py-5">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 class="text-2xl font-semibold tracking-tight">阅读笔记</h1>
+      <!-- 页面头部：左右结构 -->
+      <div class="border-b border-border px-6 py-6">
+        <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+          <!-- 左侧：标题 + 过滤 -->
+          <div class="flex-1 max-w-3xl">
+            <h1 class="text-2xl font-semibold tracking-tight font-display">阅读笔记</h1>
             <p class="text-sm text-muted-foreground mt-1">所有高亮、摘录与批注的集中仓库</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button class="inline-flex items-center justify-center h-9 px-4 rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-              导出
-            </button>
-            <button class="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-              新建独立笔记
-            </button>
-          </div>
-        </div>
 
-        <!-- 过滤栏 -->
-        <div class="mt-5 flex flex-col lg:flex-row gap-3">
-          <div class="relative flex-1 max-w-md">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-            <input type="text" placeholder="搜索笔记内容、书名、作者..." class="w-full h-9 pl-9 pr-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <select class="h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option>全部书籍</option>
-              <option>《思考，快与慢》</option>
-              <option>《置身事内》</option>
-              <option>《枪炮、病菌与钢铁》</option>
-            </select>
-            <select class="h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option>全部类型</option>
-              <option>高亮摘录</option>
-              <option>高亮 + 批注</option>
-              <option>独立笔记</option>
-            </select>
-            <select class="h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option>最近 30 天</option>
-              <option>最近 7 天</option>
-              <option>最近一年</option>
-              <option>全部时间</option>
-            </select>
-            <button class="h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent">
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><circle cx="4" cy="14" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="20" cy="16" r="2"/></svg>
-              标签
-            </button>
-            <div class="flex items-center rounded-md border border-input bg-background p-1">
-              <button class="h-7 px-2 rounded-sm bg-accent text-xs font-medium">卡片</button>
-              <button class="h-7 px-2 rounded-sm text-xs text-muted-foreground hover:bg-accent">列表</button>
+            <!-- 过滤栏 -->
+            <div class="mt-5 flex flex-col lg:flex-row gap-3">
+              <div class="relative flex-1 max-w-md">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+                <input type="text" placeholder="搜索笔记内容、书名、作者..." class="w-full h-10 pl-9 pr-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select class="h-10 px-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  <option>全部类型</option>
+                  <option>高亮摘录</option>
+                  <option>高亮 + 批注</option>
+                  <option>独立笔记</option>
+                </select>
+                <select class="h-10 px-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  <option>最近 30 天</option>
+                  <option>最近 7 天</option>
+                  <option>最近一年</option>
+                  <option>全部时间</option>
+                </select>
+                <button class="h-10 px-3 rounded-lg border border-border bg-card text-sm hover:bg-accent">
+                  <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><circle cx="4" cy="14" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="20" cy="16" r="2"/></svg>
+                  标签
+                </button>
+              </div>
+            </div>
+
+            <!-- 已选筛选标签 -->
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span class="text-xs text-muted-foreground">已筛选：</span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs">
+                最近 30 天
+                <button class="hover:text-destructive"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs">
+                批注型
+                <button class="hover:text-destructive"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+              </span>
             </div>
           </div>
-        </div>
 
-        <!-- 已选筛选标签 -->
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <span class="text-xs text-muted-foreground">已筛选：</span>
-          <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs">
-            最近 30 天
-            <button class="hover:text-destructive"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-          </span>
-          <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-xs">
-            批注型
-            <button class="hover:text-destructive"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-          </span>
-        </div>
-
-        <!-- 书源快速切换 -->
-        <div class="mt-5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-medium text-muted-foreground">书源</span>
-            <span class="text-xs text-muted-foreground">点击快速筛选该书笔记</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
-              <span>全部</span>
-              <span class="text-xs text-muted-foreground">24</span>
-            </button>
-            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-primary bg-primary text-primary-foreground text-sm">
-              <div class="w-4 h-5 rounded-sm bg-[#d8c6b7]"></div>
-              <span>思考，快与慢</span>
-              <span class="text-xs text-primary-foreground/80">18</span>
-            </button>
-            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
-              <div class="w-4 h-5 rounded-sm bg-[#cfd8c8]"></div>
-              <span>置身事内</span>
-              <span class="text-xs text-muted-foreground">3</span>
-            </button>
-            <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-input bg-background text-sm hover:bg-accent">
-              <div class="w-4 h-5 rounded-sm bg-[#d6d0c6]"></div>
-              <span>枪炮、病菌与钢铁</span>
-              <span class="text-xs text-muted-foreground">3</span>
-            </button>
+          <!-- 右侧：统计概述 -->
+          <div class="xl:w-80 shrink-0">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-xl border border-border bg-card p-4">
+                <div class="text-2xl font-semibold font-display">128</div>
+                <div class="text-xs text-muted-foreground">总笔记数</div>
+              </div>
+              <div class="rounded-xl border border-border bg-card p-4">
+                <div class="text-2xl font-semibold font-display">24</div>
+                <div class="text-xs text-muted-foreground">本月新增</div>
+              </div>
+              <div class="rounded-xl border border-border bg-card p-4">
+                <div class="text-2xl font-semibold font-display">36</div>
+                <div class="text-xs text-muted-foreground">已批注</div>
+              </div>
+              <div class="rounded-xl border border-border bg-card p-4">
+                <div class="text-2xl font-semibold font-display">12</div>
+                <div class="text-xs text-muted-foreground">关联话题</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="flex flex-col xl:flex-row">
+      <!-- 书源快速切换 -->
+      <div class="px-6 pt-5">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-medium text-muted-foreground">书源</span>
+          <span class="text-xs text-muted-foreground">点击快速筛选该书笔记</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border bg-card text-sm hover:bg-accent">
+            <span>全部</span>
+            <span class="text-xs text-muted-foreground">24</span>
+          </button>
+          <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-primary bg-primary text-primary-foreground text-sm">
+            <div class="w-4 h-5 rounded-sm bg-[#d8c6b7]"></div>
+            <span>思考，快与慢</span>
+            <span class="text-xs text-primary-foreground/80">18</span>
+          </button>
+          <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border bg-card text-sm hover:bg-accent">
+            <div class="w-4 h-5 rounded-sm bg-[#cfd8c8]"></div>
+            <span>置身事内</span>
+            <span class="text-xs text-muted-foreground">3</span>
+          </button>
+          <button class="inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border bg-card text-sm hover:bg-accent">
+            <div class="w-4 h-5 rounded-sm bg-[#d6d0c6]"></div>
+            <span>枪炮、病菌与钢铁</span>
+            <span class="text-xs text-muted-foreground">3</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 留白分隔 -->
+      <div class="h-6"></div>
+
+      <div class="flex flex-col xl:flex-row px-6 pb-6 gap-6">
         <!-- 笔记列表 -->
-        <div class="flex-1 p-6">
+        <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between mb-4">
             <div>
               <p class="text-sm font-medium text-foreground">《思考，快与慢》</p>
               <p class="text-xs text-muted-foreground">共 18 条笔记</p>
             </div>
-            <select class="h-8 px-2 rounded-md border border-input bg-background text-xs focus:outline-none">
+            <select class="h-8 px-2 rounded-lg border border-border bg-card text-xs focus:outline-none">
               <option>按时间倒序</option>
               <option>按阅读章节</option>
-              <option>按书籍分组</option>
               <option>按标签分组</option>
             </select>
           </div>
 
           <div class="space-y-4">
             <!-- 批注型卡片 -->
-            <article class="group rounded-lg border bg-card p-5 transition-shadow hover:shadow-md">
+            <article class="group rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-sm">
               <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-md bg-[hsl(22,28%,91%)] text-[hsl(22,24%,38%)] flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-[#f0eee8] text-[#6e6d68] flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .586.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -217,7 +231,7 @@
                     <span>第 12 章</span>
                     <span class="ml-auto text-xs">2026-06-28</span>
                   </div>
-                  <blockquote class="pl-3 border-l-2 border-yellow-400 text-[15px] leading-relaxed text-foreground mb-3">
+                  <blockquote class="pl-3 border-l-2 border-primary text-[15px] leading-relaxed text-foreground mb-3">
                     <span class="highlight-yellow">“系统 1 的运行是无意识且快速的，不怎么费脑力，没有感觉，完全处于自主控制状态。”</span>
                   </blockquote>
                   <div class="text-sm leading-relaxed text-foreground/90 mb-3">
@@ -231,15 +245,15 @@
                 </div>
               </div>
               <div class="mt-4 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9"/><path d="M12 9v6"/><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
-                  加入主题
+                  加入话题
                 </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
                   回到书中
                 </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   编辑批注
                 </button>
@@ -247,9 +261,9 @@
             </article>
 
             <!-- 摘录型卡片 -->
-            <article class="group rounded-lg border bg-card p-5 transition-shadow hover:shadow-md">
+            <article class="group rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-sm">
               <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-md bg-[hsl(15,28%,91%)] text-[hsl(15,24%,38%)] flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-[#f0eee8] text-[#6e6d68] flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -261,17 +275,17 @@
                     <span>第 4 章</span>
                     <span class="ml-auto text-xs">2026-06-25</span>
                   </div>
-                  <blockquote class="pl-3 border-l-2 border-green-400 text-[15px] leading-relaxed text-foreground">
+                  <blockquote class="pl-3 border-l-2 border-success text-[15px] leading-relaxed text-foreground">
                     <span class="highlight-green">“政府不仅是市场的裁判员，更是市场的运动员。理解中国经济，必须理解地方政府的行为逻辑。”</span>
                   </blockquote>
                 </div>
               </div>
               <div class="mt-4 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9"/><path d="M12 9v6"/><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
-                  加入主题
+                  加入话题
                 </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   添加批注
                 </button>
@@ -279,9 +293,9 @@
             </article>
 
             <!-- 独立笔记型卡片 -->
-            <article class="group rounded-lg border bg-card p-5 transition-shadow hover:shadow-md">
+            <article class="group rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-sm">
               <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-md bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)] flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-[#f0eee8] text-[#6e6d68] flex items-center justify-center shrink-0">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/><path d="M13 10H4V4h9"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -292,7 +306,7 @@
                   </div>
                   <h3 class="text-base font-semibold mb-2">关于“助推”概念的理解</h3>
                   <div class="text-sm leading-relaxed text-foreground/90 mb-3">
-                    《助推》这本书里提到的“选择架构”让我联想到产品设计中默认选项的力量。用户并不是完全理性的，设计师有责任通过合理的默认设置帮助他们做出更好的决策，而不是操纵他们。这个原则可以应用到 Redesk 的阅读目标设定上。
+                    《助推》这本书里提到的“选择架构”让我联想到产品设计中默认选项的力量。用户并不是完全理性的，设计师有责任通过合理的默认设置帮助他们做出更好的决策，而不是操纵他们。
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground">行为经济学</span>
@@ -301,57 +315,13 @@
                 </div>
               </div>
               <div class="mt-4 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9"/><path d="M12 9v6"/><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
-                  加入主题
+                  加入话题
                 </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
+                <button class="inline-flex items-center h-8 px-3 rounded-lg border border-border bg-card text-xs hover:bg-accent">
                   <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   编辑
-                </button>
-              </div>
-            </article>
-
-            <!-- 高亮 + 批注 + 多标签 -->
-            <article class="group rounded-lg border bg-card p-5 transition-shadow hover:shadow-md">
-              <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-md bg-[hsl(8,28%,91%)] text-[hsl(8,24%,38%)] flex items-center justify-center shrink-0">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <span class="font-medium text-foreground">《枪炮、病菌与钢铁》</span>
-                    <span>·</span>
-                    <span>贾雷德·戴蒙德</span>
-                    <span>·</span>
-                    <span>第 8 章</span>
-                    <span class="ml-auto text-xs">2026-06-20</span>
-                  </div>
-                  <blockquote class="pl-3 border-l-2 border-blue-400 text-[15px] leading-relaxed text-foreground mb-3">
-                    <span class="highlight-blue">“粮食生产的发展是人口增长、技术发展和政治组织复杂化的根本原因。”</span>
-                  </blockquote>
-                  <div class="text-sm leading-relaxed text-foreground/90 mb-3">
-                    地理环境对文明发展路径的影响，比想象中更根本。这也能解释为什么某些技术在欧亚大陆快速传播，而在美洲和非洲却受到地理阻隔的限制。
-                  </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground">地理决定论</span>
-                    <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground">文明史</span>
-                    <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:text-foreground">技术发展</span>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-4 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
-                  <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12H9"/><path d="M12 9v6"/><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
-                  加入主题
-                </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
-                  <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
-                  回到书中
-                </button>
-                <button class="inline-flex items-center h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-accent">
-                  <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                  编辑批注
                 </button>
               </div>
             </article>
@@ -359,90 +329,65 @@
 
           <!-- 分页 -->
           <div class="mt-6 flex items-center justify-center gap-1">
-            <button class="h-8 w-8 rounded-md border border-input bg-background text-sm hover:bg-accent disabled:opacity-50" disabled>←</button>
-            <button class="h-8 w-8 rounded-md bg-primary text-primary-foreground text-sm">1</button>
-            <button class="h-8 w-8 rounded-md border border-input bg-background text-sm hover:bg-accent">2</button>
-            <button class="h-8 w-8 rounded-md border border-input bg-background text-sm hover:bg-accent">3</button>
-            <button class="h-8 w-8 rounded-md border border-input bg-background text-sm hover:bg-accent">→</button>
+            <button class="h-8 w-8 rounded-lg border border-border bg-card text-sm hover:bg-accent disabled:opacity-50" disabled>←</button>
+            <button class="h-8 w-8 rounded-lg bg-primary text-primary-foreground text-sm">1</button>
+            <button class="h-8 w-8 rounded-lg border border-border bg-card text-sm hover:bg-accent">2</button>
+            <button class="h-8 w-8 rounded-lg border border-border bg-card text-sm hover:bg-accent">3</button>
+            <button class="h-8 w-8 rounded-lg border border-border bg-card text-sm hover:bg-accent">→</button>
           </div>
         </div>
 
         <!-- 右侧辅助栏 -->
-        <aside class="w-full xl:w-80 border-t xl:border-t-0 xl:border-l bg-background p-6">
-          <div class="space-y-6">
-            <!-- 统计 -->
-            <div>
-              <h3 class="text-sm font-semibold mb-3">统计概览</h3>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="rounded-lg border p-3">
-                  <div class="text-2xl font-semibold">128</div>
-                  <div class="text-xs text-muted-foreground">总笔记数</div>
-                </div>
-                <div class="rounded-lg border p-3">
-                  <div class="text-2xl font-semibold">24</div>
-                  <div class="text-xs text-muted-foreground">本月新增</div>
-                </div>
-                <div class="rounded-lg border p-3">
-                  <div class="text-2xl font-semibold">36</div>
-                  <div class="text-xs text-muted-foreground">已批注</div>
-                </div>
-                <div class="rounded-lg border p-3">
-                  <div class="text-2xl font-semibold">12</div>
-                  <div class="text-xs text-muted-foreground">关联主题</div>
-                </div>
-              </div>
+        <aside class="w-full xl:w-72 shrink-0 space-y-6">
+          <!-- 高频标签 -->
+          <div class="rounded-xl border border-border bg-card p-5">
+            <h3 class="text-sm font-semibold mb-3">高频标签</h3>
+            <div class="flex flex-wrap gap-2">
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">认知偏差 <span class="ml-1 text-muted-foreground/70">18</span></span>
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">决策 <span class="ml-1 text-muted-foreground/70">14</span></span>
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">中国经济 <span class="ml-1 text-muted-foreground/70">12</span></span>
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">产品设计 <span class="ml-1 text-muted-foreground/70">9</span></span>
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">文明史 <span class="ml-1 text-muted-foreground/70">8</span></span>
+              <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground hover:bg-accent cursor-pointer">地理决定论 <span class="ml-1 text-muted-foreground/70">6</span></span>
             </div>
+          </div>
 
-            <!-- 来源书籍 -->
-            <div>
-              <h3 class="text-sm font-semibold mb-3">来源书籍</h3>
-              <div class="space-y-2">
-                <a href="#" class="flex items-center gap-3 rounded-md border p-2 hover:bg-accent">
-                  <div class="w-8 h-10 rounded bg-muted"></div>
-                  <div class="min-w-0">
-                    <div class="text-sm font-medium truncate">思考，快与慢</div>
-                    <div class="text-xs text-muted-foreground">42 条笔记</div>
-                  </div>
-                </a>
-                <a href="#" class="flex items-center gap-3 rounded-md border p-2 hover:bg-accent">
-                  <div class="w-8 h-10 rounded bg-muted"></div>
-                  <div class="min-w-0">
-                    <div class="text-sm font-medium truncate">置身事内</div>
-                    <div class="text-xs text-muted-foreground">31 条笔记</div>
-                  </div>
-                </a>
-                <a href="#" class="flex items-center gap-3 rounded-md border p-2 hover:bg-accent">
-                  <div class="w-8 h-10 rounded bg-muted"></div>
-                  <div class="min-w-0">
-                    <div class="text-sm font-medium truncate">枪炮、病菌与钢铁</div>
-                    <div class="text-xs text-muted-foreground">28 条笔记</div>
-                  </div>
-                </a>
-              </div>
+          <!-- 来源书籍 -->
+          <div class="rounded-xl border border-border bg-card p-5">
+            <h3 class="text-sm font-semibold mb-3">来源书籍</h3>
+            <div class="space-y-2">
+              <a href="#" class="flex items-center gap-3 rounded-lg border border-border p-2 hover:bg-accent">
+                <div class="w-8 h-11 rounded bg-[#d8c6b7]"></div>
+                <div class="min-w-0">
+                  <div class="text-sm font-medium truncate">思考，快与慢</div>
+                  <div class="text-xs text-muted-foreground">42 条笔记</div>
+                </div>
+              </a>
+              <a href="#" class="flex items-center gap-3 rounded-lg border border-border p-2 hover:bg-accent">
+                <div class="w-8 h-11 rounded bg-[#cfd8c8]"></div>
+                <div class="min-w-0">
+                  <div class="text-sm font-medium truncate">置身事内</div>
+                  <div class="text-xs text-muted-foreground">31 条笔记</div>
+                </div>
+              </a>
+              <a href="#" class="flex items-center gap-3 rounded-lg border border-border p-2 hover:bg-accent">
+                <div class="w-8 h-11 rounded bg-[#d6d0c6]"></div>
+                <div class="min-w-0">
+                  <div class="text-sm font-medium truncate">枪炮、病菌与钢铁</div>
+                  <div class="text-xs text-muted-foreground">28 条笔记</div>
+                </div>
+              </a>
             </div>
+          </div>
 
-            <!-- 标签云 -->
-            <div>
-              <h3 class="text-sm font-semibold mb-3">高频标签</h3>
-              <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">认知偏差 <span class="ml-1 text-muted-foreground">18</span></span>
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">决策 <span class="ml-1 text-muted-foreground">14</span></span>
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">中国经济 <span class="ml-1 text-muted-foreground">12</span></span>
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">产品设计 <span class="ml-1 text-muted-foreground">9</span></span>
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">文明史 <span class="ml-1 text-muted-foreground">8</span></span>
-                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs hover:bg-accent cursor-pointer">地理决定论 <span class="ml-1 text-muted-foreground">6</span></span>
-              </div>
-            </div>
-
-            <!-- 导出 -->
-            <div class="rounded-lg border p-4">
-              <h3 class="text-sm font-semibold mb-2">导出笔记</h3>
-              <p class="text-xs text-muted-foreground mb-3">将当前筛选结果导出为通用格式。</p>
-              <div class="flex gap-2">
-                <button class="flex-1 h-8 rounded-md border border-input bg-background text-xs hover:bg-accent">Markdown</button>
-                <button class="flex-1 h-8 rounded-md border border-input bg-background text-xs hover:bg-accent">JSON</button>
-                <button class="flex-1 h-8 rounded-md border border-input bg-background text-xs hover:bg-accent">CSV</button>
-              </div>
+          <!-- 导出 -->
+          <div class="rounded-xl border border-border bg-card p-5">
+            <h3 class="text-sm font-semibold mb-2">导出笔记</h3>
+            <p class="text-xs text-muted-foreground mb-3">将当前筛选结果导出为通用格式。</p>
+            <div class="flex gap-2">
+              <button class="flex-1 h-8 rounded-lg border border-border bg-card text-xs hover:bg-accent">Markdown</button>
+              <button class="flex-1 h-8 rounded-lg border border-border bg-card text-xs hover:bg-accent">JSON</button>
+              <button class="flex-1 h-8 rounded-lg border border-border bg-card text-xs hover:bg-accent">CSV</button>
             </div>
           </div>
         </aside>
@@ -451,8 +396,8 @@
   </div>
 
   <!-- 底部说明 -->
-  <div class="border-t px-6 py-4 text-xs text-muted-foreground">
-    Redesk 阅读笔记页设计稿 · 包含摘录型、批注型、独立笔记型三种卡片 · 支持按书籍/类型/时间/标签过滤
+  <div class="border-t border-border px-6 py-4 text-xs text-muted-foreground">
+    Redesk 阅读笔记页设计稿 · 顶部左右结构（标题/过滤 + 统计概述）· 书源快速切换 · 右侧高频标签与来源书籍
   </div>
 </body>
 </html>
