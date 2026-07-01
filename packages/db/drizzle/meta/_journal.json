@@ -28,6 +28,8 @@
     { "idx": 23, "version": "6", "when": 1783311600013, "tag": "0010_storage_mode_n", "breakpoints": true },
     { "idx": 24, "version": "6", "when": 1783311600014, "tag": "0010_storage_mode_o", "breakpoints": true },
     { "idx": 25, "version": "6", "when": 1783311600015, "tag": "0010_storage_mode_p", "breakpoints": true },
-    { "idx": 26, "version": "6", "when": 1783315200000, "tag": "0011_book_relations_unique", "breakpoints": true }
+    { "idx": 26, "version": "6", "when": 1783315200000, "tag": "0011_book_relations_unique", "breakpoints": true },
+    { "idx": 27, "version": "6", "when": 1783322400000, "tag": "0011b_add_is_admin", "breakpoints": true },
+    { "idx": 28, "version": "6", "when": 1783353600000, "tag": "0012_auth_token_model", "breakpoints": true }
   ]
 }

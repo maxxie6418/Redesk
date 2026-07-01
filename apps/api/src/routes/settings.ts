@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { settings } from '@redesk/db';
-import { updateSettingsSchema } from '@redesk/shared';
+import { ERROR_CODE, updateSettingsSchema } from '@redesk/shared';
 import { getDb } from '../db';
-import { requireUserId } from '../lib/auth';
+import { AppError } from '../lib/errors';
+import { requireUserId, isAdmin } from '../lib/auth';
 import { getSettingsOwnerId } from '../lib/storage-factory';
 import { validate } from '../lib/zod';
 
@@ -44,7 +45,10 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/settings', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
+    if (!isAdmin(userId)) {
+      throw new AppError(ERROR_CODE.FORBIDDEN, '只有管理员可以修改系统设置');
+    }
     const input = validate(updateSettingsSchema, req.body);
     const db = getDb();
     const timestamp = now();

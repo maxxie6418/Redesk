@@ -1,2 +1,3 @@
-ALTER TABLE `users` ADD COLUMN `is_active` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD COLUMN `session_expires_days` integer DEFAULT 30 NOT NULL;
+-- 用户认证字段已合并到初始 users 表定义（0000_awesome_supernaut.sql）
+-- 保留此空迁移以保持迁移日志连续性
+SELECT 1;

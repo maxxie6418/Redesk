@@ -1,9 +1,9 @@
 export interface AuthUser {
   id: number;
-  username: string;
+  username: string | null;
   display_name: string | null;
   is_active: boolean;
-  session_expires_days: number;
+  is_admin: boolean;
   must_change_password: boolean;
 }
 

@@ -10,9 +10,9 @@ export const AUTH_DISABLED = isAuthDisabled();
 
 export const LOCAL_AUTH_USER: AuthUser = {
   id: 0,
-  username: 'guest',
+  username: null,
   display_name: '未登录',
   is_active: true,
-  session_expires_days: 30,
+  is_admin: false,
   must_change_password: false,
 };

@@ -55,7 +55,7 @@ import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
 import { useTags, useCreateTag, useUpdateTag, useDeleteTag, type TagItem } from '@/hooks/use-tags';
 import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
 import { Select } from '@/components/ui/select';
-import { api, API_BASE } from '@/lib/api';
+import { api, API_BASE, type AuthUser } from '@/lib/api';
 import {
   useQuickLinks,
   useAddQuickLink,
@@ -135,8 +135,8 @@ export function SettingsPage() {
   return <SimpleSettingsPage user={user} />;
 }
 
-function isAdminUser(user: { id: number }): boolean {
-  return user.id === 1;
+function isAdminUser(user: { is_admin: boolean }): boolean {
+  return user.is_admin === true;
 }
 
 function AdminSettingsPage() {
@@ -553,7 +553,8 @@ function LoginManagementTab() {
   const resetPassword = useResetPassword();
   const toggleActive = useToggleActive();
 
-  const [authMode, setAuthMode] = useState('single_token');
+  const [multiUser, setMultiUser] = useState(false);
+  const [sessionDays, setSessionDays] = useState('7');
   const [bfWindow, setBfWindow] = useState('10');
   const [bfMaxAttempts, setBfMaxAttempts] = useState('5');
   const [bfLock, setBfLock] = useState('60');
@@ -562,7 +563,8 @@ function LoginManagementTab() {
   useEffect(() => {
     if (hydrated || !settings.data) return;
     const s = settings.data;
-    setAuthMode(s.auth_mode === 'multi_token' ? 'multi_token' : 'single_token');
+    setMultiUser(s.auth_mode === 'multi_token');
+    setSessionDays(s.session_expires_days ?? '7');
     setBfWindow(s.brute_force_window_minutes ?? '10');
     setBfMaxAttempts(s.brute_force_max_attempts ?? '5');
     setBfLock(s.brute_force_lock_minutes ?? '60');
@@ -575,32 +577,32 @@ function LoginManagementTab() {
   const handleSave = useCallback(async () => {
     try {
       await updateSettings.mutateAsync({
-        auth_mode: authMode,
-        multi_user: authMode === 'multi_token' ? 'true' : 'false',
+        auth_mode: multiUser ? 'multi_token' : 'single_token',
+        multi_user: multiUser ? 'true' : 'false',
+        session_expires_days: sessionDays,
         brute_force_window_minutes: bfWindow,
         brute_force_max_attempts: bfMaxAttempts,
         brute_force_lock_minutes: bfLock,
       });
       showToast({ type: 'info', text: '登录管理设置已保存' });
     } catch { showToast({ type: 'error', text: '保存失败' }); }
-  }, [authMode, bfWindow, bfMaxAttempts, bfLock, updateSettings, showToast]);
+  }, [multiUser, sessionDays, bfWindow, bfMaxAttempts, bfLock, updateSettings, showToast]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPwd, setResetPwd] = useState('');
-  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
 
   const handleCreate = useCallback(async () => {
     try {
-      await createUser.mutateAsync({ username: newUsername, password: newPassword, display_name: newDisplayName || undefined });
+      await createUser.mutateAsync({ password: newPassword, display_name: newDisplayName || undefined });
       showToast({ type: 'info', text: '用户已创建' });
-      setShowCreate(false); setNewUsername(''); setNewPassword(''); setNewDisplayName('');
+      setShowCreate(false); setNewPassword(''); setNewDisplayName('');
     } catch { showToast({ type: 'error', text: '创建失败' }); }
-  }, [newUsername, newPassword, newDisplayName, createUser, showToast]);
+  }, [newPassword, newDisplayName, createUser, showToast]);
 
   const handleUpdate = useCallback(async (id: number) => {
     try {
@@ -618,7 +620,7 @@ function LoginManagementTab() {
   const handleResetPassword = useCallback(async (id: number) => {
     try {
       await resetPassword.mutateAsync({ id, password: resetPwd });
-      showToast({ type: 'info', text: '密码已重置' });
+      showToast({ type: 'info', text: '口令已重置' });
       setResetId(null); setResetPwd('');
     } catch { showToast({ type: 'error', text: '重置失败' }); }
   }, [resetPwd, resetPassword, showToast]);
@@ -630,24 +632,26 @@ function LoginManagementTab() {
     } catch { showToast({ type: 'error', text: '操作失败' }); }
   }, [toggleActive, showToast]);
 
+  const displayNameOf = (u: UserAdminSummary) => u.display_name || `用户 ${u.id}`;
+
   return (
     <div className="space-y-6">
       <StatusToast message={toast} onClose={() => setToast(null)} className="absolute left-1/2 top-0 -translate-x-1/2" />
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">认证模式</CardTitle>
+          <CardTitle className="text-base">多用户模式</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">模式</p>
-              <p className="text-xs text-muted-foreground">单口令：所有用户共享一个登录口令；多口令：每位用户独立密码</p>
+              <p className="text-xs text-muted-foreground">关闭时仅管理员口令可用；开启后可创建普通口令</p>
             </div>
             <div className="flex gap-1 rounded-lg border border-border bg-popover p-0.5">
-              {(['single_token', 'multi_token'] as const).map((value) => (
-                <button key={value} type="button" className={cn('rounded-md px-3 py-1.5 text-sm transition-colors', authMode === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')} onClick={() => setAuthMode(value)}>
-                  {value === 'single_token' ? '单口令' : '多口令'}
+              {([false, true] as const).map((value) => (
+                <button key={String(value)} type="button" className={cn('rounded-md px-3 py-1.5 text-sm transition-colors', multiUser === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')} onClick={() => setMultiUser(value)}>
+                  {value ? '开启' : '关闭'}
                 </button>
               ))}
             </div>
@@ -655,22 +659,37 @@ function LoginManagementTab() {
         </CardContent>
       </Card>
 
-      {authMode === 'multi_token' && (
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">会话有效期</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">登录状态保持天数</p>
+              <p className="text-xs text-muted-foreground">超过该天数后需要重新登录</p>
+            </div>
+            <Input type="number" min={1} max={90} className="w-24" value={sessionDays} onChange={(e) => setSessionDays(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {multiUser && (
         <Card>
           <CardHeader className="pb-4 flex-row items-center justify-between">
-            <CardTitle className="text-base">用户管理</CardTitle>
-            <Button size="sm" onClick={() => setShowCreate(true)}><UserPlus className="mr-1.5 h-4 w-4" />添加用户</Button>
+            <CardTitle className="text-base">普通口令管理</CardTitle>
+            <Button size="sm" onClick={() => setShowCreate(true)}><UserPlus className="mr-1.5 h-4 w-4" />添加口令</Button>
           </CardHeader>
           <CardContent className="space-y-3">
             {users.isError && <p className="text-sm text-muted-foreground">加载用户列表失败</p>}
-            {users.data?.map((u: UserAdminSummary) => (
+            {users.data?.filter((u) => !u.is_admin).map((u: UserAdminSummary) => (
               <div key={u.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
                 <div className={cn('flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium', u.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
-                  {(u.display_name || u.username)[0]}
+                  {displayNameOf(u)[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{u.display_name || u.username}</p>
-                  <p className="truncate text-xs text-muted-foreground">@{u.username}{!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{displayNameOf(u)}</p>
+                  <p className="truncate text-xs text-muted-foreground">普通用户{!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}</p>
                 </div>
                 {editingId === u.id ? (
                   <div className="flex items-center gap-2">
@@ -681,7 +700,7 @@ function LoginManagementTab() {
                 ) : (
                   <div className="flex items-center gap-1">
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(u.id); setEditingName(u.display_name ?? ''); }}>编辑</Button>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setResetId(resetId === u.id ? null : u.id)}><Key className="mr-1 h-3 w-3" />重置密码</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setResetId(resetId === u.id ? null : u.id)}><Key className="mr-1 h-3 w-3" />重置口令</Button>
                     <Button size="sm" variant="ghost" className={cn('h-7 text-xs', u.is_active ? 'text-muted-foreground' : 'text-primary')} onClick={() => handleToggleActive(u)}>
                       {u.is_active ? <Ban className="mr-1 h-3 w-3" /> : <CheckCircle className="mr-1 h-3 w-3" />}{u.is_active ? '停用' : '启用'}
                     </Button>
@@ -692,15 +711,14 @@ function LoginManagementTab() {
             ))}
             {resetId && users.data?.find((u: UserAdminSummary) => u.id === resetId) && (
               <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
-                <Input type="password" className="h-8 flex-1 text-xs" placeholder="新密码（至少 6 位）" value={resetPwd} onChange={(e) => setResetPwd(e.target.value)} />
+                <Input type="password" className="h-8 flex-1 text-xs" placeholder="新口令（至少 5 位）" value={resetPwd} onChange={(e) => setResetPwd(e.target.value)} />
                 <Button size="sm" className="h-8" onClick={() => handleResetPassword(resetId)}>确认</Button>
                 <Button size="sm" variant="ghost" className="h-8" onClick={() => setResetId(null)}>取消</Button>
               </div>
             )}
             {showCreate && (
               <div className="space-y-2 rounded-lg border border-border px-4 py-4">
-                <Input className="h-9 text-sm" placeholder="用户名" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
-                <Input type="password" className="h-9 text-sm" placeholder="密码（至少 6 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Input type="password" className="h-9 text-sm" placeholder="口令（至少 5 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 <Input className="h-9 text-sm" placeholder="昵称（可选）" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} />
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setShowCreate(false)}>取消</Button>
@@ -1913,18 +1931,7 @@ function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
   );
 }
 
-interface SimpleSettingsPageProps {
-  user: {
-    id: number;
-    username: string;
-    display_name: string | null;
-    is_active: boolean;
-    session_expires_days: number;
-    must_change_password: boolean;
-  };
-}
-
-function SimpleSettingsPage({ user }: SimpleSettingsPageProps) {
+function SimpleSettingsPage({ user }: { user: AuthUser }) {
   const navigate = useNavigate();
   const logout = useLogout();
   const [showChangePwd, setShowChangePwd] = useState(false);
@@ -1947,8 +1954,8 @@ function SimpleSettingsPage({ user }: SimpleSettingsPageProps) {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground">用户名</span>
-                <span className="font-medium text-foreground">{user.username}</span>
+                <span className="text-muted-foreground">身份</span>
+                <span className="font-medium text-foreground">{user.is_admin ? '管理员' : '普通用户'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">显示名</span>

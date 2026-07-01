@@ -18,10 +18,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
 
 export function RequireAuth() {
   const currentUser = useCurrentUser();
-
   if (currentUser.isLoading) return <FullScreenLoader label="正在验证身份…" />;
   if (currentUser.isError || !currentUser.data) return <Navigate to="/login" replace />;
-
   return (
     <ShellUserContext.Provider value={currentUser.data}>
       <ShellLayout user={currentUser.data}>

@@ -4,7 +4,6 @@ import { Loader2 } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-auth';
 import { ForcedPasswordChange } from '@/components/forced-password-change';
 import { ShellUserContext } from '@/components/shell-user-context';
-import { AUTH_DISABLED } from '@/lib/auth-mode';
 
 export function ChangePasswordRoute() {
   const navigate = useNavigate();
@@ -19,8 +18,6 @@ export function ChangePasswordRoute() {
       document.title = previous;
     };
   }, []);
-
-  if (AUTH_DISABLED) return <Navigate to={target} replace />;
 
   if (currentUser.isLoading) {
     return (

@@ -5,7 +5,7 @@ import { ERROR_CODE, createCategorySchema, updateCategorySchema, categoryQuerySc
 import type { CategoryQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requireUserId, getPublicUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -14,7 +14,7 @@ function now(): string {
 
 export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/categories', async (req) => {
-    const userId = requireUserId(req);
+    const userId = getPublicUserId(req);
     const input = validate(categoryQuerySchema, req.query) as CategoryQueryInput;
     const db = getDb();
 

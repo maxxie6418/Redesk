@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuthStatus, useAuthMode, useLogin } from '@/hooks/use-auth';
-import { FullScreenLoader } from '@/components/full-screen-loader';
+import { useLogin } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,25 +11,18 @@ import { AUTH_DISABLED } from '@/lib/auth-mode';
 
 export function LoginRoute() {
   const navigate = useNavigate();
-  const status = useAuthStatus();
-  const mode = useAuthMode();
   const login = useLogin();
 
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (AUTH_DISABLED) return <Navigate to="/" replace />;
-  if (status.isLoading || mode.isLoading) return <FullScreenLoader />;
-  if (status.data?.needs_setup) return <Navigate to="/setup" replace />;
-
-  const isMultiToken = mode.data?.mode === 'multi_token';
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     try {
-      const user = await login.mutateAsync(isMultiToken ? { username, password } : { password });
+      const user = await login.mutateAsync({ password });
       toast.success('登录成功', { description: user.display_name ? `欢迎回来，${user.display_name}` : '欢迎回到 Redesk' });
       if (user.must_change_password) {
         navigate('/change-password', { replace: true });
@@ -54,20 +46,8 @@ export function LoginRoute() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            {isMultiToken && (
-              <div className="space-y-2">
-                <Label htmlFor="username">用户名</Label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-            )}
             <div className="space-y-2">
-              <Label htmlFor="password">{isMultiToken ? '密码' : '口令'}</Label>
+              <Label htmlFor="password">口令</Label>
               <Input
                 id="password"
                 type="password"

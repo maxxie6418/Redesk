@@ -15,7 +15,7 @@ import {
 import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requireUserId, getPublicUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
 import { extname } from 'node:path';
@@ -1192,7 +1192,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/books', async (req) => {
-    const userId = requireUserId(req);
+    const userId = getPublicUserId(req);
     const input = validate(bookQuerySchema, req.query);
     const { rows, total, page, pageSize } = buildBookListQuery(input, userId);
 

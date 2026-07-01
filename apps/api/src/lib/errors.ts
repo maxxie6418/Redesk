@@ -32,3 +32,7 @@ export function unauthorized(message = '未登录'): AppError {
 export function businessError(message: string): AppError {
   return new AppError(ERROR_CODE.BUSINESS_ERROR, message);
 }
+
+export function forbidden(message = '无权限'): AppError {
+  return new AppError(ERROR_CODE.FORBIDDEN, message);
+}

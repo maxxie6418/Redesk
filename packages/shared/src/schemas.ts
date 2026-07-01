@@ -29,18 +29,16 @@ export const bookCoverSourceTypeSchema = z.enum([
   BOOK_COVER_SOURCE_TYPE.MANUAL_UPLOAD,
 ]);
 
-export const sessionDaysSchema = z.union([z.literal(7), z.literal(30)]);
+export const sessionDaysSchema = z.number().int().min(1).max(90).default(7);
 
 export const loginSchema = z.object({
-  username: z.string().max(64).optional(),
-  password: z.string().min(1).max(128),
+  password: z.string().min(5).max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const setupSchema = z
   .object({
-    username: z.string().min(2).max(64),
-    password: z.string().min(8).max(128),
+    password: z.string().min(5).max(128),
     display_name: z.string().max(64).optional(),
   })
   .strict();
@@ -49,17 +47,17 @@ export type SetupInput = z.infer<typeof setupSchema>;
 export const changePasswordSchema = z
   .object({
     current_password: z.string().min(1).max(128).optional(),
-    new_password: z.string().min(8).max(128),
+    new_password: z.string().min(5).max(128),
   })
   .strict();
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const userSchema = z.object({
   id: z.number().int(),
-  username: z.string(),
+  username: z.string().nullable(),
   display_name: z.string().nullable(),
   is_active: z.boolean(),
-  session_expires_days: sessionDaysSchema,
+  is_admin: z.boolean(),
 });
 export type User = z.infer<typeof userSchema>;
 
@@ -152,22 +150,19 @@ export const updateSettingsSchema = z.record(z.string(), z.string().optional());
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 
 export const createUserSchema = z.object({
-  username: z.string().min(2).max(64),
-  password: z.string().min(6).max(128),
+  password: z.string().min(5).max(128),
   display_name: z.string().max(64).optional(),
-  session_expires_days: sessionDaysSchema.optional(),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
   display_name: z.string().max(64).optional().nullable(),
   is_active: z.boolean().optional(),
-  session_expires_days: sessionDaysSchema.optional(),
 });
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
 export const resetPasswordSchema = z.object({
-  password: z.string().min(6).max(128),
+  password: z.string().min(5).max(128),
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 

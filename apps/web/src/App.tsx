@@ -3,7 +3,6 @@ import { Toaster } from 'sonner';
 import { useTheme } from '@/components/use-theme';
 import { PublicShell, RequireAuth } from '@/routes/protected-layout';
 import { LoginRoute } from '@/routes/login';
-import { SetupRoute } from '@/routes/setup';
 import { ChangePasswordRoute } from '@/routes/change-password';
 import { Bookshelf } from '@/routes/bookshelf';
 import { BookDetailPage } from '@/routes/book-detail';
@@ -20,7 +19,6 @@ export default function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
-        <Route path="/setup" element={<SetupRoute />} />
         <Route path="/change-password" element={<ChangePasswordRoute />} />
         <Route path="/" element={<PublicShell><Bookshelf /></PublicShell>} />
         <Route path="/trash" element={<PublicShell><Bookshelf initialPageView="trash" /></PublicShell>} />

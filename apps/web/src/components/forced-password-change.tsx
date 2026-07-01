@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useChangePassword } from '@/hooks/use-auth';
 import { useShellUser } from '@/components/shell-user-context';
 
-const MIN_LENGTH = 8;
+const MIN_LENGTH = 5;
 
 interface ForcedPasswordChangeProps {
   onComplete?: () => void;
@@ -53,7 +53,7 @@ export function ForcedPasswordChange({ onComplete }: ForcedPasswordChangeProps =
           </div>
           <CardTitle className="text-xl">请设置新的管理员口令</CardTitle>
           <CardDescription>
-            欢迎，<span className="font-medium text-foreground">{user.username}</span>。
+            欢迎，<span className="font-medium text-foreground">{user.display_name || '管理员'}</span>。
             这是首次登录，请为账户设置一个新口令。
           </CardDescription>
         </CardHeader>

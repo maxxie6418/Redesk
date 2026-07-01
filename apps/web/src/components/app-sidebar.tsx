@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 import {
   Archive,
   BookOpen,
@@ -85,11 +86,11 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
 
       <nav className="mt-5 space-y-0.5">
         <SidebarItem active={activeKey === 'bookshelf'} icon={<BookOpen className="h-4 w-4" />} label="书架" onClick={() => navigate('/')} />
-        <SidebarItem active={activeKey === 'overview'} icon={<Archive className="h-4 w-4" />} label="档案" onClick={() => navigate('/overview')} />
-        <SidebarItem active={activeKey === 'files'} icon={<FolderOpen className="h-4 w-4" />} label="书库文件" onClick={() => navigate('/files')} />
-        <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" onClick={() => navigate('/reading-notes')} />
-        <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" onClick={() => navigate('/reading-topics')} />
-        <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label="回收站" onClick={() => navigate('/trash')} />
+        <SidebarItem active={activeKey === 'overview'} icon={<Archive className="h-4 w-4" />} label="档案" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/overview') : toast('未登录无法操作')} />
+        <SidebarItem active={activeKey === 'files'} icon={<FolderOpen className="h-4 w-4" />} label="书库文件" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/files') : toast('未登录无法操作')} />
+        <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/reading-notes') : toast('未登录无法操作')} />
+        <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/reading-topics') : toast('未登录无法操作')} />
+        <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label="回收站" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/trash') : toast('未登录无法操作')} />
       </nav>
 
       <div className="min-h-20 flex-1" />

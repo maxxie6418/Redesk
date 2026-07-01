@@ -25,6 +25,10 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    if (password.length < 5) {
+      setError('口令至少 5 位字符');
+      return;
+    }
     try {
       const user = await login.mutateAsync({ password });
       toast.success('登录成功', { description: user.display_name ? `欢迎回来，${user.display_name}` : '欢迎回到 Redesk' });

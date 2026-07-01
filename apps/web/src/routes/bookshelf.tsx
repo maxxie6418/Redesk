@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   BookPlus,
@@ -30,6 +31,7 @@ import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { useShellUser } from '@/components/shell-user-context';
+import { useCurrentUser } from '@/hooks/use-auth';
 import { AppShell } from '@/components/app-shell';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
@@ -1240,6 +1242,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [showImport, setShowImport] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
+  const currentUser = useCurrentUser();
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -1498,7 +1501,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => setDetailBookId(book.id)}
+                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
@@ -1514,7 +1517,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => setDetailBookId(book.id)}
+                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
@@ -1530,7 +1533,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => setDetailBookId(book.id)}
+                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
@@ -1557,7 +1560,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => setDetailBookId(book.id)}
+                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}

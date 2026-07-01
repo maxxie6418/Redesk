@@ -5,14 +5,10 @@ import session from '@fastify/session';
 import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
 import { existsSync } from 'node:fs';
-import { eq } from 'drizzle-orm';
-import { users } from '@redesk/db';
-import { ERROR_CODE } from '@redesk/shared';
 import { config } from './config';
 import { errorHandler } from './plugins/error-handler';
-import { AppError } from './lib/errors';
-import { getDb } from './db';
-import { getSessionUserId } from './lib/session';
+import { getSessionExpiresDays } from './lib/settings-store';
+
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
 import { bookRoutes } from './routes/books';
@@ -57,6 +53,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       fileSize: 200 * 1024 * 1024,
     },
   });
+  const sessionExpiresDays = getSessionExpiresDays();
   await app.register(session, {
     secret: config.sessionSecret,
     cookieName: 'sid',
@@ -65,6 +62,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
+      maxAge: sessionExpiresDays * 24 * 60 * 60 * 1000,
     },
   });
 
@@ -72,19 +70,6 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await app.register(healthRoutes);
   await app.register(async (api) => {
-    api.addHook('preHandler', async (req) => {
-      if (req.url.startsWith('/api/v1/auth/')) return;
-      const userId = getSessionUserId(req);
-      if (!userId) return;
-      const row = getDb()
-        .select({ mcp: users.must_change_password })
-        .from(users)
-        .where(eq(users.id, userId))
-        .get();
-      if (row?.mcp === 1) {
-        throw new AppError(ERROR_CODE.FORBIDDEN, '请先完成口令修改');
-      }
-    });
     await api.register(authRoutes, { prefix: '/api/v1' });
     await api.register(bookRoutes, { prefix: '/api/v1' });
     await api.register(settingsRoutes, { prefix: '/api/v1' });
