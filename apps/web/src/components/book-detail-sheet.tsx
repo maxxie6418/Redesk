@@ -713,6 +713,9 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <BookOpen className="h-4 w-4" />
                   开始阅读
                 </button>
+                <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
+                  已支持基础 EPUB 阅读，进度/高亮/笔记链路待 M2 闭环
+                </p>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1182,7 +1185,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
                   <p className="mt-3 text-[14px] text-muted-foreground">笔记、高亮、标注</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground/50">阅读器上线后（M2）自动记录</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground/50">留痕链路待 M2 闭环；当前可正常阅读</p>
                 </div>
               </div>
               )}

@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -306,6 +306,7 @@ interface BookCardProps {
 
 function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
+  const navigate = useNavigate();
   return (
     <article
       className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
@@ -314,9 +315,9 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       {!isTrash && <MenuMore onClick={onOpenDetail} />}
       <button
         type="button"
-        className="relative mt-0.5 shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
-        disabled
-        title="阅读器将在 M2 上线"
+        className="relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02]"
+        title="基础阅读器已可进入，留痕能力仍在完善中"
+        onClick={() => navigate(`/books/${book.id}/read`)}
       >
         <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -350,15 +351,16 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 
 function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
+  const navigate = useNavigate();
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       {/* 封面区 */}
       <div className="relative mb-3 overflow-hidden rounded-xl">
         <button
           type="button"
-          className="block w-full cursor-not-allowed"
-          disabled
-          title="阅读器将在 M2 上线"
+          className="block w-full transition-transform hover:scale-[1.02]"
+          title="基础阅读器已可进入，留痕能力仍在完善中"
+          onClick={() => navigate(`/books/${book.id}/read`)}
         >
           <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
@@ -436,14 +438,15 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 
 function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
+  const navigate = useNavigate();
   return (
     <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {!isTrash && <MenuMoreSmall onClick={onOpenDetail} />}
       <button
         type="button"
-        className="relative shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
-        disabled
-        title="阅读器将在 M2 上线"
+        className="relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02]"
+        title="基础阅读器已可进入，留痕能力仍在完善中"
+        onClick={() => navigate(`/books/${book.id}/read`)}
       >
         <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -479,15 +482,16 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
 
 function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
+  const navigate = useNavigate();
   return (
     <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
       {!isTrash && <MenuMoreTiny onClick={onOpenDetail} />}
       {/* 封面 */}
       <button
         type="button"
-        className="relative shrink-0 cursor-not-allowed overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
-        disabled
-        title="阅读器将在 M2 上线"
+        className="relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)] transition-transform hover:scale-[1.05]"
+        title="基础阅读器已可进入，留痕能力仍在完善中"
+        onClick={() => navigate(`/books/${book.id}/read`)}
       >
         <BookCoverImage book={book} index={index} className="h-[50px] w-[36px]" rounded="rounded-sm" />
         <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
