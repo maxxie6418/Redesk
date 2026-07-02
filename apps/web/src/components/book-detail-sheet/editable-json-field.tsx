@@ -71,7 +71,11 @@ export function EditableJsonField({
     }
   }, [draft, onSave]);
 
-  const displayValue = value ? Object.keys(value).length > 0 ? `${Object.keys(value).length} 项属性` : '暂无' : '暂无';
+  const displayValue = (() => {
+    if (!value) return '暂无';
+    const count = Object.keys(value).length;
+    return count > 0 ? `${count} 项属性` : '暂无';
+  })();
 
   const trigger = (
     <EditableFieldRow

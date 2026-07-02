@@ -11,6 +11,7 @@ import {
   Trash2,
   Upload,
   X,
+  FolderOpen,
   Pencil,
   ArrowUpFromLine,
   Archive,
@@ -56,6 +57,7 @@ import { EditableLongTextField } from './editable-long-text-field';
 import { EditableJsonField } from './editable-json-field';
 import { EditableTagsField } from './editable-tags-field';
 import { RatingDisplay } from './rating-display';
+import { extractDomain, type StatusMessage, type ToastType } from './types';
 
 const COVER_URL_BASE = API_BASE;
 
@@ -67,9 +69,6 @@ const COVER_TONES = [
   'bg-[#d7c8d5] text-[#342535]',
   'bg-[#d6d0c6] text-[#332f28]',
 ];
-
-type ToastType = 'info' | 'warning' | 'error';
-type StatusMessage = { type: ToastType; text: string } | null;
 
 function bookProgress(book: BookSummary) {
   if (book.status === BOOK_STATUS.READ) return 100;
@@ -714,20 +713,29 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               <>
               {/* Header */}
               <div className="mb-6">
-                <EditableTextField
-                  label=""
-                  value={b.title}
-                  editMode={editMode}
-                  required
-                  onSave={async (v) => saveText('title', v, { required: true })}
-                />
-                {b.subtitle && (
+                {editMode ? (
                   <EditableTextField
                     label=""
+                    value={b.title}
+                    editMode={editMode}
+                    required
+                    onSave={async (v) => saveText('title', v, { required: true })}
+                  />
+                ) : (
+                  <h1 className="font-display text-[28px] font-semibold leading-tight text-foreground">
+                    {b.title}
+                  </h1>
+                )}
+                {b.subtitle && editMode && (
+                  <EditableTextField
+                    label="副标题"
                     value={b.subtitle}
                     editMode={editMode}
                     onSave={async (v) => saveText('subtitle', v)}
                   />
+                )}
+                {b.subtitle && !editMode && (
+                  <p className="mb-3 text-[15px] text-muted-foreground italic">{b.subtitle}</p>
                 )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted-foreground">
                   {b.author && <span className="font-medium text-foreground">{b.author}</span>}
@@ -742,16 +750,23 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {/* Category Badge */}
                 {b.category_name && (
                   <div className="mt-3">
-                    <EditableSelectField
-                      label=""
-                      value={b.category_id ? String(b.category_id) : ''}
-                      options={[
-                        { value: '', label: '未分类' },
-                        ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
-                      ]}
-                      editMode={editMode}
-                      onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
-                    />
+                    {editMode ? (
+                      <EditableSelectField
+                        label="分类"
+                        value={b.category_id ? String(b.category_id) : ''}
+                        options={[
+                          { value: '', label: '未分类' },
+                          ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
+                        ]}
+                        editMode={editMode}
+                        onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
+                      />
+                    ) : (
+                      <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary">
+                        <FolderOpen className="h-4 w-4 text-primary" />
+                        {b.category_name}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -833,7 +848,26 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     editMode={editMode}
                     onSave={async (r) => saveSelect('rating', String(r ?? ''), { numberTransform: true })}
                   />
-                  <EditableTextField label="书籍链接" value={b.source_url ?? ''} editMode={editMode} onSave={async (v) => saveText('source_url', v)} />
+                  {editMode ? (
+                    <EditableTextField label="书籍链接" value={b.source_url ?? ''} editMode={editMode} onSave={async (v) => saveText('source_url', v)} />
+                  ) : (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">书籍链接</span>
+                      {b.source_url ? (
+                        <a
+                          href={b.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-primary hover:underline truncate max-w-[200px]"
+                          title={b.source_url}
+                        >
+                          {extractDomain(b.source_url)}
+                        </a>
+                      ) : (
+                        <span className="font-medium text-muted-foreground/50">—</span>
+                      )}
+                    </div>
+                  )}
                   <EditableDateField label="开始阅读" value={b.started_at} editMode={editMode} onSave={async (v) => saveDate('started_at', v)} />
                   <EditableDateField label="完成阅读" value={b.finished_at} editMode={editMode} onSave={async (v) => saveDate('finished_at', v)} />
                   <EditableLongTextField label="阅读目的" value={b.reading_purpose ?? ''} editMode={editMode} onSave={async (v) => saveText('reading_purpose', v)} />

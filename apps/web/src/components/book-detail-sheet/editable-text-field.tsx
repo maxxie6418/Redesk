@@ -62,7 +62,7 @@ export function EditableTextField({
   const trigger = (
     <EditableFieldRow
       label={label}
-      value={editMode ? displayValue : displayValue}
+      value={displayValue}
       editMode={editMode}
       onClick={editMode ? handleOpen : undefined}
       isSaving={isSaving}
