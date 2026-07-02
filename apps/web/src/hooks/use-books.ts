@@ -193,7 +193,10 @@ export function useUpdateBook() {
 export function useDeleteBook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.delete<{ id: number; deleted: boolean }>(`/books/${id}`),
+    mutationFn: ({ id, deleteFiles = false }: { id: number; deleteFiles?: boolean }) =>
+      api.delete<{ id: number; deleted: boolean; files_deleted: boolean }>(
+        `/books/${id}${deleteFiles ? '?delete_files=true' : ''}`,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['books'] });
     },

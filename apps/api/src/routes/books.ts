@@ -1341,6 +1341,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
     }
 
+    const deleteFiles = String((req.query as Record<string, unknown>).delete_files ?? '').toLowerCase() === 'true';
+
     const db = getDb();
     const existing = db
       .select({ id: books.id, status: books.status })
@@ -1364,7 +1366,11 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(books.id, bookId))
       .run();
 
-    return { data: { id: bookId, deleted: true } };
+    if (deleteFiles) {
+      deleteFilesForBooks(userId, [bookId]);
+    }
+
+    return { data: { id: bookId, deleted: true, files_deleted: deleteFiles } };
   });
 
   app.post('/books/batch', async (req) => {

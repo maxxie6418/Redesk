@@ -9,7 +9,7 @@ import {
   NotebookPen,
   RefreshCcw,
   Star,
-  Tags as TagsIcon,
+  Trash2,
   Upload,
   X,
   FolderOpen,
@@ -18,16 +18,19 @@ import {
   Archive,
   Highlighter,
   Sparkles,
+  Tags,
+  Cloud,
   Check,
   AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
-import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
-import { ApiError, API_BASE } from '@/lib/api';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
+import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useBook,
   useUpdateBook,
+  useDeleteBook,
   useBookCovers,
   useFetchBookCover,
   useActivateBookCover,
@@ -37,41 +40,133 @@ import {
   useApplyBookMetadata,
   useFavoriteBook,
   useUnfavoriteBook,
+  type BookSummary,
   type BookCoverItem,
   type LinkMetadata,
 } from '@/hooks/use-books';
-import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
+import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags, type TagItem } from '@/hooks/use-tags';
-import {
-  ATTR_LABELS,
-  COVER_TONES,
-  bookProgress,
-  extractDomain,
-  formatFileSize,
-  formatShortDate,
-  formatTimelineDate,
-  type DetailTab,
-  type EditableField,
-  type StatusMessage,
-} from './types';
-import { InlineEditText, InlineEditSelect, InlineRating, TagAtom } from './inline-edit';
-import { StorageStatusBadge } from './storage-status-badge';
-import { MetadataDialog } from './metadata-dialog';
+import { Button } from '@/components/ui/button';
+import { API_BASE } from '@/lib/api';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 const COVER_URL_BASE = API_BASE;
+
+const COVER_TONES = [
+  'bg-[#d8c6b7] text-[#3d2f28]',
+  'bg-[#cfd8c8] text-[#26301f]',
+  'bg-[#c7d4dc] text-[#22313a]',
+  'bg-[#ded7c2] text-[#3c3422]',
+  'bg-[#d7c8d5] text-[#342535]',
+  'bg-[#d6d0c6] text-[#332f28]',
+];
+
+type ToastType = 'info' | 'warning' | 'error';
+type StatusMessage = { type: ToastType; text: string } | null;
+
+function bookProgress(book: BookSummary) {
+  if (book.status === BOOK_STATUS.READ) return 100;
+  return 0;
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
+}
+
+function formatTimelineDate(value: string) {
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
+}
+
+function formatFileSize(bytes: number | null) {
+  if (bytes == null) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const STORAGE_MODE_LABELS: Record<BookFileItem['storage_mode'], string> = {
+  local_only: '本地',
+  cloud_only: '云端',
+  dual: '本地 + 云端',
+};
+
+function StorageStatusBadge({ file }: { file: BookFileItem }) {
+  const labels: string[] = [];
+  if (file.storage_mode === 'local_only') labels.push('本地');
+  if (file.storage_mode === 'cloud_only') labels.push('云端');
+  if (file.storage_mode === 'dual') labels.push('本地', '云端');
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      <Cloud className="h-3 w-3" />
+      {file.sync_status === 'pending' ? (
+        <span>同步中</span>
+      ) : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? (
+        <span className="text-destructive">同步失败</span>
+      ) : (
+        <span>{STORAGE_MODE_LABELS[file.storage_mode]}</span>
+      )}
+    </span>
+  );
+}
+
+function TagAtom({ children, size = 'default' }: { children: React.ReactNode; size?: 'default' | 'small' | 'tiny' }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground',
+        size === 'default' && 'rounded-md px-2.5 py-[3px] text-xs leading-[1.4]',
+        size === 'small' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
+        size === 'tiny' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 'readingPurpose' | 'visibility' | 'sourceUrl' | 'customAttributes' | 'description' | null;
+
+type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
 const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string }[] = [
   { id: 'archive', label: '档案', icon: Archive, tint: 'bg-[hsl(15,28%,91%)] text-[hsl(15,24%,38%)]' },
   { id: 'traces', label: '笔记', icon: Highlighter, tint: 'bg-[hsl(22,28%,91%)] text-[hsl(22,24%,38%)]' },
-  { id: 'topics', label: '主题', icon: TagsIcon, tint: 'bg-[hsl(8,28%,91%)] text-[hsl(8,24%,38%)]' },
+  { id: 'topics', label: '主题', icon: Tags, tint: 'bg-[hsl(8,28%,91%)] text-[hsl(8,24%,38%)]' },
   { id: 'ai', label: 'AI', icon: Sparkles, tint: 'bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)]' },
 ];
+
+function extractDomain(url: string) {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+const ATTR_LABELS: Record<string, string> = {
+  douban_rating: '豆瓣评分',
+  neodb_rating: 'NeoDB 评分',
+  douban_id: '豆瓣 ID',
+  isbn: 'ISBN',
+  asin: 'ASIN',
+  series: '丛书',
+  edition: '版次',
+  language: '语言',
+  original_language: '原作语言',
+  format: '装帧',
+  price: '定价',
+  douban_url: '豆瓣链接',
+  neodb_url: 'NeoDB 链接',
+};
 
 export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
   const updateBook = useUpdateBook();
+  const deleteBook = useDeleteBook();
   const files = useBookFiles(bookId ?? 0);
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');
@@ -84,7 +179,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const applyMetadata = useApplyBookMetadata();
   const favoriteBook = useFavoriteBook();
   const unfavoriteBook = useUnfavoriteBook();
+  const deleteFile = useDeleteFile();
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [pendingBookDelete, setPendingBookDelete] = useState(false);
+  const [pendingBookDeleteFiles, setPendingBookDeleteFiles] = useState(false);
+  const [pendingFileDelete, setPendingFileDelete] = useState<BookFileItem | null>(null);
 
   const [message, setMessage] = useState<StatusMessage>(null);
   const [editingField, setEditingField] = useState<EditableField>(null);
@@ -243,6 +342,40 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     [bookId, uploadCover],
   );
 
+  const handleRequestBookDelete = useCallback(() => {
+    setPendingBookDeleteFiles(false);
+    setPendingBookDelete(true);
+  }, []);
+
+  const handleConfirmBookDelete = useCallback(async () => {
+    if (!bookId) return;
+    try {
+      await deleteBook.mutateAsync({ id: bookId, deleteFiles: pendingBookDeleteFiles });
+      setPendingBookDelete(false);
+      onClose();
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Delete failed' });
+      setPendingBookDelete(false);
+    }
+  }, [bookId, deleteBook, pendingBookDeleteFiles, onClose]);
+
+  const handleRequestFileDelete = useCallback((file: BookFileItem) => {
+    setPendingFileDelete(file);
+  }, []);
+
+  const handleConfirmFileDelete = useCallback(async () => {
+    if (!bookId || !pendingFileDelete) return;
+    const target = pendingFileDelete;
+    setPendingFileDelete(null);
+    try {
+      await deleteFile.mutateAsync({ bookId, fileId: target.id });
+      setMessage({ type: 'info', text: 'File deleted' });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Delete failed' });
+    }
+  }, [bookId, pendingFileDelete, deleteFile]);
+
   const handleOpenMetadataDialog = useCallback(async () => {
     const current = book.data;
     if (!current?.source_url) {
@@ -324,12 +457,165 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
 
   if (!open) return null;
 
-  const inlineEditProps = { editMode, editingField, editValue, setEditValue, saveField, cancelEdit, startEdit };
+  const InlineEditText = ({ field, label, value, multiline = false }: { field: EditableField; label: string; value: string; multiline?: boolean }) => {
+    const isEditing = editMode && editingField === field;
+    if (isEditing) {
+      return (
+        <div className="min-w-0 space-y-1">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          {multiline ? (
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => saveField(field, editValue)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') cancelEdit();
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveField(field, editValue);
+              }}
+              className="w-full rounded-md border border-primary bg-muted px-2 py-1 text-[13px] outline-none"
+              rows={3}
+            />
+          ) : (
+            <input
+              autoFocus
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => saveField(field, editValue)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') cancelEdit();
+                if (e.key === 'Enter') saveField(field, editValue);
+              }}
+              className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
+            />
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="flex min-w-0 justify-between gap-2">
+        <span className="shrink-0 text-muted-foreground">{label}</span>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit(field, value)}
+            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {value || '—'}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{value || '—'}</span>
+        )}
+      </div>
+    );
+  };
+
+  const InlineEditSelect = ({ field, label, value, options }: { field: EditableField; label: string; value: string; options: { value: string; label: string }[] }) => {
+    const isEditing = editMode && editingField === field;
+    if (isEditing) {
+      return (
+        <div className="min-w-0 space-y-1">
+          <span className="text-xs text-muted-foreground">{label}</span>
+          <select
+            autoFocus
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={() => saveField(field, editValue)}
+            className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+    const displayLabel = options.find((o) => o.value === value)?.label ?? value;
+    return (
+      <div className="flex min-w-0 justify-between gap-2">
+        <span className="shrink-0 text-muted-foreground">{label}</span>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit(field, value)}
+            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {displayLabel || '—'}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{displayLabel || '—'}</span>
+        )}
+      </div>
+    );
+  };
+
+  const InlineRating = () => {
+    const isEditing = editMode && editingField === 'rating';
+    const currentRating = b?.rating ?? null;
+    const displayRating = isEditing ? (editValue ? Number(editValue) : null) : currentRating;
+    if (isEditing) {
+      return (
+        <div className="flex justify-between gap-2">
+          <span className="text-muted-foreground">评分</span>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => {
+                  const newVal = displayRating === r ? '' : String(r);
+                  setEditValue(newVal);
+                  saveField('rating', newVal);
+                }}
+                className={cn(r <= (displayRating ?? 0) ? 'text-[#f5c842]' : 'text-muted-foreground/40')}
+              >
+                <Star className="h-4 w-4 fill-current" />
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex justify-between gap-2">
+        <span className="text-muted-foreground">评分</span>
+        {editMode ? (
+          <button
+            type="button"
+            onClick={() => startEdit('rating', currentRating ? String(currentRating) : '')}
+            className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {currentRating != null ? (
+              <>
+                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
+                {currentRating}
+              </>
+            ) : (
+              '—'
+            )}
+          </button>
+        ) : (
+          <span className="flex items-center gap-1 font-medium text-foreground">
+            {currentRating != null ? (
+              <>
+                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
+                {currentRating}
+              </>
+            ) : (
+              '—'
+            )}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
     <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
     <div className="fixed inset-y-0 right-0 z-40 flex w-[min(1000px,calc(100vw-160px))] min-w-[720px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
+      {/* Topbar */}
       <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
         <button
           type="button"
@@ -355,6 +641,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         </button>
       </div>
 
+      {/* Content */}
       <div className="flex-1 overflow-hidden">
         {book.isLoading && (
           <div className="flex h-full items-center justify-center">
@@ -368,8 +655,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
 
         {b && (
           <div className="flex h-full">
+            {/* Left Column */}
             <div className="relative w-[300px] shrink-0 border-r border-border bg-muted/30">
               <div className="h-full overflow-y-auto px-6 py-6 pr-9">
+              {/* Toast */}
               {message && (
                 <div
                   className={cn(
@@ -388,6 +677,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 </div>
               )}
 
+              {/* Cover Group */}
               <div className="mb-6">
                 {hasCover ? (
                   <img
@@ -404,6 +694,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 )}
               </div>
 
+              {/* Progress Group */}
               <div className="mb-6">
                 <div className="mb-1.5 flex items-center justify-between text-[12px]">
                   <span className="text-muted-foreground">阅读进度</span>
@@ -417,6 +708,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 </div>
               </div>
 
+              {/* Timeline Group */}
               <div className="mb-6">
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">时间</div>
                 <div className="space-y-1.5 text-[12px]">
@@ -448,6 +740,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 </div>
               </div>
 
+              {/* Actions Group */}
               <div className="mb-6 space-y-2.5">
                 <button
                   type="button"
@@ -503,8 +796,21 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     </button>
                   </div>
                 )}
+
+                <div className="mt-3 border-t border-border pt-3">
+                  <button
+                    type="button"
+                    onClick={handleRequestBookDelete}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
+                    title="Move this book to trash"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete this book
+                  </button>
+                </div>
               </div>
 
+              {/* Cover Panel */}
               {showCoverPanel && (
                 <div className="mb-6 rounded-xl border border-border bg-card p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -588,16 +894,26 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 </div>
               )}
 
+              {/* Files Group */}
               <div>
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
                 {files.data && files.data.length > 0 ? (
                   <div className="space-y-1">
                     {files.data.map((f: BookFileItem) => (
-                      <div key={f.id} className="flex items-center gap-2 py-1.5">
+                      <div key={f.id} className="group flex items-center gap-2 py-1.5">
                         <span className={cn('h-2 w-2 shrink-0 rounded-full', f.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
                         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</span>
                         <StorageStatusBadge file={f} />
                         <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(f.file_size)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRequestFileDelete(f)}
+                          className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                          title="Delete file"
+                          aria-label={`Delete ${f.original_filename ?? 'file'}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -607,6 +923,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               </div>
               </div>
 
+              {/* Bookmark Tabs: 贴左栏右边缘,靠近底部,不随内容滚动 */}
               <div className="absolute right-0 bottom-4 flex flex-col gap-2">
                 {TAB_LABELS.map((tab) => {
                   const active = activeTab === tab.id;
@@ -639,9 +956,11 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               </div>
             </div>
 
+            {/* Right Column */}
             <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-8">
               {activeTab === 'archive' && (
               <>
+              {/* Header */}
               <div className="mb-6">
                 {editMode ? (
                   <button
@@ -667,6 +986,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   {b.publish_year && <span>{b.publish_year}年</span>}
                 </div>
 
+                {/* Category Badge */}
                 {b.category_name && (
                   <div className="mt-3">
                     {editMode ? (
@@ -687,6 +1007,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </div>
                 )}
 
+                {/* Rating + Tags */}
                 <div className="mt-4 flex items-center gap-0 border-t border-border pt-4">
                   {editMode ? (
                     <button
@@ -800,14 +1121,15 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 )}
               </div>
 
+              {/* Archive Card */}
               <div className="mb-5 rounded-xl border border-border bg-muted/30 p-5">
                 <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
                   书籍档案
                 </h3>
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-2 text-[13px]">
-                  <InlineEditText {...inlineEditProps} field="title" label="书名" value={b.title} />
-                  <InlineEditText {...inlineEditProps} field="author" label="作者" value={b.author ?? ''} />
+                  <InlineEditText field="title" label="书名" value={b.title} />
+                  <InlineEditText field="author" label="作者" value={b.author ?? ''} />
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">出版社</span>
                     <span className="font-medium text-foreground">{b.publisher ?? '—'}</span>
@@ -825,7 +1147,6 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     <span className="font-medium text-foreground">{b.page_count ?? '—'}</span>
                   </div>
                   <InlineEditSelect
-                    {...inlineEditProps}
                     field="category"
                     label="分类"
                     value={b.category_id ? String(b.category_id) : ''}
@@ -834,9 +1155,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
                     ]}
                   />
-                  <InlineEditText {...inlineEditProps} field="readingPurpose" label="阅读目的" value={b.reading_purpose ?? ''} />
+                  <InlineEditText field="readingPurpose" label="阅读目的" value={b.reading_purpose ?? ''} />
                   <InlineEditSelect
-                    {...inlineEditProps}
                     field="visibility"
                     label="可见性"
                     value={b.visibility}
@@ -846,13 +1166,12 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     ]}
                   />
                   <InlineEditSelect
-                    {...inlineEditProps}
                     field="status"
                     label="状态"
                     value={b.status}
                     options={Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                   />
-                  <InlineRating {...inlineEditProps} currentRating={b.rating ?? null} />
+                  <InlineRating />
                   <div className="flex min-w-0 justify-between gap-2">
                     <span className="shrink-0 text-muted-foreground">书籍链接</span>
                     {editMode ? (
@@ -882,6 +1201,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </div>
                 </div>
 
+                {/* Description */}
                 <div className="mt-4 border-t border-border pt-4">
                   <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">简介</span>
                   {editMode ? (
@@ -901,6 +1221,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   )}
                 </div>
 
+                {/* Timestamps */}
                 <div className="mt-4 flex items-center gap-4 text-[12px] text-muted-foreground/60">
                   <span>收录于 {formatShortDate(b.created_at)}</span>
                   <span>·</span>
@@ -965,19 +1286,137 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       </div>
     </div>
 
+    {/* Metadata Dialog */}
     {showMetadataDialog && metadataResult && b && (
-      <MetadataDialog
-        book={b}
-        metadataResult={metadataResult}
-        selectedFields={selectedFields}
-        setSelectedFields={setSelectedFields}
-        fetchCoverChecked={fetchCoverChecked}
-        setFetchCoverChecked={setFetchCoverChecked}
-        onClose={() => setShowMetadataDialog(false)}
-        onApply={handleApplyMetadata}
-        isPending={applyMetadata.isPending}
-      />
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
+        onClick={() => setShowMetadataDialog(false)}
+      >
+        <div
+          className="w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl overflow-hidden"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <h3 className="font-display text-[15px] font-medium text-foreground">抓取元数据更新</h3>
+            <button
+              type="button"
+              onClick={() => setShowMetadataDialog(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="px-5 py-4 space-y-3 max-h-[60vh] overflow-y-auto">
+            {[
+              { key: 'title', label: '书名' },
+              { key: 'author', label: '作者' },
+              { key: 'subtitle', label: '副标题' },
+              { key: 'translator', label: '译者' },
+              { key: 'original_title', label: '原作名' },
+              { key: 'publisher', label: '出版社' },
+              { key: 'publish_year', label: '出版年' },
+              { key: 'isbn', label: 'ISBN' },
+              { key: 'page_count', label: '页数' },
+              { key: 'description', label: '简介' },
+              { key: 'language', label: '语言' },
+            ]
+              .filter(({ key }) => metadataResult[key as keyof LinkMetadata] != null)
+              .map(({ key, label }) => (
+                <label key={key} className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields[key] ?? false}
+                    onChange={(e) => setSelectedFields((prev) => ({ ...prev, [key]: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground">{label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      抓取值：{String(metadataResult[key as keyof LinkMetadata] ?? '').slice(0, 100)}
+                      {String(metadataResult[key as keyof LinkMetadata] ?? '').length > 100 ? '...' : ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">
+                      当前值：{String(b[key as keyof typeof b] ?? '').slice(0, 50) || '空'}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            {metadataResult.cover_url && (
+              <label className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={fetchCoverChecked}
+                  onChange={(e) => setFetchCoverChecked(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-foreground">封面图</p>
+                  <p className="text-xs text-muted-foreground/70">
+                    当前值：{b.cover_path ? '已有封面' : '无封面'}
+                  </p>
+                </div>
+              </label>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
+            <Button variant="outline" onClick={() => setShowMetadataDialog(false)}>取消</Button>
+            <Button onClick={handleApplyMetadata} disabled={applyMetadata.isPending || (Object.values(selectedFields).every((v) => !v) && !fetchCoverChecked)}>
+              {applyMetadata.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              确认应用
+            </Button>
+          </div>
+        </div>
+      </div>
     )}
+
+    <ConfirmDialog
+      open={pendingBookDelete}
+      destructive
+      title="Move this book to trash?"
+      description={
+        <div className="space-y-3">
+          <p>The book will be moved to trash and can be restored from there.</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={pendingBookDeleteFiles}
+              onChange={(e) => setPendingBookDeleteFiles(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-destructive focus:ring-destructive"
+            />
+            <span>Also delete associated files and covers (irreversible)</span>
+          </label>
+        </div>
+      }
+      confirmLabel="Move to trash"
+      cancelLabel="Cancel"
+      confirmDisabled={deleteBook.isPending}
+      onConfirm={handleConfirmBookDelete}
+      onCancel={() => setPendingBookDelete(false)}
+    />
+
+    <ConfirmDialog
+      open={pendingFileDelete !== null}
+      destructive
+      title="Delete this file?"
+      description={
+        pendingFileDelete ? (
+          <div className="space-y-1">
+            <p>This will permanently delete the file and its storage objects.</p>
+            <p className="text-xs text-muted-foreground">
+              {pendingFileDelete.original_filename ?? 'unnamed file'}
+              {pendingFileDelete.file_size != null
+                ? ` (${formatFileSize(pendingFileDelete.file_size)})`
+                : ''}
+            </p>
+          </div>
+        ) : null
+      }
+      confirmLabel="Delete file"
+      cancelLabel="Cancel"
+      confirmDisabled={deleteFile.isPending}
+      onConfirm={handleConfirmFileDelete}
+      onCancel={() => setPendingFileDelete(null)}
+    />
     </>
   );
 }

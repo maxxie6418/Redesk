@@ -1,11 +1,9 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   BookPlus,
   Bookmark,
-  FileUp,
   Grid3X3,
   LayoutGrid,
   LayoutList,
@@ -13,8 +11,9 @@ import {
   X,
   Heart,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
-import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY, type ImportBooksResult } from '@redesk/shared';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError, api, API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -23,6 +22,7 @@ import {
   useRestoreBook,
   usePermanentDeleteBook,
   useEmptyTrash,
+  useDeleteBook,
   type BookSummary,
 } from '@/hooks/use-books';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
@@ -31,7 +31,7 @@ import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { ProtectedShell } from '@/components/protected-shell';
-import { useCurrentUser } from '@/hooks/use-auth';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -294,6 +294,23 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
   );
 }
 
+function DeleteButton({ onClick, title = 'Delete', label = 'Delete' }: { onClick: () => void; title?: string; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      title={title}
+      className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+}
+
 interface BookCardProps {
   book: BookSummary;
   index: number;
@@ -301,11 +318,11 @@ interface BookCardProps {
   isTrash?: boolean;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
+  onDelete?: () => void;
 }
 
-function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
   const progress = bookProgress(book);
-  const navigate = useNavigate();
   return (
     <article
       className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
@@ -314,9 +331,9 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       {!isTrash && <MenuMore onClick={onOpenDetail} />}
       <button
         type="button"
-        className="relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02]"
-        title="基础阅读器已可进入，留痕能力仍在完善中"
-        onClick={() => navigate(`/books/${book.id}/read`)}
+        className="relative mt-0.5 shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+        disabled
+        title="阅读器将在 M2 上线"
       >
         <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -337,6 +354,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         <div className="mt-auto flex items-center gap-3.5 border-t border-border pt-3">
           <RatingDisplay rating={book.rating} />
           <ProgressBar progress={progress} />
+          {onDelete && !isTrash && <DeleteButton onClick={onDelete} />}
         </div>
       </div>
       {isTrash && (
@@ -348,18 +366,17 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
   const progress = bookProgress(book);
-  const navigate = useNavigate();
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       {/* 封面区 */}
       <div className="relative mb-3 overflow-hidden rounded-xl">
         <button
           type="button"
-          className="block w-full transition-transform hover:scale-[1.02]"
-          title="基础阅读器已可进入，留痕能力仍在完善中"
-          onClick={() => navigate(`/books/${book.id}/read`)}
+          className="block w-full cursor-not-allowed"
+          disabled
+          title="阅读器将在 M2 上线"
         >
           <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
@@ -426,6 +443,11 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         </div>
       </div>
 
+      {onDelete && !isTrash && (
+        <div className="mt-2 flex justify-end">
+          <DeleteButton onClick={onDelete} />
+        </div>
+      )}
       {isTrash && (
         <div className="mt-2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -435,17 +457,16 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
   const progress = bookProgress(book);
-  const navigate = useNavigate();
   return (
     <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {!isTrash && <MenuMoreSmall onClick={onOpenDetail} />}
       <button
         type="button"
-        className="relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-transform hover:scale-[1.02]"
-        title="基础阅读器已可进入，留痕能力仍在完善中"
-        onClick={() => navigate(`/books/${book.id}/read`)}
+        className="relative shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+        disabled
+        title="阅读器将在 M2 上线"
       >
         <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -470,6 +491,11 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
           <ProgressBar progress={progress} trackWidth="w-[80px]" />
         </div>
       </div>
+      {onDelete && !isTrash && (
+        <div className="absolute bottom-4 right-4">
+          <DeleteButton onClick={onDelete} />
+        </div>
+      )}
       {isTrash && (
         <div className="absolute bottom-4 right-4">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -479,18 +505,17 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
   const progress = bookProgress(book);
-  const navigate = useNavigate();
   return (
     <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
       {!isTrash && <MenuMoreTiny onClick={onOpenDetail} />}
       {/* 封面 */}
       <button
         type="button"
-        className="relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)] transition-transform hover:scale-[1.05]"
-        title="基础阅读器已可进入，留痕能力仍在完善中"
-        onClick={() => navigate(`/books/${book.id}/read`)}
+        className="relative shrink-0 cursor-not-allowed overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
+        disabled
+        title="阅读器将在 M2 上线"
       >
         <BookCoverImage book={book} index={index} className="h-[50px] w-[36px]" rounded="rounded-sm" />
         <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -547,6 +572,11 @@ function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       <div className="w-[70px] shrink-0 text-right text-xs tabular-nums text-muted-foreground">
         {book.updated_at.slice(0, 10)}
       </div>
+      {onDelete && !isTrash && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          <DeleteButton onClick={onDelete} />
+        </div>
+      )}
       {isTrash && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -680,7 +710,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
         cover_url: coverUrl || null,
         custom_attributes: parsedDoubanRating != null && Number.isFinite(parsedDoubanRating) ? { [externalRatingKey]: parsedDoubanRating } : null,
         page_count: pageCount ? Number(pageCount) : null,
-        ...(tagIds.length > 0 ? { tag_ids: tagIds } : {}),
+        tag_ids: tagIds.length > 0 ? tagIds : null,
       };
 
       if (selectedFile) {
@@ -1091,143 +1121,6 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
   );
 }
 
-function ImportBooksDialog({ onClose }: { onClose: () => void }) {
-  const qc = useQueryClient();
-  const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<ImportBooksResult | null>(null);
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [dryRun, setDryRun] = useState(false);
-
-  const importCsv = async () => {
-    if (!file) {
-      setError('请先选择 CSV 文件');
-      return;
-    }
-
-    setError('');
-    setSubmitting(true);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const data = await api.postForm<ImportBooksResult>(`/books/import${dryRun ? '?dry_run=true' : ''}`, form);
-      setResult(data);
-      if (!dryRun) {
-        qc.invalidateQueries({ queryKey: ['books'] });
-        qc.invalidateQueries({ queryKey: ['categories'] });
-        qc.invalidateQueries({ queryKey: ['tags'] });
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : '导入失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const problemRows = result?.rows.filter((row) => !row.success) ?? [];
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xl overflow-hidden rounded-xl bg-card shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="font-display text-xl font-medium text-foreground">批量导入书籍</h2>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="space-y-5 px-6 py-5">
-          <div className="rounded-lg border border-border bg-muted p-4">
-            <div className="text-sm font-medium text-foreground">CSV 模板</div>
-            <div className="mt-1 text-sm leading-6 text-muted-foreground">
-              模板包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建书籍元数据，不包含文件。
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
-            >
-              下载参考 CSV
-            </Button>
-          </div>
-
-          <label className="block space-y-2">
-            <span className="text-xs font-medium text-foreground">选择已填写的 CSV</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              className="block w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
-            />
-          </label>
-
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={dryRun}
-              onChange={(e) => setDryRun(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-            />
-            <span>仅校验不导入（预览模式）</span>
-          </label>
-
-          {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive dark:border-destructive/30 dark:bg-destructive/15">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {result && (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-medium text-foreground">
-                {result.dry_run
-                  ? `预览通过 ${result.valid} 行，跳过 ${result.skipped} 行，失败 ${result.failed} 行`
-                  : `已创建 ${result.created} 本，跳过 ${result.skipped} 行，失败 ${result.failed} 行`}
-              </div>
-              {problemRows.length > 0 && (
-                <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border">
-                  {problemRows.slice(0, 20).map((row) => (
-                    <div key={row.row} className="border-b border-border px-3 py-2 text-xs last:border-b-0">
-                      <span className="font-medium text-foreground">第 {row.row} 行</span>
-                      <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
-                      <div className="mt-1 flex items-center gap-1 text-destructive">
-                        <AlertTriangle className="h-3 w-3 shrink-0" />
-                        {row.error}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2.5 border-t border-border pt-5">
-            <Button type="button" variant="outline" onClick={onClose}>关闭</Button>
-            <Button type="button" onClick={importCsv} disabled={submitting}>
-              {submitting ? (dryRun ? '校验中...' : '导入中...') : (dryRun ? '开始校验' : '开始导入')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -1241,10 +1134,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [sort, setSort] = useState<SortMode>('updated_desc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
-  const currentUser = useCurrentUser();
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -1255,16 +1146,13 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   useEffect(() => {
     const shouldOpenCreate = searchParams.get('create') === '1';
-    const shouldOpenImport = searchParams.get('import') === '1';
 
-    if (!shouldOpenCreate && !shouldOpenImport) return;
+    if (!shouldOpenCreate) return;
 
-    if (shouldOpenCreate) setShowCreate(true);
-    if (shouldOpenImport) setShowImport(true);
+    setShowCreate(true);
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('create');
-    nextParams.delete('import');
     setSearchParams(nextParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -1304,6 +1192,9 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const restoreBook = useRestoreBook();
   const permanentDeleteBook = usePermanentDeleteBook();
   const emptyTrash = useEmptyTrash();
+  const deleteBook = useDeleteBook();
+  const [pendingDelete, setPendingDelete] = useState<{ book: BookSummary; deleteFiles: boolean } | null>(null);
+  const [deleteFilesForPending, setDeleteFilesForPending] = useState(false);
 
   const rawBooks = useMemo<BookSummary[]>(() => {
     if (pageView === 'trash') {
@@ -1364,6 +1255,21 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     }
   }, [emptyTrash]);
 
+  const handleRequestDelete = useCallback((book: BookSummary) => {
+    setDeleteFilesForPending(false);
+    setPendingDelete({ book, deleteFiles: false });
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    try {
+      await deleteBook.mutateAsync({ id: pendingDelete.book.id, deleteFiles: deleteFilesForPending });
+      setPendingDelete(null);
+    } catch {
+      // handled by mutation
+    }
+  }, [pendingDelete, deleteBook, deleteFilesForPending]);
+
   return (
     <>
       <ProtectedShell
@@ -1390,16 +1296,10 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               </Button>
             )}
             {pageView === 'bookshelf' && (
-              <>
-                <Button variant="outline" className="rounded-full" onClick={() => setShowImport(true)}>
-                  <FileUp className="h-4 w-4" />
-                  批量导入
-                </Button>
-                <Button className="rounded-full" onClick={() => setShowCreate(true)}>
-                  <BookPlus className="h-4 w-4" />
-                  添加书籍
-                </Button>
-              </>
+              <Button className="rounded-full" onClick={() => setShowCreate(true)}>
+                <BookPlus className="h-4 w-4" />
+                添加书籍
+              </Button>
             )}
           </div>
         </header>
@@ -1502,10 +1402,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
+                onOpenDetail={() => setDetailBookId(book.id)}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
+                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1518,10 +1419,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
+                onOpenDetail={() => setDetailBookId(book.id)}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
+                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1534,10 +1436,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
+                onOpenDetail={() => setDetailBookId(book.id)}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
+                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1561,10 +1464,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 key={book.id}
                 book={book}
                 index={index}
-                onOpenDetail={() => currentUser.data ? setDetailBookId(book.id) : toast('未登录无法操作')}
+                onOpenDetail={() => setDetailBookId(book.id)}
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
+                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1572,8 +1476,33 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       </ProtectedShell>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
-      {showImport && <ImportBooksDialog onClose={() => setShowImport(false)} />}
       <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        destructive
+        title={pendingDelete ? `Move "${pendingDelete.book.title}" to trash?` : ''}
+        description={
+          pendingDelete ? (
+            <div className="space-y-3">
+              <p>The book will be moved to trash and can be restored from there.</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={deleteFilesForPending}
+                  onChange={(e) => setDeleteFilesForPending(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-destructive focus:ring-destructive"
+                />
+                <span>Also delete associated files and covers (irreversible)</span>
+              </label>
+            </div>
+          ) : null
+        }
+        confirmLabel="Move to trash"
+        cancelLabel="Cancel"
+        confirmDisabled={deleteBook.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </>
   );
 }

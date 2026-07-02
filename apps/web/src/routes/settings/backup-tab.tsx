@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BatchImportPanel } from '@/components/batch-import-panel';
 import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
 import { API_BASE } from '@/lib/api';
 import { CloudStorageCard } from './storage-tab';
@@ -47,6 +48,18 @@ export function BackupTab({ settings: _settings, onToast }: { settings: Record<s
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">批量导入</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            通过 CSV 文件批量创建书籍。仅写入元数据，不包含文件；重复条目按 ISBN / 标题 + 作者去重。
+          </p>
+          <BatchImportPanel variant="embedded" />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">元数据导出</CardTitle>

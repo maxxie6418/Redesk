@@ -14,6 +14,7 @@ import {
   Cloud,
 } from 'lucide-react';
 import {
+  useDeleteFile,
   useDeleteUnassociatedFile,
   useFileLibrary,
   useMatchFileToBook,
@@ -26,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { cn } from '@/lib/utils';
 
 const FORMAT_OPTIONS = ['ALL', 'EPUB', 'PDF', 'MOBI', 'TXT', 'AZW3', 'DJVU', 'DOCX', 'FB2'];
@@ -260,6 +262,8 @@ export function FileLibraryPage() {
   const uploadUnassociated = useUploadUnassociatedFile();
   const matchFile = useMatchFileToBook();
   const deleteUnassociated = useDeleteUnassociatedFile();
+  const deleteFile = useDeleteFile();
+  const [pendingDeleteFile, setPendingDeleteFile] = useState<BookFileItem | null>(null);
   const bookSearch = useBooks({ q: searchQuery, page_size: 20 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,16 +280,20 @@ export function FileLibraryPage() {
     [matchFile],
   );
 
-  const handleDeleteUnassociated = useCallback(
-    async (fileId: number) => {
-      try {
-        await deleteUnassociated.mutateAsync(fileId);
-      } catch {
-        // ignore
+  const handleConfirmDeleteFile = useCallback(async () => {
+    const target = pendingDeleteFile;
+    if (!target) return;
+    setPendingDeleteFile(null);
+    try {
+      if (target.book_id != null) {
+        await deleteFile.mutateAsync({ bookId: target.book_id, fileId: target.id });
+      } else {
+        await deleteUnassociated.mutateAsync(target.id);
       }
-    },
-    [deleteUnassociated],
-  );
+    } catch {
+      // ignore
+    }
+  }, [pendingDeleteFile, deleteFile, deleteUnassociated]);
 
   const handleUploadUnassociated = useCallback(
     async (file: File) => {
@@ -524,24 +532,23 @@ export function FileLibraryPage() {
                 </td>
                 <td className="py-3 pr-3 text-xs text-muted-foreground">{file.created_at.slice(0, 10)}</td>
                 <td className="py-3 pr-5 text-right">
-                  {file.book_id == null ? (
-                    <div className="flex justify-end gap-1">
+                  <div className="flex justify-end gap-1">
+                    {file.book_id == null && (
                       <Button variant="outline" size="sm" onClick={() => setMatchDialog(file.id)}>
                         <Link className="mr-1 h-3.5 w-3.5" />
                         匹配书籍
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => void handleDeleteUnassociated(file.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => setPendingDeleteFile(file)}
+                      title="Delete file"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -729,6 +736,30 @@ export function FileLibraryPage() {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteFile !== null}
+        destructive
+        title="Delete this file?"
+        description={
+          pendingDeleteFile ? (
+            <div className="space-y-1">
+              <p>This will permanently delete the file and its storage objects.</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingDeleteFile.original_filename ?? 'unnamed file'}
+                {pendingDeleteFile.file_size != null
+                  ? ` (${formatSize(pendingDeleteFile.file_size)})`
+                  : ''}
+              </p>
+            </div>
+          ) : null
+        }
+        confirmLabel="Delete file"
+        cancelLabel="Cancel"
+        confirmDisabled={deleteFile.isPending || deleteUnassociated.isPending}
+        onConfirm={handleConfirmDeleteFile}
+        onCancel={() => setPendingDeleteFile(null)}
+      />
     </ProtectedShell>
   );
 }
