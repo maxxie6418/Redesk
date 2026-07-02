@@ -578,27 +578,94 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 ## 12. 系统管理（S1）
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | /system/stats | 系统统计（DB 大小/存储/书籍/文件数） |
-| POST | /system/backup | 手动备份（VACUUM INTO） |
-| POST | /system/fts-rebuild | 重建 FTS5 全文索引 |
-| POST | /system/clear-cache | 清理缓存（占位） |
+权限矩阵（与 [决策记录 2026-07-02](决策记录.md) 同步）：
+
+- 登录用户可读：`GET /system/stats`、`GET /system/storage`。
+- 仅管理员可写：`POST /system/backup`、`POST /system/fts-rebuild`、`POST /system/clear-cache`、`POST /system/reset`。
+- 错误码：未登录 401；已登录非管理员访问写接口 403。
+- 免登录模式（`VITE_AUTH_DISABLED=true` / `AUTH_DISABLED=true`）视为默认管理员会话，鉴权层统一放行。
+
+| 方法 | 路径 | 说明 | 权限 |
+| --- | --- | --- | --- |
+| GET | /system/stats | 系统统计（DB 大小/存储/书籍/文件数） | 登录可读 |
+| GET | /system/storage | 存储目录分布与 OSS 配置 | 登录可读 |
+| POST | /system/backup | 手动备份（VACUUM INTO） | 管理员 |
+| POST | /system/fts-rebuild | 重建 FTS5 全文索引 | 管理员 |
+| POST | /system/clear-cache | 清理 tmp 缓存 | 管理员 |
+| POST | /system/reset | 清库 + 重跑迁移（高破坏性，需二次口令验证） | 管理员 |
 
 ### GET /system/stats
 ```json
 {
   "data": {
+    "version": "1.0.6",
+    "node_env": "production",
+    "node_version": "v20.x",
+    "sqlite_version": "3.x",
+    "uptime_seconds": 3600,
     "db_size_bytes": 2457600,
     "storage_size_bytes": 47185920,
     "book_count": 142,
-    "file_count": 35
+    "trash_count": 3,
+    "file_count": 35,
+    "tag_count": 12,
+    "category_count": 5,
+    "user_count": 1
   }
 }
 ```
 
+> `user_count` 仅对管理员返回，非管理员请求该字段为 `undefined`。
+> `db_path` 绝对路径不再返回，避免向登录可读接口暴露全库物理位置。
+
+### GET /system/storage
+```json
+{
+  "data": {
+    "db_size_bytes": 2457600,
+    "total_files": 142,
+    "total_size_bytes": 47185920,
+    "breakdown": {
+      "books":    { "file_count": 35, "size_bytes": 47185920 },
+      "covers":   { "file_count": 140, "size_bytes": 0 },
+      "backups":  { "file_count": 1, "size_bytes": 2457600 },
+      "tmp":      { "file_count": 0, "size_bytes": 0 },
+      "unassociated": { "file_count": 0, "size_bytes": 0 }
+    },
+    "oss": {
+      "configured": false,
+      "provider": "",
+      "endpoint": "",
+      "bucket": ""
+    }
+  }
+}
+```
+
+> 不暴露全库绝对路径与全局磁盘细节，仅返回用户范围汇总。
+
 ### POST /system/backup
-响应 200：`{ "data": { "path": "/storage/backups/redesk-backup-1719568800000.db", "success": true } }`
+请求体：无需参数。
+响应 200：`{ "data": { "path": "<relative-path>", "success": true } }`
+未登录 401；非管理员 403。
+
+### POST /system/fts-rebuild
+请求体：无需参数。
+响应 200：`{ "data": { "success": true } }`
+未登录 401；非管理员 403。
+
+### POST /system/clear-cache
+请求体：无需参数。
+响应 200：`{ "data": { "success": true, "freed_bytes": 0, "removed_files": 0 } }`
+未登录 401；非管理员 403。
+
+### POST /system/reset
+请求体：
+```json
+{ "password": "当前管理员口令" }
+```
+响应 200：`{ "data": { "success": true, "message": "应用已重置，请刷新页面后重新设置管理员账户" } }`
+未登录 401；非管理员 403；口令错误 401。
 
 ---
 

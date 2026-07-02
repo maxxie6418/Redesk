@@ -6,7 +6,7 @@ import { runMigrationsOn } from '@redesk/db';
 import { ERROR_CODE } from '@redesk/shared';
 import { config, MONOREPO_ROOT } from '../config';
 import { getDb, getSqlite } from '../db';
-import { requireUserId, verifyPassword } from '../lib/auth';
+import { requireAdmin, requireUserId, isAdminRequest, verifyPassword } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { getSettingsOwnerId } from '../lib/storage-factory';
 import { join } from 'node:path';
@@ -109,10 +109,11 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(categories.owner_id, userId))
       .get()?.c ?? 0;
 
-    const userCount = db
-      .select({ c: sql<number>`count(*)` })
-      .from(users)
-      .get()?.c ?? 0;
+    // user_count 属于系统级信息，仅对管理员返回。
+    const isAdmin = isAdminRequest(req);
+    const userCount = isAdmin
+      ? db.select({ c: sql<number>`count(*)` }).from(users).get()?.c ?? 0
+      : undefined;
 
     const dbSize = getDbFileSize();
     const filesOnDisk = scanDir(config.storageDir);
@@ -124,7 +125,6 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
         node_version: getNodeVersion(),
         sqlite_version: getSqliteVersion(),
         uptime_seconds: getUptimeSeconds(),
-        db_path: config.databaseUrl,
         db_size_bytes: dbSize,
         storage_size_bytes: filesOnDisk.size_bytes,
         book_count: totalBooks,
@@ -201,7 +201,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/system/backup', async (req) => {
-    requireUserId(req);
+    requireAdmin(req);
     const sqlite = getSqlite();
     const backupPath = join(config.storageDir, 'backups', `redesk-backup-${Date.now()}.db`);
     const escapedPath = backupPath.replace(/\\/g, '/').replace(/'/g, "''");
@@ -221,7 +221,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/system/fts-rebuild', async (req) => {
-    requireUserId(req);
+    requireAdmin(req);
     const db = getDb();
     try {
       db.run(sql`INSERT INTO books_fts(books_fts) VALUES('rebuild')`);
@@ -234,7 +234,8 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.post('/system/clear-cache', async (_req) => {
+  app.post('/system/clear-cache', async (req) => {
+    requireAdmin(req);
     const tmpDir = join(config.storageDir, 'tmp');
     let freedBytes = 0;
     let removedFiles = 0;
@@ -274,7 +275,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/system/reset', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requireAdmin(req);
     const body = req.body as { password?: string } | undefined;
     const inputPassword = body?.password;
     if (!inputPassword) {

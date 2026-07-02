@@ -6,7 +6,7 @@ import { users } from '@redesk/db';
 import { DEFAULT_ADMIN_PASSWORD } from '../config';
 import { config } from '../config';
 import { getDb } from '../db';
-import { unauthorized } from './errors';
+import { forbidden, unauthorized } from './errors';
 import { getSessionUserId, setSessionUserId } from './session';
 
 export async function hashPassword(password: string): Promise<string> {
@@ -89,6 +89,22 @@ export function requireUserId(req: FastifyRequest): number {
     if (adminId) return adminId;
   }
   throw unauthorized();
+}
+
+// 系统管理权限收口：未登录走 401（由 requireUserId 抛），已登录非管理员走 403。
+// 免登录模式（config.authDisabled）下 requireUserId 已注入默认管理员上下文，等价放行。
+export function requireAdmin(req: FastifyRequest): number {
+  const userId = requireUserId(req);
+  if (!isAdmin(userId)) {
+    throw forbidden('需要管理员权限');
+  }
+  return userId;
+}
+
+export function isAdminRequest(req: FastifyRequest): boolean {
+  const userId = getOptionalUserId(req);
+  if (userId === undefined) return false;
+  return isAdmin(userId);
 }
 
 export function getOptionalUserId(req: FastifyRequest): number | undefined {
