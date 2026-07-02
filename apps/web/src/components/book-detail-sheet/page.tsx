@@ -354,7 +354,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
       setPendingBookDelete(false);
       onClose();
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Delete failed' });
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除失败' });
       setPendingBookDelete(false);
     }
   }, [bookId, deleteBook, pendingBookDeleteFiles, onClose]);
@@ -369,10 +369,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     setPendingFileDelete(null);
     try {
       await deleteFile.mutateAsync({ bookId, fileId: target.id });
-      setMessage({ type: 'info', text: 'File deleted' });
+      setMessage({ type: 'info', text: '文件已删除' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : 'Delete failed' });
+      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除失败' });
     }
   }, [bookId, pendingFileDelete, deleteFile]);
 
@@ -909,8 +909,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                           type="button"
                           onClick={() => handleRequestFileDelete(f)}
                           className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                          title="Delete file"
-                          aria-label={`Delete ${f.original_filename ?? 'file'}`}
+                          title="删除文件"
+                          aria-label={`删除 ${f.original_filename ?? '文件'}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1397,13 +1397,13 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     <ConfirmDialog
       open={pendingFileDelete !== null}
       destructive
-      title="Delete this file?"
+      title="删除此文件？"
       description={
         pendingFileDelete ? (
           <div className="space-y-1">
-            <p>This will permanently delete the file and its storage objects.</p>
+            <p>将永久删除该文件及其存储对象。</p>
             <p className="text-xs text-muted-foreground">
-              {pendingFileDelete.original_filename ?? 'unnamed file'}
+              {pendingFileDelete.original_filename ?? '未命名文件'}
               {pendingFileDelete.file_size != null
                 ? ` (${formatFileSize(pendingFileDelete.file_size)})`
                 : ''}
@@ -1411,8 +1411,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
           </div>
         ) : null
       }
-      confirmLabel="Delete file"
-      cancelLabel="Cancel"
+      confirmLabel="删除文件"
+      cancelLabel="取消"
       confirmDisabled={deleteFile.isPending}
       onConfirm={handleConfirmFileDelete}
       onCancel={() => setPendingFileDelete(null)}
