@@ -52,8 +52,40 @@ export const EXTENSION_FORMAT: Record<string, string> = {
 
 const COVER_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
 
+// 把指定 book 的指定 file 升为主文件（按"无主则升、有主不动"规则），并把同书其他主文件降级。
+// 未关联文件关联入书时使用，等同于 isPrimary=undefined 的语义。
+function applyPrimaryOnLink(
+  db: ReturnType<typeof getDb>,
+  bookId: number,
+  linkedFileId: number,
+): void {
+  const existingPrimary = db
+    .select({ id: bookFiles.id })
+    .from(bookFiles)
+    .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.is_primary, 1)))
+    .get();
+  if (existingPrimary) return;
+  db.update(bookFiles)
+    .set({ is_primary: 1, updated_at: now() })
+    .where(eq(bookFiles.id, linkedFileId))
+    .run();
+}
+
 function now(): string {
   return new Date().toISOString();
+}
+
+// multipart 字段中的布尔值：仅接受字符串 'true' / 'false'，未传合法，其他值抛 400。
+function readMultipartBool(field: unknown): 'true' | 'false' | undefined {
+  if (field === undefined || field === null) return undefined;
+  const value = (field as { value?: unknown }).value;
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'is_primary 必须是字符串 true 或 false');
+  }
+  if (value === 'true') return 'true';
+  if (value === 'false') return 'false';
+  throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'is_primary 仅接受字符串 true 或 false');
 }
 
 function safeName(ext: string): string {
@@ -473,7 +505,7 @@ export async function saveUploadedFile(
   bookId: number | null,
   filename: string,
   stream: NodeJS.ReadableStream,
-  makePrimary: boolean,
+  isPrimary: boolean | undefined,
   preferredMode?: StorageMode,
 ): Promise<typeof bookFiles.$inferSelect> {
   const mode = preferredMode ?? getDefaultStorageMode();
@@ -488,6 +520,28 @@ export async function saveUploadedFile(
   const timestamp = now();
 
   const db = getDb();
+
+  // 主文件升/降规则（与决策记录 2026-07-02 / WL-002 同步）：
+  // - 未关联文件（bookId == null）永远为非主文件
+  // - 关联到书籍的文件：书无主文件 → 必须升主；书有主文件 → 仅在 isPrimary='true' 时切换
+  let becomesPrimary: boolean;
+  if (bookId == null) {
+    becomesPrimary = false;
+  } else {
+    const existingPrimary = db
+      .select({ id: bookFiles.id })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.book_id, bookId), eq(bookFiles.is_primary, 1)))
+      .get();
+    if (isPrimary === true) {
+      becomesPrimary = true;
+    } else if (!existingPrimary) {
+      becomesPrimary = true;
+    } else {
+      becomesPrimary = false;
+    }
+  }
+
   const inserted = db
     .insert(bookFiles)
     .values({
@@ -503,14 +557,14 @@ export async function saveUploadedFile(
       mime_type: mime,
       file_size: writeResult.size,
       checksum: writeResult.checksum,
-      is_primary: makePrimary ? 1 : 0,
+      is_primary: becomesPrimary ? 1 : 0,
       created_at: timestamp,
       updated_at: timestamp,
     })
     .returning()
     .get();
 
-  if (makePrimary && bookId != null) {
+  if (becomesPrimary && bookId != null) {
     db.update(bookFiles)
       .set({ is_primary: 0 })
       .where(and(eq(bookFiles.book_id, bookId), ne(bookFiles.id, inserted.id)))
@@ -591,7 +645,7 @@ export function fileRoutes(app: FastifyInstance): void {
     const modeField = (data.fields.storage_mode as { value?: string } | undefined)?.value;
     const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
 
-    const saved = await saveUploadedFile(userId, null, data.filename, data.file, false, mode);
+    const saved = await saveUploadedFile(userId, null, data.filename, data.file, undefined, mode);
     reply.code(201);
     return { data: saved };
   });
@@ -716,6 +770,8 @@ export function fileRoutes(app: FastifyInstance): void {
       .where(eq(bookFiles.id, fileId))
       .run();
 
+    applyPrimaryOnLink(db, book_id, fileId);
+
     return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
   });
 
@@ -740,6 +796,8 @@ export function fileRoutes(app: FastifyInstance): void {
       .set({ book_id, updated_at: now() })
       .where(eq(bookFiles.id, fileId))
       .run();
+
+    applyPrimaryOnLink(db, book_id, fileId);
 
     return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
   });
@@ -796,7 +854,12 @@ export function fileRoutes(app: FastifyInstance): void {
     const modeField = (data.fields.storage_mode as { value?: string } | undefined)?.value;
     const mode = storageModeSchema.safeParse(modeField).data ?? getDefaultStorageMode();
 
-    const saved = await saveUploadedFile(userId, bookId, data.filename, data.file, true, mode);
+    // 显式读取并校验 is_primary：未传 / 'false' 均表示"不切换"；非法值 400。
+    // 内部 saveUploadedFile 收到 boolean；undefined 表示"按规则自动判断"。
+    const isPrimaryField = readMultipartBool(data.fields.is_primary);
+    const isPrimary = isPrimaryField === undefined ? undefined : isPrimaryField === 'true';
+
+    const saved = await saveUploadedFile(userId, bookId, data.filename, data.file, isPrimary, mode);
     reply.code(201);
     return { data: saved };
   });

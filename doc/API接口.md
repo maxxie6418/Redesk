@@ -341,20 +341,55 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | POST | /files/unassociated | 上传未关联文件（进入文件池），支持 `storage_mode` | 2.x |
 | GET | /files/unassociated | 未关联文件列表 | 2.x |
 | DELETE | /files/unassociated/{fileId} | 删除未关联文件 | 2.x |
+| POST | /files/unassociated/{fileId}/associate | 未关联文件关联到指定书籍 | 2.x |
 | POST | /files/{fileId}/match | 将文件池中的文件匹配到指定书籍 | 2.x |
 
 > `/files` 与 `/files/unassociated` 均只返回当前用户 `owner_id` 下的文件。checksum 去重范围为当前用户整个书库（已关联与未关联文件池），重复时返回 `DUPLICATE_FILE`。
 
 ### POST /books/{id}/files
 
-请求：`multipart/form-data`，字段 `file`（二进制）、`is_primary`（bool，可选）、`storage_mode`（`local_only`/`cloud_only`/`dual`，可选，缺省系统默认）。
+请求：`multipart/form-data`，字段：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `file` | 二进制 | 是 | 书籍文件 |
+| `is_primary` | 字符串 `true` / `false` | 否 | 主文件切换显式标志 |
+| `storage_mode` | `local_only` / `cloud_only` / `dual` | 否 | 缺省系统默认 |
+
+`is_primary` 字段语义（与决策记录 2026-07-02 / WL-002 同步）：
+
+- 严格只接受字符串 `true` / `false`，不接受 `1` / `0` 或其他值。
+- 字段未传等价于"未传"，不构成"显式要求"。
+- 非法值返回 400 `VALIDATION_ERROR`。
+- 收到合法值后按主文件升/降规则处理：
+  - 该书还没有任何主文件时，本文件**必须**自动设为主文件。
+  - 已存在主文件时，仅在 `is_primary=true` 时切换。
+  - `is_primary=false` / 未传：均表示"不切换"，不会把当前主文件降为非主文件。
+
 后端处理：按 `storage_mode` 写入主端，另一端标记为 `pending`（`dual` 模式下），抽取 EPUB 封面缓存、计算 checksum、识别格式。
 响应 201：`{ "data": { "id": 9, "file_format": "EPUB", "is_primary": true, "storage_mode": "local_only", "local_path": "...", "remote_key": null, "primary_location": "local", "sync_status": "synced" } }`
 
 ### POST /files/unassociated
 
 请求：`multipart/form-data`，字段 `file`（二进制）、`storage_mode`（可选，缺省系统默认）。
+未关联文件永远为非主文件（`is_primary=false`）。
 响应 201：与 POST /books/{id}/files 结构一致。
+
+### POST /files/unassociated/{fileId}/associate
+
+请求体：`{ "book_id": <number> }`
+将未关联文件关联到指定书籍。关联后按主文件升/降规则处理：
+
+- 该书还没有任何主文件时，本文件自动设为主文件。
+- 已存在主文件时，不切换主文件。
+
+响应 200：返回更新后的 `bookFiles` 记录。
+
+### POST /files/{fileId}/match
+
+请求体：`{ "book_id": <number> }`
+与 `POST /files/unassociated/{fileId}/associate` 语义一致：未关联文件匹配入书。匹配后按主文件升/降规则处理（无主则升、有主不动）。
+响应 200：返回更新后的 `bookFiles` 记录。
 
 ### GET .../download
 
