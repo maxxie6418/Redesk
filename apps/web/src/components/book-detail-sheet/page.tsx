@@ -1,5 +1,4 @@
-﻿import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -158,8 +157,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const [showCoverPanel, setShowCoverPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('archive');
   const [editMode, setEditMode] = useState(false);
-  const [shouldRender, setShouldRender] = useState(open);
-  const [visible, setVisible] = useState(open);
 
   const categories = personalCategories;
 
@@ -369,19 +366,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
 
   const isDialog = variant === 'dialog';
 
-  useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      const frame = requestAnimationFrame(() => setVisible(true));
-      return () => cancelAnimationFrame(frame);
-    }
-
-    setVisible(false);
-    const timer = window.setTimeout(() => setShouldRender(false), 180);
-    return () => window.clearTimeout(timer);
-  }, [open]);
-
-  if (!shouldRender) return null;
+  if (!open) return null;
 
   return (
     <>
@@ -389,29 +374,26 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       type="button"
       aria-label="关闭书籍详情"
       className={cn(
-        'fixed inset-0 cursor-default bg-black/10 transition-opacity duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'fixed inset-0 cursor-default bg-black/10',
         isDialog ? 'z-40 bg-black/40' : 'z-30',
-        visible ? 'opacity-100' : 'opacity-0',
       )}
       onClick={onClose}
     />
     <div
       className={cn(
-        'fixed right-0 z-40 flex flex-col overflow-hidden border-l border-border bg-background shadow-2xl transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'fixed right-0 z-40 flex flex-col overflow-hidden border-l border-border bg-background shadow-2xl',
         isDialog
           ? 'inset-0 z-50 flex items-center justify-center bg-transparent p-3 shadow-none border-none sm:p-4'
           : 'inset-y-0 w-[min(1000px,calc(100vw-160px))] min-w-[720px]',
-        isDialog ? (visible ? 'opacity-100' : 'opacity-0') : (visible ? 'translate-x-0' : 'translate-x-3'),
       )}
       onClick={isDialog ? onClose : undefined}
     >
       <div
         className={cn(
-          'flex flex-col overflow-hidden bg-background shadow-2xl transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          'flex flex-col overflow-hidden bg-background shadow-2xl',
           isDialog
             ? 'h-full max-h-full w-full max-w-[1180px] rounded-xl border border-border'
             : 'h-full w-full',
-          isDialog ? (visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-1 scale-[0.992] opacity-0') : 'opacity-100',
         )}
         onClick={isDialog ? (e) => e.stopPropagation() : undefined}
       >
