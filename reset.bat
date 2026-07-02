@@ -1,39 +1,68 @@
 @echo off
-chcp 65001 >nul
-echo ========================================
-echo   Redesk - 重置本地开发环境
-echo ========================================
+REM ============================================================
+REM Redesk - Reset Local Dev Environment (ASCII-only)
+REM -----------------------------------------------------------
+REM Why this script is ASCII-only:
+REM   cmd.exe and PowerShell on a CN-locale Windows use code
+REM   page 936 (GBK) by default. Non-ASCII bytes are interpreted
+REM   as GBK commands, which causes "X is not recognized" errors.
+REM   Keeping the script pure ASCII (and switching the console
+REM   to UTF-8) avoids that class of bugs entirely.
+REM -----------------------------------------------------------
+REM Usage:
+REM   - Double-click reset.bat (cmd.exe)
+REM   - From cmd.exe:    reset.bat
+REM   - From PowerShell: cmd /c reset.bat
+REM ============================================================
+
+setlocal
+chcp 65001 >NUL
+
+echo ==========================================================
+echo   Redesk - Reset Local Dev Environment
+echo ==========================================================
 echo.
 
-REM 1. 停止所有 node 进程
-echo [1/4] 停止 node 进程...
-taskkill /f /im node.exe >nul 2>&1
-timeout /t 2 /nobreak >nul
-echo   完成
+REM 1. Stop any running Node dev servers.
+echo [1/4] Stopping node processes...
+taskkill /F /IM node.exe >NUL 2>&1
+REM Exclude IDE processes (node_repl.exe handles the IDE itself).
+timeout /T 2 /NOBREAK >NUL
+echo   done.
 
-REM 2. 删除数据库
-echo [2/4] 删除数据库...
-if exist "data\redesk.db" (
-    del /f /q "data\redesk.db"
-    echo   已删除 data\redesk.db
-) else (
-    echo   数据库不存在，跳过
-)
+REM 2. Delete the SQLite database file (and WAL sidecars if any).
+echo [2/4] Removing database files...
+if exist "data\redesk.db"      del /F /Q "data\redesk.db"
+if exist "data\redesk.db-shm"  del /F /Q "data\redesk.db-shm"
+if exist "data\redesk.db-wal"  del /F /Q "data\redesk.db-wal"
+echo   done.
 
-REM 3. 删除存储文件
-echo [3/4] 删除存储文件...
-if exist "data\storage" (
-    rmdir /s /q "data\storage"
-    echo   已删除 data\storage
-) else (
-    echo   存储目录不存在，跳过
-)
+REM 3. Remove the storage directory (book covers, files, etc.).
+echo [3/4] Removing storage directory...
+if exist "data\storage" rmdir /S /Q "data\storage"
+echo   done.
 
-REM 4. 重新迁移并启动
-echo [4/4] 运行数据库迁移...
+REM 4. Re-run migrations to recreate an empty schema.
+echo [4/4] Running database migrations...
 call pnpm db:migrate
+if errorlevel 1 (
+  echo.
+  echo [ERROR] pnpm db:migrate failed. Aborting.
+  pause
+  exit /b 1
+)
 echo.
-echo ========================================
-echo   环境已重置，执行 pnpm dev 启动服务
-echo ========================================
+
+REM Optional: also clear local .temp test data.
+REM Comment out the next block if you want to keep .temp/.
+if exist ".temp" (
+  echo [bonus] Clearing .temp test artifacts...
+  rmdir /S /Q ".temp"
+  echo   done.
+)
+
+echo ==========================================================
+echo   Reset complete. Run 'pnpm dev' to start the services.
+echo ==========================================================
+endlocal
 pause
