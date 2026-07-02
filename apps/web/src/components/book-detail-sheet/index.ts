@@ -1,2 +1,2 @@
 export { BookDetailSheet } from './page';
-export type { DetailTab, EditableField, StatusMessage, ToastType } from './types';
+export type { DetailTab, StatusMessage, ToastType } from './types';

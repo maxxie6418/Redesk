@@ -8,11 +8,9 @@ import {
   Loader2,
   NotebookPen,
   RefreshCcw,
-  Star,
   Trash2,
   Upload,
   X,
-  FolderOpen,
   Pencil,
   ArrowUpFromLine,
   Archive,
@@ -46,10 +44,18 @@ import {
 } from '@/hooks/use-books';
 import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
-import { useTags, type TagItem } from '@/hooks/use-tags';
+import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 import { API_BASE } from '@/lib/api';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EditableTextField } from './editable-text-field';
+import { EditableSelectField } from './editable-select-field';
+import { EditableNumberField } from './editable-number-field';
+import { EditableDateField } from './editable-date-field';
+import { EditableLongTextField } from './editable-long-text-field';
+import { EditableJsonField } from './editable-json-field';
+import { EditableTagsField } from './editable-tags-field';
+import { RatingDisplay } from './rating-display';
 
 const COVER_URL_BASE = API_BASE;
 
@@ -111,23 +117,6 @@ function StorageStatusBadge({ file }: { file: BookFileItem }) {
   );
 }
 
-function TagAtom({ children, size = 'default' }: { children: React.ReactNode; size?: 'default' | 'small' | 'tiny' }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground',
-        size === 'default' && 'rounded-md px-2.5 py-[3px] text-xs leading-[1.4]',
-        size === 'small' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
-        size === 'tiny' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-type EditableField = 'title' | 'author' | 'status' | 'category' | 'rating' | 'readingPurpose' | 'visibility' | 'sourceUrl' | 'customAttributes' | 'description' | null;
-
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
 const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string }[] = [
@@ -137,31 +126,6 @@ const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string
   { id: 'ai', label: 'AI', icon: Sparkles, tint: 'bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)]' },
 ];
 
-function extractDomain(url: string) {
-  try {
-    const u = new URL(url);
-    return u.hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
-
-const ATTR_LABELS: Record<string, string> = {
-  douban_rating: '豆瓣评分',
-  neodb_rating: 'NeoDB 评分',
-  douban_id: '豆瓣 ID',
-  isbn: 'ISBN',
-  asin: 'ASIN',
-  series: '丛书',
-  edition: '版次',
-  language: '语言',
-  original_language: '原作语言',
-  format: '装帧',
-  price: '定价',
-  douban_url: '豆瓣链接',
-  neodb_url: 'NeoDB 链接',
-};
-
 export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
@@ -170,6 +134,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const files = useBookFiles(bookId ?? 0);
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');
+  const genreCategories = useCategories('GENRE');
   const tagsQuery = useTags();
   const fetchCover = useFetchBookCover();
   const activateCover = useActivateBookCover();
@@ -186,9 +151,6 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const [pendingFileDelete, setPendingFileDelete] = useState<BookFileItem | null>(null);
 
   const [message, setMessage] = useState<StatusMessage>(null);
-  const [editingField, setEditingField] = useState<EditableField>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
   const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
@@ -196,89 +158,48 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const [showCoverPanel, setShowCoverPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('archive');
   const [editMode, setEditMode] = useState(false);
+
   const categories = personalCategories;
-  const tags = tagsQuery;
 
-  const startEdit = useCallback((field: EditableField, value: string) => {
-    setEditingField(field);
-    setEditValue(value);
+  const showMessage = useCallback((text: string, type: ToastType = 'info') => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 2000);
   }, []);
 
-  const cancelEdit = useCallback(() => {
-    setEditingField(null);
-    setEditValue('');
-  }, []);
-
-  const saveField = useCallback(async (field: EditableField, value: string) => {
-    if (!bookId || !book.data) return;
-    try {
-      const payload: Record<string, unknown> = {};
-      switch (field) {
-        case 'title':
-          payload.title = value;
-          break;
-        case 'author':
-          payload.author = value || null;
-          break;
-        case 'status':
-          payload.status = value;
-          break;
-        case 'category':
-          payload.category_id = value ? Number(value) : null;
-          break;
-        case 'rating':
-          payload.rating = value ? Number(value) : null;
-          break;
-        case 'readingPurpose':
-          payload.reading_purpose = value || null;
-          break;
-        case 'visibility':
-          payload.visibility = value;
-          break;
-        case 'sourceUrl':
-          payload.source_url = value || null;
-          break;
-        case 'description':
-          payload.description = value || null;
-          break;
-        case 'customAttributes':
-          payload.custom_attributes = value ? JSON.parse(value) as Record<string, unknown> : null;
-          break;
-        default:
-          return;
-      }
-      await updateBook.mutateAsync({ id: bookId, ...payload });
-      setMessage({ type: 'info', text: '已更新' });
-      setTimeout(() => setMessage(null), 2000);
-    } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
-    } finally {
-      setEditingField(null);
-      setEditValue('');
-    }
-  }, [bookId, book.data, updateBook]);
-
-  const saveTags = useCallback(async () => {
+  const handleUpdate = useCallback(async (_field: string, payload: Record<string, unknown>) => {
     if (!bookId) return;
-    try {
-      await updateBook.mutateAsync({ id: bookId, tag_ids: editTagIds });
-      setMessage({ type: 'info', text: '标签已更新' });
-      setTimeout(() => setMessage(null), 2000);
-    } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新失败' });
+    await updateBook.mutateAsync({ id: bookId, ...payload });
+    showMessage('已更新');
+  }, [bookId, updateBook, showMessage]);
+
+  const saveText = useCallback(async (field: string, value: string, options?: { required?: boolean }) => {
+    if (options?.required && !value.trim()) throw new Error('不能为空');
+    await handleUpdate(field, { [field]: value || null });
+  }, [handleUpdate]);
+
+  const saveNumber = useCallback(async (field: string, value: number | null) => {
+    await handleUpdate(field, { [field]: value });
+  }, [handleUpdate]);
+
+  const saveDate = useCallback(async (field: string, value: string | null) => {
+    await handleUpdate(field, { [field]: value });
+  }, [handleUpdate]);
+
+  const saveSelect = useCallback(async (field: string, value: string, options?: { numberTransform?: boolean }) => {
+    if (options?.numberTransform) {
+      await handleUpdate(field, { [field]: value ? Number(value) : null });
+    } else {
+      await handleUpdate(field, { [field]: value });
     }
-    setEditingField(null);
-  }, [bookId, editTagIds, updateBook]);
+  }, [handleUpdate]);
 
-  const toggleTag = useCallback((tagId: number) => {
-    setEditTagIds((prev) => (prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]));
-  }, []);
+  const saveTags = useCallback(async (tagIds: number[]) => {
+    await handleUpdate('tag_ids', { tag_ids: tagIds });
+  }, [handleUpdate]);
 
-  const startEditTags = useCallback(() => {
-    if (!book.data) return;
-    setEditTagIds(book.data.tag_ids);
-    setEditingField('tags' as unknown as EditableField);
-  }, [book.data]);
+  const saveJson = useCallback(async (field: string, value: Record<string, unknown> | null) => {
+    await handleUpdate(field, { [field]: value });
+  }, [handleUpdate]);
 
   const handleFavorite = useCallback(async () => {
     if (!book.data || !bookId) return;
@@ -429,17 +350,6 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const progress = b ? bookProgress(b) : 0;
   const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
 
-  const customAttrs = useMemo(() => {
-    if (!b?.custom_attributes) return [];
-    if (typeof b.custom_attributes === 'object' && b.custom_attributes !== null) {
-      return Object.entries(b.custom_attributes).map(([k, v]: [string, unknown]) => {
-          const label = ATTR_LABELS[k] ?? k;
-          return { label, value: String(v) };
-      });
-    }
-    return [];
-  }, [b?.custom_attributes]);
-
   const coverGroups = useMemo(() => {
     if (!covers.data) return null;
     const groups: Record<string, { label: string; items: BookCoverItem[] }> = {
@@ -456,160 +366,6 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   }, [covers.data]);
 
   if (!open) return null;
-
-  const InlineEditText = ({ field, label, value, multiline = false }: { field: EditableField; label: string; value: string; multiline?: boolean }) => {
-    const isEditing = editMode && editingField === field;
-    if (isEditing) {
-      return (
-        <div className="min-w-0 space-y-1">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          {multiline ? (
-            <textarea
-              autoFocus
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={() => saveField(field, editValue)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') cancelEdit();
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveField(field, editValue);
-              }}
-              className="w-full rounded-md border border-primary bg-muted px-2 py-1 text-[13px] outline-none"
-              rows={3}
-            />
-          ) : (
-            <input
-              autoFocus
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={() => saveField(field, editValue)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') cancelEdit();
-                if (e.key === 'Enter') saveField(field, editValue);
-              }}
-              className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
-            />
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="flex min-w-0 justify-between gap-2">
-        <span className="shrink-0 text-muted-foreground">{label}</span>
-        {editMode ? (
-          <button
-            type="button"
-            onClick={() => startEdit(field, value)}
-            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
-          >
-            {value || '—'}
-          </button>
-        ) : (
-          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{value || '—'}</span>
-        )}
-      </div>
-    );
-  };
-
-  const InlineEditSelect = ({ field, label, value, options }: { field: EditableField; label: string; value: string; options: { value: string; label: string }[] }) => {
-    const isEditing = editMode && editingField === field;
-    if (isEditing) {
-      return (
-        <div className="min-w-0 space-y-1">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          <select
-            autoFocus
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={() => saveField(field, editValue)}
-            className="h-7 w-full min-w-0 rounded-md border border-primary bg-muted px-2 text-[13px] outline-none"
-          >
-            {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-      );
-    }
-    const displayLabel = options.find((o) => o.value === value)?.label ?? value;
-    return (
-      <div className="flex min-w-0 justify-between gap-2">
-        <span className="shrink-0 text-muted-foreground">{label}</span>
-        {editMode ? (
-          <button
-            type="button"
-            onClick={() => startEdit(field, value)}
-            className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
-          >
-            {displayLabel || '—'}
-          </button>
-        ) : (
-          <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">{displayLabel || '—'}</span>
-        )}
-      </div>
-    );
-  };
-
-  const InlineRating = () => {
-    const isEditing = editMode && editingField === 'rating';
-    const currentRating = b?.rating ?? null;
-    const displayRating = isEditing ? (editValue ? Number(editValue) : null) : currentRating;
-    if (isEditing) {
-      return (
-        <div className="flex justify-between gap-2">
-          <span className="text-muted-foreground">评分</span>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  const newVal = displayRating === r ? '' : String(r);
-                  setEditValue(newVal);
-                  saveField('rating', newVal);
-                }}
-                className={cn(r <= (displayRating ?? 0) ? 'text-[#f5c842]' : 'text-muted-foreground/40')}
-              >
-                <Star className="h-4 w-4 fill-current" />
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="flex justify-between gap-2">
-        <span className="text-muted-foreground">评分</span>
-        {editMode ? (
-          <button
-            type="button"
-            onClick={() => startEdit('rating', currentRating ? String(currentRating) : '')}
-            className="flex items-center gap-1 font-medium text-foreground hover:text-primary transition-colors"
-          >
-            {currentRating != null ? (
-              <>
-                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
-                {currentRating}
-              </>
-            ) : (
-              '—'
-            )}
-          </button>
-        ) : (
-          <span className="flex items-center gap-1 font-medium text-foreground">
-            {currentRating != null ? (
-              <>
-                <Star className="h-3.5 w-3.5 fill-[#f5c842] text-[#f5c842]" />
-                {currentRating}
-              </>
-            ) : (
-              '—'
-            )}
-          </span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <>
@@ -769,10 +525,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (editMode) cancelEdit();
-                      setEditMode(!editMode);
-                    }}
+                    onClick={() => setEditMode(!editMode)}
                     className={cn(
                       'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px',
                       editMode ? 'border-primary bg-primary/10 text-primary' : 'border-border',
@@ -935,7 +688,6 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                       onClick={() => {
                         setActiveTab(tab.id);
                         if (editMode) {
-                          cancelEdit();
                           setEditMode(false);
                         }
                       }}
@@ -962,20 +714,21 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               <>
               {/* Header */}
               <div className="mb-6">
-                {editMode ? (
-                  <button
-                    type="button"
-                    onClick={() => startEdit('title', b.title)}
-                    className="mb-1 block w-full text-left font-display text-[28px] font-semibold leading-tight text-foreground hover:text-primary transition-colors"
-                  >
-                    {b.title}
-                  </button>
-                ) : (
-                  <h1 className="mb-1 block w-full font-display text-[28px] font-semibold leading-tight text-foreground">
-                    {b.title}
-                  </h1>
+                <EditableTextField
+                  label=""
+                  value={b.title}
+                  editMode={editMode}
+                  required
+                  onSave={async (v) => saveText('title', v, { required: true })}
+                />
+                {b.subtitle && (
+                  <EditableTextField
+                    label=""
+                    value={b.subtitle}
+                    editMode={editMode}
+                    onSave={async (v) => saveText('subtitle', v)}
+                  />
                 )}
-                {b.subtitle && <p className="mb-3 text-[15px] text-muted-foreground italic">{b.subtitle}</p>}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted-foreground">
                   {b.author && <span className="font-medium text-foreground">{b.author}</span>}
                   {b.translator && <span>·</span>}
@@ -989,136 +742,36 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                 {/* Category Badge */}
                 {b.category_name && (
                   <div className="mt-3">
-                    {editMode ? (
-                      <button
-                        type="button"
-                        onClick={() => startEdit('category', b.category_id ? String(b.category_id) : '')}
-                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm transition-all hover:-translate-y-px border-l-[3px] border-l-primary"
-                      >
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                        {b.category_name}
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary">
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                        {b.category_name}
-                      </span>
-                    )}
+                    <EditableSelectField
+                      label=""
+                      value={b.category_id ? String(b.category_id) : ''}
+                      options={[
+                        { value: '', label: '未分类' },
+                        ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
+                      ]}
+                      editMode={editMode}
+                      onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
+                    />
                   </div>
                 )}
 
                 {/* Rating + Tags */}
                 <div className="mt-4 flex items-center gap-0 border-t border-border pt-4">
-                  {editMode ? (
-                    <button
-                      type="button"
-                      onClick={() => startEdit('rating', b.rating != null ? String(b.rating) : '')}
-                      className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground hover:text-primary transition-colors"
-                    >
-                      {b.rating != null ? (
-                        <>
-                          {[1, 2, 3, 4, 5].map((r) => (
-                            <Star
-                              key={r}
-                              className={cn(
-                                'h-4 w-4',
-                                r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
-                              )}
-                            />
-                          ))}
-                          <span className="ml-1">{b.rating}</span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">未评分</span>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="flex shrink-0 items-center gap-1 text-[15px] font-bold text-foreground">
-                      {b.rating != null ? (
-                        <>
-                          {[1, 2, 3, 4, 5].map((r) => (
-                            <Star
-                              key={r}
-                              className={cn(
-                                'h-4 w-4',
-                                r <= b.rating! ? 'fill-[#f5c842] text-[#f5c842]' : 'text-muted-foreground/30'
-                              )}
-                            />
-                          ))}
-                          <span className="ml-1">{b.rating}</span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">未评分</span>
-                      )}
-                    </div>
-                  )}
+                  <RatingDisplay
+                    rating={b.rating}
+                    editMode={editMode}
+                    onSave={async (r) => saveSelect('rating', String(r ?? ''), { numberTransform: true })}
+                  />
                   <div className="mx-4 h-6 w-px bg-border" />
-                  {editMode ? (
-                    <button
-                      type="button"
-                      onClick={startEditTags}
-                      className="flex min-w-0 flex-1 flex-wrap gap-1.5 text-left"
-                    >
-                      {b.tag_names.length > 0 ? (
-                        b.tag_names.map((tag: string) => (
-                          <TagAtom key={tag} size="small">{tag}</TagAtom>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground/60">点击添加标签</span>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
-                      {b.tag_names.length > 0 ? (
-                        b.tag_names.map((tag: string) => (
-                          <TagAtom key={tag} size="small">{tag}</TagAtom>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground/40">无标签</span>
-                      )}
-                    </div>
-                  )}
+                  <EditableTagsField
+                    label=""
+                    tagIds={b.tag_ids}
+                    tagNames={b.tag_names}
+                    allTags={tagsQuery.data ?? []}
+                    editMode={editMode}
+                    onSave={saveTags}
+                  />
                 </div>
-                {editingField === ('tags' as unknown as EditableField) && (
-                  <div className="mt-2 rounded-lg border border-border bg-muted p-3">
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {tags.data?.map((t: TagItem) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => toggleTag(t.id)}
-                          className={cn(
-                            'flex items-center gap-1 rounded-full border px-3 py-1 text-[12px] transition-all',
-                            editTagIds.includes(t.id)
-                              ? 'border-primary bg-primary/10 text-primary font-medium'
-                              : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          {editTagIds.includes(t.id) && (
-                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
-                          )}
-                          {t.name}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={cancelEdit}
-                        className="h-7 rounded-md border border-border px-3 text-[12px] text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                        取消
-                      </button>
-                      <button
-                        type="button"
-                        onClick={saveTags}
-                        className="h-7 rounded-md bg-primary px-3 text-[12px] text-white hover:bg-primary/90"
-                      >
-                        保存
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Archive Card */}
@@ -1128,73 +781,62 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   书籍档案
                 </h3>
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-2 text-[13px]">
-                  <InlineEditText field="title" label="书名" value={b.title} />
-                  <InlineEditText field="author" label="作者" value={b.author ?? ''} />
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">出版社</span>
-                    <span className="font-medium text-foreground">{b.publisher ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">出版年</span>
-                    <span className="font-medium text-foreground">{b.publish_year ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">ISBN</span>
-                    <span className="font-medium text-foreground">{b.isbn ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">页数</span>
-                    <span className="font-medium text-foreground">{b.page_count ?? '—'}</span>
-                  </div>
-                  <InlineEditSelect
-                    field="category"
-                    label="分类"
+                  <EditableTextField label="书名" value={b.title} editMode={editMode} required onSave={async (v) => saveText('title', v, { required: true })} />
+                  <EditableTextField label="作者" value={b.author ?? ''} editMode={editMode} onSave={async (v) => saveText('author', v)} />
+                  <EditableTextField label="副标题" value={b.subtitle ?? ''} editMode={editMode} onSave={async (v) => saveText('subtitle', v)} />
+                  <EditableTextField label="译者" value={b.translator ?? ''} editMode={editMode} onSave={async (v) => saveText('translator', v)} />
+                  <EditableTextField label="原作名" value={b.original_title ?? ''} editMode={editMode} onSave={async (v) => saveText('original_title', v)} />
+                  <EditableTextField label="出版社" value={b.publisher ?? ''} editMode={editMode} onSave={async (v) => saveText('publisher', v)} />
+                  <EditableNumberField label="出版年" value={b.publish_year} editMode={editMode} min={0} max={2100} integer onSave={async (v) => saveNumber('publish_year', v)} />
+                  <EditableTextField label="ISBN" value={b.isbn ?? ''} editMode={editMode} onSave={async (v) => saveText('isbn', v)} />
+                  <EditableTextField label="语言" value={b.language ?? ''} editMode={editMode} onSave={async (v) => saveText('language', v)} />
+                  <EditableNumberField label="页数" value={b.page_count} editMode={editMode} min={0} integer onSave={async (v) => saveNumber('page_count', v)} />
+                  <EditableSelectField
+                    label="个人分类"
                     value={b.category_id ? String(b.category_id) : ''}
                     options={[
                       { value: '', label: '未分类' },
                       ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
                     ]}
+                    editMode={editMode}
+                    onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
                   />
-                  <InlineEditText field="readingPurpose" label="阅读目的" value={b.reading_purpose ?? ''} />
-                  <InlineEditSelect
-                    field="visibility"
+                  <EditableSelectField
+                    label="常规分类"
+                    value={b.genre_category_id ? String(b.genre_category_id) : ''}
+                    options={[
+                      { value: '', label: '未分类' },
+                      ...(genreCategories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
+                    ]}
+                    editMode={editMode}
+                    onSave={async (v) => saveSelect('genre_category_id', v, { numberTransform: true })}
+                  />
+                  <EditableSelectField
                     label="可见性"
                     value={b.visibility}
                     options={[
                       { value: VISIBILITY.PRIVATE, label: '私密' },
                       { value: VISIBILITY.PUBLIC, label: '公开' },
                     ]}
+                    editMode={editMode}
+                    onSave={async (v) => saveSelect('visibility', v)}
                   />
-                  <InlineEditSelect
-                    field="status"
+                  <EditableSelectField
                     label="状态"
                     value={b.status}
                     options={Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                    editMode={editMode}
+                    onSave={async (v) => saveSelect('status', v)}
                   />
-                  <InlineRating />
-                  <div className="flex min-w-0 justify-between gap-2">
-                    <span className="shrink-0 text-muted-foreground">书籍链接</span>
-                    {editMode ? (
-                      <button
-                        type="button"
-                        onClick={() => startEdit('sourceUrl', b.source_url ?? '')}
-                        className="min-w-0 flex-1 truncate text-right font-medium text-foreground hover:text-primary transition-colors"
-                      >
-                        {b.source_url || '—'}
-                      </button>
-                    ) : b.source_url ? (
-                      <a
-                        href={b.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-right font-medium text-primary hover:underline"
-                      >
-                        {extractDomain(b.source_url)}
-                      </a>
-                    ) : (
-                      <span className="min-w-0 flex-1 text-right font-medium text-foreground">—</span>
-                    )}
-                  </div>
+                  <RatingDisplay
+                    rating={b.rating}
+                    editMode={editMode}
+                    onSave={async (r) => saveSelect('rating', String(r ?? ''), { numberTransform: true })}
+                  />
+                  <EditableTextField label="书籍链接" value={b.source_url ?? ''} editMode={editMode} onSave={async (v) => saveText('source_url', v)} />
+                  <EditableDateField label="开始阅读" value={b.started_at} editMode={editMode} onSave={async (v) => saveDate('started_at', v)} />
+                  <EditableDateField label="完成阅读" value={b.finished_at} editMode={editMode} onSave={async (v) => saveDate('finished_at', v)} />
+                  <EditableLongTextField label="阅读目的" value={b.reading_purpose ?? ''} editMode={editMode} onSave={async (v) => saveText('reading_purpose', v)} />
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">元数据来源</span>
                     <span className="font-medium text-foreground">{b.metadata_source ?? '—'}</span>
@@ -1203,22 +845,12 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
 
                 {/* Description */}
                 <div className="mt-4 border-t border-border pt-4">
-                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">简介</span>
-                  {editMode ? (
-                    <button
-                      type="button"
-                      onClick={() => startEdit('description', b.description ?? '')}
-                      className="mt-2 block w-full text-left"
-                    >
-                      <p className="text-[14px] leading-relaxed text-muted-foreground hover:text-foreground transition-colors">
-                        {b.description || '暂无简介'}
-                      </p>
-                    </button>
-                  ) : (
-                    <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-                      {b.description || '暂无简介'}
-                    </p>
-                  )}
+                  <EditableLongTextField
+                    label="简介"
+                    value={b.description ?? ''}
+                    editMode={editMode}
+                    onSave={async (v) => saveText('description', v)}
+                  />
                 </div>
 
                 {/* Timestamps */}
@@ -1228,13 +860,15 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                   <span>最后更新 {formatShortDate(b.updated_at)}</span>
                 </div>
 
-                {customAttrs.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
-                    {customAttrs.map((attr) => (
-                      <span key={attr.label} className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">{attr.label}: {attr.value}</span>
-                    ))}
-                  </div>
-                )}
+                {/* Custom Attributes */}
+                <div className="mt-3 border-t border-border pt-3">
+                  <EditableJsonField
+                    label="自定义属性"
+                    value={b.custom_attributes}
+                    editMode={editMode}
+                    onSave={async (v) => saveJson('custom_attributes', v)}
+                  />
+                </div>
               </div>
               </>
               )}

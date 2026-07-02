@@ -5,19 +5,6 @@ import type { LucideIcon } from 'lucide-react';
 export type ToastType = 'info' | 'warning' | 'error';
 export type StatusMessage = { type: ToastType; text: string } | null;
 
-export type EditableField =
-  | 'title'
-  | 'author'
-  | 'status'
-  | 'category'
-  | 'rating'
-  | 'readingPurpose'
-  | 'visibility'
-  | 'sourceUrl'
-  | 'customAttributes'
-  | 'description'
-  | null;
-
 export type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
 export interface DetailTabItem {
