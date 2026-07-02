@@ -7,7 +7,7 @@ export interface AuthViewModel {
   loggedIn: boolean;
   initial: boolean;
   displayName: string;
-  userLabel: '管理员' | '普通用户' | null;
+  userLabel: '\u7ba1\u7406\u5458' | '\u666e\u901a\u7528\u6237' | null;
   canOpenSettings: boolean;
 }
 
@@ -22,9 +22,6 @@ interface AppShellProps {
   mainClassName?: string;
 }
 
-/**
- * 应用主壳层：纯展示。所有数据由 ProtectedShell 注入。
- */
 export function AppShell({
   activeKey,
   authViewModel,

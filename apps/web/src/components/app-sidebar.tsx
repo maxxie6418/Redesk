@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Archive,
@@ -19,10 +19,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { useTheme } from '@/components/use-theme';
 import { LoginDialog } from '@/components/login-dialog';
+import { useTheme } from '@/components/use-theme';
 import type { QuickLink } from '@/hooks/use-quick-links';
+import { cn } from '@/lib/utils';
 
 export type AppSidebarKey =
   | 'overview'
@@ -44,7 +44,7 @@ export interface AppSidebarAuthViewModel {
   loggedIn: boolean;
   initial: boolean;
   displayName: string;
-  userLabel: '管理员' | '普通用户' | null;
+  userLabel: '\u7ba1\u7406\u5458' | '\u666e\u901a\u7528\u6237' | null;
   canOpenSettings: boolean;
 }
 
@@ -57,9 +57,6 @@ interface AppSidebarProps {
   stats?: AppSidebarStat[];
 }
 
-/**
- * 侧边栏：纯展示。所有数据由 ProtectedShell 通过 props 注入。
- */
 export function AppSidebar({
   activeKey,
   authViewModel,
@@ -71,21 +68,25 @@ export function AppSidebar({
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
-  const { loggedIn, initial, canOpenSettings } = authViewModel;
   const firstRunShown = useRef(false);
+  const { loggedIn, initial, canOpenSettings } = authViewModel;
 
   useEffect(() => {
     if (initial && !loggedIn && !firstRunShown.current) {
       firstRunShown.current = true;
       const timer = setTimeout(() => {
         setLoginOpen(true);
-        toast.info('首次部署，请使用默认口令 admin 登录并设置新口令', { duration: 6000 });
+        toast.info('\u9996\u6b21\u90e8\u7f72\uff0c\u8bf7\u4f7f\u7528\u9ed8\u8ba4\u53e3\u4ee4 admin \u767b\u5f55\u5e76\u8bbe\u7f6e\u65b0\u53e3\u4ee4\u3002');
       }, 500);
       return () => clearTimeout(timer);
     }
   }, [initial, loggedIn]);
 
-  const authLabel = loggedIn ? '设置' : initial ? '设置管理口令' : '登录';
+  const authLabel = loggedIn
+    ? '\u8bbe\u7f6e'
+    : initial
+      ? '\u8bbe\u7f6e\u7ba1\u7406\u53e3\u4ee4'
+      : '\u767b\u5f55';
   const AuthIcon = loggedIn ? Settings : initial ? KeyRound : LogIn;
 
   return (
@@ -103,7 +104,7 @@ export function AppSidebar({
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="h-9 rounded-full border-sidebar-border bg-background pl-9 text-sm"
-            placeholder="搜索书名、作者、标签"
+            placeholder={'\u641c\u7d22\u4e66\u540d\u3001\u4f5c\u8005\u3001\u6807\u7b7e'}
             value={searchValue}
             readOnly={!onSearchChange}
             onChange={(event) => onSearchChange?.(event.target.value)}
@@ -112,12 +113,12 @@ export function AppSidebar({
       </div>
 
       <nav className="mt-5 space-y-0.5">
-        <SidebarItem active={activeKey === 'bookshelf'} icon={<BookOpen className="h-4 w-4" />} label="书架" onClick={() => navigate('/')} />
-        <SidebarItem active={activeKey === 'overview'} icon={<Archive className="h-4 w-4" />} label="档案" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/overview') : toast('未登录无法操作')} />
-        <SidebarItem active={activeKey === 'files'} icon={<FolderOpen className="h-4 w-4" />} label="书库文件" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/files') : toast('未登录无法操作')} />
-        <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label="读书笔记" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/reading-notes') : toast('未登录无法操作')} />
-        <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label="阅读话题" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/reading-topics') : toast('未登录无法操作')} />
-        <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label="回收站" disabled={!loggedIn} onClick={() => loggedIn ? navigate('/trash') : toast('未登录无法操作')} />
+        <SidebarItem active={activeKey === 'bookshelf'} icon={<BookOpen className="h-4 w-4" />} label={'\u4e66\u67b6'} onClick={() => navigate('/')} />
+        <SidebarItem active={activeKey === 'overview'} icon={<Archive className="h-4 w-4" />} label={'\u6863\u6848'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/overview') : toast('\u672a\u767b\u5f55\u65e0\u6cd5\u64cd\u4f5c'))} />
+        <SidebarItem active={activeKey === 'files'} icon={<FolderOpen className="h-4 w-4" />} label={'\u4e66\u5e93\u6587\u4ef6'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/files') : toast('\u672a\u767b\u5f55\u65e0\u6cd5\u64cd\u4f5c'))} />
+        <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label={'\u8bfb\u4e66\u7b14\u8bb0'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-notes') : toast('\u672a\u767b\u5f55\u65e0\u6cd5\u64cd\u4f5c'))} />
+        <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label={'\u9605\u8bfb\u8bdd\u9898'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-topics') : toast('\u672a\u767b\u5f55\u65e0\u6cd5\u64cd\u4f5c'))} />
+        <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label={'\u56de\u6536\u7ad9'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/trash') : toast('\u672a\u767b\u5f55\u65e0\u6cd5\u64cd\u4f5c'))} />
       </nav>
 
       <div className="min-h-20 flex-1" />
@@ -135,7 +136,7 @@ export function AppSidebar({
       {quickLinks.length > 0 && (
         <div className="mb-4 space-y-0.5 border-t border-sidebar-border px-1 pt-4">
           <div className="mb-1.5 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            快捷链接
+            {'\u5feb\u6377\u94fe\u63a5'}
           </div>
           {quickLinks.map((link) => (
             <a
@@ -153,18 +154,18 @@ export function AppSidebar({
       )}
 
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
-        <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
+        <SidebarItem icon={<Sparkles className="h-4 w-4" />} label={'AI \u52a9\u624b'} badge="M3" disabled />
 
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-            title={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
+            title={theme === 'dark' ? '\u5207\u6362\u5230\u6d45\u8272\u4e3b\u9898' : '\u5207\u6362\u5230\u6df1\u8272\u4e3b\u9898'}
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <div className="relative flex-1 min-w-0">
+          <div className="relative min-w-0 flex-1">
             <SidebarItem
               active={activeKey === 'settings' || activeKey === 'login'}
               icon={<AuthIcon className="h-4 w-4 shrink-0" />}
@@ -178,7 +179,7 @@ export function AppSidebar({
               }}
             />
             {loginOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 z-[60]">
+              <div className="absolute bottom-full left-0 right-0 z-[60] mb-2">
                 <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
               </div>
             )}

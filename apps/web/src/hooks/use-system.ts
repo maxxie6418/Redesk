@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export interface DirInfo {
@@ -27,7 +27,6 @@ export interface SystemStats {
   node_version: string;
   sqlite_version: string;
   uptime_seconds: number;
-  db_path: string;
   db_size_bytes: number;
   storage_size_bytes: number;
   book_count: number;
@@ -35,7 +34,7 @@ export interface SystemStats {
   file_count: number;
   tag_count: number;
   category_count: number;
-  user_count: number;
+  user_count?: number;
 }
 
 export interface ClearCacheResult {

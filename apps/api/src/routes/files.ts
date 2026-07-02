@@ -1001,8 +1001,6 @@ export function fileRoutes(app: FastifyInstance): void {
         .set({ is_primary: 0 })
         .where(and(eq(bookFiles.book_id, bookId), ne(bookFiles.id, fid)))
         .run();
-    } else if (input.is_primary === false) {
-      updates.is_primary = 0;
     }
 
     db.update(bookFiles).set(updates).where(eq(bookFiles.id, fid)).run();
