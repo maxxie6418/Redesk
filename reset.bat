@@ -24,26 +24,45 @@ echo ==========================================================
 echo.
 
 REM 1. Stop any running Node dev servers.
-echo [1/4] Stopping node processes...
+echo [1/5] Stopping node processes...
 taskkill /F /IM node.exe >NUL 2>&1
 REM Exclude IDE processes (node_repl.exe handles the IDE itself).
 timeout /T 2 /NOBREAK >NUL
 echo   done.
 
-REM 2. Delete the SQLite database file (and WAL sidecars if any).
-echo [2/4] Removing database files...
+REM 2. Ensure dependencies are installed.
+REM    If node_modules is missing (e.g. after a fresh clone or
+REM    manual cleanup), pnpm db:migrate will fail because the
+REM    `tsx` binary is not on PATH. Auto-install in that case.
+echo [2/5] Checking dependencies...
+if not exist "node_modules\.modules.yaml" (
+  echo   node_modules missing, running pnpm install --frozen-lockfile ...
+  call pnpm install --frozen-lockfile
+  if errorlevel 1 (
+    echo.
+    echo [ERROR] pnpm install failed. Aborting.
+    pause
+    exit /b 1
+  )
+  echo   install complete.
+) else (
+  echo   node_modules present, skipping install.
+)
+
+REM 3. Delete the SQLite database file (and WAL sidecars if any).
+echo [3/5] Removing database files...
 if exist "data\redesk.db"      del /F /Q "data\redesk.db"
 if exist "data\redesk.db-shm"  del /F /Q "data\redesk.db-shm"
 if exist "data\redesk.db-wal"  del /F /Q "data\redesk.db-wal"
 echo   done.
 
-REM 3. Remove the storage directory (book covers, files, etc.).
-echo [3/4] Removing storage directory...
+REM 4. Remove the storage directory (book covers, files, etc.).
+echo [4/5] Removing storage directory...
 if exist "data\storage" rmdir /S /Q "data\storage"
 echo   done.
 
-REM 4. Re-run migrations to recreate an empty schema.
-echo [4/4] Running database migrations...
+REM 5. Re-run migrations to recreate an empty schema.
+echo [5/5] Running database migrations...
 call pnpm db:migrate
 if errorlevel 1 (
   echo.
