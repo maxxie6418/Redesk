@@ -1,11 +1,20 @@
 import type { ReactNode } from 'react';
-import type { AuthUser } from '@/lib/api';
+import type { QuickLink } from '@/hooks/use-quick-links';
 import { AppSidebar, type AppSidebarKey, type AppSidebarStat } from '@/components/app-sidebar';
 import { cn } from '@/lib/utils';
 
+export interface AuthViewModel {
+  loggedIn: boolean;
+  initial: boolean;
+  displayName: string;
+  userLabel: '管理员' | '普通用户' | null;
+  canOpenSettings: boolean;
+}
+
 interface AppShellProps {
   activeKey: AppSidebarKey;
-  user: AuthUser;
+  authViewModel: AuthViewModel;
+  quickLinks: QuickLink[];
   children: ReactNode;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -13,9 +22,13 @@ interface AppShellProps {
   mainClassName?: string;
 }
 
+/**
+ * 应用主壳层：纯展示。所有数据由 ProtectedShell 注入。
+ */
 export function AppShell({
   activeKey,
-  user,
+  authViewModel,
+  quickLinks,
   children,
   searchValue,
   onSearchChange,
@@ -25,7 +38,14 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       <div className="sticky top-0 self-start">
-        <AppSidebar activeKey={activeKey} user={user} searchValue={searchValue} onSearchChange={onSearchChange} stats={stats} />
+        <AppSidebar
+          activeKey={activeKey}
+          authViewModel={authViewModel}
+          quickLinks={quickLinks}
+          searchValue={searchValue}
+          onSearchChange={onSearchChange}
+          stats={stats}
+        />
       </div>
       <main className={cn('min-w-0 flex-1', mainClassName)}>{children}</main>
     </div>

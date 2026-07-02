@@ -19,12 +19,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import type { AuthUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useAuthInit, useCurrentUser } from '@/hooks/use-auth';
-import { useQuickLinks, type QuickLink } from '@/hooks/use-quick-links';
 import { useTheme } from '@/components/use-theme';
 import { LoginDialog } from '@/components/login-dialog';
+import type { QuickLink } from '@/hooks/use-quick-links';
 
 export type AppSidebarKey =
   | 'overview'
@@ -42,22 +40,38 @@ export interface AppSidebarStat {
   valueClass?: string;
 }
 
+export interface AppSidebarAuthViewModel {
+  loggedIn: boolean;
+  initial: boolean;
+  displayName: string;
+  userLabel: '管理员' | '普通用户' | null;
+  canOpenSettings: boolean;
+}
+
 interface AppSidebarProps {
   activeKey: AppSidebarKey;
-  user: AuthUser;
+  authViewModel: AppSidebarAuthViewModel;
+  quickLinks: QuickLink[];
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   stats?: AppSidebarStat[];
 }
 
-export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchChange, stats }: AppSidebarProps) {
+/**
+ * 侧边栏：纯展示。所有数据由 ProtectedShell 通过 props 注入。
+ */
+export function AppSidebar({
+  activeKey,
+  authViewModel,
+  quickLinks,
+  searchValue = '',
+  onSearchChange,
+  stats,
+}: AppSidebarProps) {
   const navigate = useNavigate();
-  const currentUser = useCurrentUser();
-  const authInit = useAuthInit();
   const { theme, setTheme } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
-  const loggedIn = !!currentUser.data;
-  const initial = authInit.data?.initial === true;
+  const { loggedIn, initial, canOpenSettings } = authViewModel;
   const firstRunShown = useRef(false);
 
   useEffect(() => {
@@ -70,6 +84,7 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
       return () => clearTimeout(timer);
     }
   }, [initial, loggedIn]);
+
   const authLabel = loggedIn ? '设置' : initial ? '设置管理口令' : '登录';
   const AuthIcon = loggedIn ? Settings : initial ? KeyRound : LogIn;
 
@@ -117,7 +132,25 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
         </div>
       )}
 
-      <QuickLinksSection />
+      {quickLinks.length > 0 && (
+        <div className="mb-4 space-y-0.5 border-t border-sidebar-border px-1 pt-4">
+          <div className="mb-1.5 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            快捷链接
+          </div>
+          {quickLinks.map((link) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="truncate">{link.name}</span>
+            </a>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-1 border-t border-sidebar-border px-1 pt-4">
         <SidebarItem icon={<Sparkles className="h-4 w-4" />} label="AI 助手" badge="M3" disabled />
@@ -137,7 +170,7 @@ export function AppSidebar({ activeKey, user: _user, searchValue = '', onSearchC
               icon={<AuthIcon className="h-4 w-4 shrink-0" />}
               label={authLabel}
               onClick={() => {
-                if (loggedIn) {
+                if (canOpenSettings) {
                   navigate('/settings');
                 } else {
                   setLoginOpen((prev) => !prev);
@@ -194,32 +227,6 @@ function StatCell({ label, value, valueClass }: AppSidebarStat) {
     <div className="rounded-[10px] border border-sidebar-border bg-background px-2.5 py-3 text-center">
       <div className={cn('text-xl font-semibold leading-none tabular-nums', valueClass)}>{value}</div>
       <div className="mt-1 text-[11px] text-muted-foreground">{label}</div>
-    </div>
-  );
-}
-
-function QuickLinksSection() {
-  const { data: links } = useQuickLinks();
-
-  if (!links || links.length === 0) return null;
-
-  return (
-    <div className="mb-4 space-y-0.5 border-t border-sidebar-border px-1 pt-4">
-      <div className="mb-1.5 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-        快捷链接
-      </div>
-      {links.map((link: QuickLink) => (
-        <a
-          key={link.id}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-        >
-          <ExternalLink className="h-4 w-4" />
-          <span className="truncate">{link.name}</span>
-        </a>
-      ))}
     </div>
   );
 }

@@ -69,7 +69,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AppSidebar } from '@/components/app-sidebar';
+import { ProtectedShell } from '@/components/protected-shell';
 import { useShellUser } from '@/components/shell-user-context';
 import { useChangePassword, useLogout } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -194,46 +194,42 @@ function AdminSettingsPage() {
           </div>
         </div>
       )}
-      <div className="flex min-h-screen flex-1 bg-background">
-        <AppSidebar activeKey="settings" user={user} />
-      <StatusToast message={toast} onClose={() => setToast(null)} />
-
-      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+      <ProtectedShell activeKey="settings" mainClassName="overflow-y-auto px-6 py-6">
+        <StatusToast message={toast} onClose={() => setToast(null)} />
         <div className="mx-auto max-w-5xl">
           <h1 className="mb-5 text-xl font-semibold text-foreground">设置</h1>
-        <nav className="mb-6 flex gap-1 rounded-lg border border-border bg-popover p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className={cn(
-                'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                activeTab === tab.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+          <nav className="mb-6 flex gap-1 rounded-lg border border-border bg-popover p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === tab.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </nav>
 
-        {activeTab === 'general' && (
-          <GeneralTab settings={settings.data ?? {}} onToast={showToast} />
-        )}
-        {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} onToast={showToast} />}
-        {activeTab === 'login' && <LoginManagementTab />}
-        {activeTab === 'properties' && <PropertiesTab />}
-        {activeTab === 'backup' && (
-          <BackupTab settings={settings.data ?? {}} onToast={showToast} />
-        )}
-        {activeTab === 'storage' && <StorageTab onToast={showToast} />}
-        {activeTab === 'system' && <SystemTab onToast={showToast} />}
+          {activeTab === 'general' && (
+            <GeneralTab settings={settings.data ?? {}} onToast={showToast} />
+          )}
+          {activeTab === 'ai' && <AiTab settings={settings.data ?? {}} onToast={showToast} />}
+          {activeTab === 'login' && <LoginManagementTab />}
+          {activeTab === 'properties' && <PropertiesTab />}
+          {activeTab === 'backup' && (
+            <BackupTab settings={settings.data ?? {}} onToast={showToast} />
+          )}
+          {activeTab === 'storage' && <StorageTab onToast={showToast} />}
+          {activeTab === 'system' && <SystemTab onToast={showToast} />}
         </div>
-      </main>
-    </div>
+      </ProtectedShell>
     </>
   );
 }
@@ -1933,79 +1929,76 @@ function SimpleSettingsPage({ user }: { user: AuthUser }) {
   const [showChangePwd, setShowChangePwd] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <AppSidebar activeKey="settings" user={user} />
-      <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto max-w-2xl space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">个人设置</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              管理你的账户信息和偏好
-            </p>
-          </div>
+    <ProtectedShell activeKey="settings" mainClassName="overflow-y-auto px-6 py-6">
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">个人设置</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            管理你的账户信息和偏好
+          </p>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">账户信息</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground">身份</span>
-                <span className="font-medium text-foreground">{user.is_admin ? '管理员' : '普通用户'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">显示名</span>
-                <span className="font-medium text-foreground">
-                  {user.display_name || '—'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">账户信息</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-muted-foreground">身份</span>
+              <span className="font-medium text-foreground">{user.is_admin ? '管理员' : '普通用户'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">显示名</span>
+              <span className="font-medium text-foreground">
+                {user.display_name || '—'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">安全</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!showChangePwd ? (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setShowChangePwd(true)}
-                >
-                  <Key className="mr-2 h-4 w-4" />
-                  修改口令
-                </Button>
-              ) : (
-                <SimpleChangePassword onClose={() => setShowChangePwd(false)} />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">会话</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">安全</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!showChangePwd ? (
               <Button
                 variant="outline"
-                className="w-full justify-start text-destructive"
-                onClick={() => {
-                  logout.mutateAsync().then(() => {
-                    navigate('/login', { replace: true });
-                  }).catch(() => {
-                    // ignore
-                  });
-                }}
+                className="w-full justify-start"
+                onClick={() => setShowChangePwd(true)}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                退出登录
+                <Key className="mr-2 h-4 w-4" />
+                修改口令
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+            ) : (
+              <SimpleChangePassword onClose={() => setShowChangePwd(false)} />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">会话</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-destructive"
+              onClick={() => {
+                logout.mutateAsync().then(() => {
+                  navigate('/login', { replace: true });
+                }).catch(() => {
+                  // ignore
+                });
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              退出登录
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </ProtectedShell>
   );
 }
 

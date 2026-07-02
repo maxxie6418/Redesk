@@ -30,9 +30,8 @@ import { useTags, type TagItem } from '@/hooks/use-tags';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
-import { useShellUser } from '@/components/shell-user-context';
+import { ProtectedShell } from '@/components/protected-shell';
 import { useCurrentUser } from '@/hooks/use-auth';
-import { AppShell } from '@/components/app-shell';
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -1230,7 +1229,6 @@ function ImportBooksDialog({ onClose }: { onClose: () => void }) {
 
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
-  const user = useShellUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
@@ -1368,12 +1366,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   return (
     <>
-      <AppShell
+      <ProtectedShell
         activeKey={pageView === 'trash' ? 'trash' : 'bookshelf'}
-        user={user}
         searchValue={search}
         onSearchChange={setSearch}
-      stats={sidebarStats}
+        stats={sidebarStats}
         mainClassName="px-6 py-6 lg:px-8"
       >
         <header className="mb-5 flex items-center justify-between">
@@ -1572,7 +1569,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             ))}
           </section>
         )}
-      </AppShell>
+      </ProtectedShell>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
       {showImport && <ImportBooksDialog onClose={() => setShowImport(false)} />}

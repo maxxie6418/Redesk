@@ -21,8 +21,7 @@ import {
   type BookFileItem,
 } from '@/hooks/use-files';
 import { useBooks, type BookSummary } from '@/hooks/use-books';
-import { AppShell } from '@/components/app-shell';
-import { useShellUser } from '@/components/shell-user-context';
+import { ProtectedShell } from '@/components/protected-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -240,7 +239,6 @@ function levelClassName(level: MatchLevel): string {
 }
 
 export function FileLibraryPage() {
-  const user = useShellUser();
   const navigate = useNavigate();
   const sidebarStats = useSidebarStats();
   const [formatFilter, setFormatFilter] = useState('ALL');
@@ -339,9 +337,8 @@ export function FileLibraryPage() {
   }, [recommendedCandidate]);
 
   return (
-    <AppShell
+    <ProtectedShell
       activeKey="files"
-      user={user}
       stats={sidebarStats}
       mainClassName="min-w-0 flex-1 overflow-y-auto px-8 py-7"
     >
@@ -732,6 +729,6 @@ export function FileLibraryPage() {
           </Card>
         </div>
       )}
-    </AppShell>
+    </ProtectedShell>
   );
 }

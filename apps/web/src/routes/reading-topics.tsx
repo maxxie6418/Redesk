@@ -1,6 +1,5 @@
 import { BookOpen, Hash, Network, Sparkles } from 'lucide-react';
-import { AppShell } from '@/components/app-shell';
-import { useShellUser } from '@/components/shell-user-context';
+import { ProtectedShell } from '@/components/protected-shell';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 
 const TOPIC_TAGS = [
@@ -26,13 +25,11 @@ const SIZE_MAP: Record<string, string> = {
 };
 
 export function ReadingTopicsPage() {
-  const user = useShellUser();
   const sidebarStats = useSidebarStats();
 
   return (
-    <AppShell
+    <ProtectedShell
       activeKey="reading-topics"
-      user={user}
       stats={sidebarStats}
       mainClassName="flex min-w-0 flex-1 items-center justify-center px-8 py-7"
     >
@@ -90,6 +87,6 @@ export function ReadingTopicsPage() {
             </div>
           </div>
         </div>
-    </AppShell>
+    </ProtectedShell>
   );
 }

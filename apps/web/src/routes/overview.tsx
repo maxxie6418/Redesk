@@ -17,8 +17,7 @@ import type { OverviewData } from '@/hooks/use-overview';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useShellUser } from '@/components/shell-user-context';
-import { AppShell } from '@/components/app-shell';
+import { ProtectedShell } from '@/components/protected-shell';
 import { cn } from '@/lib/utils';
 import type { CategoryItem } from '@/hooks/use-categories';
 
@@ -96,7 +95,6 @@ function QuickAction({
 }
 
 export function OverviewPage() {
-  const user = useShellUser();
   const navigate = useNavigate();
   const overview = useOverview();
   const sidebarStats = useSidebarStats();
@@ -142,9 +140,8 @@ export function OverviewPage() {
   }
 
   return (
-    <AppShell
+    <ProtectedShell
       activeKey="overview"
-      user={user}
       stats={sidebarStats}
       mainClassName="px-8 py-7"
     >
@@ -311,7 +308,7 @@ export function OverviewPage() {
             </div>
           </div>
         </div>
-    </AppShell>
+    </ProtectedShell>
   );
 }
 

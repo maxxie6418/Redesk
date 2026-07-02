@@ -1,6 +1,5 @@
 import { FileText, Highlighter, Lightbulb, NotebookPen, StickyNote } from 'lucide-react';
-import { AppShell } from '@/components/app-shell';
-import { useShellUser } from '@/components/shell-user-context';
+import { ProtectedShell } from '@/components/protected-shell';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 
 const FEATURES = [
@@ -27,13 +26,11 @@ const FEATURES = [
 ];
 
 export function ReadingNotesPage() {
-  const user = useShellUser();
   const sidebarStats = useSidebarStats();
 
   return (
-    <AppShell
+    <ProtectedShell
       activeKey="reading-notes"
-      user={user}
       stats={sidebarStats}
       mainClassName="flex min-w-0 flex-1 items-center justify-center px-8 py-7"
     >
@@ -63,6 +60,6 @@ export function ReadingNotesPage() {
             ))}
           </div>
         </div>
-    </AppShell>
+    </ProtectedShell>
   );
 }
