@@ -11,7 +11,6 @@ import {
   X,
   Heart,
   AlertTriangle,
-  Trash2,
 } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError, api, API_BASE } from '@/lib/api';
@@ -22,7 +21,6 @@ import {
   useRestoreBook,
   usePermanentDeleteBook,
   useEmptyTrash,
-  useDeleteBook,
   type BookSummary,
 } from '@/hooks/use-books';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
@@ -31,7 +29,7 @@ import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { ProtectedShell } from '@/components/protected-shell';
-import { ConfirmDialog } from '@/components/confirm-dialog';
+
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
 type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
@@ -294,23 +292,6 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
   );
 }
 
-function DeleteButton({ onClick, title = 'Delete', label = 'Delete' }: { onClick: () => void; title?: string; label?: string }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      title={title}
-      className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
-    >
-      <Trash2 className="h-3.5 w-3.5" />
-      {label}
-    </button>
-  );
-}
-
 interface BookCardProps {
   book: BookSummary;
   index: number;
@@ -318,10 +299,9 @@ interface BookCardProps {
   isTrash?: boolean;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
-  onDelete?: () => void;
 }
 
-function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
+function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
     <article
@@ -354,7 +334,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
         <div className="mt-auto flex items-center gap-3.5 border-t border-border pt-3">
           <RatingDisplay rating={book.rating} />
           <ProgressBar progress={progress} />
-          {onDelete && !isTrash && <DeleteButton onClick={onDelete} />}
+
         </div>
       </div>
       {isTrash && (
@@ -366,7 +346,7 @@ function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
+function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
@@ -442,12 +422,6 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
           <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
         </div>
       </div>
-
-      {onDelete && !isTrash && (
-        <div className="mt-2 flex justify-end">
-          <DeleteButton onClick={onDelete} />
-        </div>
-      )}
       {isTrash && (
         <div className="mt-2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -457,7 +431,7 @@ function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
+function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
     <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
@@ -491,11 +465,6 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
           <ProgressBar progress={progress} trackWidth="w-[80px]" />
         </div>
       </div>
-      {onDelete && !isTrash && (
-        <div className="absolute bottom-4 right-4">
-          <DeleteButton onClick={onDelete} />
-        </div>
-      )}
       {isTrash && (
         <div className="absolute bottom-4 right-4">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -505,7 +474,7 @@ function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
   );
 }
 
-function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, onDelete }: BookCardProps) {
+function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const progress = bookProgress(book);
   return (
     <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
@@ -572,11 +541,6 @@ function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentD
       <div className="w-[70px] shrink-0 text-right text-xs tabular-nums text-muted-foreground">
         {book.updated_at.slice(0, 10)}
       </div>
-      {onDelete && !isTrash && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-          <DeleteButton onClick={onDelete} />
-        </div>
-      )}
       {isTrash && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -1192,9 +1156,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const restoreBook = useRestoreBook();
   const permanentDeleteBook = usePermanentDeleteBook();
   const emptyTrash = useEmptyTrash();
-  const deleteBook = useDeleteBook();
-  const [pendingDelete, setPendingDelete] = useState<{ book: BookSummary; deleteFiles: boolean } | null>(null);
-  const [deleteFilesForPending, setDeleteFilesForPending] = useState(false);
 
   const rawBooks = useMemo<BookSummary[]>(() => {
     if (pageView === 'trash') {
@@ -1254,21 +1215,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       // handled by mutation
     }
   }, [emptyTrash]);
-
-  const handleRequestDelete = useCallback((book: BookSummary) => {
-    setDeleteFilesForPending(false);
-    setPendingDelete({ book, deleteFiles: false });
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!pendingDelete) return;
-    try {
-      await deleteBook.mutateAsync({ id: pendingDelete.book.id, deleteFiles: deleteFilesForPending });
-      setPendingDelete(null);
-    } catch {
-      // handled by mutation
-    }
-  }, [pendingDelete, deleteBook, deleteFilesForPending]);
 
   return (
     <>
@@ -1406,7 +1352,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
-                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1423,7 +1368,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
-                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1440,7 +1384,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
-                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1468,7 +1411,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 isTrash={pageView === 'trash'}
                 onRestore={() => handleRestore(book.id)}
                 onPermanentDelete={() => handlePermanentDelete(book.id)}
-                onDelete={() => handleRequestDelete(book)}
               />
             ))}
           </section>
@@ -1477,32 +1419,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
       <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        destructive
-        title={pendingDelete ? `Move "${pendingDelete.book.title}" to trash?` : ''}
-        description={
-          pendingDelete ? (
-            <div className="space-y-3">
-              <p>The book will be moved to trash and can be restored from there.</p>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={deleteFilesForPending}
-                  onChange={(e) => setDeleteFilesForPending(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-destructive focus:ring-destructive"
-                />
-                <span>Also delete associated files and covers (irreversible)</span>
-              </label>
-            </div>
-          ) : null
-        }
-        confirmLabel="Move to trash"
-        cancelLabel="Cancel"
-        confirmDisabled={deleteBook.isPending}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setPendingDelete(null)}
-      />
     </>
   );
 }
