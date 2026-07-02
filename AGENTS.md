@@ -104,6 +104,13 @@ docker compose up -d
 
 本地开发当前临时免登录：`VITE_AUTH_DISABLED=true`。后端鉴权接口仍保留，生产构建默认不免登录；恢复登录时将该值设为 `false`。
 
+### Node.js 版本要求
+
+- 本项目本地开发与依赖安装统一使用 **Node.js 22 LTS**。
+- 执行任何 `pnpm install`、`pnpm dev`、`pnpm build`、`pnpm typecheck`、`pnpm lint` 前，先确认当前 `node --version` 属于 22.x。
+- 若发现当前 Node 版本不是 22.x，AI 代理必须**暂停当前任务并先向用户确认**，不得继续安装依赖、重编译原生模块或执行启动命令。
+- 若原生模块（如 `better-sqlite3`）与当前 Node ABI 不匹配，也应先告知用户当前 Node 版本与修复方式，再继续操作。
+
 ## AI 代理工作守则
 
 1. **先读文档再动手**：涉及表结构读《数据模型》，涉及接口读《API 接口》，涉及选择读《决策记录》。不要凭假设实现。
