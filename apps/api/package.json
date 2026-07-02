@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "migrate": "tsx src/scripts/migrate.ts",
+    "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
