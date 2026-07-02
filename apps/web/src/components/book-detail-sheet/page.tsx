@@ -576,20 +576,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
                   {b?.favorited_at ? '已收藏' : '收藏'}
                 </button>
-                {editMode && b.source_url && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleOpenMetadataDialog}
-                      disabled={fetchMetadata.isPending}
-                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary disabled:opacity-50"
-                      title="从源页面抓取最新元数据，可勾选要更新的字段"
-                    >
-                      <RefreshCcw className={cn('h-3 w-3', fetchMetadata.isPending && 'animate-spin')} />
-                      {fetchMetadata.isPending ? '抓取中…' : '抓取更新信息'}
-                    </button>
-                  </div>
-                )}
 
                 <div className="mt-3 border-t border-border pt-3">
                   <button
@@ -945,6 +931,21 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                     onSave={async (v) => saveJson('custom_attributes', v)}
                   />
                 </div>
+
+                {editMode && b.source_url && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <button
+                      type="button"
+                      onClick={handleOpenMetadataDialog}
+                      disabled={fetchMetadata.isPending}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground shadow-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                      title="从源页面抓取最新元数据，可勾选要更新的字段"
+                    >
+                      <RefreshCcw className={cn('h-3.5 w-3.5', fetchMetadata.isPending && 'animate-spin')} />
+                      {fetchMetadata.isPending ? '抓取中…' : '抓取更新信息'}
+                    </button>
+                  </div>
+                )}
               </div>
               </>
               )}
