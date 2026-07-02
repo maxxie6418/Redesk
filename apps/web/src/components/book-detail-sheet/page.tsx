@@ -1,4 +1,5 @@
-import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
+﻿import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -125,7 +126,7 @@ const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string
   { id: 'ai', label: 'AI', icon: Sparkles, tint: 'bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)]' },
 ];
 
-export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | null; open: boolean; onClose: () => void }) {
+export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { bookId: number | null; open: boolean; onClose: () => void; variant?: 'sheet' | 'dialog' }) {
   const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
   const updateBook = useUpdateBook();
@@ -157,6 +158,8 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
   const [showCoverPanel, setShowCoverPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('archive');
   const [editMode, setEditMode] = useState(false);
+  const [shouldRender, setShouldRender] = useState(open);
+  const [visible, setVisible] = useState(open);
 
   const categories = personalCategories;
 
@@ -364,36 +367,79 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     return Object.entries(groups).filter(([, { items }]: [string, { label: string; items: BookCoverItem[] }]) => items.length > 0);
   }, [covers.data]);
 
-  if (!open) return null;
+  const isDialog = variant === 'dialog';
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timer = window.setTimeout(() => setShouldRender(false), 180);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  if (!shouldRender) return null;
 
   return (
     <>
-    <button type="button" aria-label="关闭书籍详情" className="fixed inset-0 z-30 cursor-default bg-black/10" onClick={onClose} />
-    <div className="fixed inset-y-0 right-0 z-40 flex w-[min(1000px,calc(100vw-160px))] min-w-[720px] flex-col overflow-hidden border-l border-border bg-background shadow-2xl">
-      {/* Topbar */}
+    <button
+      type="button"
+      aria-label="关闭书籍详情"
+      className={cn(
+        'fixed inset-0 cursor-default bg-black/10 transition-opacity duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        isDialog ? 'z-40 bg-black/40' : 'z-30',
+        visible ? 'opacity-100' : 'opacity-0',
+      )}
+      onClick={onClose}
+    />
+    <div
+      className={cn(
+        'fixed right-0 z-40 flex flex-col overflow-hidden border-l border-border bg-background shadow-2xl transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        isDialog
+          ? 'inset-0 z-50 flex items-center justify-center bg-transparent p-3 shadow-none border-none sm:p-4'
+          : 'inset-y-0 w-[min(1000px,calc(100vw-160px))] min-w-[720px]',
+        isDialog ? (visible ? 'opacity-100' : 'opacity-0') : (visible ? 'translate-x-0' : 'translate-x-3'),
+      )}
+      onClick={isDialog ? onClose : undefined}
+    >
+      <div
+        className={cn(
+          'flex flex-col overflow-hidden bg-background shadow-2xl transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          isDialog
+            ? 'h-full max-h-full w-full max-w-[1180px] rounded-xl border border-border'
+            : 'h-full w-full',
+          isDialog ? (visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-1 scale-[0.992] opacity-0') : 'opacity-100',
+        )}
+        onClick={isDialog ? (e) => e.stopPropagation() : undefined}
+      >
       <div className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-        </button>
+        {!isDialog && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+            aria-label="返回"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          </button>
+        )}
         <span className="font-display text-[15px] font-medium text-foreground">书籍详情</span>
-        <button
-          type="button"
-          onClick={handleFavorite}
-          className={cn(
-            'flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium shadow-sm transition-all hover:-translate-y-px',
-            b?.favorited_at
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border bg-card text-foreground'
+        {isDialog && <div className="flex-1" />}
+        <div className="flex items-center gap-2">
+          {isDialog && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              aria-label="关闭"
+            >
+              <X className="h-4 w-4" />
+            </button>
           )}
-          title={b?.favorited_at ? '取消收藏' : '加入收藏'}
-        >
-          <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
-          {b?.favorited_at ? '已收藏' : '收藏'}
-        </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -534,8 +580,22 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     {editMode ? '完成编辑' : '编辑信息'}
                   </button>
                 </div>
-                {b.source_url && (
-                  <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleFavorite}
+                  className={cn(
+                    'flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium shadow-sm transition-all hover:-translate-y-px',
+                    b?.favorited_at
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-foreground',
+                  )}
+                  title={b?.favorited_at ? '取消收藏' : '加入收藏'}
+                >
+                  <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
+                  {b?.favorited_at ? '已收藏' : '收藏'}
+                </button>
+                {editMode && b.source_url && (
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={handleOpenMetadataDialog}
@@ -953,6 +1013,7 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
         )}
       </div>
     </div>
+    </div>
 
     {/* Metadata Dialog */}
     {showMetadataDialog && metadataResult && b && (
@@ -1040,10 +1101,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
     <ConfirmDialog
       open={pendingBookDelete}
       destructive
-      title="Move this book to trash?"
+      title="删除此书？"
       description={
         <div className="space-y-3">
-          <p>The book will be moved to trash and can be restored from there.</p>
+          <p>此书将移入回收站，后续可从回收站恢复。</p>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -1051,12 +1112,12 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
               onChange={(e) => setPendingBookDeleteFiles(e.target.checked)}
               className="h-4 w-4 rounded border-border text-destructive focus:ring-destructive"
             />
-            <span>Also delete associated files and covers (irreversible)</span>
+            <span>同时删除关联的文件与封面（不可恢复）</span>
           </label>
         </div>
       }
-      confirmLabel="Move to trash"
-      cancelLabel="Cancel"
+      confirmLabel="移入回收站"
+      cancelLabel="取消"
       confirmDisabled={deleteBook.isPending}
       onConfirm={handleConfirmBookDelete}
       onCancel={() => setPendingBookDelete(false)}

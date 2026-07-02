@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BookOpen,
   BookPlus,
@@ -16,6 +16,7 @@ import { useOverview } from '@/hooks/use-overview';
 import type { OverviewData } from '@/hooks/use-overview';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
+import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProtectedShell } from '@/components/protected-shell';
 import { cn } from '@/lib/utils';
@@ -96,9 +97,12 @@ function QuickAction({
 
 export function OverviewPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const overview = useOverview();
   const sidebarStats = useSidebarStats();
   const categories = useCategories('PERSONAL');
+  const detailBookIdParam = searchParams.get('book');
+  const detailBookId = detailBookIdParam && /^\d+$/.test(detailBookIdParam) ? Number(detailBookIdParam) : null;
 
   const total = overview.data?.total ?? 0;
   const counts = overview.data?.status_counts ?? {};
@@ -130,6 +134,18 @@ export function OverviewPage() {
       title: b.title,
     }));
   }, [recentAdded]);
+
+  const openDetail = useCallback((bookId: number) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('book', String(bookId));
+    setSearchParams(nextParams);
+  }, [searchParams, setSearchParams]);
+
+  const closeDetail = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('book');
+    setSearchParams(nextParams);
+  }, [searchParams, setSearchParams]);
 
   if (overview.isLoading) {
     return (
@@ -183,7 +199,7 @@ export function OverviewPage() {
                     <div className="absolute bottom-1 left-[4px] top-1 w-[2px] rounded-sm bg-border" />
                     {timeline.map((item: { type: 'add'; id: number; time: string; title: string }) => (
                       <ActivityItem key={item.id} dotClass="bg-success" time={formatActivityDate(item.time)}>
-                        <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => navigate(`/books/${item.id}`)}>
+                        <span className="cursor-pointer font-medium text-foreground transition-colors hover:text-primary" onClick={() => openDetail(item.id)}>
                           {item.title}
                         </span>
                         <span className="text-muted-foreground"> 被添加到书架</span>
@@ -208,7 +224,12 @@ export function OverviewPage() {
                 <CardContent className="px-[18px] py-3.5">
                   <div className="flex flex-col gap-2">
                     {recentReading.map((b: OverviewData['recent_reading'][number], i: number) => (
-                      <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => openDetail(b.id)}
+                        className="flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all hover:border-border hover:bg-muted/30"
+                      >
                         <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[i % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}
                         </div>
@@ -217,7 +238,7 @@ export function OverviewPage() {
                           <div className="mt-0.5 text-[11.5px] text-muted-foreground">{b.author ?? '未知作者'}</div>
                         </div>
                         <span className="shrink-0 rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">在读</span>
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </CardContent>
@@ -266,7 +287,12 @@ export function OverviewPage() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {recentAdded.slice(0, 4).map((b: OverviewData['recent_added'][number], i: number) => (
-                      <Link key={b.id} to={`/books/${b.id}`} className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all hover:border-border hover:bg-muted/30">
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => openDetail(b.id)}
+                        className="flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all hover:border-border hover:bg-muted/30"
+                      >
                         <div className={cn('flex h-[50px] w-9 shrink-0 items-center justify-center rounded font-display text-sm font-semibold', COVER_TONES[(i + 3) % COVER_TONES.length])}>
                           {b.title.slice(0, 1)}
                         </div>
@@ -277,7 +303,7 @@ export function OverviewPage() {
                             {b.author ? ` · ${b.author}` : ''}
                           </div>
                         </div>
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -308,6 +334,7 @@ export function OverviewPage() {
             </div>
           </div>
         </div>
+      <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={closeDetail} variant="dialog" />
     </ProtectedShell>
   );
 }

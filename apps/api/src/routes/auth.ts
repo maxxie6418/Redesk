@@ -5,7 +5,7 @@ import { changePasswordSchema, loginSchema, ERROR_CODE } from '@redesk/shared';
 import { getDb } from '../db';
 import { validate } from '../lib/zod';
 import { AppError, unauthorized } from '../lib/errors';
-import { hashPassword, verifyPassword, userCount, tryLoginByPassword, isAdmin, requireUserId } from '../lib/auth';
+import { hashPassword, verifyPassword, userCount, tryLoginByPassword, isAdmin, requireUserId, getAdminUserId } from '../lib/auth';
 import { clearSession, getSessionUserId } from '../lib/session';
 import {
   getAuthMode,
@@ -13,6 +13,7 @@ import {
   setAdminPasswordChangedAt,
   getAdminPasswordChangedAt,
 } from '../lib/settings-store';
+import { config } from '../config';
 import {
   checkBruteForce,
   recordFailedAttempt,
@@ -146,8 +147,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/auth/me', async (req) => {
-    const userId = getSessionUserId(req);
-    if (!userId) throw unauthorized();
+    let userId = getSessionUserId(req);
+    if (!userId) {
+      if (config.authDisabled) {
+        userId = getAdminUserId();
+      }
+      if (!userId) throw unauthorized();
+    }
     const user = getDb()
       .select()
       .from(users)

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -22,6 +21,7 @@ import {
   type BookFileItem,
 } from '@/hooks/use-files';
 import { useBooks, type BookSummary } from '@/hooks/use-books';
+import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { ProtectedShell } from '@/components/protected-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -241,7 +241,6 @@ function levelClassName(level: MatchLevel): string {
 }
 
 export function FileLibraryPage() {
-  const navigate = useNavigate();
   const sidebarStats = useSidebarStats();
   const [formatFilter, setFormatFilter] = useState('ALL');
   const [associatedFilter, setAssociatedFilter] = useState<'all' | 'true' | 'false'>('all');
@@ -264,6 +263,7 @@ export function FileLibraryPage() {
   const deleteUnassociated = useDeleteUnassociatedFile();
   const deleteFile = useDeleteFile();
   const [pendingDeleteFile, setPendingDeleteFile] = useState<BookFileItem | null>(null);
+  const [detailBookId, setDetailBookId] = useState<number | null>(null);
   const bookSearch = useBooks({ q: searchQuery, page_size: 20 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -522,7 +522,7 @@ export function FileLibraryPage() {
                     <button
                       type="button"
                       className="text-xs text-primary hover:underline"
-                      onClick={() => navigate(`/books/${file.book_id}`)}
+                      onClick={() => setDetailBookId(file.book_id ?? null)}
                     >
                       {file.book_title}
                     </button>
@@ -760,6 +760,7 @@ export function FileLibraryPage() {
         onConfirm={handleConfirmDeleteFile}
         onCancel={() => setPendingDeleteFile(null)}
       />
+      <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} variant="dialog" />
     </ProtectedShell>
   );
 }

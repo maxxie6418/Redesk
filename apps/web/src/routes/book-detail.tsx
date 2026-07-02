@@ -1,18 +1,12 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import { BookDetailSheet } from '@/components/book-detail-sheet';
+import { Navigate, useParams } from 'react-router-dom';
 
 export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const bookId = Number(id);
-  const navigate = useNavigate();
 
-  return (
-    <div className="min-h-screen bg-background">
-      <BookDetailSheet
-        bookId={isNaN(bookId) ? null : bookId}
-        open={true}
-        onClose={() => navigate(-1)}
-      />
-    </div>
-  );
+  if (!Number.isInteger(bookId) || bookId <= 0) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Navigate to={`/?book=${bookId}`} replace />;
 }
