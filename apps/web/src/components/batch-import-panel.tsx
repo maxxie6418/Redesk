@@ -20,9 +20,10 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
 
   const importCsv = async () => {
     if (!file) {
-      setError('Please select a CSV file first.');
+      setError('请先选择 CSV 文件');
       return;
     }
+
     setError('');
     setSubmitting(true);
     try {
@@ -36,7 +37,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         qc.invalidateQueries({ queryKey: ['tags'] });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Import failed');
+      setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : '导入失败');
     } finally {
       setSubmitting(false);
     }
@@ -47,10 +48,9 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
   const body = (
     <div className="space-y-5 px-6 py-5">
       <div className="rounded-lg border border-border bg-muted p-4">
-        <div className="text-sm font-medium text-foreground">CSV Template</div>
+        <div className="text-sm font-medium text-foreground">CSV 模板</div>
         <div className="mt-1 text-sm leading-6 text-muted-foreground">
-          The template covers title, author, ISBN, category, tags, status, rating and other fields.
-          Only book metadata is imported; files are not included.
+          模板包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建书籍元数据，不包含文件。
         </div>
         <Button
           type="button"
@@ -61,12 +61,12 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
             window.location.href = `${API_BASE}/books/import/template`;
           }}
         >
-          Download sample CSV
+          下载参考 CSV
         </Button>
       </div>
 
       <label className="block space-y-2">
-        <span className="text-xs font-medium text-foreground">Select a filled CSV</span>
+        <span className="text-xs font-medium text-foreground">选择已填写的 CSV</span>
         <input
           type="file"
           accept=".csv,text/csv"
@@ -82,7 +82,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
           onChange={(e) => setDryRun(e.target.checked)}
           className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
         />
-        <span>Validate only (preview mode, do not write)</span>
+        <span>仅校验不导入（预览模式）</span>
       </label>
 
       {error && (
@@ -96,15 +96,15 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="text-sm font-medium text-foreground">
             {result.dry_run
-              ? `Preview: ${result.valid} valid rows, ${result.skipped} skipped, ${result.failed} failed`
-              : `Created ${result.created} books, ${result.skipped} skipped, ${result.failed} failed`}
+              ? `预览通过 ${result.valid} 行，跳过 ${result.skipped} 行，失败 ${result.failed} 行`
+              : `已创建 ${result.created} 本，跳过 ${result.skipped} 行，失败 ${result.failed} 行`}
           </div>
           {problemRows.length > 0 && (
             <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border">
               {problemRows.slice(0, 20).map((row) => (
                 <div key={row.row} className="border-b border-border px-3 py-2 text-xs last:border-b-0">
-                  <span className="font-medium text-foreground">Row {row.row}</span>
-                  <span className="ml-2 text-muted-foreground">{row.title ?? 'untitled'}</span>
+                  <span className="font-medium text-foreground">第 {row.row} 行</span>
+                  <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
                   <div className="mt-1 flex items-center gap-1 text-destructive">
                     <AlertTriangle className="h-3 w-3 shrink-0" />
                     {row.error}
@@ -119,11 +119,11 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
       <div className="flex justify-end gap-2.5 border-t border-border pt-5">
         {variant === 'dialog' && onClose ? (
           <Button type="button" variant="outline" onClick={onClose}>
-            Close
+            关闭
           </Button>
         ) : null}
         <Button type="button" onClick={importCsv} disabled={submitting}>
-          {submitting ? (dryRun ? 'Validating...' : 'Importing...') : dryRun ? 'Validate' : 'Start import'}
+          {submitting ? (dryRun ? '校验中...' : '导入中...') : dryRun ? '开始校验' : '开始导入'}
         </Button>
       </div>
     </div>
@@ -143,7 +143,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="font-display text-xl font-medium text-foreground">Batch import books</h2>
+          <h2 className="font-display text-xl font-medium text-foreground">批量导入书籍</h2>
           <button
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"

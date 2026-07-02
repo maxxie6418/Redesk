@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useAddQuickLink, useDeleteQuickLink, useQuickLinks, useReorderQuickLink, useUpdateQuickLink, type QuickLink } from '@/hooks/use-quick-links';
 import { useUpdateSettings } from '@/hooks/use-settings';
 import { useLogout } from '@/hooks/use-auth';
+import { BatchImportPanel } from '@/components/batch-import-panel';
 import { BatchUploadCard } from './storage-tab';
 import type { StatusMessage } from './types';
 
@@ -63,6 +64,18 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
 
       <QuickLinksSection onToast={onToast} />
       <BatchUploadCard onToast={onToast} />
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">批量导入书籍</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            通过 CSV 文件批量创建书籍。仅写入元数据，不包含文件；重复条目按 ISBN / 标题 + 作者去重。
+          </p>
+          <BatchImportPanel variant="embedded" />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-4">
