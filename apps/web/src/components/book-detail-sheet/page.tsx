@@ -802,10 +802,10 @@ export function BookDetailSheet({ bookId, open, onClose }: { bookId: number | nu
                     type="button"
                     onClick={handleRequestBookDelete}
                     className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
-                    title="Move this book to trash"
+                    title="将此书移入回收站"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete this book
+                    删除此书
                   </button>
                 </div>
               </div>

@@ -740,13 +740,13 @@ export function FileLibraryPage() {
       <ConfirmDialog
         open={pendingDeleteFile !== null}
         destructive
-        title="Delete this file?"
+        title="删除此文件？"
         description={
           pendingDeleteFile ? (
             <div className="space-y-1">
-              <p>This will permanently delete the file and its storage objects.</p>
+              <p>将永久删除该文件及其存储对象。</p>
               <p className="text-xs text-muted-foreground">
-                {pendingDeleteFile.original_filename ?? 'unnamed file'}
+                {pendingDeleteFile.original_filename ?? '未命名文件'}
                 {pendingDeleteFile.file_size != null
                   ? ` (${formatSize(pendingDeleteFile.file_size)})`
                   : ''}
@@ -754,8 +754,8 @@ export function FileLibraryPage() {
             </div>
           ) : null
         }
-        confirmLabel="Delete file"
-        cancelLabel="Cancel"
+        confirmLabel="删除文件"
+        cancelLabel="取消"
         confirmDisabled={deleteFile.isPending || deleteUnassociated.isPending}
         onConfirm={handleConfirmDeleteFile}
         onCancel={() => setPendingDeleteFile(null)}
