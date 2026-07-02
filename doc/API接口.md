@@ -391,6 +391,32 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 与 `POST /files/unassociated/{fileId}/associate` 语义一致：未关联文件匹配入书。匹配后按主文件升/降规则处理（无主则升、有主不动）。
 响应 200：返回更新后的 `bookFiles` 记录。
 
+### POST /books/{id}/files/{fileId}/replace
+
+替换书籍文件内容但**保留记录 ID**。与决策记录 2026-07-02 / WL-003 同步。
+
+请求：`multipart/form-data`，字段 `file`（二进制，必填）。
+
+行为：
+
+- 允许跨格式替换（如 `.epub` → `.pdf`）。
+- 不限制只能替换主文件，主文件 / 非主文件均可替换。
+- 替换后**保持原身份不变**（`is_primary` 字段不因本接口变化）。
+- 替换后 `original_filename`、格式、`file_size`、校验值、存储位置、`updated_at` 同步更新。
+- 跨 owner / 不存在 / 已删 全部返回 404，避免泄露资源存在性。
+- 本版本替换接口**只处理文件资产**，不主动清理未来阅读留痕数据。
+
+事务语义（"先新后旧"安全替换）：
+
+1. 写新文件到 `books/{bookId}/.tmp/replace-{fileId}-{ts}{ext}` 临时 key。
+2. DB 一次更新 metadata + path 指向正式 key。
+3. `storage.move` 临时 → 正式（覆盖旧文件）。
+4. 删除旧物理文件（best-effort，孤儿文件留给未来清理任务）。
+
+任一步失败回滚到旧 path 并清理临时文件，**不允许出现"DB 已指向新文件但新文件不可用"的半成功状态**。
+
+响应 200：返回替换后的 `bookFiles` 完整记录。
+
 ### GET .../download
 
 响应：文件流，`Content-Type` 按 mime，支持 `Range` 请求（阅读器分块加载）。

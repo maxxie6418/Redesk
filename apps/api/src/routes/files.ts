@@ -599,6 +599,117 @@ export async function saveUploadedFile(
   return inserted;
 }
 
+// 替换书籍文件（保留记录 ID 与身份），与决策记录 2026-07-02 / WL-003 同步。
+// 流程：写新文件到临时 key → DB 更新到新 key → storage.move 临时 → 正式 → 删除旧物理文件。
+// 任一步失败回滚到旧 path，绝不允许"DB 已指向新文件但新文件不可用"的半成功状态。
+export async function replaceBookFile(
+  ownerId: number,
+  bookId: number,
+  fileId: number,
+  filename: string,
+  stream: NodeJS.ReadableStream,
+): Promise<typeof bookFiles.$inferSelect> {
+  const db = getDb();
+  const old = db
+    .select()
+    .from(bookFiles)
+    .where(
+      and(
+        eq(bookFiles.id, fileId),
+        eq(bookFiles.book_id, bookId),
+        eq(bookFiles.owner_id, ownerId),
+      ),
+    )
+    .get();
+  if (!old) throw notFound('文件不存在');
+
+  const ext = extname(filename).toLowerCase();
+  if (!EXTENSION_FORMAT[ext]) {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, `不支持的文件格式：${ext}`);
+  }
+  const format = detectFormat(filename);
+  const mime = detectMime(filename);
+  const mode = old.storage_mode;
+  const newKey = bookFileKey(bookId, ext);
+  const tmpKey = `books/${bookId}/.tmp/replace-${fileId}-${Date.now()}${ext}`;
+  const primary = resolvePrimaryLocation(mode);
+
+  // 1) 写新文件到临时 key。失败时旧文件未动，无副作用。
+  const writeResult = await writeStreamForMode(mode, tmpKey, stream, mime);
+  const newLocalPath = writeResult.localPath ? newKey : null;
+  const newRemoteKey = writeResult.remoteKey ? newKey : null;
+  const timestamp = now();
+
+  // 2) DB 一次更新：metadata + path 全部指向 newKey。
+  // 主/非主身份由 is_primary 字段本身决定，本接口不改动。
+  db.update(bookFiles)
+    .set({
+      storage_mode: mode,
+      local_path: newLocalPath,
+      remote_key: newRemoteKey,
+      primary_location: primary,
+      sync_status: writeResult.syncStatus,
+      original_filename: basename(filename),
+      file_format: format,
+      mime_type: mime,
+      file_size: writeResult.size,
+      checksum: writeResult.checksum,
+      updated_at: timestamp,
+    })
+    .where(eq(bookFiles.id, fileId))
+    .run();
+
+  // 3) storage.move 临时 → 正式。失败回滚 DB 到旧 path 并清理 tmp。
+  const driver = primary === 'cloud' ? 's3' : 'local';
+  try {
+    const storage = getStorageByDriver(driver);
+    await storage.move(tmpKey, newKey);
+  } catch (err) {
+    db.update(bookFiles)
+      .set({
+        storage_mode: old.storage_mode,
+        local_path: old.local_path,
+        remote_key: old.remote_key,
+        primary_location: old.primary_location,
+        sync_status: old.sync_status,
+        original_filename: old.original_filename,
+        file_format: old.file_format,
+        mime_type: old.mime_type,
+        file_size: old.file_size,
+        checksum: old.checksum,
+        updated_at: now(),
+      })
+      .where(eq(bookFiles.id, fileId))
+      .run();
+    try {
+      await getStorageByDriver(driver).delete(tmpKey);
+    } catch {
+      // 临时文件清理失败不阻塞回滚；孤儿文件留给未来清理任务
+    }
+    throw err;
+  }
+
+  // 4) 删除旧物理文件（best-effort；与 newKey 不同才需要；同 ext 替换时已被 move 覆盖）
+  if (old.local_path && old.local_path !== newKey) {
+    try {
+      getStorageByDriver('local').delete(old.local_path).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }
+  if (old.remote_key && old.remote_key !== newKey) {
+    try {
+      getStorageByDriver('s3').delete(old.remote_key).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }
+
+  const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get();
+  if (!updated) throw new AppError(ERROR_CODE.INTERNAL_ERROR, '替换后无法读取文件记录');
+  return updated;
+}
+
 export function deleteFilesForBooks(ownerId: number, bookIds: number[]): void {
   const db = getDb();
   const rows = db
@@ -897,6 +1008,23 @@ export function fileRoutes(app: FastifyInstance): void {
     db.update(bookFiles).set(updates).where(eq(bookFiles.id, fid)).run();
 
     return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fid)).get() };
+  });
+
+  app.post('/books/:id/files/:fileId/replace', async (req, reply) => {
+    const userId = requireUserId(req);
+    const { id, fileId } = req.params as { id: string; fileId: string };
+    const bookId = Number(id);
+    const fid = Number(fileId);
+    if (Number.isNaN(bookId) || Number.isNaN(fid)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的参数');
+    }
+
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
+
+    const replaced = await replaceBookFile(userId, bookId, fid, data.filename, data.file);
+    reply.code(200);
+    return { data: replaced };
   });
 
   app.delete('/books/:id/files/:fileId', async (req) => {
