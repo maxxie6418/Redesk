@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Loader2, X } from 'lucide-react';
-import { BOOK_STATUS, BOOK_STATUS_LABELS } from '@redesk/shared';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, type BookStatus } from '@redesk/shared';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useBook, useFavoriteBook, useStatusHistory, useUnfavoriteBook, useUpdateBook } from '@/hooks/use-books';
@@ -56,6 +56,19 @@ export function MobileBookDetailSheet({
     [files.data],
   );
 
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [open]);
+
   if (!open || !isMobileLayout) {
     return null;
   }
@@ -70,19 +83,22 @@ export function MobileBookDetailSheet({
         className="fixed inset-0 z-40 bg-black/25"
         onClick={onClose}
       />
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="mx-auto min-h-screen w-full max-w-md px-4 py-4">
-          <div className="rounded-[32px] border border-white/70 bg-[rgba(255,253,248,0.98)] shadow-[0_20px_60px_rgba(64,47,31,0.22)] backdrop-blur">
-            <div className="flex items-center justify-between px-4 py-4">
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-border bg-background/70 text-foreground"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="text-sm font-semibold text-foreground">\u4e66\u7c4d\u8be6\u60c5</div>
-              <div className="w-9" />
+      <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="w-full max-w-md px-2 pb-2 pt-12">
+          <div className="max-h-[calc(100vh-1rem)] overflow-y-auto rounded-[28px] border border-white/70 bg-[rgba(255,253,248,0.98)] shadow-[0_-8px_40px_rgba(64,47,31,0.22)] backdrop-blur">
+            <div className="sticky top-0 z-10 rounded-t-[28px] bg-[rgba(255,253,248,0.94)] px-4 pb-4 pt-3 backdrop-blur">
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border" />
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-border bg-background/70 text-foreground"
+                  onClick={onClose}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="text-sm font-semibold text-foreground">\u4e66\u7c4d\u8be6\u60c5</div>
+                <div className="w-9" />
+              </div>
             </div>
 
             {book.isLoading ? (
@@ -117,12 +133,12 @@ export function MobileBookDetailSheet({
                     )}
 
                     <div className="min-w-0">
-                      <h2 className="font-display text-2xl font-semibold leading-tight tracking-[-0.04em]">{data.title}</h2>
-                      <p className="mt-2 text-xs text-[#fff8ec]/76">
+                      <h2 className="break-words font-display text-2xl font-semibold leading-tight tracking-[-0.04em]">{data.title}</h2>
+                      <p className="mt-2 break-words text-xs leading-5 text-[#fff8ec]/76">
                         {[data.author, data.publisher, data.publish_year].filter(Boolean).join(' \u00b7 ') || '\u672a\u586b\u5199\u4f5c\u8005'}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold">{BOOK_STATUS_LABELS[data.status]}</span>
+                        <span className="rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold">{BOOK_STATUS_LABELS[data.status as BookStatus]}</span>
                         {data.category_name ? <span className="rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-semibold">{data.category_name}</span> : null}
                       </div>
                     </div>
@@ -167,17 +183,17 @@ export function MobileBookDetailSheet({
                   </div>
                   <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
                     <span className="text-muted-foreground">\u4f5c\u8005</span>
-                    <span className="font-medium text-foreground">{data.author || '\u672a\u586b\u5199'}</span>
+                    <span className="break-words font-medium text-foreground">{data.author || '\u672a\u586b\u5199'}</span>
                     <span className="text-muted-foreground">\u5206\u7c7b</span>
-                    <span className="font-medium text-foreground">{data.category_name || '\u672a\u5206\u7c7b'}</span>
+                    <span className="break-words font-medium text-foreground">{data.category_name || '\u672a\u5206\u7c7b'}</span>
                     <span className="text-muted-foreground">\u72b6\u6001</span>
-                    <span className="font-medium text-foreground">{BOOK_STATUS_LABELS[data.status]}</span>
+                    <span className="font-medium text-foreground">{BOOK_STATUS_LABELS[data.status as BookStatus]}</span>
                     <span className="text-muted-foreground">\u6587\u4ef6</span>
-                    <span className="font-medium text-foreground">{files.data && files.data.length > 0 ? `${files.data.length} \u4e2a\u5df2\u5173\u8054` : '\u6682\u65e0\u5173\u8054\u6587\u4ef6'}</span>
+                    <span className="break-words font-medium text-foreground">{files.data && files.data.length > 0 ? `${files.data.length} \u4e2a\u5df2\u5173\u8054` : '\u6682\u65e0\u5173\u8054\u6587\u4ef6'}</span>
                     <span className="text-muted-foreground">\u6807\u7b7e</span>
-                    <span className="font-medium text-foreground">{data.tag_names.length > 0 ? data.tag_names.join('\u3001') : '\u6682\u65e0\u6807\u7b7e'}</span>
+                    <span className="break-words font-medium text-foreground">{data.tag_names.length > 0 ? data.tag_names.join('\u3001') : '\u6682\u65e0\u6807\u7b7e'}</span>
                   </div>
-                  {data.description ? <div className="mt-4 rounded-[18px] bg-muted px-3 py-3 text-xs leading-6 text-muted-foreground">{data.description}</div> : null}
+                  {data.description ? <div className="mt-4 rounded-[18px] bg-muted px-3 py-3 text-xs leading-6 break-words text-muted-foreground">{data.description}</div> : null}
                 </section>
 
                 <section className="rounded-[24px] border border-border bg-card px-4 py-4">
@@ -206,9 +222,9 @@ export function MobileBookDetailSheet({
                     className="mt-4 flex w-full items-center justify-between rounded-[18px] bg-muted px-3 py-3 text-left"
                     onClick={() => navigate(`/books/${data.id}`)}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-semibold text-foreground">\u8fdb\u5165\u5b8c\u6574\u8be6\u60c5</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">\u7ee7\u7eed\u7f16\u8f91\u5143\u6570\u636e\u3001\u5c01\u9762\u548c\u6587\u4ef6</div>
+                      <div className="mt-1 break-words text-[11px] leading-5 text-muted-foreground">\u7ee7\u7eed\u7f16\u8f91\u5143\u6570\u636e\u3001\u5c01\u9762\u548c\u6587\u4ef6</div>
                     </div>
                     <Heart className={cn('h-4 w-4', data.favorited_at ? 'fill-primary text-primary' : 'text-muted-foreground')} />
                   </button>
@@ -222,7 +238,7 @@ export function MobileBookDetailSheet({
                         <div key={item.id} className="grid grid-cols-[10px_minmax(0,1fr)] gap-3 text-xs leading-5 text-muted-foreground">
                           <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', index === 0 ? 'bg-success' : index === 1 ? 'bg-primary' : 'bg-amber-500')} />
                           <div>
-                            <div className="font-medium text-foreground">{BOOK_STATUS_LABELS[item.to_status]}</div>
+                            <div className="font-medium text-foreground">{BOOK_STATUS_LABELS[item.to_status as BookStatus]}</div>
                             <div>{formatHistoryTime(item.changed_at)}</div>
                           </div>
                         </div>

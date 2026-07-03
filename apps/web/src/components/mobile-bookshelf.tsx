@@ -1,6 +1,6 @@
 import { BookPlus, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { BOOK_STATUS, BOOK_STATUS_LABELS } from '@redesk/shared';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, type BookStatus } from '@redesk/shared';
 import { API_BASE } from '@/lib/api';
 import type { ApiError } from '@/lib/api';
 import type { BookSummary } from '@/hooks/use-books';
@@ -149,7 +149,7 @@ export function MobileBookshelf({
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                    {BOOK_STATUS_LABELS[book.status]}
+                    {BOOK_STATUS_LABELS[book.status as BookStatus]}
                   </span>
                   {book.has_files ? (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">\u6709\u6587\u4ef6</span>

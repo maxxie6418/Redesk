@@ -33,12 +33,17 @@ export function SettingsPage() {
     return <MobileBackupPage />;
   }
 
+  if (isMobileLayout && user.is_admin) {
+    return <MobileAdminSettingsPage user={user} />;
+  }
+
   return user.is_admin ? <AdminSettingsPage /> : <SimpleSettingsPage user={user} />;
 }
 
 function AdminSettingsPage() {
   const user = useShellUser();
   const navigate = useNavigate();
+  const isMobileLayout = useMobileLayout();
   const [activeTab, setActiveTab] = useState<Tab>('general');
   const [toast, setToast] = useState<StatusMessage>(null);
   const settings = useSettings();
@@ -89,23 +94,46 @@ function AdminSettingsPage() {
         </div>
       ) : null}
 
-      <ProtectedShell activeKey="settings" mobileNavKey="settings" mainClassName="overflow-y-auto px-6 py-6">
+      <ProtectedShell
+        activeKey="settings"
+        mobileNavKey="settings"
+        mainClassName={isMobileLayout ? 'overflow-y-auto px-0 py-0' : 'overflow-y-auto px-6 py-6'}
+      >
         <StatusToast message={toast} onClose={() => setToast(null)} />
-        <div className="mx-auto max-w-5xl">
-          <h1 className="mb-5 text-xl font-semibold text-foreground">\u8bbe\u7f6e</h1>
-          <nav className="mb-6 flex gap-1 rounded-lg border border-border bg-popover p-1">
+        <div className={cn('mx-auto max-w-5xl', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
+          <div className={cn(isMobileLayout ? 'space-y-1' : 'mb-5')}>
+            <h1 className="text-xl font-semibold text-foreground">\u8bbe\u7f6e</h1>
+            {isMobileLayout ? (
+              <p className="text-sm text-muted-foreground">\u7ba1\u7406\u8d26\u6237\u3001\u5b58\u50a8\u3001\u5907\u4efd\u4e0e\u7cfb\u7edf\u53c2\u6570</p>
+            ) : null}
+          </div>
+          <nav
+            className={cn(
+              'mb-6',
+              isMobileLayout
+                ? 'grid grid-cols-2 gap-2'
+                : 'flex gap-1 rounded-lg border border-border bg-popover p-1',
+            )}
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                  activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                  'min-w-0 text-sm font-medium transition-colors',
+                  isMobileLayout
+                    ? 'flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-3 text-left shadow-[0_10px_24px_rgba(64,47,31,0.06)]'
+                    : 'flex items-center gap-2 rounded-md px-4 py-2',
+                  activeTab === tab.key
+                    ? isMobileLayout
+                      ? 'border-primary/30 bg-primary/12 text-primary'
+                      : 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.icon}
-                {tab.label}
+                <span className="truncate">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -297,6 +325,115 @@ function MobileBackupPage() {
         </div>
       </section>
     </ProtectedShell>
+  );
+}
+
+function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
+  const navigate = useNavigate();
+  const logout = useLogout();
+  const systemStats = useSystemStats();
+  const [showChangePwd, setShowChangePwd] = useState(false);
+
+  return (
+    <ProtectedShell activeKey="settings" mobileNavKey="settings" mainClassName="px-0 py-0">
+      <div className="space-y-3">
+        <section className="rounded-[24px] border border-border bg-card px-4 py-4 shadow-[0_10px_24px_rgba(64,47,31,0.06)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">设置</h1>
+              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">移动端保留高频操作，复杂管理建议在桌面端完成。</p>
+            </div>
+            <div className="inline-flex h-10 min-w-10 items-center justify-center rounded-[16px] bg-foreground px-3 text-sm font-semibold text-background">
+              {user.display_name?.slice(0, 1) || 'R'}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <MobileActionRow
+              title="备份与导出"
+              subtitle="查看最近备份并导出 JSON、CSV、ZIP"
+              actionLabel="打开"
+              onClick={() => navigate('/settings?mobile=backup')}
+            />
+            <MobileActionRow
+              title="轻管理"
+              subtitle="回到上传、导入和概览入口"
+              actionLabel="前往"
+              onClick={() => navigate('/overview')}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-border bg-card px-4 py-4 shadow-[0_10px_24px_rgba(64,47,31,0.06)]">
+          <div className="mb-3 flex items-center justify-between">
+            <strong className="text-sm text-foreground">账号与安全</strong>
+            <span className="text-[11px] text-muted-foreground">{user.is_admin ? '管理员' : '普通用户'}</span>
+          </div>
+
+          {!showChangePwd ? (
+            <div className="space-y-2">
+              <MobileActionRow
+                title="修改口令"
+                subtitle="更新当前账户口令"
+                actionLabel="打开"
+                onClick={() => setShowChangePwd(true)}
+              />
+              <MobileActionRow
+                title="退出登录"
+                subtitle="退出后需要重新登录"
+                actionLabel="退出"
+                onClick={() => {
+                  logout.mutateAsync().then(() => {
+                    navigate('/login', { replace: true });
+                  }).catch(() => {
+                    // ignore
+                  });
+                }}
+                disabled={logout.isPending}
+              />
+            </div>
+          ) : (
+            <div className="rounded-[18px] border border-border px-3 py-3">
+              <SimpleChangePassword onClose={() => setShowChangePwd(false)} />
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-[24px] border border-border bg-card px-4 py-4 shadow-[0_10px_24px_rgba(64,47,31,0.06)]">
+          <div className="mb-3 flex items-center justify-between">
+            <strong className="text-sm text-foreground">系统概览</strong>
+            <span className="text-[11px] text-muted-foreground">只读摘要</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <MobileStatCard label="书籍" value={systemStats.data?.book_count ?? '--'} />
+            <MobileStatCard label="文件" value={systemStats.data?.file_count ?? '--'} />
+            <MobileStatCard label="分类" value={systemStats.data?.category_count ?? '--'} />
+            <MobileStatCard label="标签" value={systemStats.data?.tag_count ?? '--'} />
+          </div>
+          <div className="mt-3 flex items-center justify-between rounded-[18px] bg-muted px-3 py-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground">桌面端完整设置</div>
+              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">AI、存储、登录管理、属性设置等高级功能仍建议在桌面端完成。</div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </div>
+        </section>
+      </div>
+    </ProtectedShell>
+  );
+}
+
+function MobileStatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="rounded-[18px] bg-muted px-3 py-3">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
+    </div>
   );
 }
 
