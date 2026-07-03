@@ -28,7 +28,10 @@ import { useTags, type TagItem } from '@/hooks/use-tags';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { Button } from '@/components/ui/button';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
+import { MobileBookDetailSheet } from '@/components/mobile-book-detail-sheet';
+import { MobileBookshelf } from '@/components/mobile-bookshelf';
 import { ProtectedShell } from '@/components/protected-shell';
+import { useMobileLayout } from '@/hooks/use-mobile-layout';
 
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
@@ -1086,6 +1089,7 @@ function CreateBookForm({ onClose }: CreateBookFormProps) {
 }
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
+  const isMobileLayout = useMobileLayout();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
@@ -1223,8 +1227,26 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         searchValue={search}
         onSearchChange={setSearch}
         stats={sidebarStats}
-        mainClassName="px-6 py-6 lg:px-8"
+        mobileNavKey="bookshelf"
+        mainClassName={isMobileLayout ? 'px-0 py-0' : 'px-6 py-6 lg:px-8'}
       >
+        {isMobileLayout ? (
+          <MobileBookshelf
+            pageView={pageView}
+            books={books}
+            isLoading={isLoading}
+            isError={isError}
+            error={error instanceof Error ? error : null}
+            hasFilter={Boolean(hasFilter)}
+            search={search}
+            onSearchChange={setSearch}
+            status={status}
+            onStatusChange={setStatus}
+            onOpenCreate={() => setShowCreate(true)}
+            onOpenDetail={(id) => setDetailBookId(id)}
+          />
+        ) : (
+          <>
         <header className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground font-display">
@@ -1415,10 +1437,16 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             ))}
           </section>
         )}
+          </>
+        )}
       </ProtectedShell>
 
       {showCreate && <CreateBookForm onClose={() => setShowCreate(false)} />}
-      <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
+      {isMobileLayout ? (
+        <MobileBookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
+      ) : (
+        <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={() => setDetailBookId(null)} />
+      )}
     </>
   );
 }

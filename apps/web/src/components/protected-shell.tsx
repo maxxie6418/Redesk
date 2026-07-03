@@ -4,6 +4,7 @@ import { useQuickLinks } from '@/hooks/use-quick-links';
 import { AppShell, type AuthViewModel } from '@/components/app-shell';
 import { ShellUserContext } from '@/components/shell-user-context';
 import type { AppSidebarKey, AppSidebarStat } from '@/components/app-sidebar';
+import type { MobileNavKey } from '@/components/mobile-app-shell';
 import { LOCAL_AUTH_USER } from '@/lib/auth-mode';
 
 export interface ProtectedShellProps {
@@ -13,6 +14,7 @@ export interface ProtectedShellProps {
   onSearchChange?: (value: string) => void;
   stats?: AppSidebarStat[];
   mainClassName?: string;
+  mobileNavKey?: MobileNavKey;
 }
 
 export function ProtectedShell(props: ProtectedShellProps) {
@@ -42,6 +44,7 @@ export function ProtectedShell(props: ProtectedShellProps) {
         onSearchChange={props.onSearchChange}
         stats={props.stats}
         mainClassName={props.mainClassName}
+        mobileNavKey={props.mobileNavKey}
       >
         {props.children}
       </AppShell>
