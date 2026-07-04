@@ -14,6 +14,19 @@ interface TocItem {
   href: string;
 }
 
+function shouldIgnoreKeydown(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  const tagName = target.tagName;
+  return (
+    target.isContentEditable ||
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT' ||
+    target.closest('[contenteditable="true"]') !== null
+  );
+}
+
 export function BookReaderPage() {
   const { id } = useParams<{ id: string }>();
   const bookId = Number(id);
@@ -137,6 +150,35 @@ export function BookReaderPage() {
     renditionRef.current?.display(href);
     setTocOpen(false);
   };
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (shouldIgnoreKeydown(event.target)) return;
+
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        renditionRef.current?.prev();
+      }
+
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        renditionRef.current?.next();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+
+    const rendition = renditionRef.current;
+    if (rendition?.hooks?.content) {
+      rendition.hooks.content.register((contents: any) => {
+        contents.document.addEventListener('keydown', handleKeydown);
+      });
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [primaryEpubId]);
 
   if (book.isLoading || files.isLoading) {
     return (
