@@ -29,8 +29,8 @@ export function ProtectedShell(props: ProtectedShellProps) {
   const authViewModel: AuthViewModel = {
     loggedIn,
     initial,
-    displayName: user.display_name ?? user.username ?? '\u672a\u767b\u5f55',
-    userLabel: !loggedIn ? null : user.is_admin ? '\u7ba1\u7406\u5458' : '\u666e\u901a\u7528\u6237',
+    displayName: user.display_name ?? user.username ?? '未登录',
+    userLabel: !loggedIn ? null : user.is_admin ? '管理员' : '普通用户',
     canOpenSettings: loggedIn,
   };
 

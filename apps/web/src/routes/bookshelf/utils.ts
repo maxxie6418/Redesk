@@ -35,7 +35,7 @@ export interface LinkBookMetadata {
 export function cleanDoubanValue(value: string): string {
   return value
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\u3010([^\u3011]+)\u3011/g, '$1')
+    .replace(/【([^】]+)】/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
 }

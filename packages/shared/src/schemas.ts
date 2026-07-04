@@ -215,6 +215,26 @@ export const updateFileSchema = z.object({
 });
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
 
+export const fileMatchModeSchema = z.enum(['conservative', 'balanced', 'loose']);
+export type FileMatchMode = z.infer<typeof fileMatchModeSchema>;
+
+export const fileMatchCandidatesSchema = z.object({
+  file_ids: z.array(z.number().int().positive()).min(1).max(200),
+  mode: fileMatchModeSchema.default('balanced'),
+});
+export type FileMatchCandidatesInput = z.infer<typeof fileMatchCandidatesSchema>;
+
+export const applyFileMatchItemSchema = z.object({
+  file_id: z.number().int().positive(),
+  book_id: z.number().int().positive(),
+});
+export type ApplyFileMatchItemInput = z.infer<typeof applyFileMatchItemSchema>;
+
+export const applyFileMatchesSchema = z.object({
+  items: z.array(applyFileMatchItemSchema).min(1).max(200),
+});
+export type ApplyFileMatchesInput = z.infer<typeof applyFileMatchesSchema>;
+
 export const exportQuerySchema = z.object({
   format: z.enum(['json', 'csv']).optional().default('json'),
   ids: z.string().optional(),
@@ -232,6 +252,7 @@ export const importBooksRowSchema = z.object({
   skipped: z.boolean(),
   book_id: z.number().int().nullable(),
   error: z.string().nullable(),
+  raw_data: z.record(z.string(), z.string().nullable()).optional(),
 });
 export type ImportBooksResultRow = z.infer<typeof importBooksRowSchema>;
 
@@ -363,3 +384,71 @@ export const bookCoverSchema = z.object({
   updated_at: z.string(),
 });
 export type BookCoverItem = z.infer<typeof bookCoverSchema>;
+
+// 高亮/划线 schemas
+export const createHighlightSchema = z.object({
+  book_id: z.number().int(),
+  cfi_start: z.string().min(1),
+  cfi_end: z.string().min(1),
+  text: z.string().min(1),
+  type: z.enum(['HIGHLIGHT', 'UNDERLINE']).optional().default('HIGHLIGHT'),
+  color: z.string().max(20).optional().nullable(),
+  note: z.string().max(5000).optional().nullable(),
+  mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional().default('NONE'),
+});
+export type CreateHighlightInput = z.infer<typeof createHighlightSchema>;
+
+export const updateHighlightSchema = z.object({
+  cfi_start: z.string().min(1).optional(),
+  cfi_end: z.string().min(1).optional(),
+  text: z.string().min(1).optional(),
+  type: z.enum(['HIGHLIGHT', 'UNDERLINE']).optional(),
+  color: z.string().max(20).optional().nullable(),
+  note: z.string().max(5000).optional().nullable(),
+  mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional(),
+});
+export type UpdateHighlightInput = z.infer<typeof updateHighlightSchema>;
+
+// 独立笔记 schemas
+export const createNoteSchema = z.object({
+  book_id: z.number().int(),
+  cfi: z.string().optional().nullable(),
+  title: z.string().max(500).optional().nullable(),
+  content_html: z.string().optional().nullable(),
+  content_markdown: z.string().optional().nullable(),
+  mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional().default('NONE'),
+});
+export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+
+export const updateNoteSchema = z.object({
+  cfi: z.string().optional().nullable(),
+  title: z.string().max(500).optional().nullable(),
+  content_html: z.string().optional().nullable(),
+  content_markdown: z.string().optional().nullable(),
+  mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional(),
+});
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+
+// 话题 schemas
+export const createTopicSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional().nullable(),
+});
+export type CreateTopicInput = z.infer<typeof createTopicSchema>;
+
+export const updateTopicSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional().nullable(),
+});
+export type UpdateTopicInput = z.infer<typeof updateTopicSchema>;
+
+export const createTopicEntrySchema = z.object({
+  entry_type: z.enum(['QUESTION', 'JUDGMENT', 'COMPARISON']),
+  content: z.string().min(1).max(5000),
+});
+export type CreateTopicEntryInput = z.infer<typeof createTopicEntrySchema>;
+
+export const updateTopicEntrySchema = z.object({
+  content: z.string().min(1).max(5000).optional(),
+});
+export type UpdateTopicEntryInput = z.infer<typeof updateTopicEntrySchema>;

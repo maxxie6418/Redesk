@@ -63,6 +63,7 @@ interface RawBookRow {
   favorited_at: string | null;
   started_at: string | null;
   finished_at: string | null;
+  import_order: number;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -182,16 +183,16 @@ function parseNeoDBHtml(html: string, sourceUrl: string): LinkMetadata {
     .map(asRecord)
     .find((item) => item?.['@type'] === 'Book');
   const publisher = asRecord(jsonLd?.publisher);
-  const publishDate = readText(jsonLd?.datePublished) ?? pickNeoDBField(html, '\u53d1\u884c\u65f6\u95f4');
-  const pageCountRaw = jsonLd?.numberOfPages ?? pickNeoDBField(html, '\u9875\u6570');
+  const publishDate = readText(jsonLd?.datePublished) ?? pickNeoDBField(html, '发行时间');
+  const pageCountRaw = jsonLd?.numberOfPages ?? pickNeoDBField(html, '页数');
   const pageCount = typeof pageCountRaw === 'number' ? pageCountRaw : String(pageCountRaw ?? '').match(/\d+/)?.[0];
   const rating = pickNeoDBRating(html);
 
   return {
     title: readText(jsonLd?.name) ?? pickMeta(html, 'og:title') ?? undefined,
-    author: readPersonList(jsonLd?.author) ?? pickNeoDBField(html, '\u4f5c\u8005'),
-    translator: pickNeoDBField(html, '\u8bd1\u8005'),
-    publisher: readText(publisher?.name) ?? pickNeoDBField(html, '(?:publishing house|\u51fa\u7248\u793e)'),
+    author: readPersonList(jsonLd?.author) ?? pickNeoDBField(html, '作者'),
+    translator: pickNeoDBField(html, '译者'),
+    publisher: readText(publisher?.name) ?? pickNeoDBField(html, '(?:publishing house|出版社)'),
     publish_year: publishDate?.match(/\d{4}/) ? Number(publishDate.match(/\d{4}/)?.[0]) : undefined,
     isbn: readText(jsonLd?.isbn)?.replace(/[^\dXx]/g, '') ?? pickNeoDBField(html, 'ISBN')?.replace(/[^\dXx]/g, ''),
     page_count: pageCount ? Number(pageCount) : undefined,
@@ -209,13 +210,13 @@ function parseDoubanHtml(html: string, sourceUrl: string): LinkMetadata {
     pickMeta(html, 'og:title') ??
     stripHtml(html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] ?? '').replace(/\(豆瓣\)$/, '').trim();
 
-  const author = pickDoubanInfo(html, '\u4f5c\u8005');
-  const publisher = pickDoubanInfo(html, '\u51fa\u7248\u793e');
-  const publishDate = pickDoubanInfo(html, '\u51fa\u7248\u5e74');
+  const author = pickDoubanInfo(html, '作者');
+  const publisher = pickDoubanInfo(html, '出版社');
+  const publishDate = pickDoubanInfo(html, '出版年');
   const isbn = pickDoubanInfo(html, 'ISBN')?.replace(/[^\dXx]/g, '');
-  const pageCountText = pickDoubanInfo(html, '\u9875\u6570');
-  const translator = pickDoubanInfo(html, '\u8bd1\u8005');
-  const originalTitle = pickDoubanInfo(html, '\u539f\u4f5c\u540d');
+  const pageCountText = pickDoubanInfo(html, '页数');
+  const translator = pickDoubanInfo(html, '译者');
+  const originalTitle = pickDoubanInfo(html, '原作名');
   const description =
     pickMeta(html, 'og:description') ??
     stripHtml(html.match(/<div[^>]+class=["'][^"']*intro[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '');
@@ -335,6 +336,7 @@ function bookSelect() {
     favorited_at: books.favorited_at,
     started_at: books.started_at,
     finished_at: books.finished_at,
+    import_order: books.import_order,
     deleted_at: books.deleted_at,
     created_at: books.created_at,
     updated_at: books.updated_at,
@@ -408,6 +410,14 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
   const categoryId = validateCategoryOwnership(userId, input.category_id, 'PERSONAL');
   const genreCategoryId = validateCategoryOwnership(userId, input.genre_category_id, 'GENRE');
   const tagIds = validateTagOwnership(userId, input.tag_ids);
+
+  const maxOrderResult = db
+    .select({ max_order: sql<number>`COALESCE(MAX(${books.import_order}), 0)` })
+    .from(books)
+    .where(eq(books.owner_id, userId))
+    .get();
+  const nextImportOrder = (maxOrderResult?.max_order ?? 0) + 1;
+
   const book = db
     .insert(books)
     .values({
@@ -432,6 +442,7 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
       translator: input.translator ?? null,
       original_title: input.original_title ?? null,
       page_count: input.page_count ?? null,
+      import_order: nextImportOrder,
       created_at: timestamp,
       updated_at: timestamp,
     })
@@ -654,11 +665,13 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
       orderBy = descending ? desc(books.rating) : asc(books.rating);
     } else if (field === 'publish_year') {
       orderBy = descending ? desc(books.publish_year) : asc(books.publish_year);
+    } else if (field === 'import_order') {
+      orderBy = descending ? desc(books.import_order) : asc(books.import_order);
     }
   }
 
   if (!orderBy) {
-    orderBy = desc(books.updated_at);
+    orderBy = asc(books.import_order);
   }
 
   const offset = (page - 1) * pageSize;
@@ -1008,6 +1021,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       skipped: boolean;
       book_id: number | null;
       error: string | null;
+      raw_data?: Record<string, string | null>;
     }[] = [];
     const seenKeys = new Set<string>();
 
@@ -1018,6 +1032,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       headers.forEach((header, index) => {
         item[header] = raw[index];
       });
+      const rawData: Record<string, string | null> = {};
+      for (const h of headers) {
+        rawData[h] = item[h] != null ? item[h]! : null;
+      }
 
       const errors: string[] = [];
       const title = optionalText(item.title);
@@ -1041,6 +1059,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
             skipped: true,
             book_id: null,
             error: '已存在相同 ISBN 或书名+作者的书籍',
+            raw_data: rawData,
           });
           seenKeys.add(duplicateKey);
           continue;
@@ -1056,6 +1075,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           skipped: false,
           book_id: null,
           error: errors.join('；'),
+          raw_data: rawData,
         });
         continue;
       }
@@ -1089,12 +1109,12 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         });
 
         if (dryRun) {
-          importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: null, error: null });
+          importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: null, error: null, raw_data: rawData });
           continue;
         }
 
         const book = await createBookRecord(userId, input, null);
-        importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: book.id, error: null });
+        importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: book.id, error: null, raw_data: rawData });
       } catch (err) {
         importRows.push({
           row: rowNo,
@@ -1103,6 +1123,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           skipped: false,
           book_id: null,
           error: err instanceof Error ? err.message : '导入失败',
+          raw_data: rawData,
         });
       }
     }
@@ -1692,6 +1713,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         orderBy = descending ? desc(books.updated_at) : asc(books.updated_at);
       } else if (field === 'title') {
         orderBy = descending ? desc(books.title) : asc(books.title);
+      } else if (field === 'import_order') {
+        orderBy = descending ? desc(books.import_order) : asc(books.import_order);
       }
     }
 

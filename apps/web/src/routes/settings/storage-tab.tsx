@@ -318,8 +318,8 @@ export function BatchUploadCard({ onToast }: { onToast: (msg: StatusMessage) => 
       form.append('file', item.file);
       form.append('storage_mode', item.mode);
       try {
-        const res = await api.post<{ data: { id: number } }>('/files/unassociated', form);
-        results.push({ ...item, status: 'success', resultId: res.data.id, error: null });
+        const res = await api.postForm<{ id: number }>('/files/unassociated', form);
+        results.push({ ...item, status: 'success', resultId: res.id, error: null });
       } catch (err) {
         results.push({ ...item, status: 'error', error: err instanceof Error ? err.message : '上传失败' });
       }

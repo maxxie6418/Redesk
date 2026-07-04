@@ -747,6 +747,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                     value={b.title}
                     editMode={editMode}
                     required
+                    layout="block"
+                    align="left"
+                    truncate={false}
+                    valueClassName="font-display text-[28px] font-semibold leading-tight text-foreground"
                     onSave={async (v) => saveText('title', v, { required: true })}
                   />
                 ) : (
@@ -756,9 +760,13 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 )}
                 {b.subtitle && editMode && (
                   <EditableTextField
-                    label="副标题"
+                    label=""
                     value={b.subtitle}
                     editMode={editMode}
+                    layout="block"
+                    align="left"
+                    truncate={false}
+                    valueClassName="text-[15px] text-muted-foreground italic"
                     onSave={async (v) => saveText('subtitle', v)}
                   />
                 )}
@@ -780,13 +788,23 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   <div className="mt-3">
                     {editMode ? (
                       <EditableSelectField
-                        label="分类"
+                        label=""
                         value={b.category_id ? String(b.category_id) : ''}
                         options={[
                           { value: '', label: '未分类' },
                           ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
                         ]}
                         editMode={editMode}
+                        layout="block"
+                        align="left"
+                        truncate={false}
+                        valueClassName="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary"
+                        renderValue={(label) => (
+                          <>
+                            <FolderOpen className="h-4 w-4 text-primary" />
+                            {label}
+                          </>
+                        )}
                         onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
                       />
                     ) : (
@@ -911,6 +929,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                     label="简介"
                     value={b.description ?? ''}
                     editMode={editMode}
+                    layout="block"
+                    align="left"
+                    truncate={false}
+                    valueClassName="text-[14px] leading-relaxed text-muted-foreground font-normal whitespace-pre-wrap"
                     onSave={async (v) => saveText('description', v)}
                   />
                 </div>

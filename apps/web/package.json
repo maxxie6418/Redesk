@@ -1,6 +1,6 @@
 {
   "name": "@redesk/web",
-  "version": "1.7.0",
+  "version": "1.7.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,7 +15,14 @@
     "@tanstack/react-query": "^5.62.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "@xmldom/xmldom": "^0.9.5",
     "epubjs": "^0.3.93",
+    "event-emitter": "^0.3.5",
+    "jszip": "^3.10.1",
+    "localforage": "^1.10.0",
+    "lodash": "^4.17.21",
+    "marks-pane": "^1.0.9",
+    "path-webpack": "^0.0.3",
     "lucide-react": "^0.469.0",
     "radix-ui": "^1.6.0",
     "react": "^18.3.1",

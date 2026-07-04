@@ -45,7 +45,7 @@ export async function ensureDefaultAdmin(): Promise<void> {
       .values({
         username: 'admin',
         password_hash: passwordHash,
-        display_name: '\u7ba1\u7406\u5458',
+        display_name: '管理员',
         is_admin: 1,
         must_change_password: 1,
         created_at: ts,
@@ -53,7 +53,7 @@ export async function ensureDefaultAdmin(): Promise<void> {
       })
       .run();
 
-    console.log('[redesk] \u9ed8\u8ba4\u7ba1\u7406\u5458\u5df2\u521b\u5efa\uff1a\u53e3\u4ee4\u4e3a admin\uff0c\u9996\u6b21\u767b\u5f55\u540e\u5fc5\u987b\u4fee\u6539\u53e3\u4ee4\u3002');
+    console.log('[redesk] 默认管理员已创建：口令为 admin，首次登录后必须修改口令。');
   }
 }
 
@@ -88,7 +88,7 @@ export function requireUserId(req: FastifyRequest): number {
 export function requireAdmin(req: FastifyRequest): number {
   const userId = requireUserId(req);
   if (!isAdmin(userId)) {
-    throw forbidden('\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650');
+    throw forbidden('需要管理员权限');
   }
   return userId;
 }

@@ -125,16 +125,16 @@ function parseNeoDBHtml(html: string, sourceUrl: string): LinkMetadata {
     .map(asRecord)
     .find((item) => item?.['@type'] === 'Book');
   const publisher = asRecord(jsonLd?.publisher);
-  const publishDate = readText(jsonLd?.datePublished) ?? pickNeoDBField(html, '\u53d1\u884c\u65f6\u95f4');
-  const pageCountRaw = jsonLd?.numberOfPages ?? pickNeoDBField(html, '\u9875\u6570');
+  const publishDate = readText(jsonLd?.datePublished) ?? pickNeoDBField(html, '发行时间');
+  const pageCountRaw = jsonLd?.numberOfPages ?? pickNeoDBField(html, '页数');
   const pageCount = typeof pageCountRaw === 'number' ? pageCountRaw : String(pageCountRaw ?? '').match(/\d+/)?.[0];
   const rating = pickNeoDBRating(html);
 
   return {
     title: readText(jsonLd?.name) ?? pickMeta(html, 'og:title') ?? undefined,
-    author: readPersonList(jsonLd?.author) ?? pickNeoDBField(html, '\u4f5c\u8005'),
-    translator: pickNeoDBField(html, '\u8bd1\u8005'),
-    publisher: readText(publisher?.name) ?? pickNeoDBField(html, '(?:publishing house|\u51fa\u7248\u793e)'),
+    author: readPersonList(jsonLd?.author) ?? pickNeoDBField(html, '作者'),
+    translator: pickNeoDBField(html, '译者'),
+    publisher: readText(publisher?.name) ?? pickNeoDBField(html, '(?:publishing house|出版社)'),
     publish_year: publishDate?.match(/\d{4}/) ? Number(publishDate.match(/\d{4}/)?.[0]) : undefined,
     isbn: readText(jsonLd?.isbn)?.replace(/[^\dXx]/g, '') ?? pickNeoDBField(html, 'ISBN')?.replace(/[^\dXx]/g, ''),
     page_count: pageCount ? Number(pageCount) : undefined,
@@ -150,15 +150,15 @@ function parseNeoDBHtml(html: string, sourceUrl: string): LinkMetadata {
 function parseDoubanHtml(html: string, sourceUrl: string): LinkMetadata {
   const title =
     pickMeta(html, 'og:title') ??
-    stripHtml(html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] ?? '').replace(/\(璞嗙摚\)$/, '').trim();
+    stripHtml(html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] ?? '').replace(/\(豆瓣\)$/, '').trim();
 
-  const author = pickDoubanInfo(html, '\u4f5c\u8005');
-  const publisher = pickDoubanInfo(html, '\u51fa\u7248\u793e');
-  const publishDate = pickDoubanInfo(html, '\u51fa\u7248\u5e74');
+  const author = pickDoubanInfo(html, '作者');
+  const publisher = pickDoubanInfo(html, '出版社');
+  const publishDate = pickDoubanInfo(html, '出版年');
   const isbn = pickDoubanInfo(html, 'ISBN')?.replace(/[^\dXx]/g, '');
-  const pageCountText = pickDoubanInfo(html, '\u9875\u6570');
-  const translator = pickDoubanInfo(html, '\u8bd1\u8005');
-  const originalTitle = pickDoubanInfo(html, '\u539f\u4f5c\u540d');
+  const pageCountText = pickDoubanInfo(html, '页数');
+  const translator = pickDoubanInfo(html, '译者');
+  const originalTitle = pickDoubanInfo(html, '原作名');
   const description =
     pickMeta(html, 'og:description') ??
     stripHtml(html.match(/<div[^>]+class=["'][^"']*intro[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? '');

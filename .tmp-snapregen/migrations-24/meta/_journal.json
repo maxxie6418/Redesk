@@ -1,0 +1,181 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1745248385000,
+      "tag": "0000_awesome_supernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1745421185000,
+      "tag": "0001_eager_susan_delgado",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1747687985000,
+      "tag": "0002_loud_lady_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1747856460000,
+      "tag": "0003_file_pool",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1748002200000,
+      "tag": "0004_file_owner_boundary",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1748376600000,
+      "tag": "0005_books_author_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1748981400000,
+      "tag": "0006_book_covers",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1750114200000,
+      "tag": "0007_user_auth_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1751573400000,
+      "tag": "0008_storage_driver",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783306800000,
+      "tag": "0009_must_change_password",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1783311600000,
+      "tag": "0010_storage_mode_a",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1783311600001,
+      "tag": "0010_storage_mode_b",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1783311600002,
+      "tag": "0010_storage_mode_c",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1783311600003,
+      "tag": "0010_storage_mode_d",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1783311600004,
+      "tag": "0010_storage_mode_e",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1783311600005,
+      "tag": "0010_storage_mode_f",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1783311600006,
+      "tag": "0010_storage_mode_g",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1783311600007,
+      "tag": "0010_storage_mode_h",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1783311600008,
+      "tag": "0010_storage_mode_i",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1783311600009,
+      "tag": "0010_storage_mode_j",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783311600010,
+      "tag": "0010_storage_mode_k",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1783311600011,
+      "tag": "0010_storage_mode_l",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1783311600012,
+      "tag": "0010_storage_mode_m",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1783311600013,
+      "tag": "0010_storage_mode_n",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1783311600014,
+      "tag": "0010_storage_mode_o",
+      "breakpoints": true
+    }
+  ]
+}

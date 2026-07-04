@@ -20,10 +20,10 @@ const NAV_ITEMS: Array<{
   label: string;
   icon: typeof BookOpen;
 }> = [
-  { key: 'bookshelf', label: '\u4e66\u67b6', icon: BookOpen },
-  { key: 'manage', label: '\u8f7b\u7ba1\u7406', icon: Plus },
-  { key: 'backup', label: '\u5907\u4efd', icon: Download },
-  { key: 'settings', label: '\u8bbe\u7f6e', icon: Settings },
+  { key: 'bookshelf', label: '书架', icon: BookOpen },
+  { key: 'manage', label: '轻管理', icon: Plus },
+  { key: 'backup', label: '备份', icon: Download },
+  { key: 'settings', label: '设置', icon: Settings },
 ];
 
 export function MobileAppShell({
@@ -37,7 +37,7 @@ export function MobileAppShell({
 
   const handleNav = (key: MobileNavKey) => {
     if (key !== 'bookshelf' && !authViewModel.loggedIn) {
-      toast('\u767b\u5f55\u540e\u624d\u80fd\u7ee7\u7eed\u64cd\u4f5c');
+      toast('登录后才能继续操作');
       return;
     }
 
@@ -68,8 +68,8 @@ export function MobileAppShell({
 
   return (
     <div className={cn('min-h-screen', pageClassName)}>
-      <main className={cn('mx-auto min-h-screen w-full max-w-md px-4 pb-28 pt-4', mainClassName)}>
-        {children}
+      <main className={cn('mx-auto min-h-screen w-full max-w-md px-4 pt-4', mainClassName)}>
+        <div className="pb-28">{children}</div>
       </main>
 
       <div className="fixed inset-x-0 bottom-4 z-40 px-4">
@@ -89,7 +89,7 @@ export function MobileAppShell({
                   key={item.key}
                   type="button"
                   className={cn(
-                    'flex min-w-0 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-semibold transition-colors',
+                    'flex min-w-0 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-xs font-semibold transition-colors',
                     active ? 'bg-primary/12 text-primary' : 'text-muted-foreground hover:text-foreground',
                   )}
                   onClick={() => handleNav(item.key)}

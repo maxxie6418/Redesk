@@ -35,10 +35,11 @@ import { useMobileLayout } from '@/hooks/use-mobile-layout';
 
 
 type ViewMode = 'A' | 'B' | 'C' | 'D';
-type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
+type SortMode = 'import_order_asc' | 'updated_desc' | 'title_asc' | 'rating_desc';
 type PageView = 'bookshelf' | 'trash';
 
 const SORT_API_MAP: Record<SortMode, string> = {
+  import_order_asc: 'import_order',
   updated_desc: '-updated_at',
   title_asc: 'title',
   rating_desc: '-rating',
@@ -68,6 +69,7 @@ const VISIBILITY_OPTIONS = [
 ] as const;
 
 const SORT_OPTIONS = [
+  { value: 'import_order_asc', label: '按导入序号排序' },
   { value: 'updated_desc', label: '按最近更新排序' },
   { value: 'title_asc', label: '按书名排序' },
   { value: 'rating_desc', label: '按评分排序' },
@@ -117,7 +119,7 @@ interface LinkBookMetadata {
 function cleanDoubanValue(value: string): string {
   return value
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\u3010([^\u3011]+)\u3011/g, '$1')
+    .replace(/【([^】]+)】/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -129,23 +131,23 @@ function parseDoubanMetadata(raw: string): ParsedBookMetadata {
     .filter(Boolean);
   const data: ParsedBookMetadata = {};
 
-  const firstTitle = lines.find((line) => !line.includes(':') && !line.includes('\uff1a'));
+  const firstTitle = lines.find((line) => !line.includes(':') && !line.includes('：'));
   if (firstTitle) data.title = cleanDoubanValue(firstTitle);
 
   for (const line of lines) {
-    const match = line.match(/^([^:\uff1a]+)[:\uff1a]\s*(.+)$/);
+    const match = line.match(/^([^:：]+)[:：]\s*(.+)$/);
     if (!match) continue;
     const key = match[1].trim();
     const value = cleanDoubanValue(match[2]);
 
-    if (key.includes('\u4f5c\u8005')) data.author = value;
-    if (key.includes('\u8bd1\u8005')) data.translator = value;
-    if (key.includes('\u51fa\u7248\u793e')) data.publisher = value;
-    if (key.includes('\u51fa\u7248\u5e74')) data.publishYear = value.match(/\d{4}/)?.[0] ?? value;
+    if (key.includes('作者')) data.author = value;
+    if (key.includes('译者')) data.translator = value;
+    if (key.includes('出版社')) data.publisher = value;
+    if (key.includes('出版年')) data.publishYear = value.match(/\d{4}/)?.[0] ?? value;
     if (key.toUpperCase().includes('ISBN')) data.isbn = value.replace(/[^\dXx]/g, '');
-    if (key.includes('\u9875\u6570')) data.pageCount = value.match(/\d+/)?.[0] ?? value;
-    if (key.includes('\u539f\u4f5c\u540d')) data.originalTitle = value;
-    if (key.includes('\u8c46\u74e3\u8bc4\u5206') || key.includes('\u8bc4\u5206')) data.doubanRating = value.match(/\d+(?:\.\d+)?/)?.[0];
+    if (key.includes('页数')) data.pageCount = value.match(/\d+/)?.[0] ?? value;
+    if (key.includes('原作名')) data.originalTitle = value;
+    if (key.includes('豆瓣评分') || key.includes('评分')) data.doubanRating = value.match(/\d+(?:\.\d+)?/)?.[0];
   }
 
   return data;
@@ -1099,7 +1101,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
    const personalCategories = useCategories('PERSONAL');
   const tags = useTags();
   const [favorited, setFavorited] = useState(false);
-  const [sort, setSort] = useState<SortMode>('updated_desc');
+  const [sort, setSort] = useState<SortMode>('import_order_asc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);

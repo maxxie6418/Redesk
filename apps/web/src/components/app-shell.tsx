@@ -9,7 +9,7 @@ export interface AuthViewModel {
   loggedIn: boolean;
   initial: boolean;
   displayName: string;
-  userLabel: '\u7ba1\u7406\u5458' | '\u666e\u901a\u7528\u6237' | null;
+  userLabel: '管理员' | '普通用户' | null;
   canOpenSettings: boolean;
 }
 

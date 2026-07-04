@@ -19,7 +19,7 @@ import { useAddQuickLink, useDeleteQuickLink, useQuickLinks, useReorderQuickLink
 import { useUpdateSettings } from '@/hooks/use-settings';
 import { useLogout } from '@/hooks/use-auth';
 import { BatchImportPanel } from '@/components/batch-import-panel';
-import { BatchUploadCard } from './storage-tab';
+import { BatchUploadMatchCard } from './batch-upload-card';
 import type { StatusMessage } from './types';
 
 export function GeneralTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
@@ -63,7 +63,11 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
       </Card>
 
       <QuickLinksSection onToast={onToast} />
-      <BatchUploadCard onToast={onToast} />
+      <BatchUploadMatchCard
+        defaultMode={(settings.default_storage_mode as 'local_only' | 'cloud_only' | 'dual') || 'local_only'}
+        cloudAvailable={settings.storage_driver === 's3' || Boolean(settings.oss_bucket)}
+        onToast={onToast}
+      />
 
       <Card>
         <CardHeader className="pb-4">

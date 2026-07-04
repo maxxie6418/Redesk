@@ -12,6 +12,97 @@ import { getSettingsOwnerId } from '../lib/storage-factory';
 import { join } from 'node:path';
 import { statSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync, readFileSync } from 'node:fs';
 
+// ── 版本更新检查 ──────────────────────────────────────────────
+
+const GITHUB_REPO = 'maxxie6418/Redesk';
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 分钟
+
+interface UpdateCache {
+  result: UpdateCheckResult;
+  ts: number;
+}
+
+let updateCache: UpdateCache | null = null;
+
+function compareVersions(a: string, b: string): number {
+  // 忽略 -tag 后缀，只比较 x.y.z
+  const pa = a.replace(/-.*$/, '').split('.').map(Number);
+  const pb = b.replace(/-.*$/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] ?? 0;
+    const nb = pb[i] ?? 0;
+    if (na !== nb) return na - nb;
+  }
+  return 0;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  published_at: string;
+  html_url: string;
+  body: string;
+}
+
+interface UpdateCheckResult {
+  current_version: string;
+  latest_version: string | null;
+  has_update: boolean | null;
+  release_url: string | null;
+  published_at: string | null;
+  release_notes: string | null;
+}
+
+async function fetchLatestRelease(): Promise<GitHubRelease | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+      headers: { 'User-Agent': 'redesk-update-checker' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as GitHubRelease;
+  } catch {
+    return null;
+  }
+}
+
+async function checkForUpdates(): Promise<UpdateCheckResult> {
+  const currentVersion = getAppVersion();
+
+  // 缓存命中直接返回
+  if (updateCache && Date.now() - updateCache.ts < CACHE_TTL_MS) {
+    // 但需要确保 current_version 始终是最新的
+    return { ...updateCache.result, current_version: currentVersion };
+  }
+
+  const release = await fetchLatestRelease();
+  if (!release) {
+    const result: UpdateCheckResult = {
+      current_version: currentVersion,
+      latest_version: null,
+      has_update: null,
+      release_url: null,
+      published_at: null,
+      release_notes: null,
+    };
+    return result;
+  }
+
+  const latestVersion = release.tag_name.replace(/^v/, '');
+  const hasUpdate = compareVersions(latestVersion, currentVersion) > 0;
+
+  const result: UpdateCheckResult = {
+    current_version: currentVersion,
+    latest_version: latestVersion,
+    has_update: hasUpdate,
+    release_url: release.html_url,
+    published_at: release.published_at,
+    release_notes: release.body,
+  };
+
+  updateCache = { result, ts: Date.now() };
+  return result;
+}
+
 interface DirInfo {
   file_count: number;
   size_bytes: number;
@@ -331,5 +422,12 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     return {
       data: { success: true, message: '应用已重置，请刷新页面后重新设置管理员账户' },
     };
+  });
+
+  // ── 版本更新检查 ────────────────────────────────────────────
+  app.get('/system/update-check', async (req) => {
+    requireAdmin(req);
+    const result = await checkForUpdates();
+    return { data: result };
   });
 }

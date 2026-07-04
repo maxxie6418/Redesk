@@ -7,7 +7,9 @@ import {
   BOOK_COVER_SOURCE_TYPE,
   ERROR_CODE,
   activateBookCoverSchema,
+  applyFileMatchesSchema,
   batchFetchBookCoversSchema,
+  fileMatchCandidatesSchema,
   fetchBookCoverSchema,
   storageModeSchema,
   updateFileSchema,
@@ -129,6 +131,165 @@ function detectFormat(filename: string): string {
 function detectMime(filename: string): string {
   const ext = extname(filename).toLowerCase();
   return MIME_MAP[ext] ?? 'application/octet-stream';
+}
+
+const FILE_MATCH_MODE_CONFIG = {
+  conservative: { accept: 0.9, review: 0.75, gap: 0.08 },
+  balanced: { accept: 0.78, review: 0.58, gap: 0.06 },
+  loose: { accept: 0.68, review: 0.48, gap: 0.04 },
+} as const;
+
+const FILE_MATCH_NOISE = [
+  'epub',
+  'pdf',
+  'mobi',
+  'txt',
+  'azw3',
+  'azw',
+  'djvu',
+  'docx',
+  'fb2',
+  'ebook',
+  'z-library',
+  'zlibrary',
+  'z lib',
+  '完整版',
+  '扫描版',
+  '文字版',
+  '校对版',
+  '插图版',
+  '精校',
+  '全集',
+  'volume',
+  'vol',
+];
+
+type FileMatchMode = keyof typeof FILE_MATCH_MODE_CONFIG;
+type FileMatchLevel = 'high' | 'medium' | 'low';
+
+interface FileDerivedMetadata {
+  filename_title: string | null;
+  filename_author: string | null;
+  normalized_filename: string;
+  epub_title: string | null;
+  epub_author: string | null;
+  epub_publisher: string | null;
+  epub_identifier: string | null;
+}
+
+interface FileMatchCandidate {
+  book_id: number;
+  title: string;
+  author: string | null;
+  score: number;
+  confidence: FileMatchLevel;
+  ambiguous: boolean;
+  reason: string;
+}
+
+function stripExtension(filename: string): string {
+  return filename.replace(/\.[^.]+$/, '');
+}
+
+function normalizeMatchText(value: string | null | undefined): string {
+  if (!value) return '';
+  let text = stripExtension(value)
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/(?:【|\[)z[\s-]*library(?:】|\])/gi, ' ')
+    .replace(/\((?:z[\s-]*library|zlib)\)/gi, ' ')
+    .replace(/（(?:z[\s-]*library|zlib)）/gi, ' ')
+    .replace(/[=＝]/g, ' ')
+    .replace(/[_\-+]+/g, ' ')
+    .replace(/[·•:：,，/\\|]/g, ' ')
+    .replace(/\b(v|vol|volume)\s*\d+\b/g, ' ')
+    .replace(/\b(19|20)\d{2}\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  for (const noise of FILE_MATCH_NOISE) {
+    text = text.replace(new RegExp(`\\b${noise.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), ' ');
+  }
+
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function compactMatchText(value: string | null | undefined): string {
+  return normalizeMatchText(value).replace(/\s+/g, '');
+}
+
+function tokenizeMatchText(value: string | null | undefined): string[] {
+  return normalizeMatchText(value)
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+}
+
+function normalizeIdentifier(value: string | null | undefined): string {
+  return String(value ?? '')
+    .toUpperCase()
+    .replace(/[^0-9X]/g, '');
+}
+
+function buildBigrams(value: string): Set<string> {
+  if (!value) return new Set();
+  if (value.length === 1) return new Set([value]);
+  const grams = new Set<string>();
+  for (let index = 0; index < value.length - 1; index += 1) {
+    grams.add(value.slice(index, index + 2));
+  }
+  return grams;
+}
+
+function diceCoefficient(left: string, right: string): number {
+  if (!left || !right) return 0;
+  if (left === right) return 1;
+  const leftGrams = buildBigrams(left);
+  const rightGrams = buildBigrams(right);
+  if (leftGrams.size === 0 || rightGrams.size === 0) return 0;
+
+  let overlap = 0;
+  for (const gram of leftGrams) {
+    if (rightGrams.has(gram)) overlap += 1;
+  }
+
+  return (2 * overlap) / (leftGrams.size + rightGrams.size);
+}
+
+function extractFilenameTitle(filename: string | null | undefined): string | null {
+  const raw = stripExtension(filename ?? '').trim();
+  if (!raw) return null;
+
+  const cutTokens = [' = ', '=', '（', '(', '【', '['];
+  let cutIndex = raw.length;
+  for (const token of cutTokens) {
+    const index = raw.indexOf(token);
+    if (index > 0) cutIndex = Math.min(cutIndex, index);
+  }
+
+  const title = raw.slice(0, cutIndex).replace(/[\s\-_:：]+$/g, '').trim();
+  return title || raw;
+}
+
+function extractFilenameAuthor(filename: string | null | undefined): string | null {
+  const raw = stripExtension(filename ?? '');
+  if (!raw) return null;
+  const groups = [...raw.matchAll(/(?:（|\(|【|\[)([^（）()【】\]]+)(?:）|\)|】|\])/g)]
+    .map((match) => match[1].trim())
+    .filter(Boolean)
+    .filter((part) => !/z[\s-]*library|zlib/i.test(part))
+    .filter((part) => !/丛书|全集|套装|volume|vol|edition|修订/i.test(part));
+
+  return groups.at(-1) ?? null;
+}
+
+function containsCompactText(haystack: string, needle: string): boolean {
+  return needle.length >= 2 && haystack.includes(needle);
+}
+
+function buildMatchReason(parts: string[]): string {
+  const unique = [...new Set(parts.filter(Boolean))];
+  return unique.length > 0 ? unique.join('，') : '按文件名近似匹配';
 }
 
 function coverMimeFromExt(ext: string): string {
@@ -411,6 +572,264 @@ async function extractEpubCover(
   } catch {
     return null;
   }
+}
+
+async function extractEpubMetadata(
+  storage: Storage,
+  srcKey: string,
+): Promise<Pick<FileDerivedMetadata, 'epub_title' | 'epub_author' | 'epub_publisher' | 'epub_identifier'>> {
+  try {
+    const bytes = await storage.getBytes(srcKey);
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip(bytes);
+
+    const containerEntry = zip.getEntry('META-INF/container.xml');
+    if (!containerEntry) {
+      return { epub_title: null, epub_author: null, epub_publisher: null, epub_identifier: null };
+    }
+
+    const containerXml = containerEntry.getData().toString('utf-8');
+    const rootfileMatch = containerXml.match(/full-path="([^"]+)"/);
+    if (!rootfileMatch?.[1]) {
+      return { epub_title: null, epub_author: null, epub_publisher: null, epub_identifier: null };
+    }
+
+    const opfEntry = zip.getEntry(rootfileMatch[1]);
+    if (!opfEntry) {
+      return { epub_title: null, epub_author: null, epub_publisher: null, epub_identifier: null };
+    }
+
+    const opfXml = opfEntry.getData().toString('utf-8');
+    const extractTag = (tag: string): string | null => {
+      const match = opfXml.match(new RegExp(`<dc:${tag}[^>]*>([\\s\\S]*?)</dc:${tag}>`, 'i'));
+      const value = match?.[1]?.replace(/<[^>]+>/g, '').trim();
+      return value || null;
+    };
+
+    return {
+      epub_title: extractTag('title'),
+      epub_author: extractTag('creator'),
+      epub_publisher: extractTag('publisher'),
+      epub_identifier: extractTag('identifier'),
+    };
+  } catch {
+    return { epub_title: null, epub_author: null, epub_publisher: null, epub_identifier: null };
+  }
+}
+
+async function deriveFileMetadata(file: typeof bookFiles.$inferSelect): Promise<FileDerivedMetadata> {
+  const filename_title = extractFilenameTitle(file.original_filename);
+  const filename_author = extractFilenameAuthor(file.original_filename);
+  let epub_title: string | null = null;
+  let epub_author: string | null = null;
+  let epub_publisher: string | null = null;
+  let epub_identifier: string | null = null;
+
+  if (file.file_format === 'EPUB') {
+    const readable = await resolveReadableAsset(file);
+    if (readable) {
+      const metadata = await extractEpubMetadata(readable.storage, readable.key);
+      epub_title = metadata.epub_title;
+      epub_author = metadata.epub_author;
+      epub_publisher = metadata.epub_publisher;
+      epub_identifier = metadata.epub_identifier;
+    }
+  }
+
+  return {
+    filename_title,
+    filename_author,
+    normalized_filename: normalizeMatchText(file.original_filename),
+    epub_title,
+    epub_author,
+    epub_publisher,
+    epub_identifier,
+  };
+}
+
+function buildFileMatchCandidate(
+  derived: FileDerivedMetadata,
+  book: Pick<typeof books.$inferSelect, 'id' | 'title' | 'author' | 'isbn' | 'original_title'>,
+  mode: FileMatchMode,
+  secondScore: number,
+): FileMatchCandidate {
+  const filenameCompact = compactMatchText(derived.filename_title || derived.normalized_filename);
+  const filenameFullCompact = compactMatchText(derived.normalized_filename);
+  const epubTitleCompact = compactMatchText(derived.epub_title);
+  const titleCompact = compactMatchText(book.title);
+  const originalTitleCompact = compactMatchText(book.original_title);
+  const authorCompact = compactMatchText(book.author);
+  const filenameAuthorCompact = compactMatchText(derived.filename_author);
+  const epubAuthorCompact = compactMatchText(derived.epub_author);
+
+  const titleScore = Math.max(
+    diceCoefficient(filenameCompact, titleCompact),
+    diceCoefficient(filenameFullCompact, titleCompact),
+    diceCoefficient(epubTitleCompact, titleCompact),
+    originalTitleCompact ? diceCoefficient(filenameCompact, originalTitleCompact) : 0,
+    originalTitleCompact ? diceCoefficient(epubTitleCompact, originalTitleCompact) : 0,
+  );
+
+  const containsTitle =
+    containsCompactText(filenameCompact, titleCompact) ||
+    containsCompactText(filenameFullCompact, titleCompact) ||
+    containsCompactText(epubTitleCompact, titleCompact) ||
+    (originalTitleCompact ? containsCompactText(filenameCompact, originalTitleCompact) || containsCompactText(epubTitleCompact, originalTitleCompact) : false);
+
+  const startsWithTitle =
+    (titleCompact.length >= 2 && filenameCompact.startsWith(titleCompact)) ||
+    (originalTitleCompact.length >= 2 && filenameCompact.startsWith(originalTitleCompact));
+
+  const titleTokens = tokenizeMatchText(book.title);
+  const filenameTokenSource = normalizeMatchText(derived.filename_title || derived.normalized_filename);
+  const tokenHits = titleTokens.filter((token) => filenameTokenSource.includes(token)).length;
+  const tokenScore = titleTokens.length > 0 ? tokenHits / titleTokens.length : 0;
+
+  const authorScore = Math.max(
+    authorCompact ? diceCoefficient(filenameAuthorCompact, authorCompact) : 0,
+    authorCompact ? diceCoefficient(filenameFullCompact, authorCompact) : 0,
+    authorCompact ? diceCoefficient(epubAuthorCompact, authorCompact) : 0,
+  );
+
+  const containsAuthor =
+    (authorCompact.length >= 2 && containsCompactText(filenameAuthorCompact, authorCompact)) ||
+    (authorCompact.length >= 2 && containsCompactText(filenameFullCompact, authorCompact)) ||
+    (authorCompact.length >= 2 && containsCompactText(epubAuthorCompact, authorCompact));
+
+  const identifierMatch =
+    normalizeIdentifier(derived.epub_identifier).length >= 8 &&
+    normalizeIdentifier(derived.epub_identifier) === normalizeIdentifier(book.isbn);
+
+  const epubExactTitle =
+    titleCompact.length >= 2 &&
+    (epubTitleCompact === titleCompact || (originalTitleCompact.length >= 2 && epubTitleCompact === originalTitleCompact));
+
+  let score = Math.min(
+    1,
+    titleScore * 0.64 +
+      tokenScore * 0.14 +
+      authorScore * 0.1 +
+      (containsTitle ? 0.08 : 0) +
+      (startsWithTitle ? 0.1 : 0) +
+      (containsAuthor ? 0.05 : 0) +
+      (epubExactTitle ? 0.08 : 0),
+  );
+
+  if (identifierMatch) score = 1;
+
+  const config = FILE_MATCH_MODE_CONFIG[mode];
+  const ambiguous = score >= config.review && Math.abs(score - secondScore) < config.gap;
+
+  let confidence: FileMatchLevel = 'low';
+  if (score >= config.accept && !ambiguous) confidence = 'high';
+  else if (score >= config.review) confidence = 'medium';
+
+  const reasons: string[] = [];
+  if (identifierMatch) reasons.push('EPUB 标识符与 ISBN 一致');
+  if (epubExactTitle) reasons.push('EPUB 书名直接命中');
+  else if (derived.epub_title && containsTitle) reasons.push('EPUB 书名接近');
+  if (startsWithTitle) reasons.push('文件名起始书名命中');
+  else if (containsTitle) reasons.push('文件名包含书名主体');
+  if (containsAuthor) reasons.push('作者命中');
+  else if (authorScore >= 0.45) reasons.push('作者较接近');
+  if (ambiguous) reasons.push('存在接近候选');
+
+  return {
+    book_id: book.id,
+    title: book.title,
+    author: book.author,
+    score,
+    confidence,
+    ambiguous,
+    reason: buildMatchReason(reasons),
+  };
+}
+
+async function buildFileMatchResult(
+  userId: number,
+  file: typeof bookFiles.$inferSelect,
+  mode: FileMatchMode,
+): Promise<{
+  file_id: number;
+  original_filename: string | null;
+  file_format: string;
+  derived: FileDerivedMetadata;
+  recommended_book_id: number | null;
+  confidence: FileMatchLevel;
+  reason: string | null;
+  candidates: FileMatchCandidate[];
+}> {
+  const db = getDb();
+  const derived = await deriveFileMetadata(file);
+  const candidateBooks = db
+    .select({
+      id: books.id,
+      title: books.title,
+      author: books.author,
+      isbn: books.isbn,
+      original_title: books.original_title,
+    })
+    .from(books)
+    .where(and(eq(books.owner_id, userId), isNull(books.deleted_at)))
+    .all();
+
+  const preliminary = candidateBooks
+    .map((book) => ({
+      book,
+      score: buildFileMatchCandidate(derived, book, mode, 0).score,
+    }))
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 6);
+
+  const candidates = preliminary
+    .map((entry, index) => buildFileMatchCandidate(derived, entry.book, mode, preliminary[index + 1]?.score ?? 0))
+    .sort((left, right) => right.score - left.score);
+
+  const recommended = candidates[0] ?? null;
+  const confidence = recommended?.confidence ?? 'low';
+
+  return {
+    file_id: file.id,
+    original_filename: file.original_filename,
+    file_format: file.file_format,
+    derived,
+    recommended_book_id: recommended && recommended.confidence !== 'low' ? recommended.book_id : null,
+    confidence,
+    reason: recommended?.reason ?? null,
+    candidates,
+  };
+}
+
+function applyFileMatch(
+  db: ReturnType<typeof getDb>,
+  userId: number,
+  fileId: number,
+  bookId: number,
+): typeof bookFiles.$inferSelect {
+  const file = db
+    .select()
+    .from(bookFiles)
+    .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+    .get();
+  if (!file) throw notFound('文件不存在或已关联');
+
+  const book = db
+    .select({ id: books.id })
+    .from(books)
+    .where(and(eq(books.id, bookId), eq(books.owner_id, userId), isNull(books.deleted_at)))
+    .get();
+  if (!book) throw notFound('目标书籍不存在');
+
+  db.update(bookFiles)
+    .set({ book_id: bookId, updated_at: now() })
+    .where(eq(bookFiles.id, fileId))
+    .run();
+
+  applyPrimaryOnLink(db, bookId, fileId);
+
+  const updated = db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get();
+  if (!updated) throw new AppError(ERROR_CODE.INTERNAL_ERROR, '匹配后无法读取文件记录');
+  return updated;
 }
 
 export async function downloadRemoteCover(input: {
@@ -884,6 +1303,57 @@ export function fileRoutes(app: FastifyInstance): void {
     applyPrimaryOnLink(db, book_id, fileId);
 
     return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
+  });
+
+  app.post('/files/match/candidates', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(fileMatchCandidatesSchema, req.body ?? {});
+    const db = getDb();
+
+    const files = db
+      .select()
+      .from(bookFiles)
+      .where(and(inArray(bookFiles.id, input.file_ids), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
+      .all();
+
+    const fileMap = new Map(files.map((file) => [file.id, file]));
+    const orderedFiles = input.file_ids
+      .map((id) => fileMap.get(id))
+      .filter((file): file is typeof bookFiles.$inferSelect => Boolean(file));
+
+    const items = await Promise.all(orderedFiles.map((file) => buildFileMatchResult(userId, file, input.mode)));
+    return { data: items };
+  });
+
+  app.post('/files/match/apply-batch', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(applyFileMatchesSchema, req.body ?? {});
+    const db = getDb();
+
+    const applied: typeof bookFiles.$inferSelect[] = [];
+    const failed: Array<{ file_id: number; book_id: number; message: string }> = [];
+
+    for (const item of input.items) {
+      try {
+        applied.push(applyFileMatch(db, userId, item.file_id, item.book_id));
+      } catch (error) {
+        failed.push({
+          file_id: item.file_id,
+          book_id: item.book_id,
+          message: error instanceof Error ? error.message : '匹配失败',
+        });
+      }
+    }
+
+    return {
+      data: {
+        applied,
+        failed,
+        total: input.items.length,
+        success_count: applied.length,
+        failed_count: failed.length,
+      },
+    };
   });
 
   app.post('/files/:id/match', async (req) => {

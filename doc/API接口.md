@@ -29,6 +29,7 @@
 | v1.0.11 | 2026-06-29 | 新增书籍元数据批量导入：提供 CSV 模板下载 GET /books/import/template，支持 multipart CSV 导入 POST /books/import；导入仅创建书籍元数据，不包含文件 | AI |
 | v1.1.0 | 2026-07-01 | 存储策略三态改造：book_files/book_covers 增加 storage_mode/local_path/remote_key/primary_location/sync_status；上传接口支持 `storage_mode` 字段；新增默认存储方式设置 `default_storage_mode`；设置页增加批量上传弹窗；云未配置时禁用 `cloud_only`/`dual` | AI |
 | v1.1.1 | 2026-07-02 | 鉴权与文件管理修正：会话改为长期保持直至主动退出；封面管理补充 PATCH/DELETE 跨域支持；新封面在无活动封面时自动设为当前封面 | AI |
+| v1.1.2 | 2026-07-04 | 文件匹配流程重设计：批量上传后可选进入匹配；新增批量候选生成 POST /files/match/candidates 与批量应用 POST /files/match/apply-batch；匹配候选允许结合文件名与 EPUB 元数据综合判断 | AI |
 
 ## 文档说明
 
@@ -342,6 +343,8 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 | GET | /files/unassociated | 未关联文件列表 | 2.x |
 | DELETE | /files/unassociated/{fileId} | 删除未关联文件 | 2.x |
 | POST | /files/unassociated/{fileId}/associate | 未关联文件关联到指定书籍 | 2.x |
+| POST | /files/match/candidates | 批量生成文件匹配候选 | 2.x |
+| POST | /files/match/apply-batch | 批量应用文件与书籍匹配结果 | 2.x |
 | POST | /files/{fileId}/match | 将文件池中的文件匹配到指定书籍 | 2.x |
 
 > `/files` 与 `/files/unassociated` 均只返回当前用户 `owner_id` 下的文件。checksum 去重范围为当前用户整个书库（已关联与未关联文件池），重复时返回 `DUPLICATE_FILE`。
@@ -375,6 +378,8 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 未关联文件永远为非主文件（`is_primary=false`）。
 响应 201：与 POST /books/{id}/files 结构一致。
 
+说明：上传完成后前端可以提供“继续匹配”入口，但匹配不是强制动作；用户可稍后再到文件库处理未关联文件。
+
 ### POST /files/unassociated/{fileId}/associate
 
 请求体：`{ "book_id": <number> }`
@@ -384,6 +389,94 @@ query：`threshold`（可选，默认 0.6，0–1 之间）
 - 已存在主文件时，不切换主文件。
 
 响应 200：返回更新后的 `bookFiles` 记录。
+
+### POST /files/match/candidates
+
+请求体：
+```json
+{
+  "file_ids": [101, 102, 103],
+  "mode": "balanced"
+}
+```
+
+说明：
+
+- `file_ids` 最多 200 个，只接受当前用户名下且尚未关联书籍的文件。
+- `mode` 可选值为 `conservative` / `balanced` / `loose`，分别对应保守 / 平衡 / 宽松匹配策略。
+- 候选生成允许综合使用文件名、文件名前缀、作者片段与 EPUB 内部元数据（如 `dc:title`、`dc:creator`、`dc:identifier`）进行判断。
+
+响应 200：
+```json
+{
+  "data": [
+    {
+      "file_id": 101,
+      "original_filename": "如何阅读一本书 (艾德勒) [Z-Library].epub",
+      "file_format": "EPUB",
+      "derived": {
+        "filename_title": "如何阅读一本书",
+        "filename_author": "艾德勒",
+        "normalized_filename": "如何阅读一本书 艾德勒",
+        "epub_title": "如何阅读一本书",
+        "epub_author": "莫提默·J. 艾德勒",
+        "epub_publisher": "商务印书馆",
+        "epub_identifier": "9787100040945"
+      },
+      "recommended_book_id": 12,
+      "confidence": "high",
+      "reason": "EPUB 书名直接命中，作者命中",
+      "candidates": [
+        {
+          "book_id": 12,
+          "title": "如何阅读一本书",
+          "author": "莫提默·J. 艾德勒",
+          "score": 0.97,
+          "confidence": "high",
+          "ambiguous": false,
+          "reason": "EPUB 书名直接命中，作者命中"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### POST /files/match/apply-batch
+
+请求体：
+```json
+{
+  "items": [
+    { "file_id": 101, "book_id": 12 },
+    { "file_id": 102, "book_id": 35 }
+  ]
+}
+```
+
+说明：
+
+- 一次最多 200 条。
+- 仅对仍处于未关联状态的文件生效。
+- 每条匹配成功后按既有主文件规则处理：目标书籍无主文件时自动提升为主文件，已有主文件则仅建立关联、不替换主文件。
+- 批量接口按条目逐个结算，允许部分成功、部分失败。
+
+响应 200：
+```json
+{
+  "data": {
+    "applied": [
+      { "id": 101, "book_id": 12, "is_primary": 1 }
+    ],
+    "failed": [
+      { "file_id": 102, "book_id": 35, "message": "目标书籍不存在" }
+    ],
+    "total": 2,
+    "success_count": 1,
+    "failed_count": 1
+  }
+}
+```
 
 ### POST /files/{fileId}/match
 
@@ -784,4 +877,4 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 ---
 
-> 本文档为 Redesk API 接口 v1.0.2，待评审。S1 端点可直接进入实现；S2/S3/P2 端点清单作为预留，进场时补全字段。
+> 本文档为 Redesk API 接口 v1.1.2，待评审。S1 端点可直接进入实现；S2/S3/P2 端点清单作为预留，进场时补全字段。

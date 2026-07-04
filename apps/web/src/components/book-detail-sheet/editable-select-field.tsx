@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EditablePopover } from './editable-popover';
@@ -15,6 +15,12 @@ interface EditableSelectFieldProps {
   options: SelectOption[];
   editMode: boolean;
   onSave: (value: string) => Promise<void>;
+  className?: string;
+  valueClassName?: string;
+  layout?: 'row' | 'block';
+  align?: 'left' | 'right';
+  truncate?: boolean;
+  renderValue?: (label: string) => ReactNode;
 }
 
 export function EditableSelectField({
@@ -23,12 +29,19 @@ export function EditableSelectField({
   options,
   editMode,
   onSave,
+  className,
+  valueClassName,
+  layout,
+  align,
+  truncate,
+  renderValue,
 }: EditableSelectFieldProps) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const currentLabel = options.find((o) => o.value === value)?.label ?? value;
+  const displayNode = renderValue ? renderValue(currentLabel) : currentLabel;
 
   const handleSelect = useCallback(
     async (newValue: string) => {
@@ -50,7 +63,7 @@ export function EditableSelectField({
   const trigger = (
     <EditableFieldRow
       label={label}
-      value={editMode ? currentLabel : (currentLabel || '—')}
+      value={editMode ? displayNode : (displayNode || '—')}
       editMode={editMode}
       onClick={() => {
         if (editMode && !isSaving) {
@@ -59,6 +72,11 @@ export function EditableSelectField({
         }
       }}
       isSaving={isSaving}
+      className={className}
+      valueClassName={valueClassName}
+      layout={layout}
+      align={align}
+      truncate={truncate}
     />
   );
 

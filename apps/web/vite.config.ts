@@ -18,6 +18,16 @@ export default defineConfig({
       '@': resolve(here, './src'),
     },
   },
+  optimizeDeps: {
+    include: [
+      'epubjs',
+      'event-emitter',
+      'localforage',
+      'jszip',
+      'marks-pane',
+      '@xmldom/xmldom',
+    ],
+  },
   envDir: resolve(here, '../../'),
   server: {
     port: 5173,

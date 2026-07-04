@@ -16,6 +16,7 @@ import { useOverview } from '@/hooks/use-overview';
 import type { OverviewData } from '@/hooks/use-overview';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
+import { useMobileLayout } from '@/hooks/use-mobile-layout';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProtectedShell } from '@/components/protected-shell';
@@ -97,6 +98,7 @@ function QuickAction({
 
 export function OverviewPage() {
   const navigate = useNavigate();
+  const isMobileLayout = useMobileLayout();
   const [searchParams, setSearchParams] = useSearchParams();
   const overview = useOverview();
   const sidebarStats = useSidebarStats();
@@ -159,14 +161,15 @@ export function OverviewPage() {
     <ProtectedShell
       activeKey="overview"
       stats={sidebarStats}
-      mainClassName="px-8 py-7"
+      mainClassName={isMobileLayout ? 'px-0 py-0' : 'px-8 py-7'}
     >
+        <div className={isMobileLayout ? 'px-4 py-4' : ''}>
         <div className="mb-6">
           <h1 className="font-display text-[26px] font-semibold text-foreground">档案</h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">你的阅读资产全景</p>
         </div>
 
-        <div className="mb-5 grid grid-cols-5 gap-3">
+        <div className="mb-5 grid grid-cols-3 gap-3 sm:grid-cols-5">
           <KpiCard label="书籍总数" value={total} colorClass="total" />
           <KpiCard label="正在阅读" value={readingCount} colorClass="reading" />
           <KpiCard label="计划阅读" value={plannedCount} colorClass="planned" />
@@ -174,14 +177,14 @@ export function OverviewPage() {
           <KpiCard label="收藏" value={favoriteCount} colorClass="fav" />
         </div>
 
-        <div className="mb-5 grid grid-cols-4 gap-3">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <QuickAction icon={<BookPlus className="h-[18px] w-[18px]" />} title="添加书籍" subtitle="手动录入或从链接获取" onClick={() => navigate('/?create=1')} />
           <QuickAction icon={<Import className="h-[18px] w-[18px]" />} title="导入笔记" subtitle="进入读书笔记页查看规划" onClick={() => navigate('/reading-notes')} />
           <QuickAction icon={<FileUp className="h-[18px] w-[18px]" />} title="上传文件" subtitle="EPUB / PDF / MOBI 等" onClick={() => navigate('/?import=1')} />
           <QuickAction icon={<Download className="h-[18px] w-[18px]" />} title="导出数据" subtitle="元数据 / 笔记 / 备份" onClick={() => navigate('/settings')} />
         </div>
 
-        <div className="grid grid-cols-[1fr_340px] gap-5">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_340px]">
           <div className="space-y-4">
             {timeline.length > 0 && (
               <Card className="overflow-hidden">
@@ -333,6 +336,7 @@ export function OverviewPage() {
               <span className="mt-1.5 inline-block rounded bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">M4 阶段</span>
             </div>
           </div>
+        </div>
         </div>
       <BookDetailSheet bookId={detailBookId} open={detailBookId !== null} onClose={closeDetail} variant="dialog" />
     </ProtectedShell>

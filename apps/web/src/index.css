@@ -36,10 +36,10 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Lora', Georgia, ui-serif, serif;
-  --font-display: 'Newsreader', Georgia, ui-serif, serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-sans: 'Poppins', 'PingFang SC', 'Noto Sans SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Lora', 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', Georgia, ui-serif, serif;
+  --font-display: 'Newsreader', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', Georgia, ui-serif, serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Menlo', 'Noto Sans Mono CJK SC', ui-monospace, monospace;
 }
 
 :root {

@@ -10,6 +10,11 @@ interface EditableTextFieldProps {
   onSave: (value: string) => Promise<void>;
   required?: boolean;
   placeholder?: string;
+  className?: string;
+  valueClassName?: string;
+  layout?: 'row' | 'block';
+  align?: 'left' | 'right';
+  truncate?: boolean;
 }
 
 export function EditableTextField({
@@ -19,6 +24,11 @@ export function EditableTextField({
   onSave,
   required = false,
   placeholder,
+  className,
+  valueClassName,
+  layout,
+  align,
+  truncate,
 }: EditableTextFieldProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -66,6 +76,11 @@ export function EditableTextField({
       editMode={editMode}
       onClick={editMode ? handleOpen : undefined}
       isSaving={isSaving}
+      className={className}
+      valueClassName={valueClassName}
+      layout={layout}
+      align={align}
+      truncate={truncate}
     />
   );
 

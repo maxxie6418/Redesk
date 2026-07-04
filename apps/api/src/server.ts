@@ -22,6 +22,9 @@ import { exportRoutes } from './routes/export';
 import { opdsRoutes } from './routes/opds';
 import { overviewRoutes } from './routes/overview';
 import { storageRoutes } from './routes/storage';
+import { updateScriptRoutes } from './routes/update-script';
+import { noteRoutes } from './routes/notes';
+import { topicRoutes } from './routes/topics';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -83,6 +86,9 @@ export async function buildServer(): Promise<FastifyInstance> {
     await api.register(exportRoutes, { prefix: '/api/v1' });
     await api.register(overviewRoutes, { prefix: '/api/v1' });
     await api.register(storageRoutes, { prefix: '/api/v1' });
+    await api.register(updateScriptRoutes, { prefix: '/api/v1' });
+    await api.register(noteRoutes, { prefix: '/api/v1' });
+    await api.register(topicRoutes, { prefix: '/api/v1' });
   });
 
   app.register(opdsRoutes);

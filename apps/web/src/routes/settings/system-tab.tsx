@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { AlertTriangle, Download, Loader2, RotateCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Download, ExternalLink, Loader2, RotateCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
-import { useBackup, useClearCache, useFtsRebuild, useSystemStats } from '@/hooks/use-system';
+import { useBackup, useClearCache, useFtsRebuild, useSystemStats, useUpdateCheck } from '@/hooks/use-system';
 import { formatBytes, formatUptime, type StatusMessage } from './types';
 
 export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }) {
@@ -12,6 +12,7 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
   const backup = useBackup();
   const ftsRebuild = useFtsRebuild();
   const clearCache = useClearCache();
+  const updateCheck = useUpdateCheck();
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirm, setResetConfirm] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -47,14 +48,14 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
           <div className="flex flex-col items-center gap-3 text-center">
             <AlertTriangle className="h-8 w-8 text-destructive" />
             <div>
-              <p className="text-sm font-medium text-foreground">{'\u7cfb\u7edf\u4fe1\u606f\u52a0\u8f7d\u5931\u8d25'}</p>
+              <p className="text-sm font-medium text-foreground">{'系统信息加载失败'}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {stats.error instanceof Error ? stats.error.message : '\u672a\u77e5\u9519\u8bef'}
+                {stats.error instanceof Error ? stats.error.message : '未知错误'}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => stats.refetch()}>
               <RotateCw className="mr-1 h-4 w-4" />
-              {'\u91cd\u8bd5'}
+              {'重试'}
             </Button>
           </div>
         </CardContent>
@@ -68,55 +69,146 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">{'\u5e94\u7528\u4fe1\u606f'}</CardTitle>
+          <CardTitle className="text-base">{'应用信息'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            <InfoCell label={'\u7248\u672c'} value={`v${stats.data.version}`} />
-            <InfoCell label={'\u8fd0\u884c\u73af\u5883'} value={stats.data.node_env === 'production' ? '\u751f\u4ea7' : '\u5f00\u53d1'} />
-            <InfoCell label={'\u8fd0\u884c\u65f6\u957f'} value={formatUptime(stats.data.uptime_seconds)} />
+            <InfoCell label={'版本'} value={`v${stats.data.version}`} />
+            <InfoCell label={'运行环境'} value={stats.data.node_env === 'production' ? '生产' : '开发'} />
+            <InfoCell label={'运行时长'} value={formatUptime(stats.data.uptime_seconds)} />
             <InfoCell label="Node.js" value={stats.data.node_version} />
             <InfoCell label="SQLite" value={stats.data.sqlite_version} />
           </div>
         </CardContent>
       </Card>
 
+      {/* ── 版本更新 ──────────────────────────────── */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">{'\u6570\u636e\u6982\u89c8'}</CardTitle>
+          <CardTitle className="text-base">{'版本更新'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {updateCheck.isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : updateCheck.isError ? (
+            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{'检查失败'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {updateCheck.error instanceof Error ? updateCheck.error.message : '网络连接异常'}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => updateCheck.refetch()}>
+                <RotateCw className="mr-1 h-4 w-4" />
+                {'重试'}
+              </Button>
+            </div>
+          ) : updateCheck.data ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-popover px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{'当前版本'}</span>
+                  <span className="text-sm font-medium text-foreground">v{updateCheck.data.current_version}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{'最新版本'}</span>
+                  {updateCheck.data.has_update === null ? (
+                    <span className="text-sm text-muted-foreground">{'无法获取'}</span>
+                  ) : updateCheck.data.has_update ? (
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-green-600 dark:text-green-400">
+                      <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+                      v{updateCheck.data.latest_version}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CheckCircle className="h-4 w-4" />
+                      {'已是最新'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {updateCheck.data.has_update && (
+                <div className="flex items-center gap-2">
+                  {updateCheck.data.release_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={updateCheck.data.release_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-1 h-4 w-4" />
+                        {'查看 Release'}
+                      </a>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <a href="/api/v1/update-script" download="update.sh">
+                      <Download className="mr-1 h-4 w-4" />
+                      {'下载更新脚本'}
+                    </a>
+                  </Button>
+                </div>
+              )}
+
+              {updateCheck.data.has_update === null && (
+                <p className="text-xs text-muted-foreground">
+                  {'无法连接 GitHub，请检查网络后重试'}
+                </p>
+              )}
+
+              {updateCheck.data.has_update && (
+                <div className="rounded-lg border border-dashed border-green-200 bg-green-50/50 px-4 py-3 dark:border-green-800/50 dark:bg-green-950/30">
+                  <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                    {'ℹ️ 更新方式'}
+                  </p>
+                  <p className="mt-1 text-xs text-green-700 dark:text-green-300">
+                    {'下载脚本传到服务器执行：'}
+                  </p>
+                  <code className="mt-1.5 block rounded bg-green-100/80 px-2 py-1 text-xs text-green-900 dark:bg-green-900/50 dark:text-green-100">
+                    chmod +x update.sh && ./update.sh
+                  </code>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">{'数据概览'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            <InfoCell label={'\u4e66\u7c4d\u603b\u6570'} value={stats.data.book_count} large />
-            <InfoCell label={'\u6587\u4ef6\u6570'} value={stats.data.file_count} large />
-            <InfoCell label={'\u5206\u7c7b'} value={stats.data.category_count} large />
-            <InfoCell label={'\u6807\u7b7e'} value={stats.data.tag_count} large />
-            {stats.data.user_count != null && <InfoCell label={'\u7528\u6237'} value={stats.data.user_count} large />}
-            <InfoCell label={'\u56de\u6536\u7ad9'} value={stats.data.trash_count} large />
+            <InfoCell label={'书籍总数'} value={stats.data.book_count} large />
+            <InfoCell label={'文件数'} value={stats.data.file_count} large />
+            <InfoCell label={'分类'} value={stats.data.category_count} large />
+            <InfoCell label={'标签'} value={stats.data.tag_count} large />
+            {stats.data.user_count != null && <InfoCell label={'用户'} value={stats.data.user_count} large />}
+            <InfoCell label={'回收站'} value={stats.data.trash_count} large />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">{'\u5b58\u50a8\u6982\u51b5'}</CardTitle>
+          <CardTitle className="text-base">{'存储概况'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
-            <InfoCell label={'\u6570\u636e\u5e93\u5927\u5c0f'} value={formatBytes(stats.data.db_size_bytes)} large />
-            <InfoCell label={'\u6587\u4ef6\u5b58\u50a8'} value={formatBytes(stats.data.storage_size_bytes)} large />
+            <InfoCell label={'数据库大小'} value={formatBytes(stats.data.db_size_bytes)} large />
+            <InfoCell label={'文件存储'} value={formatBytes(stats.data.storage_size_bytes)} large />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">{'\u7ef4\u62a4\u64cd\u4f5c'}</CardTitle>
+          <CardTitle className="text-base">{'维护操作'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <ActionRow
-            title={'\u624b\u52a8\u5907\u4efd'}
-            description={'\u5bfc\u51fa SQLite \u6570\u636e\u5e93\u5230\u5907\u4efd\u76ee\u5f55'}
+            title={'手动备份'}
+            description={'导出 SQLite 数据库到备份目录'}
             action={
               <Button
                 variant="outline"
@@ -124,9 +216,9 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                 onClick={async () => {
                   try {
                     const result = await backup.mutateAsync();
-                    onToast({ type: 'info', text: `\u5907\u4efd\u5b8c\u6210\uff1a${result.path}` });
+                    onToast({ type: 'info', text: `备份完成：${result.path}` });
                   } catch {
-                    onToast({ type: 'error', text: '\u5907\u4efd\u5931\u8d25' });
+                    onToast({ type: 'error', text: '备份失败' });
                   }
                 }}
                 disabled={backup.isPending}
@@ -137,8 +229,8 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
           />
 
           <ActionRow
-            title={'\u91cd\u5efa\u5168\u6587\u7d22\u5f15'}
-            description={'\u641c\u7d22\u5f02\u5e38\u65f6\u53ef\u7528\u6b64\u64cd\u4f5c\u4fee\u590d'}
+            title={'重建全文索引'}
+            description={'搜索异常时可用此操作修复'}
             action={
               <Button
                 variant="outline"
@@ -146,9 +238,9 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                 onClick={async () => {
                   try {
                     await ftsRebuild.mutateAsync();
-                    onToast({ type: 'info', text: '\u7d22\u5f15\u91cd\u5efa\u5b8c\u6210' });
+                    onToast({ type: 'info', text: '索引重建完成' });
                   } catch {
-                    onToast({ type: 'error', text: '\u91cd\u5efa\u5931\u8d25' });
+                    onToast({ type: 'error', text: '重建失败' });
                   }
                 }}
                 disabled={ftsRebuild.isPending}
@@ -159,8 +251,8 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
           />
 
           <ActionRow
-            title={'\u6e05\u7406\u7f13\u5b58'}
-            description={'\u6e05\u9664\u8fd0\u884c\u65f6\u4e34\u65f6\u6587\u4ef6'}
+            title={'清理缓存'}
+            description={'清除运行时临时文件'}
             action={
               <Button
                 variant="outline"
@@ -168,9 +260,9 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                 onClick={async () => {
                   try {
                     const result = await clearCache.mutateAsync();
-                    onToast({ type: 'info', text: `\u5df2\u6e05\u7406 ${formatBytes(result.freed_bytes)}\uff08${result.removed_files} \u4e2a\u6587\u4ef6\uff09` });
+                    onToast({ type: 'info', text: `已清理 ${formatBytes(result.freed_bytes)}（${result.removed_files} 个文件）` });
                   } catch {
-                    onToast({ type: 'error', text: '\u6e05\u7406\u5931\u8d25' });
+                    onToast({ type: 'error', text: '清理失败' });
                   }
                 }}
                 disabled={clearCache.isPending}
@@ -184,24 +276,24 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
 
       <Card className="border-destructive/30">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base text-destructive">{'\u91cd\u7f6e\u5e94\u7528'}</CardTitle>
+          <CardTitle className="text-base text-destructive">{'重置应用'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {'\u91cd\u7f6e\u5c06\u6e05\u7a7a\u6240\u6709\u6570\u636e\u5e76\u6062\u590d\u4e3a\u9996\u6b21\u90e8\u7f72\u72b6\u6001\uff0c\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\u3002'}
+            {'重置将清空所有数据并恢复为首次部署状态，此操作不可撤销。'}
           </p>
           {!resetConfirm ? (
             <Button variant="destructive" size="sm" onClick={() => setResetConfirm(true)}>
-              {'\u5f00\u59cb\u91cd\u7f6e'}
+              {'开始重置'}
             </Button>
           ) : (
             <div className="space-y-3">
               <div>
-                <p className="mb-1.5 text-sm font-medium text-foreground">{'\u7ba1\u7406\u5458\u53e3\u4ee4'}</p>
+                <p className="mb-1.5 text-sm font-medium text-foreground">{'管理员口令'}</p>
                 <Input
                   type="password"
                   className="h-9"
-                  placeholder={'\u8f93\u5165\u5f53\u524d\u7ba1\u7406\u5458\u53e3\u4ee4\u4ee5\u786e\u8ba4'}
+                  placeholder={'输入当前管理员口令以确认'}
                   value={resetPassword}
                   onChange={(event) => setResetPassword(event.target.value)}
                 />
@@ -209,7 +301,7 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
               <div className="flex gap-2">
                 <Button variant="destructive" size="sm" onClick={handleReset} disabled={resetLoading || !resetPassword}>
                   {resetLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
-                  {'\u786e\u8ba4\u91cd\u7f6e'}
+                  {'确认重置'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -219,7 +311,7 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                     setResetPassword('');
                   }}
                 >
-                  {'\u53d6\u6d88'}
+                  {'取消'}
                 </Button>
               </div>
             </div>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读话题 - Redesk 设计稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Newsreader:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['Newsreader', 'Georgia', 'ui-serif', 'serif'],
+          },
+          colors: {
+            border: '#e0ddd4',
+            input: '#b0aea5',
+            ring: '#d97757',
+            background: '#faf9f5',
+            foreground: '#141413',
+            primary: { DEFAULT: '#d97757', foreground: '#ffffff' },
+            secondary: { DEFAULT: '#e8e6dc', foreground: '#535146' },
+            muted: { DEFAULT: '#f0eee8', foreground: '#6e6d68' },
+            accent: { DEFAULT: '#e8e6dc', foreground: '#141413' },
+            destructive: { DEFAULT: '#d64545', foreground: '#ffffff' },
+            success: { DEFAULT: '#788c5d', foreground: '#ffffff' },
+            card: { DEFAULT: '#ffffff', foreground: '#141413' },
+            popover: { DEFAULT: '#ffffff', foreground: '#141413' },
+            sidebar: { DEFAULT: '#f5f4f0', foreground: '#141413' },
+          },
+          borderRadius: { lg: '0.75rem', md: '0.5rem', sm: '0.25rem' }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif; }
+    .highlight-yellow { background: linear-gradient(180deg, transparent 60%, rgba(217, 119, 87, 0.22) 60%); }
+    .highlight-green { background: linear-gradient(180deg, transparent 60%, rgba(120, 140, 93, 0.22) 60%); }
+    .highlight-blue { background: linear-gradient(180deg, transparent 60%, rgba(90, 122, 140, 0.22) 60%); }
+    .view { display: none; }
+    .view.active { display: block; }
+  </style>
+</head>
+<body class="bg-background text-foreground">
+  <!-- 顶部导航栏 -->
+  <header class="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur">
+    <div class="flex h-14 items-center px-4 lg:px-6 gap-4">
+      <div class="flex items-center gap-2 font-semibold text-lg tracking-tight">
+        <div class="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">R</div>
+        Redesk
+      </div>
+      <nav class="hidden md:flex items-center gap-1 text-sm text-muted-foreground">
+        <a href="#" class="px-3 py-2 rounded-md hover:text-foreground hover:bg-accent">书架</a>
+        <a href="#" class="px-3 py-2 rounded-md hover:text-foreground hover:bg-accent">文件库</a>
+        <a href="#" class="px-3 py-2 rounded-md hover:text-foreground hover:bg-accent">阅读笔记</a>
+        <a href="#" class="px-3 py-2 rounded-md text-foreground bg-accent font-medium">阅读话题</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-2">
+        <button class="inline-flex items-center justify-center h-9 px-3 rounded-full border border-border bg-card text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          全局搜索
+        </button>
+        <div class="w-8 h-8 rounded-full bg-muted"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex min-h-[calc(100vh-3.5rem)]">
+    <!-- 侧边栏 -->
+    <aside class="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar p-4 gap-1">
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        书架
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        文件库
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+        阅读笔记
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm bg-accent text-foreground font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
+        阅读话题
+      </a>
+      <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m20 12 2 0"/><path d="M2 12h2"/></svg>
+        设置
+      </a>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 min-w-0">
+      <div class="border-b px-6 py-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">阅读话题</h1>
+            <p class="text-sm text-muted-foreground mt-1">围绕问题或研究方向聚合多本书的思考空间</p>
+          </div>
+          <button class="inline-flex items-center justify-center h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+            新建话题
+          </button>
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1 max-w-md">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+            <input type="text" placeholder="搜索话题名称..." class="w-full h-9 pl-9 pr-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+          </div>
+          <div class="flex items-center gap-2">
+            <select class="h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none">
+              <option>最近更新</option>
+              <option>创建时间</option>
+              <option>书籍数</option>
+            </select>
+            <div class="flex items-center rounded-md border border-input bg-background p-1">
+              <button class="h-7 px-2 rounded-sm bg-accent text-xs font-medium">网格</button>
+              <button class="h-7 px-2 rounded-sm text-xs text-muted-foreground hover:bg-accent">列表</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 视图切换标签 -->
+      <div class="px-6 pt-4">
+        <div class="inline-flex items-center rounded-lg border border-input bg-background p-1">
+          <button onclick="switchView('list')" id="tab-list" class="topic-tab px-4 py-1.5 rounded-md text-sm font-medium bg-accent text-foreground">话题列表</button>
+          <button onclick="switchView('workspace')" id="tab-workspace" class="topic-tab px-4 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground">话题工作区示例</button>
+        </div>
+      </div>
+
+      <!-- 视图 1：话题列表 -->
+      <div id="view-list" class="view active p-6">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <!-- 话题卡片 1 -->
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#c7d4dc] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#ded7c2] border-2 border-background shadow-sm"></div>
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">决策与认知偏差</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">2 天前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">整理行为经济学中关于人类决策偏差的经典论述，比较卡尼曼、塞勒、艾瑞里三位作者的不同视角与互补观点。</p>
+
+                <!-- 统计条 -->
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    18 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    5 条沉淀
+                  </span>
+                </div>
+
+                <!-- 最近动态 -->
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">《助推》选择架构无处不在，默认选项的设计本质上是把系统 1 的惯性引导向更好的方向。</div>
+                </div>
+
+                <!-- 标签 -->
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">行为经济学</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">决策科学</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">认知心理学</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 话题卡片 2 -->
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#d7c8d5] border-2 border-background shadow-sm"></div>
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">地方政府与经济发展</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">1 周前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">从《置身事内》《小镇喧嚣》《乡土中国》中提炼中国地方政府行为逻辑的异同，理解中央与地方的激励结构。</p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    12 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    3 条沉淀
+                  </span>
+                </div>
+
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">《置身事内》强调政府作为“运动员”的角色，这种双重身份在土地财政上体现得最为明显。</div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">中国经济</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">地方政府</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">制度分析</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 话题卡片 3 -->
+          <div class="group rounded-xl border bg-card p-6 hover:shadow-md transition-shadow cursor-pointer" onclick="switchView('workspace')">
+            <div class="flex gap-5">
+              <div class="flex -space-x-3 shrink-0">
+                <div class="w-16 h-22 rounded-md bg-[#d6d0c6] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#d8c6b7] border-2 border-background shadow-sm"></div>
+                <div class="w-16 h-22 rounded-md bg-[#cfd8c8] border-2 border-background shadow-sm"></div>
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div class="flex items-start justify-between gap-3">
+                  <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">文明发展的地理因素</h3>
+                  <span class="text-xs text-muted-foreground shrink-0">2 周前更新</span>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">对比《枪炮、病菌与钢铁》《崩溃》《文明的冲突》中关于文明兴衰的解释框架，辨析地理、制度与文化的权重。</p>
+
+                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
+                    3 本书
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>
+                    9 条痕迹
+                  </span>
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 4h-2v6h2"/><path d="M14 4h6v6h-6"/><path d="M2 20h20"/></svg>
+                    2 条沉淀
+                  </span>
+                </div>
+
+                <div class="mt-4 rounded-lg bg-secondary/50 p-3">
+                  <div class="text-xs text-muted-foreground mb-1">最近更新</div>
+                  <div class="text-sm line-clamp-2">欧亚大陆的东西轴线促进了作物与技术的传播，而美洲的南北轴线则受到气候带的阻隔。</div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">地理决定论</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">文明史</span>
+                  <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs text-muted-foreground">制度比较</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 新建占位 -->
+          <div class="rounded-xl border border-dashed p-6 flex flex-col items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-colors cursor-pointer min-h-[240px]">
+            <svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+            <span class="text-base font-medium">创建新话题</span>
+            <span class="text-xs mt-1">围绕一个问题聚合多本书</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 视图 2：话题工作区 -->
+      <div id="view-workspace" class="view p-6">
+        <!-- 工作区头部 -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+              <button onclick="switchView('list')" class="hover:text-foreground">话题列表</button>
+              <span>/</span>
+              <span class="text-foreground font-medium">决策与认知偏差</span>
+            </div>
+            <p class="text-sm text-muted-foreground">整理行为经济学中关于人类决策偏差的经典论述</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="inline-flex items-center h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
+              添加书籍
+            </button>
+            <button class="inline-flex items-center h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              编辑话题
+            </button>
+            <button class="inline-flex items-center h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm hover:bg-primary/90">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+              新建沉淀
+            </button>
+          </div>
+        </div>
+
+        <!-- 三栏工作区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- 左栏：关联书籍 -->
+          <div class="lg:col-span-3 space-y-4">
+            <div class="rounded-lg border p-4">
+              <h3 class="text-sm font-semibold mb-3">关联书籍</h3>
+              <div class="space-y-3">
+                <div class="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                  <div class="w-10 h-14 rounded bg-[#d8c6b7] shrink-0"></div>
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium truncate">思考，快与慢</div>
+                    <div class="text-xs text-muted-foreground">42 条痕迹 · 8 引用</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                  <div class="w-10 h-14 rounded bg-[#c7d4dc] shrink-0"></div>
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium truncate">助推</div>
+                    <div class="text-xs text-muted-foreground">23 条痕迹 · 5 引用</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer">
+                  <div class="w-10 h-14 rounded bg-[#ded7c2] shrink-0"></div>
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium truncate">怪诞行为学</div>
+                    <div class="text-xs text-muted-foreground">18 条痕迹 · 5 引用</div>
+                  </div>
+                </div>
+              </div>
+              <button class="mt-3 w-full h-8 rounded-md border border-dashed border-input text-xs text-muted-foreground hover:border-foreground hover:text-foreground">+ 添加书籍</button>
+            </div>
+
+            <div class="rounded-lg border p-4">
+              <h3 class="text-sm font-semibold mb-3">话题标签</h3>
+              <div class="flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs">行为经济学</span>
+                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs">决策科学</span>
+                <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-[3px] text-xs">认知心理学</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 中栏：痕迹流 -->
+          <div class="lg:col-span-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">阅读痕迹</h3>
+              <div class="flex items-center gap-2">
+                <select class="h-8 px-2 rounded-md border border-input bg-background text-xs">
+                  <option>全部来源</option>
+                  <option>思考，快与慢</option>
+                  <option>助推</option>
+                </select>
+                <select class="h-8 px-2 rounded-md border border-input bg-background text-xs">
+                  <option>按时间</option>
+                  <option>按书籍</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <!-- 痕迹卡片 1 -->
+              <div class="rounded-lg border bg-card p-4">
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span class="font-medium text-foreground">《思考，快与慢》</span>
+                  <span>·</span>
+                  <span>第 12 章</span>
+                  <span class="ml-auto">2026-06-28</span>
+                </div>
+                <blockquote class="pl-3 border-l-2 border-primary text-sm leading-relaxed mb-2">
+                  <span class="highlight-yellow">“系统 1 的运行是无意识且快速的，不怎么费脑力，没有感觉，完全处于自主控制状态。”</span>
+                </blockquote>
+                <div class="text-xs text-muted-foreground mb-3">人们在面对复杂决策时，往往让系统 1 代替系统 2 工作，导致可预测的偏差。</div>
+                <div class="flex items-center justify-end gap-2">
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">引用到沉淀</button>
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">回到书中</button>
+                </div>
+              </div>
+
+              <!-- 痕迹卡片 2 -->
+              <div class="rounded-lg border bg-card p-4">
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span class="font-medium text-foreground">《助推》</span>
+                  <span>·</span>
+                  <span>第 3 章</span>
+                  <span class="ml-auto">2026-06-26</span>
+                </div>
+                <blockquote class="pl-3 border-l-2 border-success text-sm leading-relaxed mb-2">
+                  <span class="highlight-green">“选择架构无处不在，即使我们什么都不做，也已经设计了选择环境。”</span>
+                </blockquote>
+                <div class="flex items-center justify-end gap-2">
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">引用到沉淀</button>
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">回到书中</button>
+                </div>
+              </div>
+
+              <!-- 痕迹卡片 3 -->
+              <div class="rounded-lg border bg-card p-4">
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span class="font-medium text-foreground">《怪诞行为学》</span>
+                  <span>·</span>
+                  <span>第 1 章</span>
+                  <span class="ml-auto">2026-06-24</span>
+                </div>
+                <blockquote class="pl-3 border-l-2 border-[#5a7a8c] text-sm leading-relaxed mb-2">
+                  <span class="highlight-blue">“人们很少做不加对比的选择。我们的心里并没有一个‘内部价值计量器’。”</span>
+                </blockquote>
+                <div class="flex items-center justify-end gap-2">
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">引用到沉淀</button>
+                  <button class="h-7 px-2 rounded-md border border-input bg-background text-xs hover:bg-accent">回到书中</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右栏：沉淀面板 -->
+          <div class="lg:col-span-3 space-y-4">
+            <div class="rounded-lg border p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold">沉淀内容</h3>
+                <button class="h-7 px-2 rounded-md bg-primary text-primary-foreground text-xs">+ 新建</button>
+              </div>
+
+              <!-- 问题 -->
+              <div class="mb-4">
+                <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                  问题
+                </div>
+                <div class="space-y-2">
+                  <div class="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                    <div class="text-sm">系统 1 的直觉偏差能否通过训练减少？</div>
+                    <div class="text-xs text-muted-foreground mt-1">2 条引用</div>
+                  </div>
+                  <div class="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                    <div class="text-sm">助推与操纵的边界在哪里？</div>
+                    <div class="text-xs text-muted-foreground mt-1">3 条引用</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 判断 -->
+              <div class="mb-4">
+                <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></svg>
+                  判断
+                </div>
+                <div class="space-y-2">
+                  <div class="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                    <div class="text-sm">卡尼曼更关注认知偏差本身，塞勒更关注政策设计。</div>
+                    <div class="text-xs text-muted-foreground mt-1">5 条引用</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 比较 -->
+              <div>
+                <div class="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 6h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3"/><path d="M8 18H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3"/><circle cx="12" cy="12" r="3"/></svg>
+                  比较
+                </div>
+                <div class="space-y-2">
+                  <div class="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                    <div class="text-sm">三本书对“非理性”的解释框架对比</div>
+                    <div class="text-xs text-muted-foreground mt-1">8 条引用</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI 辅助 -->
+            <div class="rounded-lg border p-4 bg-gradient-to-b from-background to-secondary/30">
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <h3 class="text-sm font-semibold">AI 辅助</h3>
+              </div>
+              <div class="space-y-2">
+                <button class="w-full h-8 rounded-md border border-input bg-background text-xs text-left px-3 hover:bg-accent">生成话题总结</button>
+                <button class="w-full h-8 rounded-md border border-input bg-background text-xs text-left px-3 hover:bg-accent">回答话题问题</button>
+                <button class="w-full h-8 rounded-md border border-input bg-background text-xs text-left px-3 hover:bg-accent">发现观点冲突</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="border-t px-6 py-4 text-xs text-muted-foreground">
+    Redesk 阅读话题页设计稿 · 包含话题列表与话题工作区两种视图 · 主题只引用不占有阅读痕迹
+  </div>
+
+  <script>
+    function switchView(name) {
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById('view-' + name).classList.add('active');
+      document.querySelectorAll('.topic-tab').forEach(el => {
+        el.classList.remove('bg-accent', 'text-foreground');
+        el.classList.add('text-muted-foreground');
+      });
+      const activeTab = document.getElementById('tab-' + name);
+      activeTab.classList.add('bg-accent', 'text-foreground');
+      activeTab.classList.remove('text-muted-foreground');
+    }
+  </script>
+</body>
+</html>

@@ -8,6 +8,11 @@ interface EditableLongTextFieldProps {
   value: string;
   editMode: boolean;
   onSave: (value: string) => Promise<void>;
+  className?: string;
+  valueClassName?: string;
+  layout?: 'row' | 'block';
+  align?: 'left' | 'right';
+  truncate?: boolean;
 }
 
 export function EditableLongTextField({
@@ -15,6 +20,11 @@ export function EditableLongTextField({
   value,
   editMode,
   onSave,
+  className,
+  valueClassName,
+  layout,
+  align,
+  truncate,
 }: EditableLongTextFieldProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -53,6 +63,11 @@ export function EditableLongTextField({
       editMode={editMode}
       onClick={editMode ? handleOpen : undefined}
       isSaving={isSaving}
+      className={className}
+      valueClassName={valueClassName}
+      layout={layout}
+      align={align}
+      truncate={truncate}
     />
   );
 

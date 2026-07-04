@@ -2,10 +2,11 @@ import { BOOK_STATUS, VISIBILITY } from '@redesk/shared';
 import { API_BASE } from '@/lib/api';
 
 export type ViewMode = 'A' | 'B' | 'C' | 'D';
-export type SortMode = 'updated_desc' | 'title_asc' | 'rating_desc';
+export type SortMode = 'import_order_asc' | 'updated_desc' | 'title_asc' | 'rating_desc';
 export type PageView = 'bookshelf' | 'trash';
 
 export const SORT_API_MAP: Record<SortMode, string> = {
+  import_order_asc: 'import_order',
   updated_desc: '-updated_at',
   title_asc: 'title',
   rating_desc: '-rating',
@@ -35,6 +36,7 @@ export const VISIBILITY_OPTIONS = [
 ] as const;
 
 export const SORT_OPTIONS = [
+  { value: 'import_order_asc', label: '按导入序号排序' },
   { value: 'updated_desc', label: '按最近更新排序' },
   { value: 'title_asc', label: '按书名排序' },
   { value: 'rating_desc', label: '按评分排序' },

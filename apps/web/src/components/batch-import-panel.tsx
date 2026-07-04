@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, X } from 'lucide-react';
-import type { ImportBooksResult } from '@redesk/shared';
+import { AlertTriangle, Download, X, CheckCircle2, SkipForward } from 'lucide-react';
+import type { ImportBooksResult, ImportBooksResultRow } from '@redesk/shared';
 import { ApiError, api, API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
@@ -43,7 +43,57 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     }
   };
 
-  const problemRows = result?.rows.filter((row) => !row.success) ?? [];
+  const failedRows = result?.rows.filter((row) => !row.success && !row.skipped) ?? [];
+  const skippedRows = result?.rows.filter((row) => row.skipped) ?? [];
+
+  function csvEscape(value: unknown): string {
+    if (value == null) return '';
+    const text = String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  function downloadFailedCsv() {
+    if (!result || failedRows.length === 0) return;
+    const sampleRow = failedRows.find((r) => r.raw_data && Object.keys(r.raw_data).length > 0);
+    const headers = sampleRow?.raw_data ? Object.keys(sampleRow.raw_data) : ['title', 'error'];
+    const errorHeader = 'import_error';
+    const allHeaders = [...headers, errorHeader];
+    const lines = [allHeaders.join(',')];
+    for (const row of failedRows) {
+      const values = headers.map((h) => csvEscape(row.raw_data?.[h] ?? ''));
+      values.push(csvEscape(row.error));
+      lines.push(values.join(','));
+    }
+    const csv = `\uFEFF${lines.join('\n')}`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `redesk-import-failed-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function RowItem({ row, tone }: { row: ImportBooksResultRow; tone: 'skipped' | 'failed' }) {
+    return (
+      <div className="border-b border-border px-3 py-2 text-xs last:border-b-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">第 {row.row} 行</span>
+          <span className="truncate text-muted-foreground">{row.title ?? '未命名'}</span>
+        </div>
+        <div className={`mt-1 flex items-center gap-1 ${tone === 'failed' ? 'text-destructive' : 'text-amber-600'}`}>
+          {tone === 'failed' ? (
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+          ) : (
+            <SkipForward className="h-3 w-3 shrink-0" />
+          )}
+          {row.error}
+        </div>
+      </div>
+    );
+  }
 
   const body = (
     <div className="space-y-5 px-6 py-5">
@@ -94,23 +144,73 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
 
       {result && (
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="text-sm font-medium text-foreground">
-            {result.dry_run
-              ? `预览通过 ${result.valid} 行，跳过 ${result.skipped} 行，失败 ${result.failed} 行`
-              : `已创建 ${result.created} 本，跳过 ${result.skipped} 行，失败 ${result.failed} 行`}
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="text-sm font-medium text-foreground">
+                共处理 {result.total} 行
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  {result.dry_run ? '校验通过' : '成功创建'}：{result.dry_run ? result.valid : result.created}
+                </span>
+                {skippedRows.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <SkipForward className="h-3.5 w-3.5 text-amber-600" />
+                    跳过（重复）：{skippedRows.length}
+                  </span>
+                )}
+                {failedRows.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                    失败：{failedRows.length}
+                  </span>
+                )}
+              </div>
+            </div>
+            {failedRows.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={downloadFailedCsv}
+                className="shrink-0"
+              >
+                <Download className="mr-1 h-3.5 w-3.5" />
+                下载失败记录
+              </Button>
+            )}
           </div>
-          {problemRows.length > 0 && (
-            <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border">
-              {problemRows.slice(0, 20).map((row) => (
-                <div key={row.row} className="border-b border-border px-3 py-2 text-xs last:border-b-0">
-                  <span className="font-medium text-foreground">第 {row.row} 行</span>
-                  <span className="ml-2 text-muted-foreground">{row.title ?? '未命名'}</span>
-                  <div className="mt-1 flex items-center gap-1 text-destructive">
-                    <AlertTriangle className="h-3 w-3 shrink-0" />
-                    {row.error}
+
+          {failedRows.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-1.5 text-xs font-medium text-destructive">失败记录</div>
+              <div className="max-h-48 overflow-y-auto rounded-md border border-border">
+                {failedRows.slice(0, 20).map((row) => (
+                  <RowItem key={row.row} row={row} tone="failed" />
+                ))}
+                {failedRows.length > 20 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    还有 {failedRows.length - 20} 条失败记录，可下载完整 CSV 查看
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+            </div>
+          )}
+
+          {skippedRows.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-1.5 text-xs font-medium text-amber-600">跳过记录（重复）</div>
+              <div className="max-h-36 overflow-y-auto rounded-md border border-border">
+                {skippedRows.slice(0, 10).map((row) => (
+                  <RowItem key={row.row} row={row} tone="skipped" />
+                ))}
+                {skippedRows.length > 10 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    还有 {skippedRows.length - 10} 条跳过记录
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -29,6 +29,7 @@ export const books = sqliteTable('books', {
   favorited_at: text('favorited_at'),
   started_at: text('started_at'),
   finished_at: text('finished_at'),
+  import_order: integer('import_order').notNull().default(0),
   deleted_at: text('deleted_at'),
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),

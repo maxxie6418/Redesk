@@ -8,6 +8,10 @@ interface EditableFieldRowProps {
   emptyLabel?: string;
   isSaving?: boolean;
   className?: string;
+  valueClassName?: string;
+  layout?: 'row' | 'block';
+  align?: 'left' | 'right';
+  truncate?: boolean;
   onClick?: () => void;
 }
 
@@ -18,8 +22,50 @@ export function EditableFieldRow({
   emptyLabel = '—',
   isSaving = false,
   className,
+  valueClassName,
+  layout = 'row',
+  align = 'right',
+  truncate: truncateProp = true,
   onClick,
 }: EditableFieldRowProps) {
+  if (layout === 'block') {
+    return (
+      <div className={cn('min-w-0', className)}>
+        {label ? (
+          <div className="mb-1 text-[13px] text-muted-foreground">{label}</div>
+        ) : null}
+        {editMode ? (
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={isSaving}
+            className={cn(
+              'block w-full text-left transition-colors',
+              'hover:text-primary hover:bg-muted/50 rounded',
+              isSaving && 'opacity-50 cursor-not-allowed',
+              truncateProp && 'truncate',
+              valueClassName,
+            )}
+          >
+            {value || (
+              <span className="text-muted-foreground/60">点击添加</span>
+            )}
+          </button>
+        ) : (
+          <span
+            className={cn(
+              'block w-full text-left text-foreground',
+              truncateProp && 'truncate',
+              valueClassName,
+            )}
+          >
+            {value || emptyLabel}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex min-w-0 justify-between gap-2', className)}>
       <span className="shrink-0 text-muted-foreground">{label}</span>
@@ -29,9 +75,13 @@ export function EditableFieldRow({
           onClick={onClick}
           disabled={isSaving}
           className={cn(
-            'min-w-0 flex-1 truncate text-right font-medium transition-colors',
+            'min-w-0 flex-1 transition-colors',
+            align === 'right' ? 'text-right' : 'text-left',
+            truncateProp ? 'truncate' : '',
+            'font-medium',
             'hover:text-primary hover:bg-muted/50 rounded px-1 -mr-1',
             isSaving && 'opacity-50 cursor-not-allowed',
+            valueClassName,
           )}
         >
           {value || (
@@ -39,7 +89,15 @@ export function EditableFieldRow({
           )}
         </button>
       ) : (
-        <span className="min-w-0 flex-1 truncate text-right font-medium text-foreground">
+        <span
+          className={cn(
+            'min-w-0 flex-1',
+            align === 'right' ? 'text-right' : 'text-left',
+            truncateProp ? 'truncate' : '',
+            'font-medium text-foreground',
+            valueClassName,
+          )}
+        >
           {value || emptyLabel}
         </span>
       )}

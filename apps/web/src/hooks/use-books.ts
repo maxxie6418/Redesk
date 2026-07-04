@@ -31,6 +31,7 @@ export interface BookSummary {
   favorited_at: string | null;
   started_at: string | null;
   finished_at: string | null;
+  import_order: number;
   has_files: boolean;
   deleted_at: string | null;
   created_at: string;

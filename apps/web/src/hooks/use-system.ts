@@ -43,6 +43,15 @@ export interface ClearCacheResult {
   removed_files: number;
 }
 
+export interface UpdateCheckResult {
+  current_version: string;
+  latest_version: string | null;
+  has_update: boolean | null;
+  release_url: string | null;
+  published_at: string | null;
+  release_notes: string | null;
+}
+
 export function useSystemStats() {
   return useQuery({
     queryKey: ['system', 'stats'],
@@ -80,5 +89,14 @@ export function useClearCache() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['system', 'storage'] });
     },
+  });
+}
+
+export function useUpdateCheck() {
+  return useQuery({
+    queryKey: ['system', 'update-check'],
+    queryFn: () => api.get<UpdateCheckResult>('/system/update-check'),
+    staleTime: 30 * 60 * 1000, // 30 分钟缓存
+    retry: 1,
   });
 }

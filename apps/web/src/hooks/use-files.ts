@@ -3,6 +3,8 @@ import { api, API_BASE } from '@/lib/api';
 
 export type StorageMode = 'local_only' | 'cloud_only' | 'dual';
 export type SyncStatus = 'synced' | 'pending' | 'partial_failed' | 'failed';
+export type MatchMode = 'conservative' | 'balanced' | 'loose';
+export type MatchConfidence = 'high' | 'medium' | 'low';
 
 export interface BookFileItem {
   id: number;
@@ -22,6 +24,45 @@ export interface BookFileItem {
   created_at: string;
   updated_at: string;
   book_title?: string | null;
+}
+
+export interface FileMatchDerived {
+  filename_title: string | null;
+  filename_author: string | null;
+  normalized_filename: string;
+  epub_title: string | null;
+  epub_author: string | null;
+  epub_publisher: string | null;
+  epub_identifier: string | null;
+}
+
+export interface FileMatchCandidate {
+  book_id: number;
+  title: string;
+  author: string | null;
+  score: number;
+  confidence: MatchConfidence;
+  ambiguous: boolean;
+  reason: string;
+}
+
+export interface FileMatchItem {
+  file_id: number;
+  original_filename: string | null;
+  file_format: string;
+  derived: FileMatchDerived;
+  recommended_book_id: number | null;
+  confidence: MatchConfidence;
+  reason: string | null;
+  candidates: FileMatchCandidate[];
+}
+
+export interface ApplyFileMatchesResult {
+  applied: BookFileItem[];
+  failed: Array<{ file_id: number; book_id: number; message: string }>;
+  total: number;
+  success_count: number;
+  failed_count: number;
 }
 
 export function useBookFiles(bookId: number) {
@@ -53,9 +94,9 @@ export function useUploadFile() {
         throw new Error(err?.message ?? '上传失败');
       }
 
-      return (await res.json()) as { data: { id: number; file_format: string } };
+      return ((await res.json()) as { data: { id: number; file_format: string } }).data;
     },
-    onSuccess: (_data: { data: { id: number; file_format: string } }, vars: { bookId: number; file: File; isPrimary?: boolean }) => {
+    onSuccess: (_data: { id: number; file_format: string }, vars: { bookId: number; file: File; isPrimary?: boolean }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -81,9 +122,9 @@ export function useReplaceFile() {
         throw new Error(err?.message ?? '替换失败');
       }
 
-      return (await res.json()) as { data: { id: number; file_format: string } };
+      return ((await res.json()) as { data: { id: number; file_format: string } }).data;
     },
-    onSuccess: (_data: { data: { id: number; file_format: string } }, vars: { bookId: number; fileId: number; file: File }) => {
+    onSuccess: (_data: { id: number; file_format: string }, vars: { bookId: number; fileId: number; file: File }) => {
       qc.invalidateQueries({ queryKey: ['books', vars.bookId, 'files'] });
       qc.invalidateQueries({ queryKey: ['books'] });
     },
@@ -160,9 +201,10 @@ export function useUnassociatedFiles() {
 export function useUploadUnassociatedFile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, storageMode }: { file: File; storageMode?: StorageMode }) => {
       const form = new FormData();
       form.append('file', file);
+      if (storageMode) form.append('storage_mode', storageMode);
 
       const res = await fetch(`${API_BASE}/files/unassociated`, {
         method: 'POST',
@@ -176,7 +218,7 @@ export function useUploadUnassociatedFile() {
         throw new Error(err?.message ?? '上传失败');
       }
 
-      return (await res.json()) as { data: { id: number; file_format: string } };
+      return ((await res.json()) as { data: BookFileItem }).data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unassociated-files'] });
@@ -185,11 +227,34 @@ export function useUploadUnassociatedFile() {
   });
 }
 
+export function useFileMatchCandidates(fileIds: number[], mode: MatchMode, enabled: boolean) {
+  return useQuery({
+    queryKey: ['file-match-candidates', fileIds, mode],
+    queryFn: () => api.post<FileMatchItem[]>('/files/match/candidates', { file_ids: fileIds, mode }),
+    enabled: enabled && fileIds.length > 0,
+  });
+}
+
 export function useMatchFileToBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ fileId, bookId }: { fileId: number; bookId: number }) =>
       api.post<BookFileItem>(`/files/${fileId}/match`, { book_id: bookId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['unassociated-files'] });
+      qc.invalidateQueries({ queryKey: ['file-library'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+export function useApplyFileMatches() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: Array<{ fileId: number; bookId: number }>) =>
+      api.post<ApplyFileMatchesResult>('/files/match/apply-batch', {
+        items: items.map((item) => ({ file_id: item.fileId, book_id: item.bookId })),
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unassociated-files'] });
       qc.invalidateQueries({ queryKey: ['file-library'] });

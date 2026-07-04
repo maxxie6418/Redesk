@@ -268,9 +268,11 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
             <TagAtom key={tag}>{tag}</TagAtom>
           ))}
         </div>
-        <div className="mt-auto flex items-center justify-between">
-          <p className="text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
-          <ProgressBar progress={progress} trackWidth="w-[80px]" />
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <p className="min-w-0 truncate text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+          <div className="shrink-0">
+            <ProgressBar progress={progress} trackWidth="w-[80px]" />
+          </div>
         </div>
       </div>
       {isTrash ? (
