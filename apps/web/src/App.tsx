@@ -4,14 +4,14 @@ import { useTheme } from '@/components/use-theme';
 import { PublicShell, RequireAuth } from '@/routes/protected-layout';
 import { LoginRoute } from '@/routes/login';
 import { ChangePasswordRoute } from '@/routes/change-password';
-import { Bookshelf } from '@/routes/bookshelf';
+import { Bookshelf } from '@/routes/bookshelf/index';
 import { BookDetailPage } from '@/routes/book-detail';
 import { BookReaderPage } from '@/routes/book-reader';
 import { OverviewPage } from '@/routes/overview';
 import { ReadingNotesPage } from '@/routes/reading-notes';
 import { ReadingTopicsPage } from '@/routes/reading-topics';
 import { SettingsPage } from '@/routes/settings';
-import { FileLibraryPage } from '@/routes/file-library';
+import { FileLibraryPage } from '@/routes/file-library/index';
 
 export default function App() {
   const { theme } = useTheme();
