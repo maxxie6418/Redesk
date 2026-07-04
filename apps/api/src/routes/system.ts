@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import { and, eq, isNull } from 'drizzle-orm';
-import { books, bookFiles, categories, tags, users, settings } from '@redesk/db';
+import { books, bookCovers, bookFiles, categories, tags, users, settings } from '@redesk/db';
 import { runMigrationsOn } from '@redesk/db';
 import { ERROR_CODE } from '@redesk/shared';
 import { config, MONOREPO_ROOT } from '../config';
@@ -108,6 +108,15 @@ interface DirInfo {
   size_bytes: number;
 }
 
+const STORAGE_BUCKETS = ['books', 'covers', 'backups', 'tmp', 'unassociated'] as const;
+
+type StorageBucket = (typeof STORAGE_BUCKETS)[number];
+
+interface StorageEntryRef {
+  local_path: string | null;
+  file_size: number | null;
+}
+
 function scanDir(dir: string): DirInfo {
   const result: DirInfo = { file_count: 0, size_bytes: 0 };
   if (!existsSync(dir)) return result;
@@ -132,6 +141,81 @@ function scanDir(dir: string): DirInfo {
     // ignore permission errors
   }
   return result;
+}
+
+function createEmptyDirInfo(): DirInfo {
+  return { file_count: 0, size_bytes: 0 };
+}
+
+export function createEmptyStorageBreakdown(): Record<StorageBucket, DirInfo> {
+  return {
+    books: createEmptyDirInfo(),
+    covers: createEmptyDirInfo(),
+    backups: createEmptyDirInfo(),
+    tmp: createEmptyDirInfo(),
+    unassociated: createEmptyDirInfo(),
+  };
+}
+
+export function classifyStoragePath(localPath: string | null | undefined): StorageBucket | null {
+  if (!localPath) return null;
+  const normalized = localPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  for (const bucket of STORAGE_BUCKETS) {
+    if (normalized === bucket || normalized.startsWith(`${bucket}/`)) return bucket;
+  }
+  return null;
+}
+
+function safeReadFileSize(path: string): number {
+  try {
+    return statSync(path).size;
+  } catch {
+    return 0;
+  }
+}
+
+function mergeDirInfo(target: DirInfo, source: DirInfo): void {
+  target.file_count += source.file_count;
+  target.size_bytes += source.size_bytes;
+}
+
+function appendScannedDir(
+  breakdown: Record<StorageBucket, DirInfo>,
+  storageDir: string,
+  bucket: StorageBucket,
+): void {
+  mergeDirInfo(breakdown[bucket], scanDir(join(storageDir, bucket)));
+}
+
+export function summarizeTrackedStorage(
+  entries: StorageEntryRef[],
+  storageDir: string,
+): Record<StorageBucket, DirInfo> {
+  const breakdown = createEmptyStorageBreakdown();
+  const seenPaths = new Set<string>();
+
+  for (const entry of entries) {
+    if (!entry.local_path) continue;
+    const normalizedPath = entry.local_path.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (seenPaths.has(normalizedPath)) continue;
+    seenPaths.add(normalizedPath);
+
+    const bucket = classifyStoragePath(normalizedPath);
+    if (!bucket) continue;
+
+    breakdown[bucket].file_count += 1;
+    breakdown[bucket].size_bytes += entry.file_size ?? safeReadFileSize(join(storageDir, normalizedPath));
+  }
+
+  return breakdown;
+}
+
+function getTotalDirInfo(breakdown: Record<StorageBucket, DirInfo>): DirInfo {
+  const total = createEmptyDirInfo();
+  for (const bucket of STORAGE_BUCKETS) {
+    mergeDirInfo(total, breakdown[bucket]);
+  }
+  return total;
 }
 
 function getDbFileSize(): number {
@@ -206,8 +290,27 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
       ? db.select({ c: sql<number>`count(*)` }).from(users).get()?.c ?? 0
       : undefined;
 
+    const storageDir = config.storageDir;
+    const trackedFiles = db
+      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size })
+      .from(bookFiles)
+      .where(eq(bookFiles.owner_id, userId))
+      .all();
+
+    const trackedCovers = db
+      .select({ local_path: bookCovers.local_path, file_size: bookCovers.file_size })
+      .from(bookCovers)
+      .where(eq(bookCovers.owner_id, userId))
+      .all();
+
+    const storageBreakdown = summarizeTrackedStorage([...trackedFiles, ...trackedCovers], storageDir);
+    if (isAdminRequest(req)) {
+      appendScannedDir(storageBreakdown, storageDir, 'backups');
+      appendScannedDir(storageBreakdown, storageDir, 'tmp');
+    }
+
     const dbSize = getDbFileSize();
-    const filesOnDisk = scanDir(config.storageDir);
+    const storageTotals = getTotalDirInfo(storageBreakdown);
 
     return {
       data: {
@@ -217,7 +320,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
         sqlite_version: getSqliteVersion(),
         uptime_seconds: getUptimeSeconds(),
         db_size_bytes: dbSize,
-        storage_size_bytes: filesOnDisk.size_bytes,
+        storage_size_bytes: storageTotals.size_bytes,
         book_count: totalBooks,
         trash_count: trashBooks,
         file_count: fileStats?.count ?? 0,
@@ -229,22 +332,28 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/system/storage', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const settingsOwnerId = getSettingsOwnerId();
-
     const storageDir = config.storageDir;
-    const dirs = ['books', 'covers', 'backups', 'tmp', 'unassociated'];
+    const trackedFiles = getDb()
+      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size })
+      .from(bookFiles)
+      .where(eq(bookFiles.owner_id, userId))
+      .all();
 
-    const breakdown: Record<string, DirInfo> = {};
-    let totalFiles = 0;
-    let totalSize = 0;
+    const trackedCovers = getDb()
+      .select({ local_path: bookCovers.local_path, file_size: bookCovers.file_size })
+      .from(bookCovers)
+      .where(eq(bookCovers.owner_id, userId))
+      .all();
 
-    for (const name of dirs) {
-      const info = scanDir(join(storageDir, name));
-      breakdown[name] = info;
-      totalFiles += info.file_count;
-      totalSize += info.size_bytes;
+    const breakdown = summarizeTrackedStorage([...trackedFiles, ...trackedCovers], storageDir);
+    if (isAdminRequest(req)) {
+      appendScannedDir(breakdown, storageDir, 'backups');
+      appendScannedDir(breakdown, storageDir, 'tmp');
     }
+
+    const totals = getTotalDirInfo(breakdown);
 
     const dbSize = getDbFileSize();
 
@@ -278,8 +387,8 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     return {
       data: {
         db_size_bytes: dbSize,
-        total_files: totalFiles,
-        total_size_bytes: totalSize,
+        total_files: totals.file_count,
+        total_size_bytes: totals.size_bytes,
         breakdown,
         oss: {
           configured: ossConfigured,

@@ -57,6 +57,25 @@ function writeSetting(key: string, value: string | null): void {
   }
 }
 
+export function normalizeSecretSettingInput(value: string | null | undefined): string | undefined {
+  if (value == null || value === '') return undefined;
+  return value;
+}
+
+export function resolveSecretSettingInput(
+  value: string | null | undefined,
+  clear = false,
+): string | null | undefined {
+  if (clear) return null;
+  return normalizeSecretSettingInput(value);
+}
+
+function writeSecretSetting(key: string, value: string | null | undefined, clear = false): void {
+  const nextValue = resolveSecretSettingInput(value, clear);
+  if (nextValue === undefined) return;
+  writeSetting(key, nextValue);
+}
+
 function maskSensitive(key: string, value: string | null): string | null {
   if (value == null || value === '') return null;
   if (SENSITIVE_KEYS.has(key)) {
@@ -111,11 +130,9 @@ export async function storageRoutes(app: FastifyInstance): Promise<void> {
     if (isPresent(input.bucket)) writeSetting(SETTINGS_KEYS.bucket, input.bucket);
     else writeSetting(SETTINGS_KEYS.bucket, null);
 
-    if (isPresent(input.access_key)) writeSetting(SETTINGS_KEYS.accessKey, input.access_key);
-    else writeSetting(SETTINGS_KEYS.accessKey, null);
+    writeSecretSetting(SETTINGS_KEYS.accessKey, input.access_key, input.clear_access_key === true);
 
-    if (isPresent(input.secret_key)) writeSetting(SETTINGS_KEYS.secretKey, input.secret_key);
-    else writeSetting(SETTINGS_KEYS.secretKey, null);
+    writeSecretSetting(SETTINGS_KEYS.secretKey, input.secret_key, input.clear_secret_key === true);
 
     if (isPresent(input.region)) writeSetting(SETTINGS_KEYS.region, input.region);
     else writeSetting(SETTINGS_KEYS.region, null);

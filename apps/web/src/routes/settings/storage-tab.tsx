@@ -453,8 +453,8 @@ export function CloudStorageCard({ onToast }: { onToast: (msg: StatusMessage) =>
         provider: provider || null,
         endpoint: endpoint || null,
         bucket: bucket || null,
-        access_key: accessKey || null,
-        secret_key: secretKey || null,
+        access_key: accessKey || undefined,
+        secret_key: secretKey || undefined,
         region: region || null,
         public_url: publicUrl || null,
       });

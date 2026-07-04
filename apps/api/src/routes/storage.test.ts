@@ -125,3 +125,32 @@ describe('storage routes — auth gate static inspection', () => {
     }
   });
 });
+
+describe('normalizeSecretSettingInput', () => {
+  it('preserves existing secret when input is undefined', async () => {
+    const { normalizeSecretSettingInput } = await import('./storage');
+    expect(normalizeSecretSettingInput(undefined)).toBeUndefined();
+  });
+
+  it('preserves existing secret when input is null', async () => {
+    const { normalizeSecretSettingInput } = await import('./storage');
+    expect(normalizeSecretSettingInput(null)).toBeUndefined();
+  });
+
+  it('preserves existing secret when input is empty string', async () => {
+    const { normalizeSecretSettingInput } = await import('./storage');
+    expect(normalizeSecretSettingInput('')).toBeUndefined();
+  });
+
+  it('accepts non-empty secret input', async () => {
+    const { normalizeSecretSettingInput } = await import('./storage');
+    expect(normalizeSecretSettingInput('new-secret')).toBe('new-secret');
+  });
+});
+
+describe('resolveSecretSettingInput', () => {
+  it('returns null when explicitly clearing secret', async () => {
+    const { resolveSecretSettingInput } = await import('./storage');
+    expect(resolveSecretSettingInput('kept-secret', true)).toBeNull();
+  });
+});

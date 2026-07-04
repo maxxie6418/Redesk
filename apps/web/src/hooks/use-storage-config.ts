@@ -28,6 +28,8 @@ export interface StorageSettingsInput {
   bucket?: string | null;
   access_key?: string | null;
   secret_key?: string | null;
+  clear_access_key?: boolean;
+  clear_secret_key?: boolean;
   region?: string | null;
   public_url?: string | null;
 }

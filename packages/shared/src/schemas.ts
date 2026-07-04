@@ -313,6 +313,8 @@ export const storageSettingsSchema = z.object({
   bucket: z.string().max(200).optional().nullable(),
   access_key: z.string().max(500).optional().nullable(),
   secret_key: z.string().max(500).optional().nullable(),
+  clear_access_key: z.boolean().optional(),
+  clear_secret_key: z.boolean().optional(),
   region: z.string().max(64).optional().nullable(),
   public_url: z.string().max(500).optional().nullable(),
 });
