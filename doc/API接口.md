@@ -823,22 +823,29 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 ---
 
-## 13. 阅读器与笔记（S2 预留）
+## 13. 阅读器与笔记（A-F 已完成）
 
-进场后细化字段。端点清单：
+M2 分阶段推进中，当前完成状态：阅读进度（A）✔、高亮闭环（B）✔、笔记闭环（C）✔（选区附注保存时会先创建视觉高亮；若填写附注内容，再额外创建独立 note）、痕迹跳回（D）✔（含失败可见提示）、入口收口（E）✔、搜索与导出（F）✔。端点清单：
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
-| GET | /books/{id}/reader | 获取主 EPUB 阅读入口（文件流） | 3.01 |
-| GET / PUT | /books/{id}/progress | 读取/保存 CFI 进度 | 3.02/3.03 |
-| GET / POST | /books/{id}/highlights | 高亮列表/新建 | 3.04/3.05 |
-| PATCH / DELETE | /books/{id}/highlights/{hid} | 编辑/删除高亮（含附注） | 3.06–3.10/3.19 |
-| GET / POST | /books/{id}/notes | 笔记列表/新建 | 3.11 |
-| PATCH / DELETE | /books/{id}/notes/{nid} | 编辑/删除笔记 | 3.12/3.13 |
-| GET | /books/{id}/traces | 单书阅读痕迹汇总 | 3.14 |
-| GET | /notes/search?q= | 笔记全文搜索 | 3.20 |
+| GET | /books/{id}/files/{fileId}/download | 主 EPUB 阅读入口（文件流，阅读器实际使用） | 3.01 |
+| GET | /books/{id}/reading-progress | 读取单书阅读进度（CFI + 百分比） | 3.02 |
+| PUT | /books/{id}/reading-progress | 保存阅读进度（upsert） | 3.03 |
+| GET | /reading-progress/recent | 最近阅读列表（限 5 条） | 1.22 |
+| GET | /highlights | 高亮列表（支持 `?book_id=X` 按书筛选） | 3.04 |
+| POST | /highlights | 新建高亮/划线 | 3.05 |
+| PATCH | /highlights/{hid} | 编辑高亮（含附注、标记类型） | 3.06–3.10 |
+| DELETE | /highlights/{hid} | 删除高亮（软删除） | 3.19 |
+| GET | /notes | 笔记列表（支持 `?book_id=X` 按书筛选） | 3.11 |
+| POST | /notes | 新建笔记 | 3.11 |
+| PATCH | /notes/{nid} | 编辑笔记 | 3.12 |
+| DELETE | /notes/{nid} | 删除笔记（软删除） | 3.13 |
+| GET | /reading-marks/stats | 留痕统计（总数/本月/已批注） | 5.06/5.07 |
+| GET | /notes/search?q= | 笔记全文搜索（支持 `book_id`） | 3.20 |
+| GET | /highlights/search?q= | 高亮全文搜索（支持 `book_id`） | 3.20 |
 
-> 跳回原文（3.15/3.16）由前端据 CFI 实现，无独立端点。标记体系（3.17/3.18）并入高亮/笔记的 mark_type 字段。
+> 阅读器实际读取主 EPUB 文件时复用已有下载端点 `/books/{id}/files/{fileId}/download`，不存在独立的 `/books/{id}/reader` 后端路由。跳回原文（3.15/3.16）由前端据 CFI 实现，无独立端点。标记体系（3.17/3.18）并入高亮/笔记的 mark_type 字段。高亮和笔记的列表/创建/编辑/删除统一走全局路径（`/highlights`、`/notes`），通过 `?book_id=X` 查询参数按书筛选，不再嵌套在 `/books/{id}/` 下。
 
 ---
 

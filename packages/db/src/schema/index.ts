@@ -17,3 +17,4 @@ export * from './topic-highlights';
 export * from './topic-notes';
 export * from './topic-segments';
 export * from './topic-entries';
+export * from './reading-progress';

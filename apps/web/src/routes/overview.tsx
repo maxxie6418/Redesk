@@ -240,7 +240,7 @@ export function OverviewPage() {
                           <div className="truncate text-[13px] font-medium text-foreground">{b.title}</div>
                           <div className="mt-0.5 text-[11.5px] text-muted-foreground">{b.author ?? '未知作者'}</div>
                         </div>
-                        <span className="shrink-0 rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">在读</span>
+                        <span className="shrink-0 rounded bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">{b.percentage}%</span>
                       </button>
                     ))}
                   </div>

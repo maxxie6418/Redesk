@@ -454,3 +454,24 @@ export const updateTopicEntrySchema = z.object({
   content: z.string().min(1).max(5000).optional(),
 });
 export type UpdateTopicEntryInput = z.infer<typeof updateTopicEntrySchema>;
+
+// 阅读进度 schemas
+export const readingProgressSchema = z.object({
+  id: z.number().int(),
+  book_id: z.number().int(),
+  owner_id: z.number().int(),
+  file_id: z.number().int(),
+  cfi: z.string(),
+  percentage: z.number(),
+  last_read_at: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type ReadingProgressOutput = z.infer<typeof readingProgressSchema>;
+
+export const updateReadingProgressSchema = z.object({
+  file_id: z.number().int(),
+  cfi: z.string().min(1),
+  percentage: z.number().min(0).max(100),
+});
+export type UpdateReadingProgressInput = z.infer<typeof updateReadingProgressSchema>;

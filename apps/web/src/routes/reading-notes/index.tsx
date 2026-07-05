@@ -1,36 +1,120 @@
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Tags } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Plus, Tags, Trash2, Check, X } from 'lucide-react';
 import { SearchField } from '@/components/page-ui/search-field';
 import { StatCard } from '@/components/page-ui/stat-card';
 import { ProtectedShell } from '@/components/protected-shell';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
-import { useHighlights, useNotes, useReadingMarkStats, useCreateNote } from '@/hooks/use-notes';
+import { useHighlights, useNotes, useReadingMarkStats, useCreateNote, useUpdateNote, useDeleteNote, useNotesSearch, useHighlightsSearch, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
 import { CreateNoteDialog } from '@/components/create-note-dialog';
 import { CompactSelect, ExportActions, PaginationButton, ReadingNoteCard, SidebarPanel, SourcePill } from './components';
 
+interface NoteEditForm {
+  id: number;
+  title: string;
+  content_markdown: string;
+}
+
 export function ReadingNotesPage() {
+  const navigate = useNavigate();
   const sidebarStats = useSidebarStats();
   const [selectedBookId, setSelectedBookId] = useState<string>('all');
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<NoteEditForm | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: highlightsData } = useHighlights();
   const { data: notesData } = useNotes();
   const { data: statsData } = useReadingMarkStats();
+  const { data: searchNotesData } = useNotesSearch(debouncedSearch, selectedBookId !== 'all' ? Number(selectedBookId) : undefined);
+  const { data: searchHighlightsData } = useHighlightsSearch(debouncedSearch, selectedBookId !== 'all' ? Number(selectedBookId) : undefined);
   const createNote = useCreateNote();
+  const updateNote = useUpdateNote();
+  const deleteNote = useDeleteNote();
 
   const highlights = useMemo(() => highlightsData ?? [], [highlightsData]);
   const allNotes = useMemo(() => notesData ?? [], [notesData]);
   const stats = useMemo(() => statsData ?? { total_highlights: 0, total_notes: 0, notes_this_month: 0, annotated: 0 }, [statsData]);
 
+  const formatChapterLabel = (cfi: string | undefined): string => {
+    if (!cfi) return '未知位置';
+    const matches = cfi.match(/\[([^\]]+)\]/g);
+    if (matches && matches.length > 0) {
+      return matches.map((m) => m.slice(1, -1)).join(' > ');
+    }
+    if (cfi.length > 30) return cfi.slice(0, 28) + '...';
+    return cfi;
+  };
+
+  const isSearching = debouncedSearch.trim().length > 0;
+
   const allMarks = useMemo(() => {
+    // 搜索模式：使用搜索 API 结果
+    if (isSearching) {
+      const searchNotes = (searchNotesData ?? []) as NoteItem[];
+      const searchHighlights = (searchHighlightsData ?? []) as HighlightItem[];
+      const hlMarks = searchHighlights.map((h) => ({
+        id: `h-${h.id}`,
+        rawId: h.id,
+        isNote: false as const,
+        noteId: undefined as number | undefined,
+        type: 'highlight' as const,
+        book_id: h.book_id,
+        book_title: h.book_title ?? '未知书籍',
+        book_author: h.book_author ?? '',
+        chapter: formatChapterLabel(h.cfi_start),
+        chapterCfi: h.cfi_start,
+        created_at: h.created_at,
+        quote: h.text,
+        summary: h.note ?? undefined,
+        tags: [] as string[],
+        mark_type: h.mark_type,
+        color: h.color,
+      }));
+      const nMarks = searchNotes.map((n) => ({
+        id: `n-${n.id}`,
+        rawId: n.id,
+        isNote: true as const,
+        noteId: n.id,
+        type: 'note' as const,
+        book_id: n.book_id,
+        book_title: n.book_title ?? '未知书籍',
+        book_author: n.book_author ?? '',
+        chapter: formatChapterLabel(n.cfi ?? undefined),
+        chapterCfi: n.cfi ?? '',
+        created_at: n.created_at,
+        quote: undefined as string | undefined,
+        summary: n.content_markdown ?? n.title ?? undefined,
+        tags: [] as string[],
+        mark_type: n.mark_type,
+        color: null as string | null,
+      }));
+      return [...hlMarks, ...nMarks].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    }
+
+    // 正常模式：使用全量数据
     const highlightMarks = highlights.map((h) => ({
       id: `h-${h.id}`,
+      rawId: h.id,
+      isNote: false as const,
+      noteId: undefined as number | undefined,
       type: 'highlight' as const,
       book_id: h.book_id,
       book_title: h.book_title ?? '未知书籍',
       book_author: h.book_author ?? '',
-      chapter: h.cfi_start,
+      chapter: formatChapterLabel(h.cfi_start),
+      chapterCfi: h.cfi_start,
       created_at: h.created_at,
       quote: h.text,
       summary: h.note ?? undefined,
@@ -41,23 +125,27 @@ export function ReadingNotesPage() {
 
     const noteMarks = allNotes.map((n) => ({
       id: `n-${n.id}`,
+      rawId: n.id,
+      isNote: true as const,
+      noteId: n.id,
       type: 'note' as const,
       book_id: n.book_id,
       book_title: n.book_title ?? '未知书籍',
       book_author: n.book_author ?? '',
-      chapter: n.cfi ?? '',
+      chapter: formatChapterLabel(n.cfi ?? undefined),
+      chapterCfi: n.cfi ?? '',
       created_at: n.created_at,
-      quote: undefined,
+      quote: undefined as string | undefined,
       summary: n.content_markdown ?? n.title ?? undefined,
       tags: [] as string[],
       mark_type: n.mark_type,
-      color: null,
+      color: null as string | null,
     }));
 
     return [...highlightMarks, ...noteMarks].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [highlights, allNotes]);
+  }, [highlights, allNotes, isSearching, searchNotesData, searchHighlightsData]);
 
   const handleCreateNote = async (data: { book_id: number; title: string; content_markdown: string }) => {
     try {
@@ -65,6 +153,50 @@ export function ReadingNotesPage() {
       setNoteDialogOpen(false);
     } catch {
       // 创建失败，忽略
+    }
+  };
+
+  const handleEditNote = (mark: (typeof allMarks)[number]) => {
+    if (!mark.isNote) return;
+    const note = allNotes.find((n) => n.id === mark.noteId);
+    if (!note) return;
+    setEditingNote({
+      id: note.id,
+      title: note.title ?? '',
+      content_markdown: note.content_markdown ?? '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNote) return;
+    try {
+      await updateNote.mutateAsync({
+        id: editingNote.id,
+        title: editingNote.title.trim() || undefined,
+        content_markdown: editingNote.content_markdown.trim() || undefined,
+      });
+      setEditingNote(null);
+    } catch {
+      // 更新失败，忽略
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deletingNoteId === null) return;
+    try {
+      await deleteNote.mutateAsync(deletingNoteId);
+      setDeletingNoteId(null);
+    } catch {
+      // 删除失败，忽略
+    }
+  };
+
+  const handleNavigateToReader = (bookId: number, cfi: string | undefined) => {
+    if (cfi) {
+      const params = new URLSearchParams({ cfi }).toString();
+      navigate(`/books/${bookId}/read?${params}`);
+    } else {
+      navigate(`/books/${bookId}/read`);
     }
   };
 
@@ -104,7 +236,7 @@ export function ReadingNotesPage() {
               <p className="mt-1 text-sm text-muted-foreground">所有高亮、摘录与批注的集中仓库</p>
 
               <div className="mt-5 flex flex-col gap-3 lg:flex-row">
-                <SearchField placeholder="搜索笔记内容、书名、作者..." />
+                <SearchField placeholder="搜索笔记内容、书名、作者..." value={searchQuery} onChange={setSearchQuery} />
                 <div className="flex flex-wrap items-center gap-2">
                   <CompactSelect options={['全部类型', '高亮摘录', '高亮 + 批注', '独立笔记']} />
                   <CompactSelect options={['最近 30 天', '最近 7 天', '最近一年', '全部时间']} />
@@ -158,7 +290,7 @@ export function ReadingNotesPage() {
             <div className="space-y-4">
               {filteredMarks.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                  暂无阅读笔记，开始阅读后这里的高亮和批注会自动汇总。
+                  {isSearching ? '未找到匹配的结果，请尝试其他关键词。' : '暂无阅读笔记，开始阅读后这里的高亮和批注会自动汇总。'}
                 </div>
               ) : (
                 filteredMarks.map((mark) => (
@@ -176,6 +308,9 @@ export function ReadingNotesPage() {
                       summary: mark.summary,
                       tags: mark.tags,
                     }}
+                    onEdit={mark.isNote ? () => handleEditNote(mark) : undefined}
+                    onDelete={mark.isNote ? () => setDeletingNoteId(mark.noteId!) : undefined}
+                    onNavigate={() => handleNavigateToReader(mark.book_id, mark.chapterCfi || undefined)}
                   />
                 ))
               )}
@@ -215,8 +350,11 @@ export function ReadingNotesPage() {
               </div>
             </SidebarPanel>
 
-            <SidebarPanel title="导出笔记" description="将当前筛选结果导出为通用格式。">
-              <ExportActions />
+            <SidebarPanel title="导出笔记" description="选择一本具体书籍后再导出。">
+              <ExportActions
+                bookId={selectedBookId !== 'all' ? Number(selectedBookId) : undefined}
+                bookTitle={selectedBookId !== 'all' ? (sourceBooks.find((b) => String(b.id) === selectedBookId)?.title) : undefined}
+              />
             </SidebarPanel>
           </aside>
         </div>
@@ -227,6 +365,62 @@ export function ReadingNotesPage() {
         onCancel={() => setNoteDialogOpen(false)}
         loading={createNote.isPending}
       />
+
+      {/* 编辑笔记对话框 */}
+      <Dialog open={editingNote !== null} onOpenChange={(open: boolean) => { if (!open) setEditingNote(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑笔记</DialogTitle>
+          </DialogHeader>
+          {editingNote && (
+            <div className="space-y-3 py-2">
+              <input
+                type="text"
+                placeholder="笔记标题"
+                value={editingNote.title}
+                onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                className="w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <textarea
+                placeholder="笔记内容（Markdown 格式）"
+                value={editingNote.content_markdown}
+                onChange={(e) => setEditingNote({ ...editingNote, content_markdown: e.target.value })}
+                className="w-full resize-none rounded border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                rows={6}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingNote(null)}>
+              <X className="mr-1.5 h-4 w-4" />
+              取消
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editingNote?.title.trim()}>
+              <Check className="mr-1.5 h-4 w-4" />
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <Dialog open={deletingNoteId !== null} onOpenChange={(open: boolean) => { if (!open) setDeletingNoteId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">确定要删除这条笔记吗？删除后不可恢复。</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingNoteId(null)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ProtectedShell>
   );
 }

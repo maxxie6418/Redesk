@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { and, eq, inArray, isNull, asc } from 'drizzle-orm';
-import { books } from '@redesk/db';
+import { and, eq, inArray, isNull, asc, desc } from 'drizzle-orm';
+import { books, notes, highlights } from '@redesk/db';
 import { ERROR_CODE, exportQuerySchema, importNotesSchema } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { requireUserId } from '../lib/auth';
@@ -148,27 +148,120 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/export/books/:id/notes', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    return { data: { book_id: bookId, notes: [], exported_at: now(), note: 'S2 激活' } };
+
+    const db = getDb();
+    const rows = db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.book_id, bookId), eq(notes.owner_id, userId), isNull(notes.deleted_at)))
+      .orderBy(desc(notes.created_at))
+      .all();
+
+    return {
+      data: {
+        book_id: bookId,
+        notes: rows.map((r) => ({
+          id: r.id,
+          cfi: r.cfi,
+          title: r.title,
+          content_markdown: r.content_markdown,
+          content_html: r.content_html,
+          mark_type: r.mark_type,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })),
+        count: rows.length,
+        exported_at: now(),
+      },
+    };
   });
 
   app.get('/export/books/:id/highlights', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    return { data: { book_id: bookId, highlights: [], exported_at: now(), note: 'S2 激活' } };
+
+    const db = getDb();
+    const rows = db
+      .select()
+      .from(highlights)
+      .where(and(eq(highlights.book_id, bookId), eq(highlights.owner_id, userId), isNull(highlights.deleted_at)))
+      .orderBy(desc(highlights.created_at))
+      .all();
+
+    return {
+      data: {
+        book_id: bookId,
+        highlights: rows.map((r) => ({
+          id: r.id,
+          cfi_start: r.cfi_start,
+          cfi_end: r.cfi_end,
+          text: r.text,
+          type: r.type,
+          color: r.color,
+          note: r.note,
+          mark_type: r.mark_type,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })),
+        count: rows.length,
+        exported_at: now(),
+      },
+    };
   });
 
   app.get('/export/books/:id/marks', async (req) => {
-    requireUserId(req);
+    const userId = requireUserId(req);
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
-    return { data: { book_id: bookId, marks: [], exported_at: now(), note: 'S2 激活' } };
+
+    const db = getDb();
+    const noteRows = db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.book_id, bookId), eq(notes.owner_id, userId), isNull(notes.deleted_at)))
+      .orderBy(desc(notes.created_at))
+      .all();
+
+    const highlightRows = db
+      .select()
+      .from(highlights)
+      .where(and(eq(highlights.book_id, bookId), eq(highlights.owner_id, userId), isNull(highlights.deleted_at)))
+      .orderBy(desc(highlights.created_at))
+      .all();
+
+    return {
+      data: {
+        book_id: bookId,
+        notes: noteRows.map((r) => ({
+          id: r.id,
+          cfi: r.cfi,
+          title: r.title,
+          content_markdown: r.content_markdown,
+          mark_type: r.mark_type,
+          created_at: r.created_at,
+        })),
+        highlights: highlightRows.map((r) => ({
+          id: r.id,
+          cfi_start: r.cfi_start,
+          cfi_end: r.cfi_end,
+          text: r.text,
+          type: r.type,
+          color: r.color,
+          note: r.note,
+          mark_type: r.mark_type,
+          created_at: r.created_at,
+        })),
+        count: noteRows.length + highlightRows.length,
+        exported_at: now(),
+      },
+    };
   });
 
   app.post('/backup/full', async (req, reply) => {

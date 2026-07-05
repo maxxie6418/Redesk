@@ -425,6 +425,8 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const db = getDb();
     try {
       db.run(sql`INSERT INTO books_fts(books_fts) VALUES('rebuild')`);
+      db.run(sql`INSERT INTO notes_fts(notes_fts) VALUES('rebuild')`);
+      db.run(sql`INSERT INTO highlights_fts(highlights_fts) VALUES('rebuild')`);
       return { data: { success: true } };
     } catch (err) {
       throw new AppError(

@@ -154,3 +154,27 @@ export function useReadingMarkStats() {
     queryFn: () => api.get<ReadingMarkStats>('/reading-marks/stats'),
   });
 }
+
+export function useNotesSearch(q: string, bookId?: number) {
+  return useQuery({
+    queryKey: ['notes-search', { q, bookId }],
+    queryFn: () => {
+      const params = new URLSearchParams({ q });
+      if (bookId) params.set('book_id', String(bookId));
+      return api.get<NoteItem[]>(`/notes/search?${params.toString()}`);
+    },
+    enabled: q.trim().length > 0,
+  });
+}
+
+export function useHighlightsSearch(q: string, bookId?: number) {
+  return useQuery({
+    queryKey: ['highlights-search', { q, bookId }],
+    queryFn: () => {
+      const params = new URLSearchParams({ q });
+      if (bookId) params.set('book_id', String(bookId));
+      return api.get<HighlightItem[]>(`/highlights/search?${params.toString()}`);
+    },
+    enabled: q.trim().length > 0,
+  });
+}

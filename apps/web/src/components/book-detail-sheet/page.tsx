@@ -23,7 +23,7 @@ import {
   AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
-import { BOOK_STATUS, BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
+import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -39,11 +39,12 @@ import {
   useApplyBookMetadata,
   useFavoriteBook,
   useUnfavoriteBook,
-  type BookSummary,
   type BookCoverItem,
   type LinkMetadata,
 } from '@/hooks/use-books';
 import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
+import { useReadingProgress } from '@/hooks/use-reading-progress';
+import { useNotes, useHighlights, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
@@ -69,11 +70,6 @@ const COVER_TONES = [
   'bg-[#d7c8d5] text-[#342535]',
   'bg-[#d6d0c6] text-[#332f28]',
 ];
-
-function bookProgress(book: BookSummary) {
-  if (book.status === BOOK_STATUS.READ) return 100;
-  return 0;
-}
 
 function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
@@ -131,6 +127,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const updateBook = useUpdateBook();
   const deleteBook = useDeleteBook();
   const files = useBookFiles(bookId ?? 0);
+  const progress = useReadingProgress(bookId ?? 0);
+  const bookNotes = useNotes(bookId ?? 0);
+  const bookHighlights = useHighlights(bookId ?? 0);
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');
   const genreCategories = useCategories('GENRE');
@@ -346,7 +345,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
 
   const b = book.data;
   const hasCover = Boolean(b?.cover_path);
-  const progress = b ? bookProgress(b) : 0;
+  const progressPercent = progress.data?.percentage ?? 0;
   const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
 
   const coverGroups = useMemo(() => {
@@ -481,12 +480,12 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               <div className="mb-6">
                 <div className="mb-1.5 flex items-center justify-between text-[12px]">
                   <span className="text-muted-foreground">阅读进度</span>
-                  <span className="font-semibold text-foreground">{progress}%</span>
+                  <span className="font-semibold text-foreground">{progressPercent}%</span>
                 </div>
                 <div className="h-[6px] overflow-hidden rounded-full bg-border">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${progress}%` } as CSSProperties}
+                    style={{ width: `${progressPercent}%` } as CSSProperties}
                   />
                 </div>
               </div>
@@ -539,7 +538,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   开始阅读
                 </button>
                 <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
-                  已支持基础 EPUB 阅读，进度/高亮/笔记链路待 M2 闭环
+                  已支持 EPUB 阅读与进度记忆，高亮/笔记链路逐步完善中
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -973,16 +972,94 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               )}
 
               {activeTab === 'traces' && (
-              <div className="rounded-xl border-l-[3px] border-l-emerald-500 border-y border-r border-border bg-card p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+              <div>
+                <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
                   <NotebookPen className="h-4 w-4 text-emerald-500" />
                   阅读留痕
                 </h3>
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
-                  <p className="mt-3 text-[14px] text-muted-foreground">笔记、高亮、标注</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground/50">留痕链路待 M2 闭环；当前可正常阅读</p>
-                </div>
+                {(() => {
+                  const notes = (bookNotes.data ?? []) as NoteItem[];
+                  const highlights = (bookHighlights.data ?? []) as HighlightItem[];
+                  const progressPercent = progress.data ? Math.round(progress.data.percentage) : 0;
+                  const allTraces = [
+                    ...notes.map((n) => ({
+                      id: `n-${n.id}`,
+                      type: '笔记' as const,
+                      title: n.title ?? '无标题',
+                      cfi: n.cfi,
+                      createdAt: n.created_at,
+                    })),
+                    ...highlights.map((h) => ({
+                      id: `h-${h.id}`,
+                      type: '高亮' as const,
+                      title: h.text.slice(0, 80),
+                      cfi: h.cfi_start,
+                      createdAt: h.created_at,
+                    })),
+                  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                  if (allTraces.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
+                        <p className="mt-3 text-[14px] text-muted-foreground">暂无阅读留痕</p>
+                        <p className="mt-1 text-[12px] text-muted-foreground/50">开始阅读后笔记和高亮会自动汇总</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      {/* 统计概览 */}
+                      <div className="mb-4 grid grid-cols-3 gap-3">
+                        <div className="rounded-lg border border-border bg-card p-3 text-center">
+                          <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
+                          <p className="text-[11px] text-muted-foreground">阅读进度</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-card p-3 text-center">
+                          <p className="text-lg font-bold text-foreground">{highlights.length}</p>
+                          <p className="text-[11px] text-muted-foreground">高亮</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-card p-3 text-center">
+                          <p className="text-lg font-bold text-foreground">{notes.length}</p>
+                          <p className="text-[11px] text-muted-foreground">笔记</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                      {allTraces.slice(0, 20).map((trace) => (
+                        <div
+                          key={trace.id}
+                          className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3"
+                        >
+                          <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {trace.type}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] text-foreground">{trace.title}</p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+                              {new Date(trace.createdAt).toLocaleDateString('zh-CN')}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!bookId) return;
+                              if (trace.cfi) {
+                                navigate(`/books/${bookId}/read?cfi=${encodeURIComponent(trace.cfi)}`);
+                              } else {
+                                navigate(`/books/${bookId}/read`);
+                              }
+                            }}
+                            className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground opacity-0 transition-all hover:border-primary hover:text-primary group-hover:opacity-100"
+                          >
+                            跳转
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    </div>
+                  );
+                })()}
               </div>
               )}
 

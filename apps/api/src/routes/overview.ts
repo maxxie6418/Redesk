@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, isNull, sql, desc } from 'drizzle-orm';
-import { books } from '@redesk/db';
+import { books, readingProgress } from '@redesk/db';
 import { BOOK_STATUS } from '@redesk/shared';
 import { getDb } from '../db';
 import { requireUserId } from '../lib/auth';
@@ -49,10 +49,18 @@ export async function overviewRoutes(app: FastifyInstance): Promise<void> {
       .all();
 
     const recentReading = db
-      .select({ id: books.id, title: books.title, author: books.author, status: books.status, updated_at: books.updated_at })
-      .from(books)
-      .where(and(eq(books.owner_id, userId), eq(books.status, BOOK_STATUS.READING), isNull(books.deleted_at)))
-      .orderBy(desc(books.started_at), desc(books.updated_at))
+      .select({
+        id: books.id,
+        title: books.title,
+        author: books.author,
+        status: books.status,
+        updated_at: readingProgress.last_read_at,
+        percentage: readingProgress.percentage,
+      })
+      .from(readingProgress)
+      .innerJoin(books, and(eq(books.id, readingProgress.book_id), eq(books.owner_id, userId)))
+      .where(and(eq(readingProgress.owner_id, userId), isNull(books.deleted_at)))
+      .orderBy(desc(readingProgress.last_read_at))
       .limit(5)
       .all();
 

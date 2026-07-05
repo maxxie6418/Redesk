@@ -1,4 +1,5 @@
 import { type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bookmark, Grid3X3, Heart, LayoutGrid, LayoutList, Star } from 'lucide-react';
 import type { BookSummary } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
@@ -136,6 +137,7 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
 }
 
 export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+  const navigate = useNavigate();
   const progress = bookProgress(book);
 
   return (
@@ -144,7 +146,13 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
       style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' } as CSSProperties}
     >
       {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-5 top-5" /> : null}
-      <button type="button" className="relative mt-0.5 shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]" disabled title="阅读器将在 M2 上线">
+      <button
+        type="button"
+        className={cn('relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_files}
+        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
+        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+      >
         <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
@@ -176,12 +184,19 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
 }
 
 export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+  const navigate = useNavigate();
   const progress = bookProgress(book);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       <div className="relative mb-3 overflow-hidden rounded-xl">
-        <button type="button" className="block w-full cursor-not-allowed" disabled title="阅读器将在 M2 上线">
+        <button
+          type="button"
+          className={cn('block w-full', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
+          disabled={!book.has_files}
+          title={book.has_files ? '打开阅读器' : '暂无可读文件'}
+          onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+        >
           <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
         <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
@@ -244,12 +259,19 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
 }
 
 export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+  const navigate = useNavigate();
   const progress = bookProgress(book);
 
   return (
     <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-4" /> : null}
-      <button type="button" className="relative shrink-0 cursor-not-allowed overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]" disabled title="阅读器将在 M2 上线">
+      <button
+        type="button"
+        className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_files}
+        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
+        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+      >
         <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
@@ -285,12 +307,19 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
 }
 
 export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+  const navigate = useNavigate();
   const progress = bookProgress(book);
 
   return (
     <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
       {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-3.5" /> : null}
-      <button type="button" className="relative shrink-0 cursor-not-allowed overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]" disabled title="阅读器将在 M2 上线">
+      <button
+        type="button"
+        className={cn('relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_files}
+        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
+        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+      >
         <BookCoverImage book={book} index={index} className="h-[50px] w-[36px]" rounded="rounded-sm" />
         <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>

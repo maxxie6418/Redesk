@@ -8,7 +8,7 @@ import {
   createNoteSchema,
   updateNoteSchema,
 } from '@redesk/shared';
-import { getDb } from '../db';
+import { getDb, getSqlite } from '../db';
 import { AppError, notFound } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
@@ -380,6 +380,101 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
         notes_this_month: notesThisMonth,
         annotated: annotatedCount,
       },
+    };
+  });
+
+  // ========== Search ==========
+
+  app.get('/notes/search', async (req) => {
+    const userId = requireUserId(req);
+    const query = req.query as { q?: string; book_id?: string; page?: string; page_size?: string };
+    const q = query.q?.trim();
+    if (!q) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词不能为空');
+    const page = Number(query.page ?? 1);
+    const pageSize = Number(query.page_size ?? 20);
+    const bookId = query.book_id ? Number(query.book_id) : undefined;
+
+    const sqlite = getSqlite();
+
+    // 搜索 notes_fts
+    const ftsMatch = q.replace(/['"]/g, '').split(/\s+/).filter(Boolean).join(' ');
+    if (!ftsMatch) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词无效');
+
+    const escaped = ftsMatch.replace(/'/g, "''");
+    const noteRows = sqlite
+      .prepare(
+        `SELECT n.id, n.book_id, n.owner_id, n.cfi, n.title, n.content_html, n.content_markdown,
+                n.mark_type, n.created_at, n.updated_at,
+                b.title AS book_title, b.author AS book_author, b.cover_path AS book_cover_path
+         FROM notes_fts f
+         JOIN notes n ON n.id = f.rowid
+         LEFT JOIN books b ON b.id = n.book_id
+         WHERE notes_fts MATCH ?
+           AND n.deleted_at IS NULL
+           AND n.owner_id = ?
+         ${bookId && !Number.isNaN(bookId) ? 'AND n.book_id = ?' : ''}
+         ORDER BY rank
+         LIMIT ? OFFSET ?`,
+      )
+      .all(
+        ...[
+          escaped,
+          userId,
+          ...(bookId && !Number.isNaN(bookId) ? [bookId] : []),
+          pageSize,
+          (page - 1) * pageSize,
+        ],
+      ) as Array<Record<string, unknown>>;
+
+    return {
+      data: noteRows,
+      type: 'notes',
+    };
+  });
+
+  app.get('/highlights/search', async (req) => {
+    const userId = requireUserId(req);
+    const query = req.query as { q?: string; book_id?: string; page?: string; page_size?: string };
+    const q = query.q?.trim();
+    if (!q) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词不能为空');
+    const page = Number(query.page ?? 1);
+    const pageSize = Number(query.page_size ?? 20);
+    const bookId = query.book_id ? Number(query.book_id) : undefined;
+
+    const sqlite = getSqlite();
+
+    const ftsMatch = q.replace(/['"]/g, '').split(/\s+/).filter(Boolean).join(' ');
+    if (!ftsMatch) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词无效');
+
+    const escaped = ftsMatch.replace(/'/g, "''");
+    const hlRows = sqlite
+      .prepare(
+        `SELECT h.id, h.book_id, h.owner_id, h.cfi_start, h.cfi_end, h.text, h.type,
+                h.color, h.note, h.mark_type, h.created_at, h.updated_at,
+                b.title AS book_title, b.author AS book_author, b.cover_path AS book_cover_path
+         FROM highlights_fts f
+         JOIN highlights h ON h.id = f.rowid
+         LEFT JOIN books b ON b.id = h.book_id
+         WHERE highlights_fts MATCH ?
+           AND h.deleted_at IS NULL
+           AND h.owner_id = ?
+         ${bookId && !Number.isNaN(bookId) ? 'AND h.book_id = ?' : ''}
+         ORDER BY rank
+         LIMIT ? OFFSET ?`,
+      )
+      .all(
+        ...[
+          escaped,
+          userId,
+          ...(bookId && !Number.isNaN(bookId) ? [bookId] : []),
+          pageSize,
+          (page - 1) * pageSize,
+        ],
+      ) as Array<Record<string, unknown>>;
+
+    return {
+      data: hlRows,
+      type: 'highlights',
     };
   });
 }
