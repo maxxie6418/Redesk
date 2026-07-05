@@ -133,6 +133,13 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   );
 
   const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL' || favorited;
+  const resetFilters = useCallback(() => {
+    setStatus('ALL');
+    setVisibility('ALL');
+    setCategory('ALL');
+    setTag('ALL');
+    setFavorited(false);
+  }, []);
 
   const handleRestore = useCallback(async (id: number) => {
     try {
@@ -180,7 +187,18 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             onSearchChange={setSearch}
             status={status}
             onStatusChange={setStatus}
-            onOpenCreate={() => setShowCreate(true)}
+            category={category}
+            onCategoryChange={setCategory}
+            categoryOptions={categoryOptions}
+            tag={tag}
+            onTagChange={setTag}
+            tagOptions={tagOptions}
+            visibility={visibility}
+            onVisibilityChange={setVisibility}
+            visibilityOptions={visibilityOptions}
+            favorited={favorited}
+            onFavoritedChange={() => setFavorited((value) => !value)}
+            onResetFilters={resetFilters}
             onOpenDetail={(id) => setDetailBookId(id)}
           />
         ) : (

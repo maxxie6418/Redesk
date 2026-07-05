@@ -1,10 +1,20 @@
-import { BookPlus, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { ChevronRight, Heart, Search, SlidersHorizontal } from 'lucide-react';
 import { BOOK_STATUS, BOOK_STATUS_LABELS, type BookStatus } from '@redesk/shared';
 import { API_BASE } from '@/lib/api';
 import type { ApiError } from '@/lib/api';
 import type { BookSummary } from '@/hooks/use-books';
 import { cn } from '@/lib/utils';
+import { FilterSelect, type FilterSelectOption } from '@/components/page-ui/filter-select';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 const COVER_TONES = [
   'bg-[#d8c6b7] text-[#3d2f28]',
@@ -16,9 +26,11 @@ const COVER_TONES = [
 ];
 
 const MOBILE_STATUS_OPTIONS = [
-  { value: 'ALL', label: '全部' },
+  { value: 'ALL', label: '全部状态' },
+  { value: BOOK_STATUS.COLLECTED, label: BOOK_STATUS_LABELS[BOOK_STATUS.COLLECTED] },
   { value: BOOK_STATUS.READING, label: BOOK_STATUS_LABELS[BOOK_STATUS.READING] },
   { value: BOOK_STATUS.PLANNED, label: BOOK_STATUS_LABELS[BOOK_STATUS.PLANNED] },
+  { value: BOOK_STATUS.READ, label: BOOK_STATUS_LABELS[BOOK_STATUS.READ] },
   { value: BOOK_STATUS.STORED, label: BOOK_STATUS_LABELS[BOOK_STATUS.STORED] },
 ] as const;
 
@@ -33,7 +45,18 @@ export function MobileBookshelf({
   onSearchChange,
   status,
   onStatusChange,
-  onOpenCreate,
+  category,
+  onCategoryChange,
+  categoryOptions,
+  tag,
+  onTagChange,
+  tagOptions,
+  visibility,
+  onVisibilityChange,
+  visibilityOptions,
+  favorited,
+  onFavoritedChange,
+  onResetFilters,
   onOpenDetail,
 }: {
   pageView: 'bookshelf' | 'trash';
@@ -46,10 +69,22 @@ export function MobileBookshelf({
   onSearchChange: (value: string) => void;
   status: string;
   onStatusChange: (value: string) => void;
-  onOpenCreate: () => void;
+  category: string;
+  onCategoryChange: (value: string) => void;
+  categoryOptions: readonly FilterSelectOption[];
+  tag: string;
+  onTagChange: (value: string) => void;
+  tagOptions: readonly FilterSelectOption[];
+  visibility: string;
+  onVisibilityChange: (value: string) => void;
+  visibilityOptions: readonly FilterSelectOption[];
+  favorited: boolean;
+  onFavoritedChange: () => void;
+  onResetFilters: () => void;
   onOpenDetail: (id: number) => void;
 }) {
-  const navigate = useNavigate();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterCount = getActiveFilterCount({ status, category, tag, visibility, favorited });
 
   return (
     <>
@@ -67,13 +102,22 @@ export function MobileBookshelf({
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[16px] border border-border bg-card text-foreground shadow-sm"
-          onClick={() => navigate('/settings')}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
+
+        {pageView === 'bookshelf' ? (
+          <button
+            type="button"
+            aria-label="打开筛选"
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-[16px] border border-border bg-card text-foreground shadow-sm"
+            onClick={() => setFilterOpen(true)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {filterCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                {filterCount}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
       </div>
 
       <label className="flex h-11 items-center gap-3 rounded-full border border-border bg-card/92 px-4 text-sm text-muted-foreground shadow-[0_8px_22px_rgba(64,47,31,0.05)]">
@@ -86,33 +130,6 @@ export function MobileBookshelf({
         />
       </label>
 
-      {pageView === 'bookshelf' ? (
-        <>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {MOBILE_STATUS_OPTIONS.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                className={cn(
-                  'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                  status === item.value ? 'border-primary/35 bg-primary/12 text-primary' : 'border-border bg-card text-muted-foreground',
-                )}
-                onClick={() => onStatusChange(item.value)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <MobileQuickCard title="添加书籍" subtitle="手动录入或链接抓取" onClick={onOpenCreate} />
-            <MobileQuickCard title="轻管理" subtitle="上传、备份、导出入口" onClick={() => navigate('/overview')} />
-            <MobileQuickCard title="备份导出" subtitle="进入移动端备份页" onClick={() => navigate('/settings?mobile=backup')} />
-            <MobileQuickCard title="完整设置" subtitle="继续管理账户与系统" onClick={() => navigate('/settings')} />
-          </div>
-        </>
-      ) : null}
-
       <div className="mt-3 space-y-2.5">
         {isLoading ? (
           <MobilePlaceholder title="正在整理书架..." />
@@ -121,7 +138,7 @@ export function MobileBookshelf({
         ) : books.length === 0 ? (
           <MobilePlaceholder
             title={pageView === 'trash' ? '回收站为空' : hasFilter ? '没有匹配的书籍' : '书架还是空的'}
-            description={pageView === 'trash' ? '删除后的书籍会暂时停留在这里。' : '先添加一本书，这里就会出现你的书库。'}
+            description={pageView === 'trash' ? '删除后的书籍会暂时停留在这里。' : '先添加一本到书架，这里就会出现你的藏书。'}
           />
         ) : (
           books.map((book, index) => (
@@ -161,31 +178,80 @@ export function MobileBookshelf({
           ))
         )}
       </div>
+
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="bottom" className="rounded-t-[28px] border-x-0 border-b-0 px-4 pb-6 pt-5 sm:max-w-md">
+          <SheetHeader className="space-y-1 text-left">
+            <SheetTitle>筛选书架</SheetTitle>
+            <SheetDescription>保留移动端最常用的筛选项，其他深度管理继续放在桌面端。</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-5 space-y-4">
+            <MobileFilterField label="阅读状态">
+              <FilterSelect value={status} onChange={onStatusChange} options={MOBILE_STATUS_OPTIONS} size="md" className="w-full min-w-0" />
+            </MobileFilterField>
+
+            <MobileFilterField label="分类">
+              <FilterSelect value={category} onChange={onCategoryChange} options={categoryOptions} size="md" className="w-full min-w-0" />
+            </MobileFilterField>
+
+            <MobileFilterField label="标签">
+              <FilterSelect value={tag} onChange={onTagChange} options={tagOptions} size="md" className="w-full min-w-0" />
+            </MobileFilterField>
+
+            <MobileFilterField label="可见性">
+              <FilterSelect value={visibility} onChange={onVisibilityChange} options={visibilityOptions} size="md" className="w-full min-w-0" />
+            </MobileFilterField>
+
+            <button
+              type="button"
+              className={cn(
+                'flex w-full items-center justify-between rounded-[18px] border px-4 py-3 text-left text-sm font-medium transition-colors',
+                favorited ? 'border-primary/35 bg-primary/10 text-primary' : 'border-border bg-card text-foreground',
+              )}
+              onClick={onFavoritedChange}
+            >
+              <span className="flex items-center gap-2">
+                <Heart className={cn('h-4 w-4', favorited ? 'fill-current' : '')} />
+                仅看收藏
+              </span>
+              <span className="text-xs text-muted-foreground">{favorited ? '已开启' : '未开启'}</span>
+            </button>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => {
+                onResetFilters();
+              }}
+            >
+              清空筛选
+            </Button>
+            <Button type="button" className="rounded-full" onClick={() => setFilterOpen(false)}>
+              查看结果
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
 
-function MobileQuickCard({
-  title,
-  subtitle,
-  onClick,
+function MobileFilterField({
+  label,
+  children,
 }: {
-  title: string;
-  subtitle: string;
-  onClick: () => void;
+  label: string;
+  children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      className="rounded-[22px] border border-border bg-card px-3 py-3 text-left shadow-[0_10px_24px_rgba(64,47,31,0.06)]"
-      onClick={onClick}
-    >
-      <div className="inline-flex h-8 w-8 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
-        <BookPlus className="h-4 w-4" />
-      </div>
-      <div className="mt-2 text-sm font-semibold text-foreground">{title}</div>
-      <div className="mt-1 text-xs leading-5 text-muted-foreground">{subtitle}</div>
-    </button>
+    <div className="space-y-2">
+      <div className="text-xs font-semibold tracking-[0.08em] text-muted-foreground">{label}</div>
+      {children}
+    </div>
   );
 }
 
@@ -202,4 +268,20 @@ function MobilePlaceholder({
       {description ? <div className="mt-2 text-xs leading-6 text-muted-foreground">{description}</div> : null}
     </div>
   );
+}
+
+function getActiveFilterCount({
+  status,
+  category,
+  tag,
+  visibility,
+  favorited,
+}: {
+  status: string;
+  category: string;
+  tag: string;
+  visibility: string;
+  favorited: boolean;
+}) {
+  return [status !== 'ALL', category !== 'ALL', tag !== 'ALL', visibility !== 'ALL', favorited].filter(Boolean).length;
 }
