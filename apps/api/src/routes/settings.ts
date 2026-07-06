@@ -20,6 +20,11 @@ function now(): string {
   return new Date().toISOString();
 }
 
+function serializeSettingValue(value: string | number | boolean | null): string | null {
+  if (value === null) return null;
+  return String(value);
+}
+
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/settings', async (req) => {
     requireUserId(req);
@@ -59,6 +64,8 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
     for (const [key, value] of Object.entries(input)) {
       if (value === undefined) continue;
+      const serializedValue = serializeSettingValue(value);
+      if (serializedValue === null) continue;
 
       const existing = db
         .select({ key: settings.key })
@@ -68,7 +75,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
       if (existing) {
         db.update(settings)
-          .set({ value, updated_at: timestamp })
+          .set({ value: serializedValue, updated_at: timestamp })
           .where(and(eq(settings.owner_id, ownerId), eq(settings.key, key)))
           .run();
       } else {
@@ -76,7 +83,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
           .values({
             owner_id: ownerId,
             key,
-            value,
+            value: serializedValue,
             updated_at: timestamp,
           })
           .run();

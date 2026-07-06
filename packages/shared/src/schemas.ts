@@ -5,7 +5,9 @@ import type { ErrorCode } from './errors';
 const positiveInt = z.coerce.number().int().positive();
 const BOOK_STATUS_VALUES = Object.values(BOOK_STATUS) as [string, ...string[]];
 const VISIBILITY_VALUES = Object.values(VISIBILITY) as [string, ...string[]];
-const STORAGE_MODE_VALUES = ['local_only', 'cloud_only', 'dual'] as [string, ...string[]];
+const STORAGE_MODE_VALUES = ['local_only', 'cloud_only', 'dual'] as const;
+const FILE_MATCH_MODE_VALUES = ['conservative', 'balanced', 'loose'] as const;
+const STORAGE_DRIVER_VALUES = ['local', 's3'] as const;
 
 export const idParamSchema = z.object({
   id: positiveInt,
@@ -17,6 +19,42 @@ export const paginationSchema = z.object({
   sort: z.string().optional(),
 });
 export type PaginationInput = z.infer<typeof paginationSchema>;
+
+export const bookQuerySchema = paginationSchema.extend({
+  q: z.string().optional(),
+  status: z.string().optional(),
+  category_id: positiveInt.optional(),
+  genre_category_id: positiveInt.optional(),
+  tag_id: z.string().optional(),
+  visibility: z.enum(VISIBILITY_VALUES).optional(),
+  in_trash: z.coerce.boolean().optional().default(false),
+  favorited: z.coerce.boolean().optional().default(false),
+  has_files: z.coerce.boolean().optional(),
+  has_readable_file: z.coerce.boolean().optional(),
+});
+export type BookQueryInput = z.infer<typeof bookQuerySchema>;
+
+export const trashQuerySchema = paginationSchema.extend({
+  q: z.string().optional(),
+});
+export type TrashQueryInput = z.infer<typeof trashQuerySchema>;
+
+export const duplicateQuerySchema = z.object({
+  threshold: z.coerce.number().min(0).max(1).optional().default(0.6),
+});
+export type DuplicateQueryInput = z.infer<typeof duplicateQuerySchema>;
+
+export const exportQuerySchema = z.object({
+  format: z.enum(['json', 'csv']).optional().default('json'),
+  ids: z.string().optional(),
+});
+export type ExportQueryInput = z.infer<typeof exportQuerySchema>;
+
+export const importNotesSchema = z.object({
+  mode: z.enum(['append', 'replace']).optional().default('append'),
+  dry_run: z.coerce.boolean().optional().default(false),
+});
+export type ImportNotesInput = z.infer<typeof importNotesSchema>;
 
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
@@ -40,6 +78,8 @@ export const createBookSchema = z.object({
   source_url: z.string().max(2000).optional().nullable(),
   tag_ids: z.array(positiveInt).optional().default([]),
   custom_attributes: z.record(z.unknown()).optional().nullable(),
+  metadata_source: z.string().max(50).optional().nullable(),
+  cover_url: z.string().max(2000).optional().nullable(),
   storage_mode: z.enum(STORAGE_MODE_VALUES).optional(),
 });
 export type CreateBookInput = z.infer<typeof createBookSchema>;
@@ -75,11 +115,66 @@ export const updateBookSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateBookInput = z.infer<typeof updateBookSchema>;
 
+export const metadataApplySchema = z.object({
+  fields: z.record(z.unknown()).optional().default({}),
+  fetch_cover: z.boolean().optional().default(false),
+});
+export type MetadataApplyInput = z.infer<typeof metadataApplySchema>;
+
+export const batchBooksSchema = z.discriminatedUnion('action', [
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_status'),
+    params: z.object({ status: z.enum(BOOK_STATUS_VALUES) }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_category'),
+    params: z.object({ category_id: positiveInt.nullable() }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_genre_category'),
+    params: z.object({ genre_category_id: positiveInt.nullable() }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_tags'),
+    params: z.object({ tag_ids: z.array(positiveInt) }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_visibility'),
+    params: z.object({ visibility: z.enum(VISIBILITY_VALUES) }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('set_favorited'),
+    params: z.object({ favorited: z.boolean() }),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('delete'),
+    params: z.object({}).optional(),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('fetch_metadata'),
+    params: z.object({}).optional(),
+  }),
+  z.object({
+    ids: z.array(positiveInt).min(1),
+    action: z.literal('fetch_cover'),
+    params: z.object({ force: z.boolean().optional() }).optional(),
+  }),
+]);
+export type BatchBooksInput = z.infer<typeof batchBooksSchema>;
+
 export const batchBookActionSchema = z.discriminatedUnion('action', [
   z.object({
     ids: z.array(positiveInt).min(1),
     action: z.literal('set_status'),
-    params: z.object({ status: z.enum(Object.values(BOOK_STATUS) as [string, ...string[]]) }),
+    params: z.object({ status: z.enum(BOOK_STATUS_VALUES) }),
   }),
   z.object({
     ids: z.array(positiveInt).min(1),
@@ -122,6 +217,11 @@ export const updateCategorySchema = z
   .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 
+export const categoryQuerySchema = z.object({
+  type: z.enum(['PERSONAL', 'GENRE']).optional(),
+});
+export type CategoryQueryInput = z.infer<typeof categoryQuerySchema>;
+
 export const createTagSchema = z.object({
   name: z.string().min(1).max(50),
 });
@@ -135,6 +235,7 @@ export type UpdateTagInput = z.infer<typeof updateTagSchema>;
 export const createRelationSchema = z.object({
   target_book_id: positiveInt,
   relation_type: z.string().min(1).max(100).optional().nullable(),
+  note: z.string().max(1000).optional().nullable(),
 });
 export type CreateRelationInput = z.infer<typeof createRelationSchema>;
 
@@ -161,6 +262,41 @@ export const matchFileToBookSchema = z.object({
 });
 export type MatchFileToBookInput = z.infer<typeof matchFileToBookSchema>;
 
+export const storageModeSchema = z.enum(STORAGE_MODE_VALUES);
+export type StorageModeInput = z.infer<typeof storageModeSchema>;
+
+export const fileMatchCandidatesSchema = z.object({
+  file_ids: z.array(positiveInt).min(1).max(500),
+  mode: z.enum(FILE_MATCH_MODE_VALUES).optional().default('balanced'),
+});
+export type FileMatchCandidatesInput = z.infer<typeof fileMatchCandidatesSchema>;
+
+export const applyFileMatchesSchema = z.object({
+  items: z.array(z.object({ file_id: positiveInt, book_id: positiveInt })).min(1).max(500),
+});
+export type ApplyFileMatchesInput = z.infer<typeof applyFileMatchesSchema>;
+
+export const batchSendFilesToCloudSchema = z.object({
+  ids: z.array(positiveInt).min(1).max(500),
+});
+export type BatchSendFilesToCloudInput = z.infer<typeof batchSendFilesToCloudSchema>;
+
+export const fetchBookCoverSchema = z.object({
+  force: z.boolean().optional().default(false),
+});
+export type FetchBookCoverInput = z.infer<typeof fetchBookCoverSchema>;
+
+export const batchFetchBookCoversSchema = z.object({
+  ids: z.array(positiveInt).min(1).max(500),
+  force: z.boolean().optional().default(false),
+});
+export type BatchFetchBookCoversInput = z.infer<typeof batchFetchBookCoversSchema>;
+
+export const activateBookCoverSchema = z.object({
+  is_active: z.boolean(),
+});
+export type ActivateBookCoverInput = z.infer<typeof activateBookCoverSchema>;
+
 export const defaultStorageModeSchema = z.object({
   default_storage_mode: z.string(),
 });
@@ -179,8 +315,8 @@ export const bookImportRecordSchema = z.object({
   language: z.string().max(50).optional().nullable(),
   category_name: z.string().max(100).optional().nullable(),
   genre_category_name: z.string().max(100).optional().nullable(),
-  status: z.enum(Object.values(BOOK_STATUS) as [string, ...string[]]).optional().default('COLLECTED'),
-  visibility: z.enum(Object.values(VISIBILITY) as [string, ...string[]]).optional().default('PRIVATE'),
+  status: z.enum(BOOK_STATUS_VALUES).optional().default('COLLECTED'),
+  visibility: z.enum(VISIBILITY_VALUES).optional().default('PRIVATE'),
   reading_purpose: z.string().max(255).optional().nullable(),
   entry_reason: z.string().max(500).optional().nullable(),
   rating: z.number().int().min(1).max(5).optional().nullable(),
@@ -192,7 +328,7 @@ export const bookImportRecordSchema = z.object({
 export type BookImportRecordInput = z.infer<typeof bookImportRecordSchema>;
 
 export const storageConfigSchema = z.object({
-  storage_driver: z.enum(['local', 's3']).optional(),
+  storage_driver: z.enum(STORAGE_DRIVER_VALUES).optional(),
   s3_endpoint: z.string().max(500).optional().nullable(),
   s3_region: z.string().max(100).optional().nullable(),
   s3_bucket: z.string().max(255).optional().nullable(),
@@ -205,6 +341,27 @@ export type StorageConfigInput = z.infer<typeof storageConfigSchema>;
 
 export const settingsPatchSchema = z.record(z.string(), z.unknown());
 export type SettingsPatchInput = z.infer<typeof settingsPatchSchema>;
+
+export const updateSettingsSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.boolean(), z.null()]),
+);
+export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+
+export const storageSettingsSchema = z.object({
+  default_storage_mode: z.enum(STORAGE_MODE_VALUES),
+  driver: z.enum(STORAGE_DRIVER_VALUES).optional().nullable(),
+  provider: z.string().max(100).optional().nullable(),
+  bucket: z.string().max(255).optional().nullable(),
+  endpoint: z.string().max(500).optional().nullable(),
+  region: z.string().max(100).optional().nullable(),
+  access_key: z.string().max(500).optional().nullable(),
+  secret_key: z.string().max(500).optional().nullable(),
+  public_url: z.string().max(500).optional().nullable(),
+  clear_access_key: z.boolean().optional(),
+  clear_secret_key: z.boolean().optional(),
+});
+export type StorageSettingsInput = z.infer<typeof storageSettingsSchema>;
 
 export const createUserSchema = z.object({
   username: z.string().min(1).max(50),
@@ -236,6 +393,17 @@ export const setupSchema = z.object({
 });
 export type SetupInput = z.infer<typeof setupSchema>;
 
+export const changePasswordSchema = z.object({
+  current_password: z.string().min(1).max(200).optional(),
+  new_password: z.string().min(6).max(200),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(6).max(200),
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 export const createHighlightSchema = z.object({
   book_id: positiveInt,
   cfi_start: z.string().min(1).max(1024),
@@ -263,6 +431,8 @@ export const createBookmarkSchema = z.object({
   book_id: positiveInt,
   cfi: z.string().min(1).max(1024),
   title: z.string().max(500).optional().nullable(),
+  label: z.string().max(500).optional().nullable(),
+  percentage: z.number().min(0).max(100).optional().nullable(),
 });
 export type CreateBookmarkInput = z.infer<typeof createBookmarkSchema>;
 
@@ -285,7 +455,6 @@ export const updateNoteSchema = z.object({
 });
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 
-// 话题 schemas
 export const createTopicSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
@@ -334,7 +503,6 @@ export const updateTopicSegmentSchema = z.object({
 });
 export type UpdateTopicSegmentInput = z.infer<typeof updateTopicSegmentSchema>;
 
-// 阅读进度 schemas
 export const readingProgressSchema = z.object({
   id: z.number().int(),
   book_id: z.number().int(),
