@@ -286,7 +286,7 @@ export function BookReaderPage() {
             if (cfiStr) {
               // 检查选区是否覆盖已有痕迹
               let foundType: MarkType = null;
-              for (const [key, item] of highlightsMapRef.current) {
+              for (const [, item] of highlightsMapRef.current) {
                 if (cfiStr.includes(item.cfi_start) || item.cfi_start.includes(cfiStr)) {
                   foundType = item.type as MarkType;
                   break;

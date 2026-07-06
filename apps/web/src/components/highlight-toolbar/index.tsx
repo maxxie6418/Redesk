@@ -48,7 +48,6 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
     let flip = false;
 
     const vw = window.innerWidth;
-    const vh = window.innerHeight;
 
     // 顶部越界：翻转到选区下方
     if (top < 8) {
@@ -94,7 +93,7 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
   // 滚动关闭
   useEffect(() => {
     if (!visible) return;
-    let lastScrollY = window.scrollY;
+    const lastScrollY = window.scrollY;
     const handleScroll = () => {
       if (Math.abs(window.scrollY - lastScrollY) > 60) {
         onDismiss();

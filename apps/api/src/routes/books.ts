@@ -53,6 +53,7 @@ interface RawBookRow {
   status: string;
   visibility: string;
   reading_purpose: string | null;
+  entry_reason: string | null;
   rating: number | null;
   custom_attributes: string | null;
   metadata_source: string | null;
@@ -326,6 +327,7 @@ function bookSelect() {
     status: books.status,
     visibility: books.visibility,
     reading_purpose: books.reading_purpose,
+    entry_reason: books.entry_reason,
     rating: books.rating,
     custom_attributes: books.custom_attributes,
     metadata_source: books.metadata_source,
@@ -435,6 +437,7 @@ async function createBookRecord(userId: number, input: CreateBookInput, uploaded
       status: input.status ?? 'COLLECTED',
       visibility: input.visibility ?? 'PRIVATE',
       reading_purpose: input.reading_purpose ?? null,
+      entry_reason: input.entry_reason ?? null,
       rating: input.rating ?? null,
       custom_attributes: input.custom_attributes ? JSON.stringify(input.custom_attributes) : null,
       metadata_source: input.metadata_source ?? 'manual',
@@ -725,6 +728,7 @@ const BOOK_IMPORT_HEADERS = [
   'visibility',
   'rating',
   'reading_purpose',
+  'entry_reason',
   'category_name',
   'genre_category_name',
   'tag_names',
@@ -951,6 +955,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         status: fieldVal('status') ?? undefined,
         visibility: fieldVal('visibility') ?? undefined,
         reading_purpose: fieldVal('reading_purpose') ?? null,
+        entry_reason: fieldVal('entry_reason') ?? null,
         rating: fieldVal('rating') ? Number(fieldVal('rating')) : null,
         tag_ids: fieldVal('tag_ids') ? JSON.parse(fieldVal('tag_ids')!) : undefined,
         custom_attributes: fieldVal('custom_attributes') ? JSON.parse(fieldVal('custom_attributes')!) : null,
@@ -1122,6 +1127,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           visibility,
           rating,
           reading_purpose: optionalText(item.reading_purpose),
+          entry_reason: optionalText(item.entry_reason),
           category_id: !dryRun && categoryName ? findOrCreateCategory(userId, categoryName, 'PERSONAL') : null,
           genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
           tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
@@ -1333,6 +1339,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     if (genreCategoryId !== undefined) updateData.genre_category_id = genreCategoryId;
     if (input.visibility !== undefined) updateData.visibility = input.visibility;
     if (input.reading_purpose !== undefined) updateData.reading_purpose = input.reading_purpose;
+    if (input.entry_reason !== undefined) updateData.entry_reason = input.entry_reason;
     if (input.rating !== undefined) updateData.rating = input.rating;
     if (input.metadata_source !== undefined) updateData.metadata_source = input.metadata_source;
     if (input.source_url !== undefined) updateData.source_url = input.source_url;
@@ -1521,6 +1528,59 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           .set({ deleted_at: timestamp, updated_at: timestamp })
           .where(and(eq(books.owner_id, userId), inArray(books.id, deletableIds)))
           .run();
+        break;
+      }
+      case 'fetch_metadata': {
+        for (const bookId of ownedIds) {
+          const book = db.select({ source_url: books.source_url, title: books.title }).from(books).where(eq(books.id, bookId)).get();
+          if (!book?.source_url) {
+            continue;
+          }
+          try {
+            const metadata = await fetchBookMetadataFromUrl(book.source_url);
+            const allowedFields = new Set(['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count', 'metadata_source']);
+            const updates: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(metadata)) {
+              if (allowedFields.has(key) && value != null && String(value).trim() !== '') {
+                updates[key] = value;
+              }
+            }
+            if (Object.keys(updates).length > 0) {
+              updates.updated_at = timestamp;
+              db.update(books).set(updates).where(eq(books.id, bookId)).run();
+            }
+          } catch {
+            continue;
+          }
+        }
+        break;
+      }
+      case 'fetch_cover': {
+        const force = input.params?.force === true;
+        for (const bookId of ownedIds) {
+          const book = db.select({ source_url: books.source_url, cover_path: books.cover_path }).from(books).where(eq(books.id, bookId)).get();
+          if (!book?.source_url) {
+            continue;
+          }
+          if (!force && book.cover_path) {
+            continue;
+          }
+          try {
+            const metadata = await fetchBookMetadataFromUrl(book.source_url);
+            if (metadata.cover_url) {
+              const shouldActivateCover = !hasActiveBookCover(bookId);
+              await downloadRemoteCover({
+                ownerId: userId,
+                bookId,
+                coverUrl: metadata.cover_url,
+                sourceLabel: metadata.metadata_source,
+                activate: shouldActivateCover,
+              });
+            }
+          } catch {
+            continue;
+          }
+        }
         break;
       }
     }
