@@ -13,6 +13,25 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('epubjs') || id.includes('jszip') || id.includes('localforage') || id.includes('marks-pane') || id.includes('event-emitter') || id.includes('@xmldom/xmldom')) {
+            return 'reader-vendor';
+          }
+          if (id.includes('@tanstack/react-query')) {
+            return 'query-vendor';
+          }
+          if (id.includes('lucide-react') || id.includes('@radix-ui/react-slot') || id.includes('radix-ui')) {
+            return 'ui-vendor';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': resolve(here, './src'),

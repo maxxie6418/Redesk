@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AlertTriangle, ChevronRight, Cloud, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,16 +14,17 @@ import { useMobileLayout } from '@/hooks/use-mobile-layout';
 import { useSettings } from '@/hooks/use-settings';
 import { useSystemStats } from '@/hooks/use-system';
 import { cn } from '@/lib/utils';
-import { AiTab } from './ai-tab';
-import { BatchTab } from './batch-tab';
-import { BackupTab } from './backup-tab';
-import { GeneralTab } from './general-tab';
-import { LoginManagementTab } from './login-management-tab';
-import { PropertiesTab } from './properties-tab';
 import { SimpleChangePassword } from './simple-change-password';
-import { StorageTab } from './storage-tab';
-import { SystemTab } from './system-tab';
 import type { StatusMessage, Tab } from './types';
+
+const AiTab = lazy(() => import('./ai-tab').then((module) => ({ default: module.AiTab })));
+const BatchTab = lazy(() => import('./batch-tab').then((module) => ({ default: module.BatchTab })));
+const BackupTab = lazy(() => import('./backup-tab').then((module) => ({ default: module.BackupTab })));
+const GeneralTab = lazy(() => import('./general-tab').then((module) => ({ default: module.GeneralTab })));
+const LoginManagementTab = lazy(() => import('./login-management-tab').then((module) => ({ default: module.LoginManagementTab })));
+const PropertiesTab = lazy(() => import('./properties-tab').then((module) => ({ default: module.PropertiesTab })));
+const StorageTab = lazy(() => import('./storage-tab').then((module) => ({ default: module.StorageTab })));
+const SystemTab = lazy(() => import('./system-tab').then((module) => ({ default: module.SystemTab })));
 
 const VALID_TABS: Tab[] = ['general', 'batch', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
 
@@ -45,6 +46,14 @@ export function SettingsPage() {
   }
 
   return user.is_admin ? <AdminSettingsPage /> : <SimpleSettingsPage user={user} />;
+}
+
+function TabFallback() {
+  return (
+    <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-border bg-card text-sm text-muted-foreground">
+      页面加载中...
+    </div>
+  );
 }
 
 function AdminSettingsPage() {
@@ -164,23 +173,25 @@ function AdminSettingsPage() {
             ))}
           </nav>
 
-          {activeTab === 'general' ? <GeneralTab settings={settings.data ?? {}} onToast={showToast} /> : null}
-          {activeTab === 'batch' ? (
-            <BatchTab
-              settings={settings.data ?? {}}
-              initialBookIds={(searchParams.get('books') ?? '')
-                .split(',')
-                .map((value) => Number(value))
-                .filter((value) => Number.isInteger(value) && value > 0)}
-              onToast={showToast}
-            />
-          ) : null}
-          {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
-          {activeTab === 'login' ? <LoginManagementTab /> : null}
-          {activeTab === 'properties' ? <PropertiesTab /> : null}
-          {activeTab === 'backup' ? <BackupTab settings={settings.data ?? {}} onToast={showToast} /> : null}
-          {activeTab === 'storage' ? <StorageTab onToast={showToast} /> : null}
-          {activeTab === 'system' ? <SystemTab onToast={showToast} /> : null}
+          <Suspense fallback={<TabFallback />}>
+            {activeTab === 'general' ? <GeneralTab settings={settings.data ?? {}} onToast={showToast} /> : null}
+            {activeTab === 'batch' ? (
+              <BatchTab
+                settings={settings.data ?? {}}
+                initialBookIds={(searchParams.get('books') ?? '')
+                  .split(',')
+                  .map((value) => Number(value))
+                  .filter((value) => Number.isInteger(value) && value > 0)}
+                onToast={showToast}
+              />
+            ) : null}
+            {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
+            {activeTab === 'login' ? <LoginManagementTab /> : null}
+            {activeTab === 'properties' ? <PropertiesTab /> : null}
+            {activeTab === 'backup' ? <BackupTab settings={settings.data ?? {}} onToast={showToast} /> : null}
+            {activeTab === 'storage' ? <StorageTab onToast={showToast} /> : null}
+            {activeTab === 'system' ? <SystemTab onToast={showToast} /> : null}
+          </Suspense>
         </div>
       </ProtectedShell>
     </>
