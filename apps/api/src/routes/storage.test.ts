@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import type { FastifyRequest } from 'fastify';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -123,6 +123,14 @@ describe('storage routes — auth gate static inspection', () => {
       const window = file.slice(routeStart, routeStart + 200);
       expect(window, `route ${m[2]} should call requireUserId`).toMatch(/requireUserId\(req\)/);
     }
+  });
+
+  it('uses strong random storage probe keys instead of Math.random', async () => {
+    const file = await readFile(join(__dirname, 'storage.ts'), 'utf-8');
+    const helper = await readFile(join(__dirname, '../lib/storage-debug.ts'), 'utf-8');
+    expect(file).not.toMatch(/Math\.random/);
+    expect(file).toMatch(/randomStorageToken\(/);
+    expect(helper).toMatch(/randomUUID\(/);
   });
 });
 

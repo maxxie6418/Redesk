@@ -52,6 +52,18 @@ export interface ReadingMarkStats {
   annotated: number;
 }
 
+export interface PaginationInfo {
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export interface ReadingMarkSearchResponse<T> {
+  data: T[];
+  type: string;
+  pagination: PaginationInfo;
+}
+
 export function useHighlights(bookId?: number) {
   return useQuery({
     queryKey: ['highlights', { bookId }],
@@ -171,7 +183,7 @@ export function useNotesSearch(q: string, bookId?: number) {
     queryFn: () => {
       const params = new URLSearchParams({ q });
       if (bookId) params.set('book_id', String(bookId));
-      return api.get<NoteItem[]>(`/notes/search?${params.toString()}`);
+      return api.getBody<ReadingMarkSearchResponse<NoteItem>>(`/notes/search?${params.toString()}`);
     },
     enabled: q.trim().length > 0,
   });
@@ -183,7 +195,7 @@ export function useHighlightsSearch(q: string, bookId?: number) {
     queryFn: () => {
       const params = new URLSearchParams({ q });
       if (bookId) params.set('book_id', String(bookId));
-      return api.get<HighlightItem[]>(`/highlights/search?${params.toString()}`);
+      return api.getBody<ReadingMarkSearchResponse<HighlightItem>>(`/highlights/search?${params.toString()}`);
     },
     enabled: q.trim().length > 0,
   });

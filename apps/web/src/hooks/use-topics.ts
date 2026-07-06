@@ -66,6 +66,25 @@ export interface TopicItem {
   entry_count: number;
 }
 
+export interface TopicTimelineEvent {
+  event_type: string;
+  subject_type: string;
+  subject_id: number;
+  title: string;
+  summary: string | null;
+  book_id: number | null;
+  book_title: string | null;
+  cfi: string | null;
+  cfi_start?: string;
+  cfi_end?: string;
+  created_at: string;
+}
+
+export interface TopicTimeline {
+  topic_id: number;
+  events: TopicTimelineEvent[];
+}
+
 export interface TopicDetail extends TopicItem {
   books: TopicBook[];
   highlights: TopicHighlight[];
@@ -92,6 +111,14 @@ export function useTopic(id: number) {
   return useQuery({
     queryKey: ['topics', id],
     queryFn: () => api.get<TopicDetail>(`/topics/${id}`),
+    enabled: id > 0,
+  });
+}
+
+export function useTopicTimeline(id: number) {
+  return useQuery({
+    queryKey: ['topics', id, 'timeline'],
+    queryFn: () => api.get<TopicTimeline>(`/topics/${id}/timeline`),
     enabled: id > 0,
   });
 }

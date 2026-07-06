@@ -28,6 +28,7 @@ import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useBook,
+  useBookReview,
   useUpdateBook,
   useDeleteBook,
   useBookCovers,
@@ -126,6 +127,7 @@ const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string
 export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { bookId: number | null; open: boolean; onClose: () => void; variant?: 'sheet' | 'dialog' }) {
   const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
+  const review = useBookReview(bookId ?? 0);
   const updateBook = useUpdateBook();
   const deleteBook = useDeleteBook();
   const files = useBookFiles(bookId ?? 0);
@@ -993,7 +995,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 {(() => {
                   const notes = (bookNotes.data ?? []) as NoteItem[];
                   const highlights = (bookHighlights.data ?? []) as HighlightItem[];
-                  const progressPercent = progress.data ? Math.round(progress.data.percentage) : 0;
+                  const reviewSummary = review.data;
+                  const progressPercent = reviewSummary?.reading_progress ? Math.round(reviewSummary.reading_progress.percentage * 100) : progress.data ? Math.round(progress.data.percentage) : 0;
+                  const recentMarks = reviewSummary?.recent_marks ?? [];
                   const allTraces = [
                     ...notes.map((n) => ({
                       id: `n-${n.id}`,
@@ -1024,20 +1028,45 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   return (
                     <div>
                       {/* 统计概览 */}
-                      <div className="mb-4 grid grid-cols-3 gap-3">
+                      <div className="mb-4 grid grid-cols-4 gap-3">
                         <div className="rounded-lg border border-border bg-card p-3 text-center">
                           <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
                           <p className="text-[11px] text-muted-foreground">阅读进度</p>
                         </div>
                         <div className="rounded-lg border border-border bg-card p-3 text-center">
-                          <p className="text-lg font-bold text-foreground">{highlights.length}</p>
+                          <p className="text-lg font-bold text-foreground">{reviewSummary?.counts.highlights ?? highlights.length}</p>
                           <p className="text-[11px] text-muted-foreground">高亮</p>
                         </div>
                         <div className="rounded-lg border border-border bg-card p-3 text-center">
-                          <p className="text-lg font-bold text-foreground">{notes.length}</p>
+                          <p className="text-lg font-bold text-foreground">{reviewSummary?.counts.notes ?? notes.length}</p>
                           <p className="text-[11px] text-muted-foreground">笔记</p>
                         </div>
+                        <div className="rounded-lg border border-border bg-card p-3 text-center">
+                          <p className="text-lg font-bold text-foreground">{reviewSummary?.counts.bookmarks ?? 0}</p>
+                          <p className="text-[11px] text-muted-foreground">书签</p>
+                        </div>
                       </div>
+                      {recentMarks.length > 0 && (
+                        <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
+                          <p className="mb-2 text-[12px] font-semibold text-foreground">最近回看入口</p>
+                          <div className="flex flex-wrap gap-2">
+                            {recentMarks.slice(0, 8).map((mark) => (
+                              <button
+                                key={`${mark.type}-${mark.id}`}
+                                type="button"
+                                onClick={() => {
+                                  if (!bookId) return;
+                                  const cfi = mark.cfi ?? mark.cfi_start;
+                                  navigate(cfi ? `/books/${bookId}/read?cfi=${encodeURIComponent(cfi)}` : `/books/${bookId}/read`);
+                                }}
+                                className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
+                              >
+                                {mark.type === 'highlight' ? '高亮' : mark.type === 'note' ? '笔记' : '书签'} · {(mark.title ?? mark.text ?? '阅读位置').slice(0, 16)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
                       {allTraces.slice(0, 20).map((trace) => (
                         <div

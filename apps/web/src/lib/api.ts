@@ -31,6 +31,21 @@ export class ApiError extends Error {
   }
 }
 
+const UNEXPECTED_RESPONSE_ERROR: ApiErrorShape = {
+  code: 'INTERNAL_ERROR',
+  message: '服务返回了非预期响应',
+};
+
+function parseJsonResponse(text: string): unknown {
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ApiError(UNEXPECTED_RESPONSE_ERROR);
+  }
+}
+
 async function requestBody(path: string, init?: RequestInit): Promise<unknown> {
   const headers = new Headers(init?.headers);
   const isFormData = init?.body instanceof FormData;
@@ -45,7 +60,7 @@ async function requestBody(path: string, init?: RequestInit): Promise<unknown> {
   });
 
   const text = await res.text();
-  const body = text ? (JSON.parse(text) as unknown) : null;
+  const body = parseJsonResponse(text);
 
   if (!res.ok) {
     const err = (body as { error?: ApiErrorShape } | null)?.error ?? {

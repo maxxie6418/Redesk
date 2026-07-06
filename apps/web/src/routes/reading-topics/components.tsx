@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, BrainCircuit, CirclePlus, LayoutGrid, List, MessageSquareText, Network, Pencil, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, BrainCircuit, CirclePlus, Clock3, LayoutGrid, List, MessageSquareText, Network, Pencil, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FilterSelect } from '@/components/page-ui/filter-select';
 import { SectionPanel } from '@/components/page-ui/section-panel';
@@ -7,7 +7,7 @@ import { SegmentedToggle, SegmentedToggleItem } from '@/components/page-ui/segme
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useBooks } from '@/hooks/use-books';
-import type { TopicDetail } from '@/hooks/use-topics';
+import type { TopicDetail, TopicTimelineEvent } from '@/hooks/use-topics';
 import { cn } from '@/lib/utils';
 import type { Topic, TopicInsight, TopicTrace, TopicWorkspaceBlock } from './data';
 import { topicStats } from './data';
@@ -87,6 +87,20 @@ function InsightBlockIcon({ block }: { block: TopicWorkspaceBlock }) {
   if (block === '问题') return <MessageSquareText className="h-3.5 w-3.5" />;
   if (block === '判断') return <BrainCircuit className="h-3.5 w-3.5" />;
   return <Network className="h-3.5 w-3.5" />;
+}
+
+function timelineEventLabel(type: string): string {
+  const labels: Record<string, string> = {
+    topic_created: '创建话题',
+    topic_updated: '更新话题',
+    book_added: '加入书籍',
+    highlight_added: '加入高亮',
+    note_added: '加入笔记',
+    segment_added: '加入片段',
+    entry_created: '新建沉淀',
+    entry_updated: '更新沉淀',
+  };
+  return labels[type] ?? '话题事件';
 }
 
 function AddBookDialog({
@@ -395,6 +409,8 @@ function InsightCard({
 
 export function TopicWorkspace({
   topic,
+  timeline,
+  timelineLoading,
   onBack,
   onAddBook,
   onEditTopic,
@@ -404,6 +420,8 @@ export function TopicWorkspace({
   onTraceJump,
 }: {
   topic: TopicDetail;
+  timeline: TopicTimelineEvent[];
+  timelineLoading: boolean;
   onBack: () => void;
   onAddBook: (bookId: number) => Promise<void>;
   onEditTopic: (input: { name: string; description: string }) => Promise<void>;
@@ -507,6 +525,42 @@ export function TopicWorkspace({
           </section>
 
           <aside className="space-y-4 lg:col-span-3">
+            <SectionPanel title="话题时间线" className="rounded-lg p-4">
+              {timelineLoading ? (
+                <div className="text-xs text-muted-foreground">正在加载时间线...</div>
+              ) : timeline.length > 0 ? (
+                <div className="space-y-3">
+                  {timeline.slice(0, 8).map((event) => (
+                    <div key={`${event.event_type}-${event.subject_type}-${event.subject_id}-${event.created_at}`} className="flex gap-3">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Clock3 className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{timelineEventLabel(event.event_type)}</span>
+                          <span>{new Date(event.created_at).toLocaleDateString('zh-CN')}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (event.book_id && event.cfi) {
+                              onTraceJump?.({ id: String(event.subject_id), traceType: event.subject_type === 'note' ? 'note' : event.subject_type === 'segment' ? 'segment' : 'highlight', bookId: event.book_id, bookTitle: event.book_title ?? '', chapter: timelineEventLabel(event.event_type), cfi: event.cfi, createdAt: event.created_at, quote: event.title, note: event.summary ?? undefined, tone: event.subject_type === 'note' ? 'success' : event.subject_type === 'segment' ? 'info' : 'primary' });
+                            }
+                          }}
+                          className={cn('mt-1 line-clamp-2 text-left text-sm text-foreground', event.book_id && event.cfi ? 'hover:text-primary' : '')}
+                        >
+                          {event.title || '无标题事件'}
+                        </button>
+                        {event.summary ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{event.summary}</p> : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">暂无时间线事件</div>
+              )}
+            </SectionPanel>
+
             <SectionPanel
               title="沉淀内容"
               action={

@@ -7,7 +7,7 @@
 > 把书库、阅读痕迹、主题思考沉淀在自己手里，让 AI 基于你真实的阅读经历陪读、提问、归纳。
 
 [![Status](https://img.shields.io/badge/status-M1%2FM2%2FM3%20已闭环-green.svg)](#项目状态)
-[![Version](https://img.shields.io/badge/version-2.0.3-blue.svg)](#项目状态)
+[![Version](https://img.shields.io/badge/version-2.0.4-blue.svg)](#项目状态)
 [![Stack](https://img.shields.io/badge/stack-TypeScript-3178c6.svg)](#技术栈)
 
 </div>
@@ -53,7 +53,7 @@ Redesk 的长期价值在于能否把个人阅读中真正有价值的内容长�
 
 ## 🚧 项目状态
 
-**M1 书架与文件管理、M2 阅读器与笔记沉淀、M3 主题阅读均已闭环（v2.0.3），可作为完整的个人阅读管理工具使用。** M4 AI 辅助（阶段一 + RAG）仍在规划中；M5 增强与深化待《决策记录》定位确认。
+**M1 书架与文件管理、M2 阅读器与笔记沉淀、M3 主题阅读均已闭环（v2.0.4），可作为完整的个人阅读管理工具使用。** M4 AI 辅助（阶段一 + RAG）仍在规划中；M5 增强与深化待《决策记录》定位确认。
 
 已完成的文档体系（位于 `doc/`）：
 

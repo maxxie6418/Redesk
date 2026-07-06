@@ -5,6 +5,7 @@ import { config } from '../config';
 import { eq, and, asc } from 'drizzle-orm';
 import { settings, users, type StorageMode } from '@redesk/db';
 import { getDb } from '../db';
+import { storageDebug, storageError } from './storage-debug';
 
 export const SETTINGS_KEYS = {
   defaultStorageMode: 'default_storage_mode',
@@ -120,25 +121,25 @@ function buildCache(): Cache {
   const local = new LocalStorage(config.storageDir);
   const cfg = buildS3Config();
   const completeness = isS3ConfigComplete(cfg);
-  console.log(`[Storage] Building cache: cfg=${JSON.stringify({ endpoint: cfg.endpoint ? '***' : '', bucket: cfg.bucket, region: cfg.region, hasAccessKey: !!cfg.accessKeyId, hasSecretKey: !!cfg.secretAccessKey, forcePathStyle: cfg.forcePathStyle })}`);
-  console.log(`[Storage] Config completeness: ok=${completeness.ok}, missing=${completeness.missing.join(',')}`);
+  storageDebug(`[Storage] Building cache: configured=${completeness.ok}, hasEndpoint=${Boolean(cfg.endpoint)}, hasBucket=${Boolean(cfg.bucket)}, region=${cfg.region}, hasAccessKey=${Boolean(cfg.accessKeyId)}, hasSecretKey=${Boolean(cfg.secretAccessKey)}, forcePathStyle=${cfg.forcePathStyle}`);
+  storageDebug(`[Storage] Config completeness: ok=${completeness.ok}, missing=${completeness.missing.join(',')}`);
   let s3: S3Storage | null = null;
   let s3Error: string | null = null;
   if (completeness.ok) {
     try {
       s3 = new S3Storage(cfg);
-      console.log(`[Storage] S3 client initialized successfully`);
+      storageDebug('[Storage] S3 client initialized successfully');
     } catch (err) {
       s3Error = (err as Error).message;
-      console.error(`[Storage] S3 client initialization failed: ${s3Error}`);
+      storageError(`[Storage] S3 client initialization failed: error_name=${(err as Error).name}, message=${s3Error}`);
     }
   } else {
     s3Error = `配置不完整，缺少：${completeness.missing.join(', ')}`;
-    console.log(`[Storage] S3 not configured: ${s3Error}`);
+    storageDebug(`[Storage] S3 not configured: missing=${completeness.missing.join(',')}`);
   }
 
   const defaultStorageMode = resolveDefaultStorageMode();
-  console.log(`[Storage] Cache built: defaultStorageMode=${defaultStorageMode}, s3Available=${s3 != null}`);
+  storageDebug(`[Storage] Cache built: defaultStorageMode=${defaultStorageMode}, s3Available=${s3 != null}`);
   return { local, s3, s3Error, defaultStorageMode };
 }
 

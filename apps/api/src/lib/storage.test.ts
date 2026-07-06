@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { LocalStorage } from './storage';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let root: string;
 let storage: LocalStorage;
@@ -111,5 +114,27 @@ describe('LocalStorage', () => {
     const s = await stat(join(root, key));
     expect(s.isFile()).toBe(true);
     expect(s.size).toBe(7);
+  });
+});
+
+describe('storage key and log hygiene', () => {
+  it('uses strong random storage keys in file routes', async () => {
+    const file = await readFile(join(__dirname, '../routes/files.ts'), 'utf-8');
+    const helper = await readFile(join(__dirname, 'storage-debug.ts'), 'utf-8');
+    expect(file).not.toMatch(/Math\.random/);
+    expect(file).toMatch(/randomStorageToken\(/);
+    expect(helper).toMatch(/randomUUID\(/);
+  });
+
+  it('does not write storage keys or checksums to default console logs', async () => {
+    const file = await readFile(join(__dirname, '../routes/files.ts'), 'utf-8');
+    expect(file).not.toMatch(/console\.log\(.*\$\{key\}/s);
+    expect(file).not.toMatch(/console\.(log|error)\(.*\$\{checksum\}/s);
+  });
+
+  it('does not log concrete S3 endpoint or bucket while building storage cache', async () => {
+    const file = await readFile(join(__dirname, 'storage-factory.ts'), 'utf-8');
+    expect(file).not.toMatch(/console\.log\(.*cfg\.endpoint/s);
+    expect(file).not.toMatch(/console\.log\(.*cfg\.bucket/s);
   });
 });

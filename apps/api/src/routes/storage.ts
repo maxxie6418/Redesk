@@ -18,6 +18,7 @@ import {
   getSettingsOwnerId,
 } from '../lib/storage-factory';
 import { S3Storage, type S3StorageConfig } from '../lib/s3-storage';
+import { randomStorageToken } from '../lib/storage-debug';
 
 const SENSITIVE_KEYS = new Set(['oss_secret_key', 'oss_access_key']);
 
@@ -178,7 +179,7 @@ export async function storageRoutes(app: FastifyInstance): Promise<void> {
       throw businessError(`S3 客户端初始化失败: ${(err as Error).message}`);
     }
 
-    const probeKey = `__redesk_probe__/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.bin`;
+    const probeKey = `__redesk_probe__/${Date.now()}_${randomStorageToken()}.bin`;
     const probeBody = Buffer.from(`redesk-storage-probe-${Date.now()}`);
 
     try {

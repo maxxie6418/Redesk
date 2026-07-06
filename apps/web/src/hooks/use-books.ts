@@ -44,6 +44,46 @@ export interface BookDetail extends BookSummary {
   isbn: string | null;
 }
 
+export interface BookReviewMark {
+  type: 'highlight' | 'note' | 'bookmark';
+  id: number;
+  book_id: number;
+  cfi: string | null;
+  cfi_start?: string;
+  cfi_end?: string;
+  title?: string | null;
+  text?: string | null;
+  mark_type: string;
+  color?: string | null;
+  note?: string | null;
+  percentage?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookReviewSummary {
+  book_id: number;
+  book: Pick<BookSummary, 'id' | 'owner_id' | 'title' | 'author' | 'cover_path' | 'status' | 'updated_at'>;
+  counts: {
+    highlights: number;
+    notes: number;
+    bookmarks: number;
+  };
+  mark_type_counts: Record<string, number>;
+  reading_progress: {
+    id: number;
+    book_id: number;
+    owner_id: number;
+    file_id: number;
+    cfi: string;
+    percentage: number;
+    last_read_at: string;
+    created_at: string;
+    updated_at: string;
+  } | null;
+  recent_marks: BookReviewMark[];
+}
+
 export interface BookCoverItem {
   id: number;
   owner_id: number;
@@ -171,6 +211,14 @@ export function useBook(id: number) {
   return useQuery({
     queryKey: ['books', id],
     queryFn: () => api.get<BookDetail>(`/books/${id}`),
+    enabled: id > 0,
+  });
+}
+
+export function useBookReview(id: number) {
+  return useQuery({
+    queryKey: ['books', id, 'review'],
+    queryFn: () => api.get<BookReviewSummary>(`/books/${id}/review`),
     enabled: id > 0,
   });
 }

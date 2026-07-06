@@ -8,7 +8,7 @@ import { ProtectedShell } from '@/components/protected-shell';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
-import { useHighlights, useNotes, useReadingMarkStats, useCreateNote, useUpdateNote, useDeleteNote, useNotesSearch, useHighlightsSearch, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
+import { useHighlights, useNotes, useReadingMarkStats, useCreateNote, useUpdateNote, useDeleteNote, useNotesSearch, useHighlightsSearch } from '@/hooks/use-notes';
 import { CreateNoteDialog } from '@/components/create-note-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { useAddTopicHighlight, useAddTopicNote } from '@/hooks/use-topics';
@@ -66,8 +66,8 @@ export function ReadingNotesPage() {
   const allMarks = useMemo(() => {
     // 搜索模式：使用搜索 API 结果
     if (isSearching) {
-      const searchNotes = (searchNotesData ?? []) as NoteItem[];
-      const searchHighlights = (searchHighlightsData ?? []) as HighlightItem[];
+      const searchNotes = searchNotesData?.data ?? [];
+      const searchHighlights = searchHighlightsData?.data ?? [];
       const hlMarks = searchHighlights.map((h) => ({
         id: `h-${h.id}`,
         rawId: h.id,

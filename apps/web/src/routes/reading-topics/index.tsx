@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateTopicDialog } from '@/components/create-topic-dialog';
@@ -9,6 +10,7 @@ import {
   useCreateTopicEntry,
   useDeleteTopicEntry,
   useTopic,
+  useTopicTimeline,
   useTopics,
   useUpdateTopic,
   useUpdateTopicEntry,
@@ -18,6 +20,7 @@ import { TopicCard, TopicWorkspace, ViewSwitch } from './components';
 import { mapTopicDetailToViewModel } from './mapping';
 
 export function ReadingTopicsPage() {
+  const navigate = useNavigate();
   const [view, setView] = useState<'list' | 'workspace'>('list');
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +46,7 @@ export function ReadingTopicsPage() {
 
   const effectiveSelectedTopicId = selectedTopicId ?? filteredTopics[0]?.id ?? topics[0]?.id ?? null;
   const topicDetailQuery = useTopic(effectiveSelectedTopicId ?? 0);
+  const topicTimelineQuery = useTopicTimeline(effectiveSelectedTopicId ?? 0);
   const selectedTopicDetail = topicDetailQuery.data;
 
   const openTopic = (topicId: number) => {
@@ -122,6 +126,8 @@ export function ReadingTopicsPage() {
         effectiveSelectedTopicId && selectedTopicDetail ? (
           <TopicWorkspace
             topic={selectedTopicDetail}
+            timeline={topicTimelineQuery.data?.events ?? []}
+            timelineLoading={topicTimelineQuery.isLoading}
             onBack={() => setView('list')}
             onAddBook={async (bookId) => {
               await addTopicBook.mutateAsync({ topicId: effectiveSelectedTopicId, bookId });
@@ -139,7 +145,17 @@ export function ReadingTopicsPage() {
               await deleteTopicEntry.mutateAsync({ topicId: effectiveSelectedTopicId, entryId });
             }}
             onTraceJump={(trace) => {
-              toast.info(`将跳转到《${trace.bookTitle}》对应位置，跨页联动将在下一步补齐`);
+              if (!trace.bookId) {
+                toast.error('这条痕迹缺少关联书籍，无法跳回原文');
+                return;
+              }
+              if (!trace.cfi) {
+                toast.info('这条痕迹没有可定位位置，已打开书籍详情');
+                navigate(`/books/${trace.bookId}`);
+                return;
+              }
+              const params = new URLSearchParams({ cfi: trace.cfi }).toString();
+              navigate(`/books/${trace.bookId}/read?${params}`);
             }}
           />
         ) : topicDetailQuery.isLoading ? (

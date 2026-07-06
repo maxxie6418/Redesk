@@ -60,6 +60,13 @@ function requireTopic(topicId: number, userId: number) {
   return topic;
 }
 
+function entryTypeTitle(entryType: string): string {
+  if (entryType === 'QUESTION') return '问题';
+  if (entryType === 'JUDGMENT') return '判断';
+  if (entryType === 'COMPARISON') return '比较';
+  return '沉淀';
+}
+
 export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.get('/topics', async (req) => {
     const userId = requireUserId(req);
@@ -72,28 +79,27 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .orderBy(desc(topics.updated_at))
       .all();
 
-    const topicIds = rows.map((t) => t.id);
+    const bookCounts = new Map(
+      db
+        .select({ topic_id: topicBooks.topic_id, value: count() })
+        .from(topicBooks)
+        .innerJoin(topics, eq(topics.id, topicBooks.topic_id))
+        .where(and(eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
+        .groupBy(topicBooks.topic_id)
+        .all()
+        .map((row) => [row.topic_id, row.value]),
+    );
 
-    const bookCounts = new Map<number, number>();
-    const entryCounts = new Map<number, number>();
-
-    if (topicIds.length > 0) {
-      for (const topicId of topicIds) {
-        const bc = db
-          .select({ value: count() })
-          .from(topicBooks)
-          .where(eq(topicBooks.topic_id, topicId))
-          .get()?.value ?? 0;
-        bookCounts.set(topicId, bc);
-
-        const ec = db
-          .select({ value: count() })
-          .from(topicEntries)
-          .where(eq(topicEntries.topic_id, topicId))
-          .get()?.value ?? 0;
-        entryCounts.set(topicId, ec);
-      }
-    }
+    const entryCounts = new Map(
+      db
+        .select({ topic_id: topicEntries.topic_id, value: count() })
+        .from(topicEntries)
+        .innerJoin(topics, eq(topics.id, topicEntries.topic_id))
+        .where(and(eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
+        .groupBy(topicEntries.topic_id)
+        .all()
+        .map((row) => [row.topic_id, row.value]),
+    );
 
     const data = rows.map((topic) => ({
       ...topic,
@@ -123,6 +129,178 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .get();
 
     return { data: { ...topic, book_count: 0, entry_count: 0 } };
+  });
+
+  app.get('/topics/:id/timeline', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const topicId = parseTopicId(id);
+    const db = getDb();
+    const topic = requireTopic(topicId, userId);
+
+    const topicBookRows = db
+      .select({
+        book_id: topicBooks.book_id,
+        added_at: topicBooks.added_at,
+        title: books.title,
+        author: books.author,
+      })
+      .from(topicBooks)
+      .innerJoin(books, eq(topicBooks.book_id, books.id))
+      .where(and(eq(topicBooks.topic_id, topicId), eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    const topicHighlightRows = db
+      .select({
+        highlight_id: topicHighlights.highlight_id,
+        added_at: topicHighlights.added_at,
+        text: highlights.text,
+        cfi_start: highlights.cfi_start,
+        cfi_end: highlights.cfi_end,
+        book_id: highlights.book_id,
+        book_title: books.title,
+      })
+      .from(topicHighlights)
+      .innerJoin(highlights, eq(topicHighlights.highlight_id, highlights.id))
+      .innerJoin(books, eq(highlights.book_id, books.id))
+      .where(and(eq(topicHighlights.topic_id, topicId), eq(highlights.owner_id, userId), sql`${highlights.deleted_at} IS NULL`, sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    const topicNoteRows = db
+      .select({
+        note_id: topicNotes.note_id,
+        added_at: topicNotes.added_at,
+        title: notes.title,
+        content_markdown: notes.content_markdown,
+        cfi: notes.cfi,
+        book_id: notes.book_id,
+        book_title: books.title,
+      })
+      .from(topicNotes)
+      .innerJoin(notes, eq(topicNotes.note_id, notes.id))
+      .innerJoin(books, eq(notes.book_id, books.id))
+      .where(and(eq(topicNotes.topic_id, topicId), eq(notes.owner_id, userId), sql`${notes.deleted_at} IS NULL`, sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    const segmentRows = db
+      .select({
+        id: topicSegments.id,
+        book_id: topicSegments.book_id,
+        cfi_start: topicSegments.cfi_start,
+        cfi_end: topicSegments.cfi_end,
+        label: topicSegments.label,
+        added_at: topicSegments.added_at,
+        book_title: books.title,
+      })
+      .from(topicSegments)
+      .innerJoin(books, eq(topicSegments.book_id, books.id))
+      .where(and(eq(topicSegments.topic_id, topicId), eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    const entries = db
+      .select()
+      .from(topicEntries)
+      .where(eq(topicEntries.topic_id, topicId))
+      .all();
+
+    const events = [
+      {
+        event_type: 'topic_created',
+        subject_type: 'topic',
+        subject_id: topic.id,
+        title: topic.name,
+        summary: topic.description,
+        book_id: null,
+        book_title: null,
+        cfi: null,
+        created_at: topic.created_at,
+      },
+      ...(topic.updated_at !== topic.created_at ? [{
+        event_type: 'topic_updated',
+        subject_type: 'topic',
+        subject_id: topic.id,
+        title: topic.name,
+        summary: topic.description,
+        book_id: null,
+        book_title: null,
+        cfi: null,
+        created_at: topic.updated_at,
+      }] : []),
+      ...topicBookRows.map((row) => ({
+        event_type: 'book_added',
+        subject_type: 'book',
+        subject_id: row.book_id,
+        title: row.title,
+        summary: row.author,
+        book_id: row.book_id,
+        book_title: row.title,
+        cfi: null,
+        created_at: row.added_at,
+      })),
+      ...topicHighlightRows.map((row) => ({
+        event_type: 'highlight_added',
+        subject_type: 'highlight',
+        subject_id: row.highlight_id,
+        title: row.text,
+        summary: row.book_title,
+        book_id: row.book_id,
+        book_title: row.book_title,
+        cfi: row.cfi_start,
+        cfi_start: row.cfi_start,
+        cfi_end: row.cfi_end,
+        created_at: row.added_at,
+      })),
+      ...topicNoteRows.map((row) => ({
+        event_type: 'note_added',
+        subject_type: 'note',
+        subject_id: row.note_id,
+        title: row.title ?? '笔记',
+        summary: row.content_markdown,
+        book_id: row.book_id,
+        book_title: row.book_title,
+        cfi: row.cfi,
+        created_at: row.added_at,
+      })),
+      ...segmentRows.map((row) => ({
+        event_type: 'segment_added',
+        subject_type: 'segment',
+        subject_id: row.id,
+        title: row.label ?? '章节片段',
+        summary: row.book_title,
+        book_id: row.book_id,
+        book_title: row.book_title,
+        cfi: row.cfi_start,
+        cfi_start: row.cfi_start,
+        cfi_end: row.cfi_end,
+        created_at: row.added_at,
+      })),
+      ...entries.flatMap((row) => [
+        {
+          event_type: 'entry_created',
+          subject_type: 'entry',
+          subject_id: row.id,
+          title: entryTypeTitle(row.entry_type),
+          summary: row.content,
+          book_id: null,
+          book_title: null,
+          cfi: null,
+          created_at: row.created_at,
+        },
+        ...(row.updated_at !== row.created_at ? [{
+          event_type: 'entry_updated',
+          subject_type: 'entry',
+          subject_id: row.id,
+          title: entryTypeTitle(row.entry_type),
+          summary: row.content,
+          book_id: null,
+          book_title: null,
+          cfi: null,
+          created_at: row.updated_at,
+        }] : []),
+      ]),
+    ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    return { data: { topic_id: topicId, events } };
   });
 
   app.get('/topics/:id', async (req) => {

@@ -33,6 +33,13 @@ function stripHtml(value: string): string {
   return decodeHtmlEntities(value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
 }
 
+function stripLeadingMetadataLabel(value: string): string {
+  return value
+    .replace(/^(?:作者|译者|出版社|出版年|页数|原作名|ISBN|publishing house)\s*[:：]\s*/i, '')
+    .replace(/^[:：]\s*/, '')
+    .trim();
+}
+
 function pickMeta(html: string, property: string): string | undefined {
   const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const patterns = [
@@ -57,7 +64,7 @@ function pickDoubanInfo(html: string, label: string): string | undefined {
     ),
   );
   if (!match?.[1]) return undefined;
-  return stripHtml(match[1]);
+  return stripLeadingMetadataLabel(stripHtml(match[1]));
 }
 
 function pickDoubanCover(html: string): string | undefined {
@@ -84,7 +91,7 @@ function parseJsonLdObjects(html: string): unknown[] {
     try {
       result.push(JSON.parse(decodeHtmlEntities(match[1].trim())) as unknown);
     } catch {
-      // ignore invalid structured data
+      continue;
     }
   }
   return result;
@@ -113,7 +120,7 @@ function pickNeoDBField(html: string, labelPattern: string): string | undefined 
 }
 
 function pickNeoDBRating(html: string): number | undefined {
-  if (/璇勫垎浜烘暟涓嶈冻/.test(html)) return undefined;
+  if (/评分人数不足/.test(html)) return undefined;
   const ratingBlock = html.match(/<div[^>]+class=["'][^"']*\brating\b[^"']*["'][\s\S]*?<h3[^>]*>\s*([\d.]+)\s*<small>\s*\/\s*10/i)?.[1];
   if (!ratingBlock) return undefined;
   const value = Number(ratingBlock);
@@ -189,7 +196,7 @@ export async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkM
   try {
     url = new URL(sourceUrl);
   } catch {
-    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍链接');
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍介绍链接');
   }
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new AppError(ERROR_CODE.VALIDATION_ERROR, '只支持 http 或 https 链接');
@@ -224,7 +231,7 @@ export async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkM
     };
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw new AppError(ERROR_CODE.BUSINESS_ERROR, '获取链接失败，请稍后重试');
+    throw new AppError(ERROR_CODE.BUSINESS_ERROR, '获取链接失败，请改用粘贴文本导入');
   } finally {
     clearTimeout(timeout);
   }

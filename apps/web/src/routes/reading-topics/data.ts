@@ -10,8 +10,11 @@ export interface TopicBook {
 
 export interface TopicTrace {
   id: string;
+  traceType: 'highlight' | 'note' | 'segment';
+  bookId: number;
   bookTitle: string;
   chapter: string;
+  cfi: string | null;
   createdAt: string;
   quote: string;
   note?: string;
@@ -52,8 +55,11 @@ export const topics: Topic[] = [
     traces: [
       {
         id: 't1',
+        traceType: 'highlight',
+        bookId: 1,
         bookTitle: '思考，快与慢',
         chapter: '第 12 章',
+        cfi: null,
         createdAt: '2026-06-28',
         quote: '“系统 1 的运行是无意识且快速的，不怎么费脑力，没有感觉，完全处于自主控制状态。”',
         note: '人们面对复杂决策时，往往让系统 1 代替系统 2 工作，导致可预测的偏差。',
@@ -61,16 +67,22 @@ export const topics: Topic[] = [
       },
       {
         id: 't2',
+        traceType: 'note',
+        bookId: 2,
         bookTitle: '助推',
         chapter: '第 3 章',
+        cfi: null,
         createdAt: '2026-06-26',
         quote: '“选择架构无处不在，即使我们什么都不做，也已经设计了选择环境。”',
         tone: 'success',
       },
       {
         id: 't3',
+        traceType: 'segment',
+        bookId: 3,
         bookTitle: '怪诞行为学',
         chapter: '第 1 章',
+        cfi: null,
         createdAt: '2026-06-24',
         quote: '“人们很少做不加对比的选择。我们的心里并没有一个‘内部价值计量器’。”',
         tone: 'info',

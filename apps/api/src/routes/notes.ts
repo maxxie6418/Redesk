@@ -8,6 +8,8 @@ import {
   createNoteSchema,
   updateNoteSchema,
   createBookmarkSchema,
+  readingMarkListQuerySchema,
+  readingMarkSearchQuerySchema,
 } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { AppError, notFound } from '../lib/errors';
@@ -18,22 +20,25 @@ function now(): string {
   return new Date().toISOString();
 }
 
+function createFtsQuery(q: string): string {
+  const ftsMatch = q.replace(/['"]/g, '').split(/\s+/).filter(Boolean).join(' ');
+  if (!ftsMatch) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词无效');
+  return ftsMatch.replace(/'/g, "''");
+}
+
 export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Highlights ==========
 
   app.get('/highlights', async (req) => {
     const userId = requireUserId(req);
-    const query = req.query as Record<string, unknown>;
-    const page = Number(query.page ?? 1);
-    const pageSize = Number(query.page_size ?? 20);
-    const bookId = query.book_id ? Number(query.book_id) : undefined;
+    const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
     const conditions = [
       eq(highlights.owner_id, userId),
       sql`${highlights.deleted_at} IS NULL`,
     ];
-    if (bookId && !Number.isNaN(bookId)) {
+    if (bookId) {
       conditions.push(eq(highlights.book_id, bookId));
     }
 
@@ -180,17 +185,14 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/notes', async (req) => {
     const userId = requireUserId(req);
-    const query = req.query as Record<string, unknown>;
-    const page = Number(query.page ?? 1);
-    const pageSize = Number(query.page_size ?? 20);
-    const bookId = query.book_id ? Number(query.book_id) : undefined;
+    const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
     const conditions = [
       eq(notes.owner_id, userId),
       sql`${notes.deleted_at} IS NULL`,
     ];
-    if (bookId && !Number.isNaN(bookId)) {
+    if (bookId) {
       conditions.push(eq(notes.book_id, bookId));
     }
 
@@ -331,23 +333,35 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/bookmarks', async (req) => {
     const userId = requireUserId(req);
-    const query = req.query as Record<string, unknown>;
-    const bookId = query.book_id ? Number(query.book_id) : undefined;
+    const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
     const conditions = [eq(bookmarks.owner_id, userId)];
-    if (bookId && !Number.isNaN(bookId)) {
+    if (bookId) {
       conditions.push(eq(bookmarks.book_id, bookId));
     }
+
+    const where = and(...conditions);
+
+    const total = db
+      .select({ value: count() })
+      .from(bookmarks)
+      .where(where)
+      .get()?.value ?? 0;
 
     const rows = db
       .select()
       .from(bookmarks)
-      .where(and(...conditions))
+      .where(where)
       .orderBy(desc(bookmarks.created_at))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
       .all();
 
-    return { data: rows };
+    return {
+      data: rows,
+      pagination: { page, page_size: pageSize, total },
+    };
   });
 
   app.post('/bookmarks', async (req) => {
@@ -481,20 +495,24 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/notes/search', async (req) => {
     const userId = requireUserId(req);
-    const query = req.query as { q?: string; book_id?: string; page?: string; page_size?: string };
-    const q = query.q?.trim();
-    if (!q) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词不能为空');
-    const page = Number(query.page ?? 1);
-    const pageSize = Number(query.page_size ?? 20);
-    const bookId = query.book_id ? Number(query.book_id) : undefined;
-
+    const { q, page, page_size: pageSize, book_id: bookId } = validate(readingMarkSearchQuerySchema, req.query);
+    const escaped = createFtsQuery(q);
     const sqlite = getSqlite();
+    const bookFilter = bookId ? 'AND n.book_id = ?' : '';
+    const baseParams = [escaped, userId, ...(bookId ? [bookId] : [])];
 
-    // 搜索 notes_fts
-    const ftsMatch = q.replace(/['"]/g, '').split(/\s+/).filter(Boolean).join(' ');
-    if (!ftsMatch) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词无效');
+    const total = (sqlite
+      .prepare(
+        `SELECT COUNT(*) AS total
+         FROM notes_fts f
+         JOIN notes n ON n.id = f.rowid
+         WHERE notes_fts MATCH ?
+           AND n.deleted_at IS NULL
+           AND n.owner_id = ?
+         ${bookFilter}`,
+      )
+      .get(...baseParams) as { total: number } | undefined)?.total ?? 0;
 
-    const escaped = ftsMatch.replace(/'/g, "''");
     const noteRows = sqlite
       .prepare(
         `SELECT n.id, n.book_id, n.owner_id, n.cfi, n.title, n.content_html, n.content_markdown,
@@ -506,41 +524,39 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
          WHERE notes_fts MATCH ?
            AND n.deleted_at IS NULL
            AND n.owner_id = ?
-         ${bookId && !Number.isNaN(bookId) ? 'AND n.book_id = ?' : ''}
+         ${bookFilter}
          ORDER BY rank
          LIMIT ? OFFSET ?`,
       )
-      .all(
-        ...[
-          escaped,
-          userId,
-          ...(bookId && !Number.isNaN(bookId) ? [bookId] : []),
-          pageSize,
-          (page - 1) * pageSize,
-        ],
-      ) as Array<Record<string, unknown>>;
+      .all(...baseParams, pageSize, (page - 1) * pageSize) as Array<Record<string, unknown>>;
 
     return {
       data: noteRows,
       type: 'notes',
+      pagination: { page, page_size: pageSize, total },
     };
   });
 
   app.get('/highlights/search', async (req) => {
     const userId = requireUserId(req);
-    const query = req.query as { q?: string; book_id?: string; page?: string; page_size?: string };
-    const q = query.q?.trim();
-    if (!q) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词不能为空');
-    const page = Number(query.page ?? 1);
-    const pageSize = Number(query.page_size ?? 20);
-    const bookId = query.book_id ? Number(query.book_id) : undefined;
-
+    const { q, page, page_size: pageSize, book_id: bookId } = validate(readingMarkSearchQuerySchema, req.query);
+    const escaped = createFtsQuery(q);
     const sqlite = getSqlite();
+    const bookFilter = bookId ? 'AND h.book_id = ?' : '';
+    const baseParams = [escaped, userId, ...(bookId ? [bookId] : [])];
 
-    const ftsMatch = q.replace(/['"]/g, '').split(/\s+/).filter(Boolean).join(' ');
-    if (!ftsMatch) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '搜索词无效');
+    const total = (sqlite
+      .prepare(
+        `SELECT COUNT(*) AS total
+         FROM highlights_fts f
+         JOIN highlights h ON h.id = f.rowid
+         WHERE highlights_fts MATCH ?
+           AND h.deleted_at IS NULL
+           AND h.owner_id = ?
+         ${bookFilter}`,
+      )
+      .get(...baseParams) as { total: number } | undefined)?.total ?? 0;
 
-    const escaped = ftsMatch.replace(/'/g, "''");
     const hlRows = sqlite
       .prepare(
         `SELECT h.id, h.book_id, h.owner_id, h.cfi_start, h.cfi_end, h.text, h.type,
@@ -552,23 +568,16 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
          WHERE highlights_fts MATCH ?
            AND h.deleted_at IS NULL
            AND h.owner_id = ?
-         ${bookId && !Number.isNaN(bookId) ? 'AND h.book_id = ?' : ''}
+         ${bookFilter}
          ORDER BY rank
          LIMIT ? OFFSET ?`,
       )
-      .all(
-        ...[
-          escaped,
-          userId,
-          ...(bookId && !Number.isNaN(bookId) ? [bookId] : []),
-          pageSize,
-          (page - 1) * pageSize,
-        ],
-      ) as Array<Record<string, unknown>>;
+      .all(...baseParams, pageSize, (page - 1) * pageSize) as Array<Record<string, unknown>>;
 
     return {
       data: hlRows,
       type: 'highlights',
+      pagination: { page, page_size: pageSize, total },
     };
   });
 }

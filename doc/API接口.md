@@ -165,6 +165,7 @@
 | GET | /books/{id} | 书籍详情 | 1.06/1.20 |
 | PATCH | /books/{id} | 编辑元数据 | 1.05 |
 | DELETE | /books/{id} | 移入回收站（软删除） | 1.07 |
+| GET | /books/{id}/review | 单书回看摘要（进度、高亮/笔记/书签计数、最近痕迹、mark_type 聚合） | 3.14/3.15 |
 | POST | /books/metadata/preview | 通过链接预填元数据（S1 接口预留，M1 后端暂未落地） | 1.03/1.04 |
 | POST | /books/batch | 批量操作 | 1.28 |
 | GET | /books/duplicates | 重复检测（规则版） | 1.27 |
@@ -201,6 +202,27 @@
 > 支持 `multipart/form-data` 同时上传文件：字段与 JSON 一致，额外附加 `file` 二进制字段；可选附加 `storage_mode`（`local_only`/`cloud_only`/`dual`，缺省使用系统默认）。后端自动识别格式、抽取 EPUB 封面缓存、计算 checksum。
 
 响应 201：`{ "data": { /* book 对象 */ } }`
+
+### GET /books/{id}/review
+
+返回单书回看摘要，用于书籍详情与后续回看中心复用。该接口只读取当前用户名下未删除书籍及其未删除阅读痕迹。
+
+响应：
+
+```json
+{
+  "data": {
+    "book_id": 1,
+    "book": { "id": 1, "title": "示例书", "author": "作者", "status": "READING" },
+    "counts": { "highlights": 12, "notes": 3, "bookmarks": 2 },
+    "mark_type_counts": { "IMPORTANT": 5, "QUESTION": 2, "INSIGHT": 4 },
+    "reading_progress": { "cfi": "epubcfi(...)" , "percentage": 0.42, "last_read_at": "2026-07-06T00:00:00.000Z" },
+    "recent_marks": [
+      { "type": "highlight", "id": 10, "book_id": 1, "cfi": "epubcfi(...)" , "text": "原文片段", "mark_type": "IMPORTANT", "created_at": "2026-07-06T00:00:00.000Z", "updated_at": "2026-07-06T00:00:00.000Z" }
+    ]
+  }
+}
+```
 
 ### PATCH /books/{id}
 
@@ -878,7 +900,35 @@ M2 分阶段推进中，当前完成状态：阅读进度（A）✔、高亮闭�
 | POST / DELETE | /topics/{id}/segments | 关联/移除章节片段 | 4.09 |
 | GET / POST / PATCH / DELETE | /topics/{id}/entries | 问题/判断/比较 | 4.12–4.14 |
 | GET | /topics/{id}/traces | 主题内痕迹汇总 | 4.15 |
+| GET | /topics/{id}/timeline | 话题派生时间线 | 4.15/4.16 |
 | GET | /topics/{id}/search?q= | 主题内检索 | 4.17 |
+
+### GET /topics/{id}/timeline
+
+返回话题派生时间线。首版不新增事件日志表，后端从 `topics`、`topic_books`、`topic_highlights`、`topic_notes`、`topic_segments`、`topic_entries` 的创建/更新时间派生事件，并统一做 owner 边界与软删除过滤。
+
+响应：
+
+```json
+{
+  "data": {
+    "topic_id": 1,
+    "events": [
+      {
+        "event_type": "highlight_added",
+        "subject_type": "highlight",
+        "subject_id": 10,
+        "title": "原文片段",
+        "summary": "书名",
+        "book_id": 1,
+        "book_title": "示例书",
+        "cfi": "epubcfi(...)",
+        "created_at": "2026-07-06T00:00:00.000Z"
+      }
+    ]
+  }
+}
+```
 
 > 删除主题为软删除：仅设置 `topics.deleted_at` 并隐藏主题及其引用，不动原始书籍/高亮/笔记，也不物理清空引用表。原始高亮/笔记被物理删除时，对应引用按数据模型自动摘除。
 

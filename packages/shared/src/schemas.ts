@@ -68,6 +68,18 @@ export const trashQuerySchema = paginationSchema.extend({
 });
 export type TrashQueryInput = z.infer<typeof trashQuerySchema>;
 
+export const readingMarkListQuerySchema = z.object({
+  page: positiveInt.default(1),
+  page_size: z.coerce.number().int().min(1).transform((value) => Math.min(value, 500)).default(20),
+  book_id: positiveInt.optional(),
+});
+export type ReadingMarkListQueryInput = z.infer<typeof readingMarkListQuerySchema>;
+
+export const readingMarkSearchQuerySchema = readingMarkListQuerySchema.extend({
+  q: z.string().trim().min(1),
+});
+export type ReadingMarkSearchQueryInput = z.infer<typeof readingMarkSearchQuerySchema>;
+
 export const duplicateQuerySchema = z.object({
   threshold: z.coerce.number().min(0).max(1).optional().default(0.6),
 });

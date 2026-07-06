@@ -31,6 +31,7 @@ import {
 } from '../lib/storage-factory';
 import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
+import { randomStorageToken, storageDebug, storageError } from '../lib/storage-debug';
 
 export const EXTENSION_FORMAT: Record<string, string> = EXTENSION_FORMATS;
 const MIME_MAP: Record<string, string> = MIME_TYPES;
@@ -74,7 +75,7 @@ function readMultipartBool(field: unknown): 'true' | 'false' | undefined {
 }
 
 function safeName(ext: string): string {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+  return `${Date.now()}_${randomStorageToken()}${ext}`;
 }
 
 function bookFileKey(bookId: number, ext: string): string {
@@ -86,11 +87,11 @@ function unassociatedFileKey(ext: string): string {
 }
 
 function bookCoverKey(bookId: number, ext: string): string {
-  return `covers/${bookId}/cover_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+  return `covers/${bookId}/cover_${Date.now()}_${randomStorageToken()}${ext}`;
 }
 
 function remoteCoverKey(bookId: number, ext: string): string {
-  return `covers/${bookId}/remote_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+  return `covers/${bookId}/remote_${Date.now()}_${randomStorageToken()}${ext}`;
 }
 
 async function streamSha256(stream: NodeJS.ReadableStream): Promise<string> {
@@ -308,20 +309,22 @@ async function writeBytesForMode(
   contentType: string,
 ): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
   const drivers = getStorageDriversForMode(mode);
-  console.log(`[Storage] writeBytesForMode: mode=${mode}, key=${key}, drivers=${JSON.stringify(drivers)}, size=${bytes.length}`);
+  storageDebug(`[Storage] writeBytesForMode: mode=${mode}, drivers=${JSON.stringify(drivers)}, size=${bytes.length}`);
 
   const results = await Promise.allSettled(
     drivers.map(async (driver) => {
       try {
         const storage = getStorageByDriver(driver);
-        console.log(`[Storage] Writing to ${driver}: ${key}`);
+        storageDebug(`[Storage] Writing to ${driver}`);
         const { size } = await storage.putBytes(key, bytes, { contentType });
-        console.log(`[Storage] Written to ${driver}: ${key}, size=${size}`);
+        storageDebug(`[Storage] Written to ${driver}: size=${size}`);
         const checksum = await fileSha256(storage, key);
-        console.log(`[Storage] Checksum for ${driver}: ${key}, checksum=${checksum}`);
+        storageDebug(`[Storage] Checksum calculated for ${driver}`);
         return { driver, size, checksum };
       } catch (err) {
-        console.error(`[Storage] Failed to write to ${driver}: ${key}, error=${(err as Error).message}`);
+        const errorName = err instanceof Error ? err.name : 'UnknownError';
+        const errorMessage = err instanceof Error ? err.message : '未知错误';
+        storageError(`[Storage] Failed to write to ${driver}: error_name=${errorName}, message=${errorMessage}`);
         throw err;
       }
     }),
@@ -331,7 +334,7 @@ async function writeBytesForMode(
     .filter((item): item is PromiseFulfilledResult<{ driver: 'local' | 's3'; size: number; checksum: string }> => item.status === 'fulfilled')
     .map((item) => item.value);
 
-  console.log(`[Storage] writeBytesForMode result: successes=${successes.map(s => s.driver).join(',')}, failures=${results.filter(r => r.status === 'rejected').length}`);
+  storageDebug(`[Storage] writeBytesForMode result: successes=${successes.map((s) => s.driver).join(',')}, failures=${results.filter((r) => r.status === 'rejected').length}`);
 
   if (successes.length === 0) {
     throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件写入失败');
