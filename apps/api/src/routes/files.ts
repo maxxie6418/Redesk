@@ -12,6 +12,7 @@ import {
   batchFetchBookCoversSchema,
   fileMatchCandidatesSchema,
   fetchBookCoverSchema,
+  matchFileToBookSchema,
   storageModeSchema,
   updateFileSchema,
 } from '@redesk/shared';
@@ -1337,25 +1338,9 @@ export function fileRoutes(app: FastifyInstance): void {
     const fileId = Number(id);
     if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
 
-    const { book_id } = req.body as { book_id?: unknown };
-    if (typeof book_id !== 'number') throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 book_id');
-
+    const input = validate(matchFileToBookSchema, req.body ?? {});
     const db = getDb();
-    const file = db
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
-      .get();
-    if (!file) throw notFound('文件不存在或已关联');
-
-    db.update(bookFiles)
-      .set({ book_id, updated_at: now() })
-      .where(eq(bookFiles.id, fileId))
-      .run();
-
-    applyPrimaryOnLink(db, book_id, fileId);
-
-    return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
+    return { data: applyFileMatch(db, userId, fileId, input.book_id) };
   });
 
   app.post('/files/match/candidates', async (req) => {
@@ -1455,25 +1440,9 @@ export function fileRoutes(app: FastifyInstance): void {
     const fileId = Number(id);
     if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
 
-    const { book_id } = req.body as { book_id?: unknown };
-    if (typeof book_id !== 'number') throw new AppError(ERROR_CODE.VALIDATION_ERROR, '缺少 book_id');
-
+    const input = validate(matchFileToBookSchema, req.body ?? {});
     const db = getDb();
-    const file = db
-      .select()
-      .from(bookFiles)
-      .where(and(eq(bookFiles.id, fileId), eq(bookFiles.owner_id, userId), isNull(bookFiles.book_id)))
-      .get();
-    if (!file) throw notFound('文件不存在或已关联');
-
-    db.update(bookFiles)
-      .set({ book_id, updated_at: now() })
-      .where(eq(bookFiles.id, fileId))
-      .run();
-
-    applyPrimaryOnLink(db, book_id, fileId);
-
-    return { data: db.select().from(bookFiles).where(eq(bookFiles.id, fileId)).get() };
+    return { data: applyFileMatch(db, userId, fileId, input.book_id) };
   });
 
   app.delete('/files/unassociated/:id', async (req) => {

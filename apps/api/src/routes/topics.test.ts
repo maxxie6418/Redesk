@@ -433,4 +433,95 @@ describe('topic routes', () => {
     expect(topicResponse.statusCode).toBe(200);
     expect(topicResponse.json().data.highlights).toEqual([]);
   });
+
+  it('rejects empty topic and entry updates', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+
+    const topicResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/topics/${seeded.topicId}`,
+      payload: {},
+    });
+
+    expect(topicResponse.statusCode).toBe(400);
+
+    const createEntryResponse = await app.inject({
+      method: 'POST',
+      url: `/api/v1/topics/${seeded.topicId}/entries`,
+      payload: { entry_type: 'QUESTION', content: '原始沉淀' },
+    });
+
+    expect(createEntryResponse.statusCode).toBe(200);
+    const entryId = createEntryResponse.json().data.id;
+
+    const entryResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/topics/${seeded.topicId}/entries/${entryId}`,
+      payload: {},
+    });
+
+    expect(entryResponse.statusCode).toBe(400);
+  });
+
+  it('hides soft-deleted resources from topic detail', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+    const ts = now();
+
+    sqlite.prepare('INSERT INTO topic_books (topic_id, book_id, added_at) VALUES (?, ?, ?)').run(seeded.topicId, seeded.bookId, ts);
+    await app.inject({ method: 'POST', url: `/api/v1/topics/${seeded.topicId}/highlights`, payload: { highlight_id: seeded.highlightId } });
+    await app.inject({ method: 'POST', url: `/api/v1/topics/${seeded.topicId}/notes`, payload: { note_id: seeded.noteId } });
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/topics/${seeded.topicId}/segments`,
+      payload: {
+        book_id: seeded.bookId,
+        cfi_start: 'epubcfi(/6/2[test]!/4/8/2)',
+        cfi_end: 'epubcfi(/6/2[test]!/4/8/6)',
+        label: '隐藏片段',
+      },
+    });
+
+    sqlite.prepare('UPDATE books SET deleted_at = ? WHERE id = ?').run(ts, seeded.bookId);
+    sqlite.prepare('UPDATE highlights SET deleted_at = ? WHERE id = ?').run(ts, seeded.highlightId);
+    sqlite.prepare('UPDATE notes SET deleted_at = ? WHERE id = ?').run(ts, seeded.noteId);
+
+    const topicResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/topics/${seeded.topicId}`,
+    });
+
+    expect(topicResponse.statusCode).toBe(200);
+    expect(topicResponse.json().data.books).toEqual([]);
+    expect(topicResponse.json().data.highlights).toEqual([]);
+    expect(topicResponse.json().data.notes).toEqual([]);
+    expect(topicResponse.json().data.segments).toEqual([]);
+  });
+
+  it('updates parent topic timestamp after entry changes', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+    const oldTimestamp = '2000-01-01T00:00:00.000Z';
+
+    const createEntryResponse = await app.inject({
+      method: 'POST',
+      url: `/api/v1/topics/${seeded.topicId}/entries`,
+      payload: { entry_type: 'QUESTION', content: '原始沉淀' },
+    });
+
+    expect(createEntryResponse.statusCode).toBe(200);
+    const entryId = createEntryResponse.json().data.id;
+    sqlite.prepare('UPDATE topics SET updated_at = ? WHERE id = ?').run(oldTimestamp, seeded.topicId);
+
+    const updateEntryResponse = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/topics/${seeded.topicId}/entries/${entryId}`,
+      payload: { content: '更新后的沉淀' },
+    });
+
+    expect(updateEntryResponse.statusCode).toBe(200);
+    const topic = sqlite.prepare('SELECT updated_at FROM topics WHERE id = ?').get(seeded.topicId) as { updated_at: string };
+    expect(topic.updated_at).not.toBe(oldTimestamp);
+  });
 });

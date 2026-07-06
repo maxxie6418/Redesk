@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useTheme } from '@/components/use-theme';
@@ -16,31 +16,33 @@ const SettingsPage = lazy(() => import('@/routes/settings').then((module) => ({ 
 const FileLibraryPage = lazy(() => import('@/routes/file-library').then((module) => ({ default: module.FileLibraryPage })));
 
 function RouteFallback() {
-  return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">页面加载中...</div>;
+  return <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">页面加载中...</div>;
+}
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
 }
 
 export default function App() {
   const { theme } = useTheme();
   return (
     <>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
-          <Route path="/change-password" element={<ChangePasswordRoute />} />
-          <Route path="/" element={<PublicShell><Bookshelf /></PublicShell>} />
-          <Route path="/trash" element={<PublicShell><Bookshelf initialPageView="trash" /></PublicShell>} />
-          <Route element={<RequireAuth />}>
-            <Route path="/overview" element={<OverviewPage />} />
-            <Route path="/books/:id" element={<BookDetailPage />} />
-            <Route path="/books/:id/read" element={<BookReaderPage />} />
-            <Route path="/files" element={<FileLibraryPage />} />
-            <Route path="/reading-notes" element={<ReadingNotesPage />} />
-            <Route path="/reading-topics" element={<ReadingTopicsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/change-password" element={<ChangePasswordRoute />} />
+        <Route path="/" element={<PublicShell><Bookshelf /></PublicShell>} />
+        <Route path="/trash" element={<PublicShell><Bookshelf initialPageView="trash" /></PublicShell>} />
+        <Route element={<RequireAuth />}>
+          <Route path="/overview" element={<LazyRoute><OverviewPage /></LazyRoute>} />
+          <Route path="/books/:id" element={<BookDetailPage />} />
+          <Route path="/books/:id/read" element={<LazyRoute><BookReaderPage /></LazyRoute>} />
+          <Route path="/files" element={<LazyRoute><FileLibraryPage /></LazyRoute>} />
+          <Route path="/reading-notes" element={<LazyRoute><ReadingNotesPage /></LazyRoute>} />
+          <Route path="/reading-topics" element={<LazyRoute><ReadingTopicsPage /></LazyRoute>} />
+          <Route path="/settings" element={<LazyRoute><SettingsPage /></LazyRoute>} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       <Toaster theme={theme} position="top-center" richColors closeButton />
     </>
   );

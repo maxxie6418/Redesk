@@ -144,7 +144,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       })
       .from(topicBooks)
       .innerJoin(books, eq(topicBooks.book_id, books.id))
-      .where(eq(topicBooks.topic_id, topicId))
+      .where(and(eq(topicBooks.topic_id, topicId), sql`${books.deleted_at} IS NULL`))
       .all();
 
     const topicHighlightRows = db
@@ -163,7 +163,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .from(topicHighlights)
       .innerJoin(highlights, eq(topicHighlights.highlight_id, highlights.id))
       .leftJoin(books, eq(highlights.book_id, books.id))
-      .where(eq(topicHighlights.topic_id, topicId))
+      .where(and(eq(topicHighlights.topic_id, topicId), sql`${highlights.deleted_at} IS NULL`, sql`${books.deleted_at} IS NULL`))
       .all();
 
     const topicNoteRows = db
@@ -180,7 +180,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .from(topicNotes)
       .innerJoin(notes, eq(topicNotes.note_id, notes.id))
       .leftJoin(books, eq(notes.book_id, books.id))
-      .where(eq(topicNotes.topic_id, topicId))
+      .where(and(eq(topicNotes.topic_id, topicId), sql`${notes.deleted_at} IS NULL`, sql`${books.deleted_at} IS NULL`))
       .all();
 
     const segmentRows = db
@@ -195,8 +195,8 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
         book_title: books.title,
       })
       .from(topicSegments)
-      .leftJoin(books, eq(topicSegments.book_id, books.id))
-      .where(eq(topicSegments.topic_id, topicId))
+      .innerJoin(books, eq(topicSegments.book_id, books.id))
+      .where(and(eq(topicSegments.topic_id, topicId), sql`${books.deleted_at} IS NULL`))
       .orderBy(desc(topicSegments.added_at))
       .all();
 
@@ -616,10 +616,12 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (input.content !== undefined) {
+      const timestamp = now();
       db.update(topicEntries)
-        .set({ content: input.content, updated_at: now() })
+        .set({ content: input.content, updated_at: timestamp })
         .where(eq(topicEntries.id, entryId))
         .run();
+      db.update(topics).set({ updated_at: timestamp }).where(eq(topics.id, topicId)).run();
     }
 
     const updated = db.select().from(topicEntries).where(eq(topicEntries.id, entryId)).get();

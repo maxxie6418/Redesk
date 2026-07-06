@@ -461,10 +461,12 @@ export const createTopicSchema = z.object({
 });
 export type CreateTopicInput = z.infer<typeof createTopicSchema>;
 
-export const updateTopicSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional().nullable(),
-});
+export const updateTopicSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).optional().nullable(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateTopicInput = z.infer<typeof updateTopicSchema>;
 
 export const createTopicEntrySchema = z.object({
@@ -473,9 +475,11 @@ export const createTopicEntrySchema = z.object({
 });
 export type CreateTopicEntryInput = z.infer<typeof createTopicEntrySchema>;
 
-export const updateTopicEntrySchema = z.object({
-  content: z.string().min(1).max(5000).optional(),
-});
+export const updateTopicEntrySchema = z
+  .object({
+    content: z.string().min(1).max(5000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateTopicEntryInput = z.infer<typeof updateTopicEntrySchema>;
 
 export const linkTopicHighlightSchema = z.object({

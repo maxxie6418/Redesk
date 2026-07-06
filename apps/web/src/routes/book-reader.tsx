@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Loader2, Menu, X, Stick
 import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
 import { CommentInput } from '@/components/reader/comment-input';
 import { toast } from 'sonner';
-import ePub from 'epubjs';
+import type EpubFactory from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
 import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
@@ -80,7 +80,7 @@ export function BookReaderPage() {
   const deleteBookmark = useDeleteBookmark();
 
   const viewerRef = useRef<HTMLDivElement>(null);
-  const bookRef = useRef<ReturnType<typeof ePub> | null>(null);
+  const bookRef = useRef<ReturnType<typeof EpubFactory> | null>(null);
   const renditionRef = useRef<any>(null);
   const lastSaveRef = useRef<string>('');
   const highlightsMapRef = useRef<Map<string, HighlightItem>>(new Map());
@@ -218,14 +218,17 @@ export function BookReaderPage() {
     let cancelled = false;
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-    try {
+    const loadBook = async () => {
+      try {
       setLoading(true);
       setError(null);
       setToc([]);
       setCurrentTitle(bookTitle);
       lastSaveRef.current = '';
 
-      const epubBook = ePub(url, { openAs: 'epub' });
+      const epubModule = await import('epubjs');
+      if (cancelled || !viewerRef.current) return;
+      const epubBook = epubModule.default(url, { openAs: 'epub' });
       bookRef.current = epubBook;
 
       const rendition = epubBook.renderTo(viewerRef.current, {
@@ -390,10 +393,14 @@ export function BookReaderPage() {
         setError(err instanceof Error ? err.message : '加载失败');
         setLoading(false);
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
-      setLoading(false);
-    }
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : '加载失败');
+        setLoading(false);
+      }
+    };
+
+    void loadBook();
 
     return () => {
       cancelled = true;
