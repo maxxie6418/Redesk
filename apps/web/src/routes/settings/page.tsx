@@ -1,6 +1,7 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { AlertTriangle, ChevronRight, Cloud, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProtectedShell } from '@/components/protected-shell';
@@ -19,7 +20,6 @@ import { GeneralTab } from './general-tab';
 import { LoginManagementTab } from './login-management-tab';
 import { PropertiesTab } from './properties-tab';
 import { SimpleChangePassword } from './simple-change-password';
-import { StatusToast } from './status-toast';
 import { StorageTab } from './storage-tab';
 import { SystemTab } from './system-tab';
 import type { StatusMessage, Tab } from './types';
@@ -45,13 +45,16 @@ function AdminSettingsPage() {
   const navigate = useNavigate();
   const isMobileLayout = useMobileLayout();
   const [activeTab, setActiveTab] = useState<Tab>('general');
-  const [toast, setToast] = useState<StatusMessage>(null);
   const settings = useSettings();
 
   const showToast = useCallback((message: StatusMessage) => {
-    setToast(message);
-    if (message) {
-      setTimeout(() => setToast(null), 3000);
+    if (!message) return;
+    if (message.type === 'error') {
+      toast.error(message.text);
+    } else if (message.type === 'warning') {
+      toast.warning(message.text);
+    } else {
+      toast.success(message.text);
     }
   }, []);
 
@@ -99,7 +102,6 @@ function AdminSettingsPage() {
         mobileNavKey="settings"
         mainClassName={isMobileLayout ? 'overflow-y-auto px-0 py-0' : 'overflow-y-auto px-6 py-6'}
       >
-        <StatusToast message={toast} onClose={() => setToast(null)} />
         <div className={cn('mx-auto max-w-5xl', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
           <div className={cn(isMobileLayout ? 'space-y-1' : 'mb-5')}>
             <h1 className="text-xl font-semibold text-foreground">设置</h1>

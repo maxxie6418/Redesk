@@ -15,7 +15,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   useStorageSettings,
   useStorageStatus,
@@ -374,12 +380,16 @@ export function BatchUploadCard({ onToast }: { onToast: (msg: StatusMessage) => 
                         <Select
                           value={item.mode}
                           disabled={isUploading}
-                          onChange={(e) => updateItemMode(index, e.target.value as StorageMode)}
-                          className="w-40"
+                          onValueChange={(value) => updateItemMode(index, value as StorageMode)}
                         >
-                          <option value="local_only">{STORAGE_MODE_LABELS.local_only}</option>
-                          <option value="cloud_only" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.cloud_only}</option>
-                          <option value="dual" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.dual}</option>
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="local_only">{STORAGE_MODE_LABELS.local_only}</SelectItem>
+                            <SelectItem value="cloud_only" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.cloud_only}</SelectItem>
+                            <SelectItem value="dual" disabled={!cloudAvailable}>{STORAGE_MODE_LABELS.dual}</SelectItem>
+                          </SelectContent>
                         </Select>
                         <div className="w-16 text-right">
                           {item.status === 'success' && <span className="text-xs text-emerald-600">成功</span>}

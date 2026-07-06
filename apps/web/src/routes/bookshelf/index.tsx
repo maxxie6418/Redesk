@@ -27,6 +27,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [category, setCategory] = useState('ALL');
   const [tag, setTag] = useState('ALL');
   const [favorited, setFavorited] = useState(false);
+  const [readableFilter, setReadableFilter] = useState<'all' | 'readable' | 'unreadable'>('all');
   const [sort, setSort] = useState<SortMode>('import_order_asc');
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [showCreate, setShowCreate] = useState(false);
@@ -77,8 +78,10 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       ...(category !== 'ALL' ? { category_id: Number(category) } : {}),
       ...(tag !== 'ALL' ? { tag_id: tag } : {}),
       ...(favorited ? { favorited: true } : {}),
+      ...(readableFilter === 'readable' ? { has_readable_file: true } : {}),
+      ...(readableFilter === 'unreadable' ? { has_readable_file: false } : {}),
     }),
-    [category, debouncedSearch, favorited, sort, status, tag, visibility],
+    [category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility],
   );
 
   const trashQueryParams = useMemo(
@@ -132,13 +135,14 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     [],
   );
 
-  const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL' || favorited;
+  const hasFilter = debouncedSearch || status !== 'ALL' || visibility !== 'ALL' || category !== 'ALL' || tag !== 'ALL' || favorited || readableFilter !== 'all';
   const resetFilters = useCallback(() => {
     setStatus('ALL');
     setVisibility('ALL');
     setCategory('ALL');
     setTag('ALL');
     setFavorited(false);
+    setReadableFilter('all');
   }, []);
 
   const handleRestore = useCallback(async (id: number) => {
@@ -241,6 +245,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 visibilityOptions={visibilityOptions}
                 favorited={favorited}
                 onFavoritedChange={() => setFavorited((value) => !value)}
+                readableFilter={readableFilter}
+                onReadableFilterChange={setReadableFilter}
                 sort={sort}
                 onSortChange={setSort}
                 sortOptions={sortOptions}

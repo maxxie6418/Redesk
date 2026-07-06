@@ -1,13 +1,13 @@
 import { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Grid3X3, Heart, LayoutGrid, LayoutList, Star } from 'lucide-react';
+import { Bookmark, ExternalLink, Grid3X3, Heart, LayoutGrid, LayoutList, Star } from 'lucide-react';
 import type { BookSummary } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
 import { FilterSelect, type FilterSelectOption } from '@/components/page-ui/filter-select';
 import { SegmentedToggle, SegmentedToggleItem } from '@/components/page-ui/segmented-toggle';
 import { cn } from '@/lib/utils';
 import { COVER_TONES, COVER_URL_BASE, STATUS_OPTIONS, type SortMode, type ViewMode } from './constants';
-import { bookMeta, bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils';
+import { bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils';
 
 interface BookCardProps {
   book: BookSummary;
@@ -123,6 +123,63 @@ function ProgressBar({ progress, trackWidth = 'w-[70px]', trackHeight = 'h-1' }:
   );
 }
 
+function BookBadgeBar({ book, size = 'default' }: { book: BookSummary; size?: 'default' | 'small' }) {
+  const favorited = book.favorited_at != null;
+  const hasSource = Boolean(book.source_url);
+
+  return (
+    <div className={cn('flex items-center gap-1', size === 'small' ? 'gap-1' : 'gap-1.5')}>
+      {favorited ? (
+        <span
+          title="已收藏"
+          className={cn(
+            'inline-flex items-center justify-center rounded-full bg-rose-50 text-rose-500',
+            size === 'small' ? 'h-5 w-5' : 'h-6 w-6',
+          )}
+        >
+          <Heart className={cn('fill-current', size === 'small' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
+        </span>
+      ) : null}
+      {book.has_readable_file ? (
+        <span
+          title="可阅读"
+          className={cn(
+            'inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 font-medium text-emerald-600',
+            size === 'small' ? 'h-5 text-[10px]' : 'h-6 text-[11px]',
+          )}
+        >
+          可读
+        </span>
+      ) : book.has_files ? (
+        <span
+          title="有存档文件"
+          className={cn(
+            'inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 font-medium text-amber-600',
+            size === 'small' ? 'h-5 text-[10px]' : 'h-6 text-[11px]',
+          )}
+        >
+          存档
+        </span>
+      ) : null}
+      {hasSource ? (
+        <a
+          href={book.source_url!}
+          target="_blank"
+          rel="noreferrer"
+          title={book.metadata_source ? `来源：${book.metadata_source}` : '查看来源'}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'inline-flex items-center justify-center rounded-full border border-border bg-muted text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground',
+            size === 'small' ? 'h-5 w-5' : 'h-6 w-6',
+          )}
+        >
+          <ExternalLink className={size === 'small' ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void; onPermanentDelete?: () => void }) {
   return (
     <div className="flex gap-2">
@@ -148,27 +205,36 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
       {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-5 top-5" /> : null}
       <button
         type="button"
-        className={cn('relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_files}
-        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
-        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_readable_file}
+        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col" onClick={onOpenDetail}>
-        <div className="mb-2.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-          <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
-          {statusLabel(book.status)}
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+            <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
+            {statusLabel(book.status)}
+          </div>
+          <BookBadgeBar book={book} />
         </div>
-        <h2 className="mb-1.5 line-clamp-2 text-base font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
-        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
-        <div className="mb-2.5 flex flex-wrap gap-2">
+        <h2 className="mb-1 line-clamp-2 text-base font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <p className="mb-2 truncate text-[13px] leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
+        {book.description ? (
+          <p className="mb-2 line-clamp-2 text-[13px] leading-[1.6] text-muted-foreground/80">{book.description}</p>
+        ) : null}
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {book.category_name ? (
+            <TagAtom size="small">{book.category_name}</TagAtom>
+          ) : null}
           {book.tag_names.slice(0, 3).map((tag) => (
-            <TagAtom key={tag}>{tag}</TagAtom>
+            <TagAtom key={tag} size="small">{tag}</TagAtom>
           ))}
         </div>
-        <p className="mb-3.5 text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+        <p className="mb-3 text-[12px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
         <div className="mt-auto flex items-center gap-3.5 border-t border-border pt-3">
           <RatingDisplay rating={book.rating} />
           <ProgressBar progress={progress} />
@@ -192,10 +258,10 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
       <div className="relative mb-3 overflow-hidden rounded-xl">
         <button
           type="button"
-          className={cn('block w-full', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
-          disabled={!book.has_files}
-          title={book.has_files ? '打开阅读器' : '暂无可读文件'}
-          onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+          className={cn('block w-full', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+          disabled={!book.has_readable_file}
+          title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+          onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
         >
           <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
@@ -218,12 +284,25 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
       </div>
 
       <div className="flex flex-1 flex-col" onClick={onOpenDetail}>
-        <h3 className="mb-1.5 line-clamp-1 text-base font-semibold leading-tight text-foreground">{book.title}</h3>
+        <div className="mb-1 flex items-center justify-between gap-1">
+          <h3 className="line-clamp-1 flex-1 text-base font-semibold leading-tight text-foreground">{book.title}</h3>
+        </div>
         <p className="mb-2 line-clamp-1 text-sm text-muted-foreground">{book.author || '未知作者'}</p>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            {book.rating != null ? (
+              <span className="flex items-center gap-0.5 text-xs font-semibold text-yellow-500">
+                <Star className="h-3 w-3 fill-current" />
+                {book.rating.toFixed(1)}
+              </span>
+            ) : null}
+          </div>
+          <BookBadgeBar book={book} size="small" />
+        </div>
         {book.tag_names.length > 0 ? (
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {book.tag_names.slice(0, 3).map((tag) => (
-              <span key={tag} className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+          <div className="mb-2 flex flex-wrap gap-1">
+            {book.tag_names.slice(0, 2).map((tag) => (
+              <span key={tag} className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground">
                 {tag}
               </span>
             ))}
@@ -233,14 +312,6 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
           {[book.publish_year, book.page_count ? `${book.page_count}页` : null].filter(Boolean).join(' · ')}
         </p>
         <div className="mt-auto flex items-center gap-2">
-          {book.rating != null ? (
-            <span className="flex items-center gap-1 text-sm font-semibold text-yellow-500">
-              <Star className="h-4 w-4 fill-current" />
-              {book.rating.toFixed(1)}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
           <div className="flex-1">
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` } as CSSProperties} />
@@ -267,10 +338,10 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
       {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-4" /> : null}
       <button
         type="button"
-        className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_files}
-        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
-        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_readable_file}
+        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
@@ -281,17 +352,20 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
             <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
             {statusLabel(book.status)}
           </div>
-          <RatingDisplay rating={book.rating} />
+          <BookBadgeBar book={book} size="small" />
         </div>
-        <h2 className="mb-1.5 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
-        <p className="mb-2.5 truncate text-[13px] leading-[1.5] text-muted-foreground">{bookMeta(book) || '未填写作者'}</p>
-        <div className="mb-2.5 flex flex-wrap gap-2">
-          {book.tag_names.slice(0, 3).map((tag) => (
-            <TagAtom key={tag}>{tag}</TagAtom>
+        <h2 className="mb-1 line-clamp-2 text-[15px] font-bold leading-[1.4] tracking-[-0.2px] text-foreground">{book.title}</h2>
+        <p className="mb-2 truncate text-[13px] leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {book.category_name ? (
+            <TagAtom size="small">{book.category_name}</TagAtom>
+          ) : null}
+          {book.tag_names.slice(0, 2).map((tag) => (
+            <TagAtom key={tag} size="small">{tag}</TagAtom>
           ))}
         </div>
         <div className="mt-auto flex items-center justify-between gap-2">
-          <p className="min-w-0 truncate text-[13px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
+          <RatingDisplay rating={book.rating} size="xs" />
           <div className="shrink-0">
             <ProgressBar progress={progress} trackWidth="w-[80px]" />
           </div>
@@ -311,28 +385,32 @@ export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPer
   const progress = bookProgress(book);
 
   return (
-    <article className="group relative flex items-center gap-4 rounded border border-border bg-card px-3 py-2 hover:border-primary/30 hover:bg-muted/30">
-      {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-3.5" /> : null}
+    <article className="group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30">
+      {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-3" /> : null}
       <button
         type="button"
-        className={cn('relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_files ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_files}
-        title={book.has_files ? '打开阅读器' : '暂无可读文件'}
-        onClick={() => { if (book.has_files) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!book.has_readable_file}
+        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCoverImage book={book} index={index} className="h-[50px] w-[36px]" rounded="rounded-sm" />
+        <BookCoverImage book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
         <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
-      <div className="min-w-0 flex-1 cursor-pointer pr-16" onClick={onOpenDetail}>
+      <div className="min-w-0 flex-1 cursor-pointer pr-12" onClick={onOpenDetail}>
         <div className="flex items-center gap-2">
           <span className={cn('h-[6px] w-[6px] shrink-0 rounded-full', statusDotClass(book.status))} />
           <span className="truncate text-sm font-medium text-foreground">{book.title}</span>
+          <BookBadgeBar book={book} size="small" />
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{book.author || '—'}</p>
+        {book.description ? (
+          <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground/70">{book.description}</p>
+        ) : null}
       </div>
-      <div className="w-[60px] shrink-0 text-xs text-muted-foreground">{statusLabel(book.status)}</div>
-      <div className="w-[80px] shrink-0 truncate text-xs text-muted-foreground">{book.category_name || '—'}</div>
-      <div className="w-[50px] shrink-0">
+      <div className="w-[60px] shrink-0 pt-0.5 text-xs text-muted-foreground">{statusLabel(book.status)}</div>
+      <div className="w-[80px] shrink-0 truncate pt-0.5 text-xs text-muted-foreground">{book.category_name || '—'}</div>
+      <div className="w-[50px] shrink-0 pt-0.5">
         {book.rating != null ? (
           <span className="flex items-center gap-0.5 text-xs text-yellow-500">
             <Star className="h-3 w-3 fill-current" />
@@ -342,13 +420,13 @@ export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPer
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </div>
-      <div className="flex w-[80px] shrink-0 items-center gap-2">
+      <div className="flex w-[80px] shrink-0 items-center gap-2 pt-1">
         <div className="h-1.5 w-[50px] overflow-hidden rounded-full bg-muted">
           <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` } as CSSProperties} />
         </div>
         <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
       </div>
-      <div className="flex w-[100px] shrink-0 flex-wrap gap-1">
+      <div className="flex w-[100px] shrink-0 flex-wrap gap-1 pt-0.5">
         {book.tag_names.slice(0, 2).map((tag) => (
           <span key={tag} className="max-w-[60px] truncate rounded border border-border bg-muted/50 px-1 py-0.5 text-[10px] text-muted-foreground">
             #{tag}
@@ -356,7 +434,7 @@ export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPer
         ))}
         {book.tag_names.length > 2 ? <span className="text-[10px] text-muted-foreground">+{book.tag_names.length - 2}</span> : null}
       </div>
-      <div className="w-[70px] shrink-0 text-right text-xs tabular-nums text-muted-foreground">{book.updated_at.slice(0, 10)}</div>
+      <div className="w-[70px] shrink-0 pt-0.5 text-right text-xs tabular-nums text-muted-foreground">{book.updated_at.slice(0, 10)}</div>
       {isTrash ? (
         <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <TrashActions onRestore={onRestore} onPermanentDelete={onPermanentDelete} />
@@ -402,6 +480,8 @@ export function BookshelfFilterBar({
   visibilityOptions,
   favorited,
   onFavoritedChange,
+  readableFilter,
+  onReadableFilterChange,
   sort,
   onSortChange,
   sortOptions,
@@ -421,6 +501,8 @@ export function BookshelfFilterBar({
   visibilityOptions: readonly FilterSelectOption[];
   favorited: boolean;
   onFavoritedChange: () => void;
+  readableFilter: 'all' | 'readable' | 'unreadable';
+  onReadableFilterChange: (value: 'all' | 'readable' | 'unreadable') => void;
   sort: SortMode;
   onSortChange: (value: SortMode) => void;
   sortOptions: readonly FilterSelectOption[];
@@ -448,6 +530,38 @@ export function BookshelfFilterBar({
           <Heart className={cn('h-3.5 w-3.5', favorited ? 'fill-current' : '')} />
           收藏
         </button>
+        <div className="flex items-center rounded-full border border-border bg-muted">
+          <button
+            type="button"
+            onClick={() => onReadableFilterChange('all')}
+            className={cn(
+              'h-8 px-3 text-xs font-medium transition-colors first:rounded-l-full',
+              readableFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            onClick={() => onReadableFilterChange('readable')}
+            className={cn(
+              'h-8 px-3 text-xs font-medium transition-colors',
+              readableFilter === 'readable' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            可阅读
+          </button>
+          <button
+            type="button"
+            onClick={() => onReadableFilterChange('unreadable')}
+            className={cn(
+              'h-8 px-3 text-xs font-medium transition-colors last:rounded-r-full',
+              readableFilter === 'unreadable' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            不可阅读
+          </button>
+        </div>
         <FilterSelect
           value={sort}
           onChange={(value) => onSortChange(value as SortMode)}

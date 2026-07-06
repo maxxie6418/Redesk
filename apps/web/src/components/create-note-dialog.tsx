@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBooks } from '@/hooks/use-books';
 
 export interface CreateNoteDialogProps {
@@ -90,16 +96,20 @@ export function CreateNoteDialog({ open, onConfirm, onCancel, loading }: CreateN
           <div className="space-y-2">
             <Label htmlFor="note-book">关联书籍</Label>
             <Select
-              id="note-book"
-              value={bookId}
-              onChange={(e) => setBookId(Number(e.target.value))}
+              value={bookId === 0 ? '0' : String(bookId)}
+              onValueChange={(value) => setBookId(Number(value))}
             >
-              <option value={0}>无书籍笔记</option>
-              {books.map((book) => (
-                <option key={book.id} value={book.id}>
-                  《{book.title}》{book.author ? ` · ${book.author}` : ''}
-                </option>
-              ))}
+              <SelectTrigger id="note-book">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">无书籍笔记</SelectItem>
+                {books.map((book) => (
+                  <SelectItem key={book.id} value={String(book.id)}>
+                    《{book.title}》{book.author ? ` · ${book.author}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         </div>

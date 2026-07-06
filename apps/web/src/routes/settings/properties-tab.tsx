@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Check, FolderTree, Pencil, Plus, Tags, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,6 @@ import {
   useUpdateTag,
   type TagItem,
 } from '@/hooks/use-tags';
-import { StatusToast } from './status-toast';
 import type { StatusMessage } from './types';
 
 export function PropertiesTab() {
@@ -40,8 +40,16 @@ export function PropertiesTab() {
   const [tagEditId, setTagEditId] = useState<number | null>(null);
   const [tagEditName, setTagEditName] = useState('');
 
-  const [toast, setToast] = useState<StatusMessage>(null);
-  const showToast = useCallback((m: StatusMessage) => { setToast(m); if (m) setTimeout(() => setToast(null), 3000); }, []);
+  const showToast = useCallback((m: StatusMessage) => {
+    if (!m) return;
+    if (m.type === 'error') {
+      toast.error(m.text);
+    } else if (m.type === 'warning') {
+      toast.warning(m.text);
+    } else {
+      toast.success(m.text);
+    }
+  }, []);
 
   const handleCreateCat = useCallback(async () => {
     try { await createCategory.mutateAsync({ name: catName }); showToast({ type: 'info', text: '分类已创建' }); setCatShow(false); setCatName(''); }
@@ -75,8 +83,6 @@ export function PropertiesTab() {
 
   return (
     <div className="space-y-8">
-      <StatusToast message={toast} onClose={() => setToast(null)} className="absolute left-1/2 top-0 -translate-x-1/2" />
-
       <Card>
         <CardHeader className="pb-4 flex-row items-center justify-between">
           <div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, type ChangeEvent, type CSSProperties } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -156,6 +156,14 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const [showCoverPanel, setShowCoverPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('archive');
   const [editMode, setEditMode] = useState(false);
+
+  useEffect(() => {
+    setEditMode(false);
+    setShowCoverPanel(false);
+    setShowMetadataDialog(false);
+    setMessage(null);
+    setActiveTab('archive');
+  }, [bookId, open]);
 
   const categories = personalCategories;
 

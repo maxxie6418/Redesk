@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBooks } from '@/hooks/use-books';
 import {
   useApplyFileMatches,
@@ -270,19 +276,22 @@ export function BatchUploadMatchCard({
                         <Select
                           value={item.mode}
                           disabled={isUploading}
-                          onChange={(event) => {
-                            const mode = event.target.value as StorageMode;
-                            setItems((current) => current.map((entry, currentIndex) => (currentIndex === index ? { ...entry, mode } : entry)));
+                          onValueChange={(mode) => {
+                            setItems((current) => current.map((entry, currentIndex) => (currentIndex === index ? { ...entry, mode: mode as StorageMode } : entry)));
                           }}
-                          className="w-40"
                         >
-                          <option value="local_only">{STORAGE_MODE_LABELS.local_only}</option>
-                          <option value="cloud_only" disabled={!cloudAvailable}>
-                            {STORAGE_MODE_LABELS.cloud_only}
-                          </option>
-                          <option value="dual" disabled={!cloudAvailable}>
-                            {STORAGE_MODE_LABELS.dual}
-                          </option>
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="local_only">{STORAGE_MODE_LABELS.local_only}</SelectItem>
+                            <SelectItem value="cloud_only" disabled={!cloudAvailable}>
+                              {STORAGE_MODE_LABELS.cloud_only}
+                            </SelectItem>
+                            <SelectItem value="dual" disabled={!cloudAvailable}>
+                              {STORAGE_MODE_LABELS.dual}
+                            </SelectItem>
+                          </SelectContent>
                         </Select>
 
                         <div className="w-16 text-right text-xs">

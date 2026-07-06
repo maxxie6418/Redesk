@@ -165,7 +165,7 @@ export function AppSidebar({
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <div className="relative min-w-0 flex-1">
+          <div className="min-w-0 flex-1">
             <SidebarItem
               active={activeKey === 'settings' || activeKey === 'login'}
               icon={<AuthIcon className="h-4 w-4 shrink-0" />}
@@ -178,12 +178,8 @@ export function AppSidebar({
                 }
               }}
             />
-            {loginOpen && (
-              <div className="absolute bottom-full left-0 right-0 z-[60] mb-2">
-                <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
-              </div>
-            )}
           </div>
+          <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
         </div>
       </div>
     </aside>

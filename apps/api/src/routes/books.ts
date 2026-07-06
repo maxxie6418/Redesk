@@ -541,13 +541,19 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
   }
 
   const fileMap = new Map<number, boolean>();
+  const readableFileMap = new Map<number, boolean>();
   const fileRows = db
-    .select({ book_id: bookFiles.book_id })
+    .select({ book_id: bookFiles.book_id, is_primary: bookFiles.is_primary, file_format: bookFiles.file_format })
     .from(bookFiles)
     .where(inArray(bookFiles.book_id, bookIds))
     .all();
   for (const f of fileRows) {
-    if (f.book_id != null) fileMap.set(f.book_id, true);
+    if (f.book_id != null) {
+      fileMap.set(f.book_id, true);
+      if (f.is_primary === 1 && f.file_format === 'EPUB') {
+        readableFileMap.set(f.book_id, true);
+      }
+    }
   }
 
   return rows.map((row) => {
@@ -563,6 +569,7 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
       tag_ids: tagMeta.tag_ids,
       tag_names: tagMeta.tag_names,
       has_files: fileMap.get(row.id) ?? false,
+      has_readable_file: readableFileMap.get(row.id) ?? false,
     };
   });
 }
@@ -637,6 +644,22 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
     conditions.push(
       notExists(
         db.select({ one: sql`1` }).from(bookFiles).where(eq(bookFiles.book_id, books.id)).limit(1),
+      ),
+    );
+  }
+
+  if (input.has_readable_file === true) {
+    conditions.push(
+      sql`${books.id} IN (SELECT book_id FROM book_files WHERE book_id IS NOT NULL AND is_primary = 1 AND file_format = 'EPUB')`,
+    );
+  } else if (input.has_readable_file === false) {
+    conditions.push(
+      notExists(
+        db
+          .select({ one: sql`1` })
+          .from(bookFiles)
+          .where(and(eq(bookFiles.book_id, books.id), eq(bookFiles.is_primary, 1), eq(bookFiles.file_format, 'EPUB')))
+          .limit(1),
       ),
     );
   }

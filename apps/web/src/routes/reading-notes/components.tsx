@@ -92,7 +92,7 @@ export function ReadingNoteCard({
 }
 
 export function CompactSelect({ options }: { options: string[] }) {
-  return <FilterSelect value={options[0] ?? ''} onChange={() => {}} options={options.map((option) => ({ value: option, label: option }))} size="md" />;
+  return <FilterSelect value={options[0] ?? ''} onChange={() => {}} options={options.map((option) => ({ value: option, label: option })} size="default" />;
 }
 
 export function SourcePill({

@@ -1,4 +1,10 @@
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 export interface FilterSelectOption {
@@ -19,27 +25,30 @@ export function FilterSelect({
   onChange: (value: string) => void;
   options: readonly FilterSelectOption[];
   className?: string;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'default';
   shape?: 'rounded' | 'pill';
   tone?: 'card' | 'muted';
 }) {
   return (
-    <Select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className={cn(
-        'w-auto min-w-[96px] shadow-none',
-        size === 'sm' ? 'h-8 px-2 pr-8 text-xs' : 'h-9 px-3 pr-8 text-sm',
-        shape === 'pill' ? 'rounded-full' : 'rounded-lg',
-        tone === 'muted' ? 'border-border bg-muted' : 'border-border bg-card',
-        className,
-      )}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        size={size}
+        className={cn(
+          'shadow-none',
+          shape === 'pill' ? 'rounded-full' : 'rounded-lg',
+          tone === 'muted' ? 'border-border bg-muted' : 'border-border bg-card',
+          className,
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
   );
 }

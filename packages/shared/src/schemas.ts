@@ -131,6 +131,7 @@ export const bookQuerySchema = paginationSchema.extend({
   in_trash: z.coerce.boolean().optional(),
   favorited: z.coerce.boolean().optional(),
   has_files: z.coerce.boolean().optional(),
+  has_readable_file: z.coerce.boolean().optional(),
 });
 export type BookQueryInput = z.output<typeof bookQuerySchema>;
 

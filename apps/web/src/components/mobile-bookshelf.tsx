@@ -188,19 +188,19 @@ export function MobileBookshelf({
 
           <div className="mt-5 space-y-4">
             <MobileFilterField label="阅读状态">
-              <FilterSelect value={status} onChange={onStatusChange} options={MOBILE_STATUS_OPTIONS} size="md" className="w-full min-w-0" />
+              <FilterSelect value={status} onChange={onStatusChange} options={MOBILE_STATUS_OPTIONS} size="default" className="w-full min-w-0" />
             </MobileFilterField>
 
             <MobileFilterField label="分类">
-              <FilterSelect value={category} onChange={onCategoryChange} options={categoryOptions} size="md" className="w-full min-w-0" />
+              <FilterSelect value={category} onChange={onCategoryChange} options={categoryOptions} size="default" className="w-full min-w-0" />
             </MobileFilterField>
 
             <MobileFilterField label="标签">
-              <FilterSelect value={tag} onChange={onTagChange} options={tagOptions} size="md" className="w-full min-w-0" />
+              <FilterSelect value={tag} onChange={onTagChange} options={tagOptions} size="default" className="w-full min-w-0" />
             </MobileFilterField>
 
             <MobileFilterField label="可见性">
-              <FilterSelect value={visibility} onChange={onVisibilityChange} options={visibilityOptions} size="md" className="w-full min-w-0" />
+              <FilterSelect value={visibility} onChange={onVisibilityChange} options={visibilityOptions} size="default" className="w-full min-w-0" />
             </MobileFilterField>
 
             <button

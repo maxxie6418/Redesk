@@ -3,7 +3,13 @@ import { Star, Loader2, Check, X, AlertTriangle } from 'lucide-react';
 import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { InlineTagManager } from '@/components/inline-tag-manager';
 import { KeyValueEditor } from '@/components/key-value-editor';
 import { cn } from '@/lib/utils';
@@ -308,17 +314,27 @@ export function BookEditForm({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className={labelClass}>状态</Label>
-              <Select value={form.status} onChange={(e) => updateField('status', e.target.value)}>
-                {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
+              <Select value={form.status} onValueChange={(value) => updateField('status', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label className={labelClass}>可见性</Label>
-              <Select value={form.visibility} onChange={(e) => updateField('visibility', e.target.value)}>
-                <option value={VISIBILITY.PRIVATE}>私密</option>
-                <option value={VISIBILITY.PUBLIC}>公开</option>
+              <Select value={form.visibility} onValueChange={(value) => updateField('visibility', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={VISIBILITY.PRIVATE}>私密</SelectItem>
+                  <SelectItem value={VISIBILITY.PUBLIC}>公开</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -326,25 +342,35 @@ export function BookEditForm({
             <div className="space-y-2">
               <Label className={labelClass}>个人分类</Label>
               <Select
-                value={form.categoryId ?? ''}
-                onChange={(e) => updateField('categoryId', e.target.value ? Number(e.target.value) : null)}
+                value={form.categoryId != null ? String(form.categoryId) : ''}
+                onValueChange={(value) => updateField('categoryId', value ? Number(value) : null)}
               >
-                <option value="">未分类</option>
-                {personalCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">未分类</SelectItem>
+                  {personalCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label className={labelClass}>常规分类</Label>
               <Select
-                value={form.genreCategoryId ?? ''}
-                onChange={(e) => updateField('genreCategoryId', e.target.value ? Number(e.target.value) : null)}
+                value={form.genreCategoryId != null ? String(form.genreCategoryId) : ''}
+                onValueChange={(value) => updateField('genreCategoryId', value ? Number(value) : null)}
               >
-                <option value="">未分类</option>
-                {genreCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">未分类</SelectItem>
+                  {genreCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>

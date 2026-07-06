@@ -33,6 +33,7 @@ export interface BookSummary {
   finished_at: string | null;
   import_order: number;
   has_files: boolean;
+  has_readable_file: boolean;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -85,6 +86,7 @@ export interface BookQueryParams {
   in_trash?: boolean;
   favorited?: boolean;
   has_files?: boolean;
+  has_readable_file?: boolean;
 }
 
 export interface CreateBookInput {
@@ -150,6 +152,7 @@ function buildQuery(params?: BookQueryParams): string {
   if (params.in_trash) sp.set('in_trash', 'true');
   if (params.favorited) sp.set('favorited', 'true');
   if (params.has_files != null) sp.set('has_files', String(params.has_files));
+  if (params.has_readable_file != null) sp.set('has_readable_file', String(params.has_readable_file));
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }

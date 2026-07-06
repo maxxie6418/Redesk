@@ -1,11 +1,18 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLogin } from '@/hooks/use-auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ApiError } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 
@@ -20,7 +27,12 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) {
+      setPassword('');
+      setError(null);
+    }
+  }, [open]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,14 +55,15 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   };
 
   return (
-    <Card className="w-64 shadow-xl border-sidebar-border bg-sidebar">
-      <CardHeader className="px-3 pb-0 pt-3">
-        <CardTitle className="text-sm font-medium">输入口令</CardTitle>
-      </CardHeader>
-      <CardContent className="px-3 pb-3 pt-2">
-        <form onSubmit={onSubmit} className="space-y-2">
-          <div className="space-y-1">
-            <Label htmlFor="dialog-password" className="text-xs text-sidebar-foreground/70">口令</Label>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-[360px]" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle className="text-base">输入口令</DialogTitle>
+          <DialogDescription className="text-xs">请输入管理口令以访问完整功能</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="dialog-password" className="text-xs">口令</Label>
             <Input
               id="dialog-password"
               type="password"
@@ -62,21 +75,21 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               autoComplete="current-password"
               autoFocus
               required
-              className="h-8 text-sm"
+              className="h-9 text-sm"
             />
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" className="flex-1 h-8 text-sm" disabled={login.isPending}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" className="flex-1 h-9 text-sm" onClick={onClose}>
+              取消
+            </Button>
+            <Button type="submit" className="flex-1 h-9 text-sm" disabled={login.isPending}>
               {login.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               登录
             </Button>
-            <Button type="button" variant="ghost" className="h-8 text-sm px-2" onClick={() => { setPassword(''); setError(null); onClose(); }}>
-              取消
-            </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -9,6 +9,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,6 @@ import {
 } from '@/hooks/use-users-admin';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
 import { cn } from '@/lib/utils';
-import { StatusToast } from './status-toast';
 import type { StatusMessage } from './types';
 
 export function LoginManagementTab() {
@@ -52,8 +52,16 @@ export function LoginManagementTab() {
     setHydrated(true);
   }, [settings.data, hydrated]);
 
-  const [toast, setToast] = useState<StatusMessage>(null);
-  const showToast = useCallback((m: StatusMessage) => { setToast(m); if (m) setTimeout(() => setToast(null), 3000); }, []);
+  const showToast = useCallback((m: StatusMessage) => {
+    if (!m) return;
+    if (m.type === 'error') {
+      toast.error(m.text);
+    } else if (m.type === 'warning') {
+      toast.warning(m.text);
+    } else {
+      toast.success(m.text);
+    }
+  }, []);
 
   const handleSave = useCallback(async () => {
     try {
@@ -116,8 +124,6 @@ export function LoginManagementTab() {
 
   return (
     <div className="space-y-6">
-      <StatusToast message={toast} onClose={() => setToast(null)} className="absolute left-1/2 top-0 -translate-x-1/2" />
-
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">多用户模式</CardTitle>

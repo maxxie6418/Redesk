@@ -200,10 +200,10 @@ export function FilesTable({
         <thead>
           <tr className="border-y border-border text-muted-foreground">
             <th className="py-2.5 pl-5 pr-3 text-left font-medium">文件名</th>
+            <th className="py-2.5 pr-3 text-left font-medium">关联书籍</th>
             <th className="py-2.5 pr-3 text-left font-medium">格式</th>
             <th className="py-2.5 pr-3 text-left font-medium">大小</th>
             <th className="py-2.5 pr-3 text-left font-medium">存储位置</th>
-            <th className="py-2.5 pr-3 text-left font-medium">关联书籍</th>
             <th className="py-2.5 pr-3 text-left font-medium">上传时间</th>
             <th className="py-2.5 pr-5 text-right font-medium">操作</th>
           </tr>
@@ -218,13 +218,6 @@ export function FilesTable({
                 </div>
               </td>
               <td className="py-3 pr-3">
-                <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{file.file_format}</span>
-              </td>
-              <td className="py-3 pr-3 text-muted-foreground">{formatSize(file.file_size)}</td>
-              <td className="py-3 pr-3">
-                <StorageStatusBadge file={file} />
-              </td>
-              <td className="py-3 pr-3">
                 {file.book_id && file.book_title ? (
                   <button type="button" className="text-xs text-primary hover:underline" onClick={() => onOpenBook(file.book_id ?? null)}>
                     {file.book_title}
@@ -232,6 +225,13 @@ export function FilesTable({
                 ) : (
                   <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:bg-amber-950 dark:text-amber-400">未关联</span>
                 )}
+              </td>
+              <td className="py-3 pr-3">
+                <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">{file.file_format}</span>
+              </td>
+              <td className="py-3 pr-3 text-muted-foreground">{formatSize(file.file_size)}</td>
+              <td className="py-3 pr-3">
+                <StorageStatusBadge file={file} />
               </td>
               <td className="py-3 pr-3 text-xs text-muted-foreground">{file.created_at.slice(0, 10)}</td>
               <td className="py-3 pr-5 text-right">
