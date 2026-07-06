@@ -1,23 +1,36 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { createDatabase } from '@redesk/db';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { rmSync } from 'node:fs';
 import { getSqlite, initDatabase } from '../db';
 import { buildServer } from '../server';
 import { hashPassword } from '../lib/auth';
+
+const testEnv = vi.hoisted(() => {
+  const root = `${process.env.TEMP ?? process.env.TMP ?? '.'}/redesk-notes-${process.pid}-${Date.now()}-${globalThis.crypto.randomUUID()}`;
+
+  process.env.NODE_ENV = 'test';
+  process.env.AUTH_DISABLED = 'true';
+  process.env.DATABASE_URL = `${root}/redesk.db`;
+  process.env.STORAGE_DIR = `${root}/storage`;
+  process.env.SPA_DIR = `${root}/spa`;
+  process.env.SESSION_SECRET = 'test-session-secret-12345678901234567890';
+  process.env.WEB_URL = 'http://localhost:5173';
+  process.env.LOG_LEVEL = 'silent';
+
+  return { root };
+});
 
 interface SeedResult {
   userId: number;
   bookId: number;
 }
 
+type SqliteDatabase = ReturnType<typeof getSqlite>;
+
 interface TestAppContext {
   app: Awaited<ReturnType<typeof buildServer>>;
-  sqlite: ReturnType<typeof createDatabase>['sqlite'];
+  sqlite: SqliteDatabase;
 }
 
-const cleanupDirs: string[] = [];
 let sharedContext: TestAppContext | undefined;
 
 function closeSqliteSafely() {
@@ -32,104 +45,7 @@ function now() {
   return new Date().toISOString();
 }
 
-function createSchema(sqlite: ReturnType<typeof createDatabase>['sqlite']) {
-  sqlite.exec(`
-    PRAGMA foreign_keys = ON;
-
-    CREATE TABLE users (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      username text NOT NULL UNIQUE,
-      password_hash text NOT NULL,
-      display_name text,
-      is_active integer NOT NULL DEFAULT 1,
-      is_admin integer NOT NULL DEFAULT 0,
-      must_change_password integer NOT NULL DEFAULT 0,
-      created_at text NOT NULL,
-      updated_at text NOT NULL
-    );
-
-    CREATE TABLE books (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      owner_id integer NOT NULL,
-      title text NOT NULL,
-      author text,
-      cover_path text,
-      status text NOT NULL DEFAULT 'COLLECTED',
-      visibility text NOT NULL DEFAULT 'PRIVATE',
-      import_order integer NOT NULL DEFAULT 0,
-      deleted_at text,
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE highlights (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi_start text NOT NULL,
-      cfi_end text NOT NULL,
-      text text NOT NULL,
-      type text NOT NULL DEFAULT 'HIGHLIGHT',
-      color text,
-      note text,
-      mark_type text DEFAULT 'NONE',
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      deleted_at text,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE notes (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi text,
-      title text,
-      content_html text,
-      content_markdown text,
-      mark_type text DEFAULT 'NONE',
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      deleted_at text,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE bookmarks (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi text NOT NULL,
-      label text,
-      percentage real,
-      created_at text NOT NULL,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE VIRTUAL TABLE notes_fts USING fts5(title, content_markdown, content_html, content='notes', content_rowid='id');
-    CREATE VIRTUAL TABLE highlights_fts USING fts5(text, note, content='highlights', content_rowid='id');
-  `);
-}
-
 async function createApp(): Promise<TestAppContext> {
-  const root = mkdtempSync(join(tmpdir(), 'redesk-notes-'));
-  cleanupDirs.push(root);
-
-  process.env.NODE_ENV = 'test';
-  process.env.AUTH_DISABLED = 'true';
-  process.env.DATABASE_URL = join(root, 'redesk.db');
-  process.env.STORAGE_DIR = join(root, 'storage');
-  process.env.SPA_DIR = join(root, 'spa');
-  process.env.SESSION_SECRET = 'test-session-secret-123456';
-  process.env.WEB_URL = 'http://localhost:5173';
-
-  const handle = createDatabase({ url: join(root, 'redesk.db') });
-  createSchema(handle.sqlite);
-  handle.sqlite.close();
-
   initDatabase();
   const sqlite = getSqlite();
   const app = await buildServer();
@@ -141,7 +57,7 @@ async function createApp(): Promise<TestAppContext> {
   };
 }
 
-async function seedBase(sqlite: ReturnType<typeof createDatabase>['sqlite']): Promise<SeedResult> {
+async function seedBase(sqlite: SqliteDatabase): Promise<SeedResult> {
   sqlite.exec(`
     PRAGMA foreign_keys = OFF;
     DELETE FROM highlights;
@@ -155,7 +71,7 @@ async function seedBase(sqlite: ReturnType<typeof createDatabase>['sqlite']): Pr
   `);
 
   const ts = now();
-  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const suffix = `${Date.now()}-${process.pid}`;
   const passwordHash = await hashPassword('password123');
   const userId = Number(sqlite.prepare(`
     INSERT INTO users (username, password_hash, display_name, is_active, is_admin, must_change_password, created_at, updated_at)
@@ -169,7 +85,8 @@ async function seedBase(sqlite: ReturnType<typeof createDatabase>['sqlite']): Pr
   return { userId, bookId };
 }
 
-function seedMarks(sqlite: ReturnType<typeof createDatabase>['sqlite'], seeded: SeedResult, count: number) {
+function seedMarks(sqlite: SqliteDatabase, seeded: SeedResult, count: number, options: { includeBookmarks?: boolean } = {}) {
+  const includeBookmarks = options.includeBookmarks ?? true;
   const insertHighlight = sqlite.prepare(`
     INSERT INTO highlights (book_id, owner_id, cfi_start, cfi_end, text, type, color, note, mark_type, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -182,8 +99,8 @@ function seedMarks(sqlite: ReturnType<typeof createDatabase>['sqlite'], seeded: 
     INSERT INTO bookmarks (book_id, owner_id, cfi, label, percentage, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
-  const insertNoteFts = sqlite.prepare(`INSERT INTO notes_fts(rowid, title, content_markdown, content_html) VALUES (?, ?, ?, ?)`);
-  const insertHighlightFts = sqlite.prepare(`INSERT INTO highlights_fts(rowid, text, note) VALUES (?, ?, ?)`);
+  const insertNoteFts = sqlite.prepare('INSERT INTO notes_fts(rowid, title, content_markdown, content_html) VALUES (?, ?, ?, ?)');
+  const insertHighlightFts = sqlite.prepare('INSERT INTO highlights_fts(rowid, text, note) VALUES (?, ?, ?)');
 
   for (let index = 1; index <= count; index += 1) {
     const ts = new Date(Date.UTC(2026, 0, index, 0, 0, 0)).toISOString();
@@ -215,15 +132,30 @@ function seedMarks(sqlite: ReturnType<typeof createDatabase>['sqlite'], seeded: 
     );
     insertHighlightFts.run(Number(highlightResult.lastInsertRowid), `共同搜索词 高亮 ${index}`, `共同搜索词 备注 ${index}`);
 
-    insertBookmark.run(
-      seeded.bookId,
-      seeded.userId,
-      `epubcfi(/6/2[test]!/4/8/${index})`,
-      `书签 ${index}`,
-      index,
-      ts,
-    );
+    if (includeBookmarks) {
+      insertBookmark.run(
+        seeded.bookId,
+        seeded.userId,
+        `epubcfi(/6/2[test]!/4/8/${index})`,
+        `书签 ${index}`,
+        index,
+        ts,
+      );
+    }
   }
+}
+
+async function authCookie(app: TestAppContext['app']): Promise<string> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    payload: { password: 'password123' },
+  });
+  expect(response.statusCode).toBe(200);
+  const setCookie = response.headers['set-cookie'];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  if (!cookie) throw new Error('登录响应缺少会话 Cookie');
+  return cookie.split(';')[0];
 }
 
 beforeAll(async () => {
@@ -237,21 +169,17 @@ afterAll(async () => {
 
   closeSqliteSafely();
 
-  while (cleanupDirs.length > 0) {
-    const dir = cleanupDirs.pop();
-    if (dir) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  }
+  rmSync(testEnv.root, { recursive: true, force: true });
 });
 
 describe('note routes query validation and pagination', () => {
   it('caps notes pagination query and returns pagination metadata', async () => {
     const { app, sqlite } = sharedContext!;
     const seeded = await seedBase(sqlite);
-    seedMarks(sqlite, seeded, 505);
+    seedMarks(sqlite, seeded, 505, { includeBookmarks: false });
+    const cookie = await authCookie(app);
 
-    const response = await app.inject({ method: 'GET', url: `/api/v1/notes?page=1&page_size=999&book_id=${seeded.bookId}` });
+    const response = await app.inject({ method: 'GET', url: `/api/v1/notes?page=1&page_size=999&book_id=${seeded.bookId}`, headers: { cookie } });
 
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: unknown[]; pagination: { page: number; page_size: number; total: number } };
@@ -262,8 +190,9 @@ describe('note routes query validation and pagination', () => {
   it('rejects invalid highlights pagination query', async () => {
     const { app, sqlite } = sharedContext!;
     await seedBase(sqlite);
+    const cookie = await authCookie(app);
 
-    const response = await app.inject({ method: 'GET', url: '/api/v1/highlights?page=0&page_size=20' });
+    const response = await app.inject({ method: 'GET', url: '/api/v1/highlights?page=0&page_size=20', headers: { cookie } });
 
     expect(response.statusCode).toBe(400);
     expect(response.json().error.code).toBe('VALIDATION_ERROR');
@@ -273,12 +202,13 @@ describe('note routes query validation and pagination', () => {
     const { app, sqlite } = sharedContext!;
     const seeded = await seedBase(sqlite);
     seedMarks(sqlite, seeded, 3);
+    const cookie = await authCookie(app);
 
-    const invalidResponse = await app.inject({ method: 'GET', url: '/api/v1/bookmarks?book_id=abc' });
+    const invalidResponse = await app.inject({ method: 'GET', url: '/api/v1/bookmarks?book_id=abc', headers: { cookie } });
     expect(invalidResponse.statusCode).toBe(400);
     expect(invalidResponse.json().error.code).toBe('VALIDATION_ERROR');
 
-    const response = await app.inject({ method: 'GET', url: `/api/v1/bookmarks?page=1&page_size=2&book_id=${seeded.bookId}` });
+    const response = await app.inject({ method: 'GET', url: `/api/v1/bookmarks?page=1&page_size=2&book_id=${seeded.bookId}`, headers: { cookie } });
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: unknown[]; pagination: { page: number; page_size: number; total: number } };
     expect(body.data).toHaveLength(2);
@@ -289,8 +219,9 @@ describe('note routes query validation and pagination', () => {
     const { app, sqlite } = sharedContext!;
     const seeded = await seedBase(sqlite);
     seedMarks(sqlite, seeded, 3);
+    const cookie = await authCookie(app);
 
-    const response = await app.inject({ method: 'GET', url: `/api/v1/notes/search?q=共同搜索词&page=1&page_size=2&book_id=${seeded.bookId}` });
+    const response = await app.inject({ method: 'GET', url: `/api/v1/notes/search?q=共同搜索词&page=1&page_size=2&book_id=${seeded.bookId}`, headers: { cookie } });
 
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: unknown[]; pagination: { page: number; page_size: number; total: number }; type: string };
@@ -303,8 +234,9 @@ describe('note routes query validation and pagination', () => {
     const { app, sqlite } = sharedContext!;
     const seeded = await seedBase(sqlite);
     seedMarks(sqlite, seeded, 4);
+    const cookie = await authCookie(app);
 
-    const response = await app.inject({ method: 'GET', url: `/api/v1/highlights/search?q=共同搜索词&page=2&page_size=2&book_id=${seeded.bookId}` });
+    const response = await app.inject({ method: 'GET', url: `/api/v1/highlights/search?q=共同搜索词&page=2&page_size=2&book_id=${seeded.bookId}`, headers: { cookie } });
 
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: unknown[]; pagination: { page: number; page_size: number; total: number }; type: string };

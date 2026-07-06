@@ -1,11 +1,23 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { createDatabase } from '@redesk/db';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { rmSync } from 'node:fs';
 import { getSqlite, initDatabase } from '../db';
 import { buildServer } from '../server';
 import { hashPassword } from '../lib/auth';
+
+const testEnv = vi.hoisted(() => {
+  const root = `${process.env.TEMP ?? process.env.TMP ?? '.'}/redesk-topics-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  process.env.NODE_ENV = 'test';
+  process.env.AUTH_DISABLED = 'true';
+  process.env.DATABASE_URL = `${root}/redesk.db`;
+  process.env.STORAGE_DIR = `${root}/storage`;
+  process.env.SPA_DIR = `${root}/spa`;
+  process.env.SESSION_SECRET = 'test-session-secret-12345678901234567890';
+  process.env.WEB_URL = 'http://localhost:5173';
+  process.env.LOG_LEVEL = 'silent';
+
+  return { root };
+});
 
 interface SeedResult {
   userId: number;
@@ -15,12 +27,12 @@ interface SeedResult {
   noteId: number;
 }
 
+type SqliteDatabase = ReturnType<typeof getSqlite>;
+
 interface TestAppContext {
   app: Awaited<ReturnType<typeof buildServer>>;
-  sqlite: ReturnType<typeof createDatabase>['sqlite'];
+  sqlite: SqliteDatabase;
 }
-
-const cleanupDirs: string[] = [];
 let sharedContext: TestAppContext | undefined;
 
 function closeSqliteSafely() {
@@ -35,195 +47,7 @@ function now() {
   return new Date().toISOString();
 }
 
-function createSchema(sqlite: ReturnType<typeof createDatabase>['sqlite']) {
-  sqlite.exec(`
-    PRAGMA foreign_keys = ON;
-
-    CREATE TABLE users (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      username text NOT NULL UNIQUE,
-      password_hash text NOT NULL,
-      display_name text,
-      is_active integer NOT NULL DEFAULT 1,
-      is_admin integer NOT NULL DEFAULT 0,
-      must_change_password integer NOT NULL DEFAULT 0,
-      created_at text NOT NULL,
-      updated_at text NOT NULL
-    );
-
-    CREATE TABLE books (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      owner_id integer NOT NULL,
-      category_id integer,
-      genre_category_id integer,
-      title text NOT NULL,
-      author text,
-      subtitle text,
-      isbn text,
-      publisher text,
-      publish_year integer,
-      description text,
-      language text,
-      cover_path text,
-      status text NOT NULL DEFAULT 'COLLECTED',
-      visibility text NOT NULL DEFAULT 'PRIVATE',
-      reading_purpose text,
-      entry_reason text,
-      rating integer,
-      custom_attributes text,
-      metadata_source text,
-      source_url text,
-      translator text,
-      original_title text,
-      page_count integer,
-      favorited_at text,
-      started_at text,
-      finished_at text,
-      import_order integer NOT NULL DEFAULT 0,
-      deleted_at text,
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE highlights (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi_start text NOT NULL,
-      cfi_end text NOT NULL,
-      text text NOT NULL,
-      type text NOT NULL DEFAULT 'HIGHLIGHT',
-      color text,
-      note text,
-      mark_type text DEFAULT 'NONE',
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      deleted_at text,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE notes (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi text,
-      title text,
-      content_html text,
-      content_markdown text,
-      mark_type text DEFAULT 'NONE',
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      deleted_at text,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE bookmarks (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      cfi text NOT NULL,
-      label text,
-      percentage real,
-      created_at text NOT NULL,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE reading_progress (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      book_id integer NOT NULL,
-      owner_id integer NOT NULL,
-      file_id integer NOT NULL,
-      cfi text NOT NULL,
-      percentage real NOT NULL DEFAULT 0,
-      last_read_at text NOT NULL,
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      FOREIGN KEY (book_id) REFERENCES books(id),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE topics (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      owner_id integer NOT NULL,
-      name text NOT NULL,
-      description text,
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      deleted_at text,
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    );
-
-    CREATE TABLE topic_books (
-      topic_id integer NOT NULL,
-      book_id integer NOT NULL,
-      added_at text NOT NULL,
-      PRIMARY KEY (topic_id, book_id),
-      FOREIGN KEY (topic_id) REFERENCES topics(id),
-      FOREIGN KEY (book_id) REFERENCES books(id)
-    );
-
-    CREATE TABLE topic_highlights (
-      topic_id integer NOT NULL,
-      highlight_id integer NOT NULL,
-      added_at text NOT NULL,
-      PRIMARY KEY (topic_id, highlight_id),
-      FOREIGN KEY (topic_id) REFERENCES topics(id),
-      FOREIGN KEY (highlight_id) REFERENCES highlights(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE topic_notes (
-      topic_id integer NOT NULL,
-      note_id integer NOT NULL,
-      added_at text NOT NULL,
-      PRIMARY KEY (topic_id, note_id),
-      FOREIGN KEY (topic_id) REFERENCES topics(id),
-      FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE topic_segments (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      topic_id integer NOT NULL,
-      book_id integer NOT NULL,
-      cfi_start text NOT NULL,
-      cfi_end text NOT NULL,
-      label text,
-      added_at text NOT NULL,
-      FOREIGN KEY (topic_id) REFERENCES topics(id),
-      FOREIGN KEY (book_id) REFERENCES books(id)
-    );
-
-    CREATE TABLE topic_entries (
-      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-      topic_id integer NOT NULL,
-      entry_type text NOT NULL,
-      content text NOT NULL,
-      created_at text NOT NULL,
-      updated_at text NOT NULL,
-      FOREIGN KEY (topic_id) REFERENCES topics(id)
-    );
-  `);
-}
-
 async function createApp(): Promise<TestAppContext> {
-  const root = mkdtempSync(join(tmpdir(), 'redesk-topics-'));
-  cleanupDirs.push(root);
-
-  process.env.NODE_ENV = 'test';
-  process.env.AUTH_DISABLED = 'true';
-  process.env.DATABASE_URL = join(root, 'redesk.db');
-  process.env.STORAGE_DIR = join(root, 'storage');
-  process.env.SPA_DIR = join(root, 'spa');
-  process.env.SESSION_SECRET = 'test-session-secret-123456';
-  process.env.WEB_URL = 'http://localhost:5173';
-
-  const handle = createDatabase({ url: join(root, 'redesk.db') });
-  createSchema(handle.sqlite);
-  handle.sqlite.close();
-
   initDatabase();
   const sqlite = getSqlite();
   const app = await buildServer();
@@ -235,7 +59,7 @@ async function createApp(): Promise<TestAppContext> {
   };
 }
 
-async function seedBase(sqlite: ReturnType<typeof createDatabase>['sqlite']): Promise<SeedResult> {
+async function seedBase(sqlite: SqliteDatabase): Promise<SeedResult> {
   sqlite.exec(`
     PRAGMA foreign_keys = OFF;
     DELETE FROM topic_highlights;
@@ -333,12 +157,7 @@ afterAll(async () => {
 
   closeSqliteSafely();
 
-  while (cleanupDirs.length > 0) {
-    const dir = cleanupDirs.pop();
-    if (dir) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  }
+  rmSync(testEnv.root, { recursive: true, force: true });
 });
 
 describe('topic routes', () => {
