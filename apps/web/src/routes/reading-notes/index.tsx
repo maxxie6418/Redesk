@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Tags, Trash2, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { SearchField } from '@/components/page-ui/search-field';
 import { StatCard } from '@/components/page-ui/stat-card';
 import { ProtectedShell } from '@/components/protected-shell';

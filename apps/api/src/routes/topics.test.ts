@@ -23,6 +23,14 @@ interface TestAppContext {
 const cleanupDirs: string[] = [];
 let sharedContext: TestAppContext | undefined;
 
+function closeSqliteSafely() {
+  try {
+    getSqlite().close();
+  } catch {
+    void 0;
+  }
+}
+
 function now() {
   return new Date().toISOString();
 }
@@ -275,10 +283,7 @@ afterAll(async () => {
     await sharedContext.app.close();
   }
 
-  try {
-    getSqlite().close();
-  } catch {
-  }
+  closeSqliteSafely();
 
   while (cleanupDirs.length > 0) {
     const dir = cleanupDirs.pop();

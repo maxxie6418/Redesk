@@ -9,7 +9,9 @@ import ePub from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
 import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
+import { useAddTopicHighlight } from '@/hooks/use-topics';
 import { Button } from '@/components/ui/button';
+import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { api, API_BASE } from '@/lib/api';
 
 interface TocItem {
@@ -69,6 +71,7 @@ export function BookReaderPage() {
   const updateHighlight = useUpdateHighlight();
   const deleteHighlight = useDeleteHighlight();
   const bookNotes = useNotes(bookId);
+  const addTopicHighlight = useAddTopicHighlight();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
@@ -95,6 +98,7 @@ export function BookReaderPage() {
   const [commentMode, setCommentMode] = useState(false);
   const [commentTargetHighlightId, setCommentTargetHighlightId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditingHighlight | null>(null);
+  const [topicHighlightId, setTopicHighlightId] = useState<number | null>(null);
   const [noteForm, setNoteForm] = useState<{ title: string; content: string } | null>(null);
   const [editingNote, setEditingNote] = useState<{ id: number; title: string; content: string } | null>(null);
 
@@ -916,6 +920,20 @@ export function BookReaderPage() {
       />
 
       {/* 已有高亮编辑态气泡 */}
+      <AddToTopicDialog
+        open={topicHighlightId !== null}
+        title="将高亮加入话题"
+        description="选择一个主题阅读话题，或新建话题后自动关联当前高亮。"
+        loading={addTopicHighlight.isPending}
+        onCancel={() => setTopicHighlightId(null)}
+        onConfirm={async (topicId) => {
+          if (!topicHighlightId) return;
+          await addTopicHighlight.mutateAsync({ topicId, highlightId: topicHighlightId });
+          toast.success('高亮已加入话题');
+          setTopicHighlightId(null);
+        }}
+      />
+
       {editing && (
         <div
           className="fixed z-50 anim-pop"
@@ -952,6 +970,22 @@ export function BookReaderPage() {
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               {editing.note ? '编辑附注' : '添加附注'}
+            </button>
+            <div className="w-px h-5 bg-neutral-200" />
+            <button
+              type="button"
+              onClick={() => {
+                setTopicHighlightId(editing.id);
+                setEditing(null);
+              }}
+              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-neutral-100 text-xs text-neutral-600"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 12V7a2 2 0 0 0-2-2h-5" />
+                <path d="M14 17H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+                <path d="M8 12h8" /><path d="M12 8v8" />
+              </svg>
+              加入话题
             </button>
             <div className="w-px h-5 bg-neutral-200" />
             <button

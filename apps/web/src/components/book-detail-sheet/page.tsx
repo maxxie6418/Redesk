@@ -45,11 +45,13 @@ import {
 import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
 import { useReadingProgress } from '@/hooks/use-reading-progress';
 import { useNotes, useHighlights, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
+import { useAddTopicBook } from '@/hooks/use-topics';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 import { API_BASE } from '@/lib/api';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { EditableTextField } from './editable-text-field';
 import { EditableSelectField } from './editable-select-field';
 import { EditableNumberField } from './editable-number-field';
@@ -148,6 +150,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const [pendingBookDelete, setPendingBookDelete] = useState(false);
   const [pendingBookDeleteFiles, setPendingBookDeleteFiles] = useState(false);
   const [pendingFileDelete, setPendingFileDelete] = useState<BookFileItem | null>(null);
+  const [topicDialogOpen, setTopicDialogOpen] = useState(false);
 
   const [message, setMessage] = useState<StatusMessage>(null);
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
@@ -1082,7 +1085,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Lightbulb className="h-8 w-8 text-muted-foreground/20" />
                   <p className="mt-3 text-[14px] text-muted-foreground">围绕一个主题组织多本书</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground/50">主题阅读 — 即将上线（M4）</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground/50">将当前书加入主题阅读工作区，和其他书一起整理痕迹与沉淀。</p>
+                  <Button type="button" size="sm" className="mt-4" onClick={() => setTopicDialogOpen(true)} disabled={!bookId}>
+                    加入话题
+                  </Button>
                 </div>
               </div>
               )}
@@ -1106,6 +1112,20 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       </div>
     </div>
     </div>
+
+    <AddToTopicDialog
+      open={topicDialogOpen}
+      title="将书籍加入话题"
+      description="选择一个主题阅读话题，或新建话题后自动关联当前书。"
+      loading={addTopicBook.isPending}
+      onCancel={() => setTopicDialogOpen(false)}
+      onConfirm={async (topicId: number) => {
+        if (!bookId) return;
+        await addTopicBook.mutateAsync({ topicId, bookId });
+        setMessage({ type: 'info', text: '已加入话题' });
+        setTopicDialogOpen(false);
+      }}
+    />
 
     {/* Metadata Dialog */}
     {showMetadataDialog && metadataResult && b && (

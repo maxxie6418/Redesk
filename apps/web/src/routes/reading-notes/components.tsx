@@ -10,11 +10,13 @@ export function ReadingNoteCard({
   onEdit,
   onDelete,
   onNavigate,
+  onAddToTopic,
 }: {
   note: ReadingNoteItem;
   onEdit?: () => void;
   onDelete?: () => void;
   onNavigate?: () => void;
+  onAddToTopic?: () => void;
 }) {
   const isStandalone = note.type === 'standalone';
   const isAnnotated = note.type === 'annotated';

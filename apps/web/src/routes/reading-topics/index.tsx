@@ -12,12 +12,12 @@ import {
   useTopics,
   useUpdateTopic,
   useUpdateTopicEntry,
+  type TopicItem,
 } from '@/hooks/use-topics';
-import { mapTopicDetailToViewModel, TopicCard, TopicWorkspace, ViewSwitch } from './components';
+import { TopicCard, TopicWorkspace, ViewSwitch } from './components';
+import { mapTopicDetailToViewModel } from './mapping';
 
-export { default as ReadingTopicsPage } from './index';
-
-export default function ReadingTopicsPage() {
+export function ReadingTopicsPage() {
   const [view, setView] = useState<'list' | 'workspace'>('list');
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +31,8 @@ export default function ReadingTopicsPage() {
   const updateTopicEntry = useUpdateTopicEntry();
   const deleteTopicEntry = useDeleteTopicEntry();
 
-  const topics = topicsQuery.data ?? [];
+  const topicsData = topicsQuery.data;
+  const topics = useMemo<TopicItem[]>(() => topicsData ?? [], [topicsData]);
   const filteredTopics = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return topics;
