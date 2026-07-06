@@ -23,7 +23,7 @@ import {
   AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
-import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
+import { BOOK_STATUS_LABELS, VISIBILITY, selectReadableFile } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -358,7 +358,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const b = book.data;
   const hasCover = Boolean(b?.cover_path);
   const progressPercent = progress.data?.percentage ?? 0;
-  const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
+  const readableFile = selectReadableFile<BookFileItem>(files.data);
 
   const coverGroups = useMemo(() => {
     if (!covers.data) return null;
@@ -538,19 +538,19 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               <div className="mb-6 space-y-2.5">
                 <button
                   type="button"
-                  disabled={!primaryEpub}
-                  title={primaryEpub ? '开始阅读' : '请先上传 EPUB 主阅读文件'}
+                  disabled={!readableFile}
+                  title={readableFile ? '打开阅读/预览' : '请先上传可预览文件'}
                   onClick={() => {
-                    if (!bookId || !primaryEpub) return;
+                    if (!bookId || !readableFile) return;
                     navigate(`/books/${bookId}/read`);
                   }}
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <BookOpen className="h-4 w-4" />
-                  开始阅读
+                  打开阅读/预览
                 </button>
                 <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
-                  已支持 EPUB 阅读与进度记忆，高亮/笔记链路逐步完善中
+                  EPUB 保留阅读留痕能力，PDF、Markdown、TXT 和图片先支持在线预览
                 </p>
                 <div className="flex gap-2">
                   <button

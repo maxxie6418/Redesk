@@ -4,6 +4,8 @@ import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-
 import { bookCovers, bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags, type StorageMode } from '@redesk/db';
 import {
   ERROR_CODE,
+  READABLE_FILE_FORMATS,
+  isReadableFileFormat,
   bookQuerySchema,
   createBookSchema,
   updateBookSchema,
@@ -553,7 +555,7 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
   for (const f of fileRows) {
     if (f.book_id != null) {
       fileMap.set(f.book_id, true);
-      if (f.is_primary === 1 && f.file_format === 'EPUB') {
+      if (f.is_primary === 1 && isReadableFileFormat(f.file_format)) {
         readableFileMap.set(f.book_id, true);
       }
     }
@@ -653,7 +655,7 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
 
   if (input.has_readable_file === true) {
     conditions.push(
-      sql`${books.id} IN (SELECT book_id FROM book_files WHERE book_id IS NOT NULL AND is_primary = 1 AND file_format = 'EPUB')`,
+      sql`${books.id} IN (SELECT book_id FROM book_files WHERE book_id IS NOT NULL AND is_primary = 1 AND file_format IN (${sql.join([...READABLE_FILE_FORMATS], sql`, `)}))`,
     );
   } else if (input.has_readable_file === false) {
     conditions.push(
@@ -661,7 +663,7 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
         db
           .select({ one: sql`1` })
           .from(bookFiles)
-          .where(and(eq(bookFiles.book_id, books.id), eq(bookFiles.is_primary, 1), eq(bookFiles.file_format, 'EPUB')))
+          .where(and(eq(bookFiles.book_id, books.id), eq(bookFiles.is_primary, 1), inArray(bookFiles.file_format, [...READABLE_FILE_FORMATS])))
           .limit(1),
       ),
     );

@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Loader2, X } from 'lucide-react';
-import { BOOK_STATUS, BOOK_STATUS_LABELS, type BookStatus } from '@redesk/shared';
+import { BOOK_STATUS, BOOK_STATUS_LABELS, selectReadableFile, type BookStatus } from '@redesk/shared';
 import { API_BASE } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useBook, useFavoriteBook, useStatusHistory, useUnfavoriteBook, useUpdateBook } from '@/hooks/use-books';
-import { useBookFiles } from '@/hooks/use-files';
+import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useMobileLayout } from '@/hooks/use-mobile-layout';
 
 const COVER_TONES = [
@@ -52,7 +52,7 @@ export function MobileBookDetailSheet({
   const unfavoriteBook = useUnfavoriteBook();
 
   const primaryReaderFile = useMemo(
-    () => files.data?.find((item) => item.is_primary === 1 && item.file_format === 'EPUB'),
+    () => selectReadableFile<BookFileItem>(files.data),
     [files.data],
   );
 

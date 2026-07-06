@@ -4,6 +4,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Loader2, Menu, X, StickyNote, Plus, Trash2, Check, Pencil } from 'lucide-react';
 import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
 import { CommentInput } from '@/components/reader/comment-input';
+import { ImagePreviewViewer, PdfPreviewViewer, TextPreviewViewer, UnsupportedPreviewViewer } from '@/components/reader/preview-viewers';
 import { toast } from 'sonner';
 import type EpubFactory from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
@@ -13,6 +14,7 @@ import { useAddTopicHighlight } from '@/hooks/use-topics';
 import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { api, API_BASE } from '@/lib/api';
+import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
 
 interface TocItem {
   id: string;
@@ -103,8 +105,11 @@ export function BookReaderPage() {
   const [editingNote, setEditingNote] = useState<{ id: number; title: string; content: string } | null>(null);
 
 
-  const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
-  const primaryEpubId = primaryEpub?.id;
+  const readableFile = selectReadableFile<BookFileItem>(files.data);
+  const readableFileId = readableFile?.id;
+  const readableFormat = normalizeFileFormat(readableFile?.file_format);
+  const isEpub = readableFormat === 'EPUB';
+  const primaryEpubId = isEpub ? readableFileId : undefined;
   const bookTitle = book.data?.title ?? '';
 
   const saveProgress = useCallback(
@@ -686,15 +691,44 @@ export function BookReaderPage() {
     );
   }
 
-  if (!primaryEpub) {
+  if (!readableFile) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
         <BookOpen className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-muted-foreground">没有可用的 EPUB 主阅读文件</p>
+        <p className="text-muted-foreground">没有可在线预览的主阅读文件</p>
         <Button variant="outline" onClick={() => navigate(`/books/${bookId}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           返回详情
         </Button>
+      </div>
+    );
+  }
+
+  if (!isEpub) {
+    const previewUrl = `${API_BASE}/books/${bookId}/files/${readableFile.id}/download`;
+    const title = book.data?.title ?? readableFile.original_filename ?? '文件预览';
+    let viewer = <UnsupportedPreviewViewer url={previewUrl} format={readableFormat} />;
+
+    if (readableFormat === 'PDF') {
+      viewer = <PdfPreviewViewer url={previewUrl} title={title} format={readableFormat} filename={readableFile.original_filename} />;
+    } else if (readableFormat === 'TXT' || readableFormat === 'MD' || readableFormat === 'MARKDOWN') {
+      viewer = <TextPreviewViewer url={previewUrl} title={title} format={readableFormat} filename={readableFile.original_filename} />;
+    } else if (readableFormat === 'JPG' || readableFormat === 'JPEG' || readableFormat === 'PNG') {
+      viewer = <ImagePreviewViewer url={previewUrl} title={title} format={readableFormat} filename={readableFile.original_filename} />;
+    }
+
+    return (
+      <div className="flex h-screen flex-col bg-background">
+        <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/books/${bookId}`)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium text-foreground">{title}</div>
+            <div className="truncate text-xs text-muted-foreground">{readableFile.original_filename ?? readableFormat}</div>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-hidden">{viewer}</div>
       </div>
     );
   }

@@ -6,6 +6,8 @@ import { bookCovers, bookFiles, books, type StorageMode } from '@redesk/db';
 import {
   BOOK_COVER_SOURCE_TYPE,
   ERROR_CODE,
+  EXTENSION_FORMATS,
+  MIME_TYPES,
   activateBookCoverSchema,
   applyFileMatchesSchema,
   batchSendFilesToCloudSchema,
@@ -30,29 +32,8 @@ import {
 import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 
-const MIME_MAP: Record<string, string> = {
-  '.epub': 'application/epub+zip',
-  '.pdf': 'application/pdf',
-  '.mobi': 'application/x-mobipocket-ebook',
-  '.txt': 'text/plain',
-  '.azw3': 'application/vnd.amazon.mobi8-ebook',
-  '.azw': 'application/vnd.amazon.mobi8-ebook',
-  '.djvu': 'image/vnd.djvu',
-  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.fb2': 'application/x-fictionbook+xml',
-};
-
-export const EXTENSION_FORMAT: Record<string, string> = {
-  '.epub': 'EPUB',
-  '.pdf': 'PDF',
-  '.mobi': 'MOBI',
-  '.txt': 'TXT',
-  '.azw3': 'AZW3',
-  '.azw': 'AZW3',
-  '.djvu': 'DJVU',
-  '.docx': 'DOCX',
-  '.fb2': 'FB2',
-};
+export const EXTENSION_FORMAT: Record<string, string> = EXTENSION_FORMATS;
+const MIME_MAP: Record<string, string> = MIME_TYPES;
 
 const COVER_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
 

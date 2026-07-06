@@ -231,7 +231,7 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
         type="button"
         className={cn('relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
@@ -297,7 +297,7 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
           type="button"
           className={cn('block w-full', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
           disabled={!book.has_readable_file}
-          title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+          title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
           onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
         >
           <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
@@ -391,7 +391,7 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
         type="button"
         className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
@@ -456,7 +456,7 @@ export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPer
         type="button"
         className={cn('relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读器' : '暂无主 EPUB 文件'}
+        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCoverImage book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
