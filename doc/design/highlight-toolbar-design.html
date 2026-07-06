@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读选中工具条 — 气泡方案定稿</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            serif: ['Noto Serif SC', 'Georgia', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .reader { font-family: 'Noto Serif SC', Georgia, serif; line-height: 1.9; color: #2d2d2d; }
+
+    /* 功能效果样式 */
+    .fx-highlight { background: linear-gradient(180deg, transparent 55%, rgba(250, 204, 21, 0.35) 55%); }
+    .fx-underline { border-bottom: 2.2px solid rgba(59, 130, 246, 0.75); padding-bottom: 1px; }
+    .fx-wavy { text-decoration: underline; text-decoration-style: wavy; text-decoration-color: rgba(220, 38, 38, 0.7); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+    /* 气泡尾巴 */
+    .bubble-tail::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-right: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .bubble-tail-top::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%) rotate(225deg);
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-right: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    /* 锚点侧边标记 */
+    .anchor-flag {
+      position: absolute;
+      right: -2px;
+      top: 0;
+      width: 4px;
+      height: 24px;
+      background: #d97757;
+      border-radius: 2px 0 0 2px;
+      box-shadow: -2px 0 6px rgba(217, 119, 87, 0.25);
+    }
+
+    /* 微交互动画 */
+    @keyframes popIn {
+      from { opacity: 0; transform: translateX(-50%) scale(0.92) translateY(-4px); }
+      to   { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+    }
+    .anim-pop { animation: popIn 0.18s cubic-bezier(.16,1,.3,1) forwards; }
+
+    @keyframes press {
+      0% { transform: scale(1); }
+      40% { transform: scale(0.88); }
+      100% { transform: scale(1); }
+    }
+    .btn-press:active { animation: press 0.15s ease; }
+
+    /* 阅读页暗色模式 */
+    .dark-mode .reader { color: #d4d4d4; }
+    .dark-mode .page { background: #1c1c1e; }
+  </style>
+</head>
+<body class="bg-neutral-50 text-neutral-900">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-neutral-200">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">R</div>
+        <h1 class="font-semibold text-sm tracking-tight">Redesk — 选中工具条气泡方案定稿</h1>
+      </div>
+      <div class="text-xs text-neutral-400">功能：高亮 / 横线 / 波浪线 / 锚点 / 评论</div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10 space-y-14">
+
+    <!-- 设计概述 -->
+    <section>
+      <h2 class="text-2xl font-semibold tracking-tight mb-3">设计概述</h2>
+      <p class="text-neutral-500 max-w-2xl leading-relaxed">
+        采用气泡形态，尾巴直接指向选区，产生明确的空间关联。工具条承载五项功能，单色调无多色选择，降低决策成本。
+        高亮、横线、波浪线直接作用于文本；锚点和评论基于当前技术方案以最小可行形式呈现。
+      </p>
+    </section>
+
+    <!-- 核心演示：气泡默认态 + 五个功能 -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">核心演示 — 气泡默认态</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 亮色场景 -->
+        <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-medium text-neutral-400 uppercase tracking-wider">亮色场景</span>
+            <span class="text-xs text-neutral-300">选区后弹出</span>
+          </div>
+          <div class="relative h-48 flex items-center justify-center bg-neutral-50 rounded-xl overflow-hidden">
+            <p class="reader text-base text-center max-w-sm">
+              锚定效应在生活中<span class="fx-highlight">无处不在</span>，从房价到薪资谈判，我们的判断总是被最先接触到的数字所牵引。
+            </p>
+
+            <!-- 气泡工具条 -->
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 anim-pop z-10">
+              <div class="relative bubble-tail flex items-center gap-0.5 rounded-[14px] border bg-white px-1.5 py-1.5" style="border-color:#e5e5e5; box-shadow: 0 10px 30px -8px rgba(0,0,0,0.08), 0 2px 6px -2px rgba(0,0,0,0.04);">
+                <!-- 高亮 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-neutral-100 transition-colors group" title="高亮">
+                  <div class="w-5 h-2 rounded-sm" style="background: rgba(250,204,21,0.5);"></div>
+                  <span class="text-[9px] text-neutral-400 font-medium group-hover:text-neutral-600">高亮</span>
+                </button>
+                <!-- 横线 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-neutral-100 transition-colors group" title="横线">
+                  <div class="w-5 h-0.5 rounded-full" style="background: #3b82f6;"></div>
+                  <span class="text-[9px] text-neutral-400 font-medium group-hover:text-neutral-600">横线</span>
+                </button>
+                <!-- 波浪线 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-neutral-100 transition-colors group" title="波浪线">
+                  <svg class="w-5 h-1.5" viewBox="0 0 20 4" fill="none"><path d="M0 2c2 0 2-1.5 4-1.5S6 2 8 2s2-1.5 4-1.5S14 2 16 2s2-1.5 4-1.5" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <span class="text-[9px] text-neutral-400 font-medium group-hover:text-neutral-600">波浪</span>
+                </button>
+                <div class="w-px h-7 bg-neutral-200 mx-0.5"></div>
+                <!-- 锚点 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-neutral-100 transition-colors group" title="锚点">
+                  <svg class="w-4 h-4 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                  <span class="text-[9px] text-neutral-400 font-medium group-hover:text-neutral-600">锚点</span>
+                </button>
+                <!-- 评论 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-neutral-100 transition-colors group" title="评论">
+                  <svg class="w-4 h-4 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <span class="text-[9px] text-neutral-400 font-medium group-hover:text-neutral-600">评论</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 暗色场景 -->
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-medium text-neutral-500 uppercase tracking-wider">暗色场景</span>
+            <span class="text-xs text-neutral-600">选区后弹出</span>
+          </div>
+          <div class="relative h-48 flex items-center justify-center bg-neutral-800/50 rounded-xl overflow-hidden">
+            <p class="reader text-base text-center max-w-sm text-neutral-300">
+              锚定效应在生活中<span class="fx-highlight">无处不在</span>，从房价到薪资谈判，我们的判断总是被最先接触到的数字所牵引。
+            </p>
+
+            <!-- 气泡工具条 -->
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 anim-pop z-10">
+              <div class="relative flex items-center gap-0.5 rounded-[14px] border px-1.5 py-1.5" style="background:#1c1c1e; border-color:#333; box-shadow: 0 10px 30px -8px rgba(0,0,0,0.4), 0 2px 6px -2px rgba(0,0,0,0.2);">
+                <!-- 尾巴 -->
+                <div class="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-3 h-3" style="background:#1c1c1e; border-right:1px solid #333; border-bottom:1px solid #333; transform: translateX(-50%) rotate(45deg);"></div>
+                <!-- 高亮 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-white/5 transition-colors group">
+                  <div class="w-5 h-2 rounded-sm" style="background: rgba(250,204,21,0.45);"></div>
+                  <span class="text-[9px] text-neutral-500 font-medium group-hover:text-neutral-300">高亮</span>
+                </button>
+                <!-- 横线 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-white/5 transition-colors group">
+                  <div class="w-5 h-0.5 rounded-full" style="background: #60a5fa;"></div>
+                  <span class="text-[9px] text-neutral-500 font-medium group-hover:text-neutral-300">横线</span>
+                </button>
+                <!-- 波浪线 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-white/5 transition-colors group">
+                  <svg class="w-5 h-1.5" viewBox="0 0 20 4" fill="none"><path d="M0 2c2 0 2-1.5 4-1.5S6 2 8 2s2-1.5 4-1.5S14 2 16 2s2-1.5 4-1.5" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <span class="text-[9px] text-neutral-500 font-medium group-hover:text-neutral-300">波浪</span>
+                </button>
+                <div class="w-px h-7 bg-neutral-700 mx-0.5"></div>
+                <!-- 锚点 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-white/5 transition-colors group">
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                  <span class="text-[9px] text-neutral-500 font-medium group-hover:text-neutral-300">锚点</span>
+                </button>
+                <!-- 评论 -->
+                <button class="btn-press w-9 h-9 rounded-[10px] flex flex-col items-center justify-center gap-0.5 hover:bg-white/5 transition-colors group">
+                  <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <span class="text-[9px] text-neutral-500 font-medium group-hover:text-neutral-300">评论</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-neutral-200 bg-white p-5">
+        <h3 class="text-sm font-semibold text-neutral-700 mb-3">气泡样式参数</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-neutral-500">
+          <div class="space-y-1">
+            <div class="text-neutral-300">background</div>
+            <div>#ffffff / #1c1c1e</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">border</div>
+            <div>1px solid #e5e5e5 / #333</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">border-radius</div>
+            <div>14px</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">shadow</div>
+            <div>多层柔和投影</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">tail</div>
+            <div>12px 旋转方块</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">padding</div>
+            <div>6px 6px</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">button size</div>
+            <div>36×36px</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-neutral-300">label size</div>
+            <div>9px 无衬线</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 五个功能的样式定义 -->
+    <section class="space-y-6">
+      <h2 class="text-xl font-semibold tracking-tight">五项功能的文本效果</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background: rgba(250,204,21,0.2);">
+              <div class="w-4 h-1.5 rounded-sm" style="background: rgba(250,204,21,0.6);"></div>
+            </div>
+            <h3 class="text-sm font-semibold">高亮</h3>
+            <span class="text-xs text-neutral-400 ml-auto">默认</span>
+          </div>
+          <p class="reader text-base">
+            锚定效应在生活中<span class="fx-highlight">无处不在</span>，从房价到薪资谈判。
+          </p>
+          <div class="mt-3 text-xs font-mono text-neutral-400 space-y-1">
+            <div>background: linear-gradient(180deg, transparent 55%, rgba(250,204,21,0.35) 55%)</div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background: rgba(59,130,246,0.1);">
+              <div class="w-4 h-0.5 rounded-full" style="background: #3b82f6;"></div>
+            </div>
+            <h3 class="text-sm font-semibold">横线</h3>
+            <span class="text-xs text-neutral-400 ml-auto">默认</span>
+          </div>
+          <p class="reader text-base">
+            锚定效应在生活中<span class="fx-underline">无处不在</span>，从房价到薪资谈判。
+          </p>
+          <div class="mt-3 text-xs font-mono text-neutral-400 space-y-1">
+            <div>border-bottom: 2.2px solid rgba(59,130,246,0.75)</div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background: rgba(220,38,38,0.08);">
+              <svg class="w-4 h-1.5" viewBox="0 0 20 4" fill="none"><path d="M0 2c2 0 2-1.5 4-1.5S6 2 8 2s2-1.5 4-1.5S14 2 16 2s2-1.5 4-1.5" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <h3 class="text-sm font-semibold">波浪线</h3>
+            <span class="text-xs text-neutral-400 ml-auto">默认</span>
+          </div>
+          <p class="reader text-base">
+            锚定效应在生活中<span class="fx-wavy">无处不在</span>，从房价到薪资谈判。
+          </p>
+          <div class="mt-3 text-xs font-mono text-neutral-400 space-y-1">
+            <div>text-decoration: wavy underline</div>
+            <div>color: rgba(220,38,38,0.7)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 锚点技术方案 -->
+    <section class="space-y-6">
+      <h2 class="text-xl font-semibold tracking-tight">锚点 — 技术实现与视觉形式</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4">
+          <h3 class="text-sm font-semibold text-neutral-700">技术判断</h3>
+          <p class="text-sm text-neutral-500 leading-relaxed">
+            在 epub.js 阅读器环境中，锚点的本质是<strong>「基于 CFI 的书签标记」</strong>。不需要选区即可添加，但既然工具条在选区气泡上触发，
+            我们可以将锚点绑定到<strong>选区起始位置的 CFI</strong>，同时在视觉上于页面右侧边缘显示标记。
+          </p>
+          <div class="text-sm text-neutral-500 space-y-2">
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>数据存储：<code class="bg-neutral-100 px-1 rounded text-xs">bookmarks</code> 表，字段 <code class="bg-neutral-100 px-1 rounded text-xs">cfi</code> + <code class="bg-neutral-100 px-1 rounded text-xs">book_id</code></span>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>无需选区也能从侧边栏/目录添加，但气泡上的锚点按钮是对「当前位置」的快速标记</span>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>同一 CFI 已存在锚点时，按钮以高亮态显示；再次点击取消锚点</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-neutral-700 mb-4">视觉形式 — 右侧边缘标记</h3>
+          <div class="relative h-48 bg-neutral-50 rounded-xl p-6 overflow-hidden">
+            <p class="reader text-base leading-[2.2]">
+              锚定效应在生活中<span class="fx-highlight relative">无处不在
+                <span class="anchor-flag"></span>
+              </span>，从房价到薪资谈判，我们的判断总是被最先接触到的数字所牵引。
+            </p>
+            <p class="reader text-base leading-[2.2] mt-4">
+              系统 1 的运行是无意识且快速的，不怎么费脑力，没有感觉，完全处于自主控制状态。
+            </p>
+          </div>
+          <p class="text-xs text-neutral-400 mt-3">
+            锚点以 4px 宽、24px 高的圆角竖条标记在段落右侧（阅读器内容区右边缘内 2px），颜色使用 Redesk 品牌色 #d97757，
+            带轻微发光阴影。hover 时展开显示锚点添加时间，点击可跳转/删除。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 评论技术方案 -->
+    <section class="space-y-6">
+      <h2 class="text-xl font-semibold tracking-tight">评论 — 技术实现与交互形式</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4">
+          <h3 class="text-sm font-semibold text-neutral-700">技术判断</h3>
+          <p class="text-sm text-neutral-500 leading-relaxed">
+            评论（批注）在阅读器场景下需要满足两个约束：
+            <strong>不离开阅读上下文</strong>，且<strong>输入成本极低</strong>。
+            因此不采用弹窗或跳转，而是在气泡位置直接展开迷你输入区。
+          </p>
+          <div class="text-sm text-neutral-500 space-y-2">
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>数据存储：<code class="bg-neutral-100 px-1 rounded text-xs">notes</code> 表，通过 <code class="bg-neutral-100 px-1 rounded text-xs">highlight_id</code> 或 <code class="bg-neutral-100 px-1 rounded text-xs">cfi_range</code> 关联</span>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>支持纯文本输入，Enter 保存，Shift+Enter 换行，最多 5 行展开后变为滚动</span>
+            </div>
+            <div class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span>保存成功后，被评论的文本下方出现小圆点指示器，hover 显示评论摘要</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-neutral-700 mb-4">交互形式 — 气泡展开输入</h3>
+          <div class="relative h-48 flex items-center justify-center bg-neutral-50 rounded-xl">
+            <p class="reader text-base text-center max-w-sm">
+              锚定效应在生活中<span class="fx-highlight">无处不在</span>，从房价到薪资谈判。
+            </p>
+
+            <!-- 评论输入态气泡 -->
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+              <div class="relative bubble-tail flex flex-col gap-2 rounded-[14px] border bg-white p-2" style="border-color:#e5e5e5; box-shadow: 0 10px 30px -8px rgba(0,0,0,0.08);">
+                <textarea
+                  class="w-56 h-16 bg-transparent text-sm outline-none resize-none leading-relaxed placeholder:text-neutral-300"
+                  placeholder="写下你的想法…"
+                >这段和我在投资时的体验完全一致</textarea>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] text-neutral-300">Shift+Enter 换行</span>
+                  <div class="flex items-center gap-1.5">
+                    <button class="h-6 px-2 rounded-md text-[11px] text-neutral-500 hover:bg-neutral-100 transition-colors">取消</button>
+                    <button class="h-6 px-2.5 rounded-md text-[11px] bg-neutral-900 text-white hover:bg-neutral-800 transition-colors">保存</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-neutral-400 mt-3">
+            气泡在点击「评论」后纵向展开为输入区，宽度固定 240px，高度随内容自适应（最小 64px，最大 120px）。
+            保存后气泡消失，文本旁出现小圆点标记。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 评论指示器 -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">评论指示器</h2>
+      <div class="rounded-2xl border border-neutral-200 bg-white p-6">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm text-neutral-500">有评论的文本在正文中的标记方式</span>
+          <span class="text-xs text-neutral-300">hover 展开摘要</span>
+        </div>
+        <div class="flex items-center justify-center bg-neutral-50 rounded-xl p-8">
+          <p class="reader text-base text-center max-w-lg leading-[2.2]">
+            锚定效应在生活中<span class="fx-highlight relative inline-block">无处不在
+              <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-neutral-900"></span>
+            </span>，从房价到薪资谈判，我们的判断总是被最先接触到的数字所牵引。而<span class="fx-underline relative inline-block">系统 2
+              <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-neutral-900"></span>
+            </span>才是理性思考的来源。
+          </p>
+        </div>
+        <div class="mt-4 text-xs text-neutral-400 space-y-1">
+          <p>• 已保存评论的高亮/划线文本下方出现 4px 圆点，颜色与当前主题文字色一致（亮色 #171717，暗色 #d4d4d4）。</p>
+          <p>• hover 圆点或文本时，在光标旁浮现评论摘要卡片（最多 2 行），卡片带「编辑 / 删除」入口。</p>
+          <p>• 点击圆点直接弹出完整评论弹层，可编辑或删除。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 功能按钮交互 -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">按钮交互细节</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-neutral-700 mb-3">触发与状态</h3>
+          <ul class="space-y-2.5 text-sm text-neutral-500">
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>mouseup 触发</strong>：选区完成后延迟 60ms 弹出气泡，避免与选区操作冲突。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>已激活态</strong>：如果选区已被高亮/划线，对应按钮以彩色背景高亮（如高亮按钮底色变黄），再次点击取消效果。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>互斥逻辑</strong>：高亮、横线、波浪线三者互斥，一次只能存在一种；锚点和评论可与前三者共存。</span>
+            </li>
+          </ul>
+        </div>
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-sm font-semibold text-neutral-700 mb-3">消失逻辑</h3>
+          <ul class="space-y-2.5 text-sm text-neutral-500">
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>点击外部</strong>：mousedown 在气泡外时，气泡以 0.15s 淡出，同时清除选区。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>Esc</strong>：按下 Esc 立即关闭，不保留选区。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>滚动</strong>：页面滚动超过 60px 时自动关闭。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-neutral-300">—</span>
+              <span><strong>翻页</strong>：epub.js 翻页事件触发时立即关闭。</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 数据结构 -->
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">数据结构</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">痕迹记录</h3>
+          <pre class="text-xs font-mono text-neutral-600 leading-relaxed">
+{
+  id: string,
+  bookId: number,
+  cfiRange: string,
+  type: 'highlight' | 'underline'
+       | 'wavy',
+  text: string,
+  createdAt: string
+}</pre>
+          <p class="text-xs text-neutral-400 mt-2">高亮 / 横线 / 波浪线共享同一张表，用 type 区分。</p>
+        </div>
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">锚点记录</h3>
+          <pre class="text-xs font-mono text-neutral-600 leading-relaxed">
+{
+  id: string,
+  bookId: number,
+  cfi: string,
+  chapterId?: string,
+  createdAt: string
+}</pre>
+          <p class="text-xs text-neutral-400 mt-2">锚点只记录位置（CFI），不依赖选区范围。</p>
+        </div>
+        <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+          <h3 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">评论记录</h3>
+          <pre class="text-xs font-mono text-neutral-600 leading-relaxed">
+{
+  id: string,
+  highlightId?: string,
+  cfiRange?: string,
+  content: string,
+  format: 'text',
+  updatedAt: string
+}</pre>
+          <p class="text-xs text-neutral-400 mt-2">评论可关联已有痕迹，也可独立存在。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 实现落点 -->
+    <section class="space-y-4 pb-8">
+      <h2 class="text-xl font-semibold tracking-tight">实现落点</h2>
+      <div class="rounded-2xl border border-neutral-200 bg-white p-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <div>
+            <h4 class="font-semibold text-neutral-700 mb-2">前端组件</h4>
+            <ul class="space-y-1.5 text-neutral-500 text-xs">
+              <li><code class="bg-neutral-100 px-1 rounded">components/reader/bubble-toolbar.tsx</code> — 气泡工具条</li>
+              <li><code class="bg-neutral-100 px-1 rounded">components/reader/bubble-tail.tsx</code> — 尾巴定位计算</li>
+              <li><code class="bg-neutral-100 px-1 rounded">components/reader/comment-input.tsx</code> — 迷你评论输入</li>
+              <li><code class="bg-neutral-100 px-1 rounded">components/reader/anchor-marker.tsx</code> — 右侧锚点标记</li>
+              <li><code class="bg-neutral-100 px-1 rounded">components/reader/comment-dot.tsx</code> — 评论圆点指示器</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-neutral-700 mb-2"> epub.js 对接</h4>
+            <ul class="space-y-1.5 text-neutral-500 text-xs">
+              <li>选区监听：<code class="bg-neutral-100 px-1 rounded"> rendition.on('selected')</code></li>
+              <li>高亮注入：<code class="bg-neutral-100 px-1 rounded">book.addMarker(cfiRange)</code> 或自定义 span 包裹</li>
+              <li>波浪线实现：注入带 <code class="bg-neutral-100 px-1 rounded">text-decoration: wavy underline</code> 的 span</li>
+              <li>锚点存储：仅保存 CFI，翻页时通过 <code class="bg-neutral-100 px-1 rounded">rendition.currentLocation()</code> 匹配高亮标记</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-neutral-200 bg-white px-6 py-4">
+    <div class="max-w-5xl mx-auto text-xs text-neutral-400">
+      Redesk 阅读选中工具条 — 气泡方案定稿 · 五项功能 · 单色调 · 亮色/暗色双模式
+    </div>
+  </footer>
+
+</body>
+</html>
