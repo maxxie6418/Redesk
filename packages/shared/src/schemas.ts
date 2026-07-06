@@ -393,7 +393,7 @@ export const createHighlightSchema = z.object({
   cfi_start: z.string().min(1),
   cfi_end: z.string().min(1),
   text: z.string().min(1),
-  type: z.enum(['HIGHLIGHT', 'UNDERLINE']).optional().default('HIGHLIGHT'),
+  type: z.enum(['HIGHLIGHT', 'UNDERLINE', 'WAVY']).optional().default('HIGHLIGHT'),
   color: z.string().max(20).optional().nullable(),
   note: z.string().max(5000).optional().nullable(),
   mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional().default('NONE'),
@@ -404,12 +404,21 @@ export const updateHighlightSchema = z.object({
   cfi_start: z.string().min(1).optional(),
   cfi_end: z.string().min(1).optional(),
   text: z.string().min(1).optional(),
-  type: z.enum(['HIGHLIGHT', 'UNDERLINE']).optional(),
+  type: z.enum(['HIGHLIGHT', 'UNDERLINE', 'WAVY']).optional(),
   color: z.string().max(20).optional().nullable(),
   note: z.string().max(5000).optional().nullable(),
   mark_type: z.enum(['NONE', 'IMPORTANT', 'QUESTION', 'INSIGHT']).optional(),
 });
 export type UpdateHighlightInput = z.infer<typeof updateHighlightSchema>;
+
+// 书签 schemas
+export const createBookmarkSchema = z.object({
+  book_id: z.number().int(),
+  cfi: z.string().min(1),
+  label: z.string().max(200).optional().nullable(),
+  percentage: z.number().int().min(0).max(100).optional().nullable(),
+});
+export type CreateBookmarkInput = z.infer<typeof createBookmarkSchema>;
 
 // 独立笔记 schemas
 export const createNoteSchema = z.object({

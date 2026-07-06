@@ -35,6 +35,16 @@ export interface NoteItem {
   book_cover_path: string | null;
 }
 
+export interface BookmarkItem {
+  id: number;
+  book_id: number;
+  owner_id: number;
+  cfi: string;
+  label: string | null;
+  percentage: number | null;
+  created_at: string;
+}
+
 export interface ReadingMarkStats {
   total_highlights: number;
   total_notes: number;
@@ -176,5 +186,42 @@ export function useHighlightsSearch(q: string, bookId?: number) {
       return api.get<HighlightItem[]>(`/highlights/search?${params.toString()}`);
     },
     enabled: q.trim().length > 0,
+  });
+}
+
+export function useBookmarks(bookId?: number) {
+  return useQuery({
+    queryKey: ['bookmarks', { bookId }],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (bookId) params.set('book_id', String(bookId));
+      return api.get<BookmarkItem[]>(`/bookmarks?${params.toString()}`);
+    },
+  });
+}
+
+export function useCreateBookmark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      book_id: number;
+      cfi: string;
+      label?: string | null;
+      percentage?: number | null;
+    }) => api.post<BookmarkItem>('/bookmarks', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
+  });
+}
+
+export function useDeleteBookmark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.delete<{ id: number; deleted: boolean }>(`/bookmarks/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
   });
 }

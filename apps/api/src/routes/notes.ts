@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, count, desc, sql } from 'drizzle-orm';
-import { highlights, notes, books } from '@redesk/db';
+import { highlights, notes, books, bookmarks } from '@redesk/db';
 import {
   ERROR_CODE,
   createHighlightSchema,
   updateHighlightSchema,
   createNoteSchema,
   updateNoteSchema,
+  createBookmarkSchema,
 } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { AppError, notFound } from '../lib/errors';
@@ -324,6 +325,99 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
       .run();
 
     return { data: { id: noteId, deleted: true } };
+  });
+
+  // ========== Bookmarks ==========
+
+  app.get('/bookmarks', async (req) => {
+    const userId = requireUserId(req);
+    const query = req.query as Record<string, unknown>;
+    const bookId = query.book_id ? Number(query.book_id) : undefined;
+
+    const db = getDb();
+    const conditions = [eq(bookmarks.owner_id, userId)];
+    if (bookId && !Number.isNaN(bookId)) {
+      conditions.push(eq(bookmarks.book_id, bookId));
+    }
+
+    const rows = db
+      .select()
+      .from(bookmarks)
+      .where(and(...conditions))
+      .orderBy(desc(bookmarks.created_at))
+      .all();
+
+    return { data: rows };
+  });
+
+  app.post('/bookmarks', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(createBookmarkSchema, req.body);
+    const db = getDb();
+    const timestamp = now();
+
+    const book = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, input.book_id), eq(books.owner_id, userId)))
+      .get();
+    if (!book) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '书籍不存在');
+    }
+
+    // 同一 CFI 已存在则先删除，确保唯一
+    const existing = db
+      .select({ id: bookmarks.id })
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.owner_id, userId),
+          eq(bookmarks.book_id, input.book_id),
+          eq(bookmarks.cfi, input.cfi),
+        ),
+      )
+      .get();
+    if (existing) {
+      db.delete(bookmarks).where(eq(bookmarks.id, existing.id)).run();
+      return { data: { id: existing.id, deleted: true } };
+    }
+
+    const bookmark = db
+      .insert(bookmarks)
+      .values({
+        book_id: input.book_id,
+        owner_id: userId,
+        cfi: input.cfi,
+        label: input.label ?? null,
+        percentage: input.percentage ?? null,
+        created_at: timestamp,
+      })
+      .returning()
+      .get();
+
+    return { data: bookmark };
+  });
+
+  app.delete('/bookmarks/:id', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const bookmarkId = Number(id);
+    if (Number.isNaN(bookmarkId)) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书签 ID');
+    }
+
+    const db = getDb();
+    const existing = db
+      .select()
+      .from(bookmarks)
+      .where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.owner_id, userId)))
+      .get();
+    if (!existing) {
+      throw notFound('书签不存在');
+    }
+
+    db.delete(bookmarks).where(eq(bookmarks.id, bookmarkId)).run();
+    return { data: { id: bookmarkId, deleted: true } };
   });
 
   // ========== Stats ==========

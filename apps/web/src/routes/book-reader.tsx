@@ -2,14 +2,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Loader2, Menu, X, StickyNote, Plus, Trash2, Check, Pencil } from 'lucide-react';
+import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
+import { CommentInput } from '@/components/reader/comment-input';
 import { toast } from 'sonner';
 import ePub from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
-import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
+import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
 import { Button } from '@/components/ui/button';
-import { HighlightToolbar } from '@/components/highlight-toolbar';
-import { HighlightNoteEditor } from '@/components/highlight-note-editor';
 import { api, API_BASE } from '@/lib/api';
 
 interface TocItem {
@@ -55,8 +55,6 @@ function shouldIgnoreKeydown(target: EventTarget | null) {
   );
 }
 
-type HighlightType = 'HIGHLIGHT' | 'UNDERLINE';
-
 export function BookReaderPage() {
   const { id } = useParams<{ id: string }>();
   const bookId = Number(id);
@@ -74,6 +72,9 @@ export function BookReaderPage() {
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
+  const bookmarks = useBookmarks(bookId);
+  const createBookmark = useCreateBookmark();
+  const deleteBookmark = useDeleteBookmark();
 
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<ReturnType<typeof ePub> | null>(null);
@@ -89,11 +90,13 @@ export function BookReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<SelectionState | null>(null);
+  const [activeMarkType, setActiveMarkType] = useState<MarkType>(null);
+  const [commentMode, setCommentMode] = useState(false);
+  const [commentTargetHighlightId, setCommentTargetHighlightId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditingHighlight | null>(null);
   const [noteForm, setNoteForm] = useState<{ title: string; content: string } | null>(null);
   const [editingNote, setEditingNote] = useState<{ id: number; title: string; content: string } | null>(null);
-  const [pendingAnnotation, setPendingAnnotation] = useState<{ cfi: string; text: string } | null>(null);
-  const [annotationNoteText, setAnnotationNoteText] = useState('');
+
 
   const primaryEpub = files.data?.find((f: BookFileItem) => f.is_primary === 1 && f.file_format === 'EPUB');
   const primaryEpubId = primaryEpub?.id;
@@ -130,8 +133,7 @@ export function BookReaderPage() {
       const key = `${item.cfi_start}:${item.cfi_end}`;
       map.set(key, item);
 
-      const color = item.color ?? '#fde047';
-      const type: HighlightType = item.type === 'UNDERLINE' ? 'UNDERLINE' : 'HIGHLIGHT';
+      const type = item.type;
 
       try {
         if (type === 'UNDERLINE') {
@@ -151,9 +153,34 @@ export function BookReaderPage() {
               }
             },
             '',
-            { 'border-bottom': `2px solid ${color}`, 'border-bottom-color': color },
+            { 'border-bottom': '2.2px solid rgba(59,130,246,0.75)' },
+          );
+        } else if (type === 'WAVY') {
+          // 波浪线使用 highlight 机制但覆盖样式为波浪下划线
+          rendition.annotations.highlight(
+            item.cfi_start,
+            {},
+            (e: any) => {
+              e.stopPropagation();
+              const rect = (e.target as HTMLElement)?.getBoundingClientRect();
+              if (rect) {
+                setEditing({
+                  id: item.id,
+                  note: item.note,
+                  markType: item.mark_type,
+                  position: { top: rect.bottom + 4, left: rect.left },
+                });
+              }
+            },
+            'rd-wavy',
+            {
+              background: 'transparent',
+              'text-decoration': 'underline wavy rgba(220,38,38,0.7)',
+              'text-underline-offset': '3px',
+            },
           );
         } else {
+          // HIGHLIGHT 默认黄色半透明
           rendition.annotations.highlight(
             item.cfi_start,
             {},
@@ -170,7 +197,7 @@ export function BookReaderPage() {
               }
             },
             '',
-            { 'background-color': `${color}40` },
+            { 'background-color': 'rgba(250,204,21,0.35)' },
           );
         }
       } catch { /* CFI 失效的高亮跳过 */ }
@@ -257,6 +284,17 @@ export function BookReaderPage() {
             }
 
             if (cfiStr) {
+              // 检查选区是否覆盖已有痕迹
+              let foundType: MarkType = null;
+              for (const [key, item] of highlightsMapRef.current) {
+                if (cfiStr.includes(item.cfi_start) || item.cfi_start.includes(cfiStr)) {
+                  foundType = item.type as MarkType;
+                  break;
+                }
+              }
+              setActiveMarkType(foundType);
+              setCommentMode(false);
+              setCommentTargetHighlightId(null);
               setSelection({
                 rect,
                 cfi: cfiStr,
@@ -387,9 +425,14 @@ export function BookReaderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updateHighlight.isSuccess, deleteHighlight.isSuccess]);
 
-  const handleDismissSelection = useCallback(() => setSelection(null), []);
+  const handleDismissSelection = useCallback(() => {
+    setSelection(null);
+    setCommentMode(false);
+    setCommentTargetHighlightId(null);
+    setActiveMarkType(null);
+  }, []);
 
-  const handleCreateHighlight = (color: string) => {
+  const handleCreateHighlight = () => {
     if (!selection || !primaryEpubId) return;
     createHighlight.mutate({
       book_id: bookId,
@@ -397,12 +440,12 @@ export function BookReaderPage() {
       cfi_end: selection.cfi,
       text: selection.text,
       type: 'HIGHLIGHT',
-      color,
+      color: '#fde047',
     });
     setSelection(null);
   };
 
-  const handleCreateUnderline = (color: string) => {
+  const handleCreateUnderline = () => {
     if (!selection || !primaryEpubId) return;
     createHighlight.mutate({
       book_id: bookId,
@@ -410,56 +453,102 @@ export function BookReaderPage() {
       cfi_end: selection.cfi,
       text: selection.text,
       type: 'UNDERLINE',
-      color,
+      color: '#3b82f6',
     });
     setSelection(null);
   };
 
-  const handleCreateNote = () => {
+  const handleCreateWavy = () => {
     if (!selection || !primaryEpubId) return;
-    setPendingAnnotation({ cfi: selection.cfi, text: selection.text });
-    setAnnotationNoteText('');
-    setSelection(null);
-  };
-
-  const handleConfirmAnnotation = () => {
-    if (!pendingAnnotation) return;
-    // 创建视觉高亮（不含附注，附注走独立笔记）
     createHighlight.mutate({
       book_id: bookId,
-      cfi_start: pendingAnnotation.cfi,
-      cfi_end: pendingAnnotation.cfi,
-      text: pendingAnnotation.text,
-      type: 'HIGHLIGHT',
-      color: '#fde047',
+      cfi_start: selection.cfi,
+      cfi_end: selection.cfi,
+      text: selection.text,
+      type: 'WAVY',
+      color: '#dc2626',
     });
-    // 有附注内容时创建独立笔记
-    if (annotationNoteText.trim()) {
-      createNote.mutate({
+    setSelection(null);
+  };
+
+  const handleBookmark = () => {
+    if (!selection || !primaryEpubId) return;
+    const cfi = selection.cfi;
+    // 检查是否已有锚点
+    const existing = bookmarks.data?.find((b) => b.cfi === cfi);
+    if (existing) {
+      deleteBookmark.mutate(existing.id);
+    } else {
+      createBookmark.mutate({
         book_id: bookId,
-        cfi: pendingAnnotation.cfi,
-        title: pendingAnnotation.text.slice(0, 50),
-        content_markdown: `> ${pendingAnnotation.text}\n\n${annotationNoteText.trim()}`,
+        cfi,
+        label: selection.text.slice(0, 50) || null,
+        percentage: null,
       });
     }
-    setPendingAnnotation(null);
-    setAnnotationNoteText('');
+    setSelection(null);
   };
 
-  const handleSaveNote = (note: string, markType: string) => {
-    if (!editing) return;
-    updateHighlight.mutate({
-      id: editing.id,
-      note: note.trim() || undefined,
-      mark_type: markType,
-    });
-    setEditing(null);
+  const handleOpenComment = () => {
+    if (!selection || !primaryEpubId) return;
+    // 检查选区是否已有高亮，若有则绑定到该高亮
+    let targetId: number | null = null;
+    for (const [, item] of highlightsMapRef.current) {
+      if (selection.cfi.includes(item.cfi_start) || item.cfi_start.includes(selection.cfi)) {
+        targetId = item.id;
+        break;
+      }
+    }
+    setCommentTargetHighlightId(targetId);
+    setCommentMode(true);
   };
 
-  const handleDeleteHighlight = () => {
-    if (!editing) return;
-    deleteHighlight.mutate(editing.id);
-    setEditing(null);
+  const handleCommentSave = (content: string) => {
+    if (commentTargetHighlightId) {
+      // 绑定到已有高亮的评论：更新高亮附注
+      updateHighlight.mutate({
+        id: commentTargetHighlightId,
+        note: content,
+      });
+      setCommentMode(false);
+      setCommentTargetHighlightId(null);
+      setEditing(null);
+      return;
+    }
+
+    if (!selection || !primaryEpubId) return;
+    const cfi = selection.cfi;
+    const text = selection.text;
+
+    // 独立评论：创建高亮 + 附注
+    createHighlight.mutate(
+      {
+        book_id: bookId,
+        cfi_start: cfi,
+        cfi_end: cfi,
+        text,
+        type: 'HIGHLIGHT',
+        color: '#fde047',
+      },
+      {
+        onSuccess: (res: any) => {
+          if (res?.data?.id) {
+            updateHighlight.mutate({
+              id: res.data.id,
+              note: content,
+            });
+          }
+        },
+      },
+    );
+    setCommentMode(false);
+    setCommentTargetHighlightId(null);
+    setSelection(null);
+  };
+
+  const handleCommentCancel = () => {
+    setCommentMode(false);
+    setCommentTargetHighlightId(null);
   };
 
   const handleOpenNoteForm = () => {
@@ -784,54 +873,80 @@ export function BookReaderPage() {
         )}
       </div>
 
-      <HighlightToolbar
+      {/* 新选区气泡工具条 */}
+      <BubbleToolbar
         rect={selection?.rect ?? null}
-        visible={selection !== null}
+        visible={selection !== null && !commentMode}
+        activeType={activeMarkType}
+        hasBookmark={bookmarks.data?.some((b) => b.cfi === selection?.cfi)}
         onHighlight={handleCreateHighlight}
         onUnderline={handleCreateUnderline}
-        onNote={handleCreateNote}
+        onWavy={handleCreateWavy}
+        onBookmark={handleBookmark}
+        onComment={handleOpenComment}
         onDismiss={handleDismissSelection}
       />
 
-      <HighlightNoteEditor
-        note={editing?.note ?? null}
-        markType={editing?.markType ?? 'NONE'}
-        visible={editing !== null}
-        position={editing?.position ?? null}
-        onSave={handleSaveNote}
-        onDelete={handleDeleteHighlight}
-        onDismiss={() => setEditing(null)}
+      {/* 评论迷你输入 */}
+      <CommentInput
+        rect={selection?.rect ?? null}
+        visible={commentMode}
+        onSave={handleCommentSave}
+        onCancel={handleCommentCancel}
       />
 
-      {pendingAnnotation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="w-80 rounded-lg border border-border bg-card p-4 shadow-xl">
-            <p className="mb-3 text-sm font-medium text-foreground">添加附注</p>
-            <p className="mb-2 text-xs text-muted-foreground line-clamp-2">
-              原文：{pendingAnnotation.text}
-            </p>
-            <textarea
-              autoFocus
-              placeholder="附注内容（可选）"
-              value={annotationNoteText}
-              onChange={(e) => setAnnotationNoteText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  handleConfirmAnnotation();
-                }
+      {/* 已有高亮编辑态气泡 */}
+      {editing && (
+        <div
+          className="fixed z-50 anim-pop"
+          style={{
+            top: (editing.position?.top ?? 0) - 60,
+            left: editing.position?.left ?? 0,
+          }}
+        >
+          <div
+            className="relative flex items-center gap-1 rounded-[14px] border bg-white px-2 py-1.5"
+            style={{
+              borderColor: '#e5e5e5',
+              boxShadow: '0 10px 30px -8px rgba(0,0,0,0.08)',
+            }}
+          >
+            <div
+              className="absolute -bottom-[6px] left-4 w-3 h-3 bg-white"
+              style={{
+                borderRight: '1px solid #e5e5e5',
+                borderBottom: '1px solid #e5e5e5',
+                transform: 'rotate(45deg)',
               }}
-              className="w-full resize-none rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={4}
             />
-            <div className="mt-3 flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setPendingAnnotation(null); setAnnotationNoteText(''); }}>
-                取消
-              </Button>
-              <Button variant="default" size="sm" onClick={handleConfirmAnnotation}>
-                <Check className="mr-1 h-3 w-3" />
-                保存
-              </Button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCommentTargetHighlightId(editing.id);
+                setCommentMode(true);
+                setEditing(null);
+              }}
+              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-neutral-100 text-xs text-neutral-600"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {editing.note ? '编辑附注' : '添加附注'}
+            </button>
+            <div className="w-px h-5 bg-neutral-200" />
+            <button
+              type="button"
+              onClick={() => {
+                deleteHighlight.mutate(editing.id);
+                setEditing(null);
+              }}
+              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-red-50 text-xs text-red-500"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+              删除
+            </button>
           </div>
         </div>
       )}
