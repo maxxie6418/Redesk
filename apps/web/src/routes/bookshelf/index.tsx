@@ -18,6 +18,8 @@ import { BookshelfContent, BookshelfFilterBar, StatusPills } from './components'
 import { CreateBookForm } from './create-book-form';
 import { SORT_API_MAP, SORT_OPTIONS, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
 
+const BOOKSHELF_PAGE_SIZE = 50;
+
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const isMobileLayout = useMobileLayout();
   const sidebarStats = useSidebarStats();

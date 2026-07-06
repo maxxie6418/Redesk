@@ -1,19 +1,3 @@
-CREATE TABLE `reading_progress` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`book_id` integer NOT NULL,
-	`owner_id` integer NOT NULL,
-	`file_id` integer NOT NULL,
-	`cfi` text NOT NULL,
-	`percentage` real DEFAULT 0 NOT NULL,
-	`last_read_at` text NOT NULL,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`book_id`) REFERENCES `books`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uq_reading_progress_book_owner` ON `reading_progress` (`book_id`,`owner_id`);--> statement-breakpoint
-CREATE INDEX `idx_reading_progress_owner_last_read` ON `reading_progress` (`owner_id`,`last_read_at`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_bookmarks` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -132,7 +116,7 @@ CREATE TABLE `__new_books` (
 	FOREIGN KEY (`genre_category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-INSERT INTO `__new_books`("id", "owner_id", "category_id", "title", "author", "subtitle", "isbn", "publisher", "publish_year", "description", "language", "cover_path", "status", "visibility", "reading_purpose", "entry_reason", "rating", "custom_attributes", "metadata_source", "source_url", "translator", "original_title", "page_count", "genre_category_id", "favorited_at", "started_at", "finished_at", "import_order", "deleted_at", "created_at", "updated_at") SELECT "id", "owner_id", "category_id", "title", "author", "subtitle", "isbn", "publisher", "publish_year", "description", "language", "cover_path", "status", "visibility", "reading_purpose", "entry_reason", "rating", "custom_attributes", "metadata_source", "source_url", "translator", "original_title", "page_count", "genre_category_id", "favorited_at", "started_at", "finished_at", "import_order", "deleted_at", "created_at", "updated_at" FROM `books`;--> statement-breakpoint
+INSERT INTO `__new_books`("id", "owner_id", "category_id", "title", "author", "subtitle", "isbn", "publisher", "publish_year", "description", "language", "cover_path", "status", "visibility", "reading_purpose", "entry_reason", "rating", "custom_attributes", "metadata_source", "source_url", "translator", "original_title", "page_count", "genre_category_id", "favorited_at", "started_at", "finished_at", "import_order", "deleted_at", "created_at", "updated_at") SELECT "id", "owner_id", "category_id", "title", "author", "subtitle", "isbn", "publisher", "publish_year", "description", "language", "cover_path", "status", "visibility", "reading_purpose", NULL, "rating", "custom_attributes", "metadata_source", "source_url", "translator", "original_title", "page_count", "genre_category_id", "favorited_at", "started_at", "finished_at", "import_order", "deleted_at", "created_at", "updated_at" FROM `books`;--> statement-breakpoint
 DROP TABLE `books`;--> statement-breakpoint
 ALTER TABLE `__new_books` RENAME TO `books`;--> statement-breakpoint
 CREATE TABLE `__new_categories` (

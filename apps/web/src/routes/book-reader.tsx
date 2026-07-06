@@ -15,23 +15,12 @@ import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { api, API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
+import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
 
 interface TocItem {
   id: string;
   label: string;
   href: string;
-}
-
-interface ReadingProgressData {
-  id: number;
-  book_id: number;
-  owner_id: number;
-  file_id: number;
-  cfi: string;
-  percentage: number;
-  last_read_at: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface SelectionState {
@@ -84,7 +73,6 @@ export function BookReaderPage() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<ReturnType<typeof EpubFactory> | null>(null);
   const renditionRef = useRef<any>(null);
-  const lastSaveRef = useRef<string>('');
   const highlightsMapRef = useRef<Map<string, HighlightItem>>(new Map());
   const currentCfiRef = useRef<string>('');
 
@@ -111,23 +99,10 @@ export function BookReaderPage() {
   const isEpub = readableFormat === 'EPUB';
   const primaryEpubId = isEpub ? readableFileId : undefined;
   const bookTitle = book.data?.title ?? '';
-
-  const saveProgress = useCallback(
-    (cfi: string, percentage: number) => {
-      if (!primaryEpubId || !bookId) return;
-      const key = `${cfi}:${percentage}`;
-      if (key === lastSaveRef.current) return;
-      lastSaveRef.current = key;
-      api
-        .put<ReadingProgressData>(`/books/${bookId}/reading-progress`, {
-          file_id: primaryEpubId,
-          cfi,
-          percentage,
-        })
-        .catch(() => {});
-    },
-    [bookId, primaryEpubId],
-  );
+  const { saveProgress, syncMessage } = useReadingProgressSync({
+    bookId,
+    fileId: primaryEpubId,
+  });
 
   const renderHighlights = useCallback(() => {
     const rendition = renditionRef.current;
