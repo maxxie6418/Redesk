@@ -5,6 +5,35 @@ import type { ErrorCode } from './errors';
 const positiveInt = z.coerce.number().int().positive();
 const BOOK_STATUS_VALUES = Object.values(BOOK_STATUS) as [string, ...string[]];
 const VISIBILITY_VALUES = Object.values(VISIBILITY) as [string, ...string[]];
+export const BACKUP_MODULE_ID_VALUES = [
+  'settings.public',
+  'settings.secrets',
+  'users.auth',
+  'library.books',
+  'library.taxonomy',
+  'library.relations',
+  'assets.file_index',
+  'assets.book_blobs',
+  'assets.cover_blobs',
+  'reading.progress',
+  'reading.highlights',
+  'reading.notes',
+  'reading.bookmarks',
+  'topics.workspace',
+  'database.snapshot',
+] as const;
+export const BACKUP_PRESET_VALUES = ['system', 'books', 'notes', 'topics', 'full'] as const;
+export const BACKUP_TARGET_TYPE_VALUES = ['download', 'oss', 'webdav'] as const;
+export const BACKUP_JOB_STATUS_VALUES = [
+  'preparing',
+  'packing',
+  'uploading',
+  'completed',
+  'failed',
+  'cancelled',
+] as const;
+export const RESTORE_CONFLICT_STRATEGY_VALUES = ['skip', 'overwrite', 'rename', 'duplicate'] as const;
+
 const STORAGE_MODE_VALUES = ['local_only', 'cloud_only', 'dual'] as const;
 const FILE_MATCH_MODE_VALUES = ['conservative', 'balanced', 'loose'] as const;
 const STORAGE_DRIVER_VALUES = ['local', 's3'] as const;
@@ -55,6 +84,151 @@ export const importNotesSchema = z.object({
   dry_run: z.coerce.boolean().optional().default(false),
 });
 export type ImportNotesInput = z.infer<typeof importNotesSchema>;
+
+export const backupModuleIdSchema = z.enum(BACKUP_MODULE_ID_VALUES);
+export type BackupModuleId = z.infer<typeof backupModuleIdSchema>;
+
+export const backupPresetSchema = z.enum(BACKUP_PRESET_VALUES);
+export type BackupPreset = z.infer<typeof backupPresetSchema>;
+
+export const backupTargetTypeSchema = z.enum(BACKUP_TARGET_TYPE_VALUES);
+export type BackupTargetType = z.infer<typeof backupTargetTypeSchema>;
+
+export const backupJobStatusSchema = z.enum(BACKUP_JOB_STATUS_VALUES);
+export type BackupJobStatus = z.infer<typeof backupJobStatusSchema>;
+
+export const restoreConflictStrategySchema = z.enum(RESTORE_CONFLICT_STRATEGY_VALUES);
+export type RestoreConflictStrategy = z.infer<typeof restoreConflictStrategySchema>;
+
+export const backupTargetSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('download') }),
+  z.object({ type: z.literal('oss'), remote_path: z.string().min(1).max(1024).optional() }),
+  z.object({ type: z.literal('webdav'), remote_path: z.string().min(1).max(1024).optional() }),
+]);
+export type BackupTargetInput = z.infer<typeof backupTargetSchema>;
+
+export const backupModuleSummarySchema = z.object({
+  module_id: backupModuleIdSchema,
+  label: z.string().min(1).max(100),
+  selected: z.boolean(),
+  default_selected: z.boolean(),
+  sensitive: z.boolean(),
+  risky: z.boolean(),
+  count: z.number().int().min(0),
+  size_bytes: z.number().int().min(0),
+  warnings: z.array(z.string()).default([]),
+});
+export type BackupModuleSummary = z.infer<typeof backupModuleSummarySchema>;
+
+export const backupPreviewRequestSchema = z.object({
+  preset: backupPresetSchema.optional(),
+  modules: z.array(backupModuleIdSchema).optional(),
+  target: backupTargetSchema.optional(),
+});
+export type BackupPreviewRequestInput = z.infer<typeof backupPreviewRequestSchema>;
+
+export const backupCreateRequestSchema = z.object({
+  preset: backupPresetSchema.optional(),
+  modules: z.array(backupModuleIdSchema).min(1),
+  target: backupTargetSchema.default({ type: 'download' }),
+});
+export type BackupCreateRequestInput = z.infer<typeof backupCreateRequestSchema>;
+
+export const backupPreviewResponseSchema = z.object({
+  preset: backupPresetSchema.optional().nullable(),
+  modules: z.array(backupModuleSummarySchema),
+  selected_modules: z.array(backupModuleIdSchema),
+  book_count: z.number().int().min(0),
+  note_count: z.number().int().min(0),
+  highlight_count: z.number().int().min(0),
+  topic_count: z.number().int().min(0),
+  estimated_size_bytes: z.number().int().min(0),
+  warnings: z.array(z.string()).default([]),
+});
+export type BackupPreviewResponse = z.infer<typeof backupPreviewResponseSchema>;
+
+export const backupManifestModuleSchema = z.object({
+  module_id: backupModuleIdSchema,
+  path: z.string().min(1).max(1024).optional(),
+  included: z.boolean(),
+  sensitive: z.boolean(),
+  count: z.number().int().min(0),
+  size_bytes: z.number().int().min(0),
+  checksum: z.string().max(255).optional().nullable(),
+});
+export type BackupManifestModule = z.infer<typeof backupManifestModuleSchema>;
+
+export const backupManifestFileSchema = z.object({
+  path: z.string().min(1).max(1024),
+  original_filename: z.string().max(1024).optional().nullable(),
+  size_bytes: z.number().int().min(0),
+  checksum: z.string().max(255).optional().nullable(),
+  module_id: backupModuleIdSchema.optional(),
+});
+export type BackupManifestFile = z.infer<typeof backupManifestFileSchema>;
+
+export const backupManifestSchema = z.object({
+  format_version: z.number().int().positive(),
+  backup_id: z.string().min(1).max(100),
+  created_at: z.string().datetime(),
+  app: z.object({
+    name: z.literal('Redesk'),
+    version: z.string().min(1).max(50),
+  }),
+  database: z.object({
+    schema_version: z.string().max(100).optional().nullable(),
+    snapshot_included: z.boolean(),
+    snapshot_path: z.string().max(1024).optional().nullable(),
+    size_bytes: z.number().int().min(0).optional(),
+  }),
+  preset: backupPresetSchema.optional().nullable(),
+  target: backupTargetSchema.optional(),
+  modules: z.array(backupManifestModuleSchema),
+  files: z.array(backupManifestFileSchema).default([]),
+  summary: z.object({
+    book_count: z.number().int().min(0),
+    note_count: z.number().int().min(0),
+    highlight_count: z.number().int().min(0),
+    topic_count: z.number().int().min(0),
+    total_size_bytes: z.number().int().min(0),
+  }),
+  warnings: z.array(z.string()).default([]),
+});
+export type BackupManifest = z.infer<typeof backupManifestSchema>;
+
+export const backupJobSchema = z.object({
+  job_id: z.string().min(1).max(100),
+  status: backupJobStatusSchema,
+  target_type: backupTargetTypeSchema,
+  bytes_total: z.number().int().min(0),
+  bytes_uploaded: z.number().int().min(0),
+  percent: z.number().min(0).max(100),
+  remote_path: z.string().max(1024).optional().nullable(),
+  speed_bytes_per_second: z.number().min(0).optional().nullable(),
+  message: z.string().max(500).optional().nullable(),
+  error: z.string().max(2000).optional().nullable(),
+  download_url: z.string().max(2000).optional().nullable(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+export type BackupJob = z.infer<typeof backupJobSchema>;
+
+export const restorePreviewResponseSchema = z.object({
+  manifest: backupManifestSchema,
+  restorable_modules: z.array(backupModuleSummarySchema),
+  missing_files: z.array(backupManifestFileSchema).default([]),
+  warnings: z.array(z.string()).default([]),
+  risks: z.array(z.string()).default([]),
+});
+export type RestorePreviewResponse = z.infer<typeof restorePreviewResponseSchema>;
+
+export const restoreExecuteRequestSchema = z.object({
+  restore_id: z.string().min(1).max(100),
+  modules: z.array(backupModuleIdSchema).min(1),
+  conflict_strategy: restoreConflictStrategySchema.optional().default('skip'),
+  confirm_risky_modules: z.boolean().optional().default(false),
+});
+export type RestoreExecuteRequestInput = z.infer<typeof restoreExecuteRequestSchema>;
 
 export const createBookSchema = z.object({
   title: z.string().min(1).max(500),
