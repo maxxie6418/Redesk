@@ -29,8 +29,20 @@ export interface TopicNote {
   added_at: string;
   title: string | null;
   content_markdown: string | null;
+  cfi: string | null;
   book_id: number;
   book_title: string | null;
+}
+
+export interface TopicSegment {
+  id: number;
+  topic_id: number;
+  book_id: number;
+  cfi_start: string;
+  cfi_end: string;
+  label: string | null;
+  added_at: string;
+  book_title?: string | null;
 }
 
 export interface TopicEntry {
@@ -58,7 +70,15 @@ export interface TopicDetail extends TopicItem {
   books: TopicBook[];
   highlights: TopicHighlight[];
   notes: TopicNote[];
+  segments: TopicSegment[];
   entries: TopicEntry[];
+}
+
+function invalidateTopicQueries(qc: ReturnType<typeof useQueryClient>, topicId?: number) {
+  qc.invalidateQueries({ queryKey: ['topics'] });
+  if (topicId) {
+    qc.invalidateQueries({ queryKey: ['topics', topicId] });
+  }
 }
 
 export function useTopics() {
@@ -81,8 +101,8 @@ export function useCreateTopic() {
   return useMutation({
     mutationFn: (input: { name: string; description?: string }) =>
       api.post<TopicItem>('/topics', input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (data) => {
+      invalidateTopicQueries(qc, data.id);
     },
   });
 }
@@ -92,8 +112,8 @@ export function useUpdateTopic() {
   return useMutation({
     mutationFn: ({ id, ...input }: { id: number; name?: string; description?: string }) =>
       api.patch<TopicItem>(`/topics/${id}`, input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (data) => {
+      invalidateTopicQueries(qc, data.id);
     },
   });
 }
@@ -104,7 +124,7 @@ export function useDeleteTopic() {
     mutationFn: (id: number) =>
       api.delete<{ id: number; deleted: boolean }>(`/topics/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+      invalidateTopicQueries(qc);
     },
   });
 }
@@ -114,8 +134,8 @@ export function useAddTopicBook() {
   return useMutation({
     mutationFn: ({ topicId, bookId }: { topicId: number; bookId: number }) =>
       api.post<{ added: boolean }>(`/topics/${topicId}/books`, { book_id: bookId }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
     },
   });
 }
@@ -125,8 +145,102 @@ export function useRemoveTopicBook() {
   return useMutation({
     mutationFn: ({ topicId, bookId }: { topicId: number; bookId: number }) =>
       api.delete<{ removed: boolean }>(`/topics/${topicId}/books/${bookId}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useAddTopicHighlight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ topicId, highlightId }: { topicId: number; highlightId: number }) =>
+      api.post<{ added: boolean }>(`/topics/${topicId}/highlights`, { highlight_id: highlightId }),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useRemoveTopicHighlight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ topicId, highlightId }: { topicId: number; highlightId: number }) =>
+      api.delete<{ removed: boolean }>(`/topics/${topicId}/highlights/${highlightId}`),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useAddTopicNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ topicId, noteId }: { topicId: number; noteId: number }) =>
+      api.post<{ added: boolean }>(`/topics/${topicId}/notes`, { note_id: noteId }),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useRemoveTopicNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ topicId, noteId }: { topicId: number; noteId: number }) =>
+      api.delete<{ removed: boolean }>(`/topics/${topicId}/notes/${noteId}`),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useCreateTopicSegment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      topicId,
+      ...input
+    }: {
+      topicId: number;
+      book_id: number;
+      cfi_start: string;
+      cfi_end: string;
+      label?: string | null;
+    }) => api.post<TopicSegment>(`/topics/${topicId}/segments`, input),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useUpdateTopicSegment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      topicId,
+      segmentId,
+      ...input
+    }: {
+      topicId: number;
+      segmentId: number;
+      cfi_start?: string;
+      cfi_end?: string;
+      label?: string | null;
+    }) => api.patch<TopicSegment>(`/topics/${topicId}/segments/${segmentId}`, input),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
+    },
+  });
+}
+
+export function useDeleteTopicSegment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ topicId, segmentId }: { topicId: number; segmentId: number }) =>
+      api.delete<{ removed: boolean }>(`/topics/${topicId}/segments/${segmentId}`),
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
     },
   });
 }
@@ -136,8 +250,8 @@ export function useCreateTopicEntry() {
   return useMutation({
     mutationFn: ({ topicId, ...input }: { topicId: number; entry_type: string; content: string }) =>
       api.post<TopicEntry>(`/topics/${topicId}/entries`, input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
     },
   });
 }
@@ -147,8 +261,8 @@ export function useUpdateTopicEntry() {
   return useMutation({
     mutationFn: ({ topicId, entryId, ...input }: { topicId: number; entryId: number; content?: string }) =>
       api.patch<TopicEntry>(`/topics/${topicId}/entries/${entryId}`, input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
     },
   });
 }
@@ -158,8 +272,8 @@ export function useDeleteTopicEntry() {
   return useMutation({
     mutationFn: ({ topicId, entryId }: { topicId: number; entryId: number }) =>
       api.delete<{ id: number; deleted: boolean }>(`/topics/${topicId}/entries/${entryId}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['topics'] });
+    onSuccess: (_data, vars) => {
+      invalidateTopicQueries(qc, vars.topicId);
     },
   });
 }

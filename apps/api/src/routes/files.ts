@@ -8,6 +8,7 @@ import {
   ERROR_CODE,
   activateBookCoverSchema,
   applyFileMatchesSchema,
+  batchSendFilesToCloudSchema,
   batchFetchBookCoversSchema,
   fileMatchCandidatesSchema,
   fetchBookCoverSchema,
@@ -16,7 +17,7 @@ import {
 } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requireAdmin, requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import {
   assertStorageModeAvailable,
@@ -325,18 +326,30 @@ async function writeBytesForMode(
   contentType: string,
 ): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
   const drivers = getStorageDriversForMode(mode);
+  console.log(`[Storage] writeBytesForMode: mode=${mode}, key=${key}, drivers=${JSON.stringify(drivers)}, size=${bytes.length}`);
+
   const results = await Promise.allSettled(
     drivers.map(async (driver) => {
-      const storage = getStorageByDriver(driver);
-      const { size } = await storage.putBytes(key, bytes, { contentType });
-      const checksum = await fileSha256(storage, key);
-      return { driver, size, checksum };
+      try {
+        const storage = getStorageByDriver(driver);
+        console.log(`[Storage] Writing to ${driver}: ${key}`);
+        const { size } = await storage.putBytes(key, bytes, { contentType });
+        console.log(`[Storage] Written to ${driver}: ${key}, size=${size}`);
+        const checksum = await fileSha256(storage, key);
+        console.log(`[Storage] Checksum for ${driver}: ${key}, checksum=${checksum}`);
+        return { driver, size, checksum };
+      } catch (err) {
+        console.error(`[Storage] Failed to write to ${driver}: ${key}, error=${(err as Error).message}`);
+        throw err;
+      }
     }),
   );
 
   const successes = results
     .filter((item): item is PromiseFulfilledResult<{ driver: 'local' | 's3'; size: number; checksum: string }> => item.status === 'fulfilled')
     .map((item) => item.value);
+
+  console.log(`[Storage] writeBytesForMode result: successes=${successes.map(s => s.driver).join(',')}, failures=${results.filter(r => r.status === 'rejected').length}`);
 
   if (successes.length === 0) {
     throw new AppError(ERROR_CODE.INTERNAL_ERROR, '文件写入失败');
@@ -362,6 +375,46 @@ async function writeStreamForMode(
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return writeBytesForMode(mode, key, Buffer.concat(chunks), contentType);
+}
+
+async function sendFileRecordToCloud(file: typeof bookFiles.$inferSelect): Promise<typeof bookFiles.$inferSelect> {
+  if (!file.local_path) {
+    throw new AppError(ERROR_CODE.BUSINESS_ERROR, '该文件没有可用的本地副本，无法发送到云端');
+  }
+
+  assertStorageModeAvailable('cloud_only');
+
+  const localStorage = getStorageByDriver('local');
+  const cloudStorage = getStorageByDriver('s3');
+  const existsLocally = await localStorage.exists(file.local_path).catch(() => false);
+  if (!existsLocally) {
+    throw new AppError(ERROR_CODE.BUSINESS_ERROR, '本地文件不存在，无法补发到云端');
+  }
+
+  const bytes = await localStorage.getBytes(file.local_path);
+  const remoteKey = file.remote_key ?? file.local_path;
+  const contentType = file.mime_type ?? detectMime(file.original_filename ?? file.file_format);
+  const { size } = await cloudStorage.putBytes(remoteKey, bytes, { contentType });
+  const checksum = await fileSha256(cloudStorage, remoteKey);
+
+  const db = getDb();
+  db.update(bookFiles)
+    .set({
+      remote_key: remoteKey,
+      storage_mode: file.storage_mode === 'local_only' ? 'dual' : file.storage_mode,
+      sync_status: 'synced',
+      file_size: size,
+      checksum,
+      updated_at: now(),
+    })
+    .where(eq(bookFiles.id, file.id))
+    .run();
+
+  const updated = db.select().from(bookFiles).where(eq(bookFiles.id, file.id)).get();
+  if (!updated) {
+    throw new AppError(ERROR_CODE.INTERNAL_ERROR, '发送到云端后无法读取文件记录');
+  }
+  return updated;
 }
 
 async function resolveReadableAsset(input: { local_path: string | null; remote_key: string | null; primary_location: 'local' | 'cloud' }) {
@@ -1352,6 +1405,46 @@ export function fileRoutes(app: FastifyInstance): void {
         total: input.items.length,
         success_count: applied.length,
         failed_count: failed.length,
+      },
+    };
+  });
+
+  app.post('/files/batch/send-to-cloud', async (req) => {
+    const userId = requireAdmin(req);
+    const input = validate(batchSendFilesToCloudSchema, req.body ?? {});
+    const db = getDb();
+
+    const rows = db
+      .select()
+      .from(bookFiles)
+      .where(and(eq(bookFiles.owner_id, userId), inArray(bookFiles.id, input.ids)))
+      .all();
+
+    if (rows.length === 0) {
+      throw notFound('未找到可发送到云端的文件');
+    }
+
+    const synced: typeof bookFiles.$inferSelect[] = [];
+    const failed: Array<{ file_id: number; message: string }> = [];
+
+    for (const file of rows) {
+      try {
+        synced.push(await sendFileRecordToCloud(file));
+      } catch (error) {
+        failed.push({
+          file_id: file.id,
+          message: error instanceof Error ? error.message : '发送到云端失败',
+        });
+      }
+    }
+
+    return {
+      data: {
+        total: input.ids.length,
+        success_count: synced.length,
+        failed_count: failed.length,
+        synced,
+        failed,
       },
     };
   });

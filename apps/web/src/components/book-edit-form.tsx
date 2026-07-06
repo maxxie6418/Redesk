@@ -47,6 +47,7 @@ interface FormState {
   genreCategoryId: number | null;
   rating: number | null;
   readingPurpose: string;
+  entryReason: string;
   startedAt: string;
   finishedAt: string;
   tagIds: number[];
@@ -68,6 +69,7 @@ function toFormState(book: BookDetail): FormState {
     genreCategoryId: book.genre_category_id,
     rating: book.rating,
     readingPurpose: book.reading_purpose ?? '',
+    entryReason: book.entry_reason ?? '',
     startedAt: book.started_at ? book.started_at.slice(0, 10) : '',
     finishedAt: book.finished_at ? book.finished_at.slice(0, 10) : '',
     tagIds: book.tag_ids,
@@ -89,6 +91,7 @@ function computeDirty(current: FormState, initial: FormState): boolean {
   if (current.genreCategoryId !== initial.genreCategoryId) return true;
   if (current.rating !== initial.rating) return true;
   if (current.readingPurpose !== initial.readingPurpose) return true;
+  if (current.entryReason !== initial.entryReason) return true;
   if (current.startedAt !== initial.startedAt) return true;
   if (current.finishedAt !== initial.finishedAt) return true;
   if (current.tagIds.length !== initial.tagIds.length) return true;
@@ -179,6 +182,7 @@ export function BookEditForm({
       genre_category_id: form.genreCategoryId,
       rating: form.rating,
       reading_purpose: form.readingPurpose || null,
+      entry_reason: form.entryReason || null,
       tag_ids: form.tagIds,
       custom_attributes: form.customAttributes ? JSON.parse(form.customAttributes) as Record<string, unknown> : null,
       started_at: form.startedAt ? new Date(form.startedAt).toISOString() : null,
@@ -388,6 +392,15 @@ export function BookEditForm({
               value={form.readingPurpose}
               onChange={(e) => updateField('readingPurpose', e.target.value)}
               placeholder="泛读 / 精读 / 参考 ..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className={labelClass}>录入原因</Label>
+            <Input
+              className={inputClass}
+              value={form.entryReason}
+              onChange={(e) => updateField('entryReason', e.target.value)}
+              placeholder="为什么收藏这本书..."
             />
           </div>
           <div className="grid grid-cols-2 gap-4">

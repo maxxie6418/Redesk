@@ -4,13 +4,14 @@ import { Label } from '@/components/ui/label';
 
 export interface CreateTopicDialogProps {
   open: boolean;
-  onConfirm: (name: string) => void;
+  onConfirm: (input: { name: string; description: string }) => void | Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
 
 export function CreateTopicDialog({ open, onConfirm, onCancel, loading }: CreateTopicDialogProps) {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -29,7 +30,7 @@ export function CreateTopicDialog({ open, onConfirm, onCancel, loading }: Create
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    onConfirm(name.trim());
+    onConfirm({ name: name.trim(), description: description.trim() });
   };
 
   return (
@@ -63,6 +64,17 @@ export function CreateTopicDialog({ open, onConfirm, onCancel, loading }: Create
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && name.trim()) handleSubmit();
               }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="topic-description">话题描述</Label>
+            <textarea
+              id="topic-description"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="补充这个话题的目标、比较维度、待回答问题..."
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
         </div>

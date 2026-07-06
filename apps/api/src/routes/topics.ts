@@ -6,6 +6,7 @@ import {
   topicEntries,
   topicHighlights,
   topicNotes,
+  topicSegments,
   books,
   highlights,
   notes,
@@ -16,6 +17,10 @@ import {
   updateTopicSchema,
   createTopicEntrySchema,
   updateTopicEntrySchema,
+  linkTopicHighlightSchema,
+  linkTopicNoteSchema,
+  createTopicSegmentSchema,
+  updateTopicSegmentSchema,
 } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
@@ -24,6 +29,35 @@ import { validate } from '../lib/zod';
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function parseTopicId(raw: string): number {
+  const topicId = Number(raw);
+  if (Number.isNaN(topicId)) {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
+  }
+  return topicId;
+}
+
+function parseResourceId(raw: string, label = 'ID'): number {
+  const value = Number(raw);
+  if (Number.isNaN(value)) {
+    throw new AppError(ERROR_CODE.VALIDATION_ERROR, `无效的${label}`);
+  }
+  return value;
+}
+
+function requireTopic(topicId: number, userId: number) {
+  const db = getDb();
+  const topic = db
+    .select()
+    .from(topics)
+    .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
+    .get();
+  if (!topic) {
+    throw notFound('话题不存在');
+  }
+  return topic;
 }
 
 export async function topicRoutes(app: FastifyInstance): Promise<void> {
@@ -94,23 +128,11 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.get('/topics/:id', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
-    const topicId = Number(id);
-    if (Number.isNaN(topicId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
-    }
-
+    const topicId = parseTopicId(id);
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    const topic = requireTopic(topicId, userId);
 
-    // 获取关联书籍
     const topicBookRows = db
       .select({
         topic_id: topicBooks.topic_id,
@@ -125,7 +147,6 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(topicBooks.topic_id, topicId))
       .all();
 
-    // 获取关联高亮
     const topicHighlightRows = db
       .select({
         topic_id: topicHighlights.topic_id,
@@ -145,7 +166,6 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(topicHighlights.topic_id, topicId))
       .all();
 
-    // 获取关联笔记
     const topicNoteRows = db
       .select({
         topic_id: topicNotes.topic_id,
@@ -153,6 +173,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
         added_at: topicNotes.added_at,
         title: notes.title,
         content_markdown: notes.content_markdown,
+        cfi: notes.cfi,
         book_id: notes.book_id,
         book_title: books.title,
       })
@@ -162,7 +183,23 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
       .where(eq(topicNotes.topic_id, topicId))
       .all();
 
-    // 获取沉淀内容
+    const segmentRows = db
+      .select({
+        id: topicSegments.id,
+        topic_id: topicSegments.topic_id,
+        book_id: topicSegments.book_id,
+        cfi_start: topicSegments.cfi_start,
+        cfi_end: topicSegments.cfi_end,
+        label: topicSegments.label,
+        added_at: topicSegments.added_at,
+        book_title: books.title,
+      })
+      .from(topicSegments)
+      .leftJoin(books, eq(topicSegments.book_id, books.id))
+      .where(eq(topicSegments.topic_id, topicId))
+      .orderBy(desc(topicSegments.added_at))
+      .all();
+
     const entries = db
       .select()
       .from(topicEntries)
@@ -176,6 +213,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
         books: topicBookRows,
         highlights: topicHighlightRows,
         notes: topicNoteRows,
+        segments: segmentRows,
         entries,
       },
     };
@@ -184,10 +222,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/topics/:id', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
-    const topicId = Number(id);
-    if (Number.isNaN(topicId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
-    }
+    const topicId = parseTopicId(id);
 
     const input = validate(updateTopicSchema, req.body);
     const db = getDb();
@@ -216,10 +251,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/topics/:id', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
-    const topicId = Number(id);
-    if (Number.isNaN(topicId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
-    }
+    const topicId = parseTopicId(id);
 
     const db = getDb();
     const existing = db
@@ -239,15 +271,10 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
     return { data: { id: topicId, deleted: true } };
   });
 
-  // ========== Topic Books ==========
-
   app.post('/topics/:id/books', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
-    const topicId = Number(id);
-    if (Number.isNaN(topicId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
-    }
+    const topicId = parseTopicId(id);
 
     const body = req.body as { book_id?: number };
     const bookId = body?.book_id;
@@ -257,14 +284,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
 
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    requireTopic(topicId, userId);
 
     const book = db
       .select()
@@ -296,22 +316,12 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/topics/:id/books/:bookId', async (req) => {
     const userId = requireUserId(req);
     const { id, bookId: bookIdStr } = req.params as { id: string; bookId: string };
-    const topicId = Number(id);
-    const bookId = Number(bookIdStr);
-    if (Number.isNaN(topicId) || Number.isNaN(bookId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的 ID');
-    }
+    const topicId = parseTopicId(id);
+    const bookId = parseResourceId(bookIdStr, '书籍 ID');
 
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId)))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    requireTopic(topicId, userId);
 
     const existing = db
       .select()
@@ -331,27 +341,241 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
     return { data: { removed: true } };
   });
 
-  // ========== Topic Entries ==========
+  app.post('/topics/:id/highlights', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const topicId = parseTopicId(id);
+    const input = validate(linkTopicHighlightSchema, req.body);
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const highlight = db
+      .select({ id: highlights.id })
+      .from(highlights)
+      .where(
+        and(
+          eq(highlights.id, input.highlight_id),
+          eq(highlights.owner_id, userId),
+          sql`${highlights.deleted_at} IS NULL`,
+        ),
+      )
+      .get();
+    if (!highlight) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '高亮不存在');
+    }
+
+    const existing = db
+      .select()
+      .from(topicHighlights)
+      .where(and(eq(topicHighlights.topic_id, topicId), eq(topicHighlights.highlight_id, input.highlight_id)))
+      .get();
+    if (existing) {
+      throw new AppError(ERROR_CODE.CONFLICT, '该高亮已关联到此话题');
+    }
+
+    db.insert(topicHighlights)
+      .values({ topic_id: topicId, highlight_id: input.highlight_id, added_at: now() })
+      .run();
+
+    db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+
+    return { data: { added: true } };
+  });
+
+  app.delete('/topics/:id/highlights/:highlightId', async (req) => {
+    const userId = requireUserId(req);
+    const { id, highlightId: highlightIdStr } = req.params as { id: string; highlightId: string };
+    const topicId = parseTopicId(id);
+    const highlightId = parseResourceId(highlightIdStr, '高亮 ID');
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const existing = db
+      .select()
+      .from(topicHighlights)
+      .where(and(eq(topicHighlights.topic_id, topicId), eq(topicHighlights.highlight_id, highlightId)))
+      .get();
+    if (!existing) {
+      throw notFound('关联不存在');
+    }
+
+    db.delete(topicHighlights)
+      .where(and(eq(topicHighlights.topic_id, topicId), eq(topicHighlights.highlight_id, highlightId)))
+      .run();
+
+    db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+
+    return { data: { removed: true } };
+  });
+
+  app.post('/topics/:id/notes', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const topicId = parseTopicId(id);
+    const input = validate(linkTopicNoteSchema, req.body);
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const note = db
+      .select({ id: notes.id })
+      .from(notes)
+      .where(and(eq(notes.id, input.note_id), eq(notes.owner_id, userId), sql`${notes.deleted_at} IS NULL`))
+      .get();
+    if (!note) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '笔记不存在');
+    }
+
+    const existing = db
+      .select()
+      .from(topicNotes)
+      .where(and(eq(topicNotes.topic_id, topicId), eq(topicNotes.note_id, input.note_id)))
+      .get();
+    if (existing) {
+      throw new AppError(ERROR_CODE.CONFLICT, '该笔记已关联到此话题');
+    }
+
+    db.insert(topicNotes)
+      .values({ topic_id: topicId, note_id: input.note_id, added_at: now() })
+      .run();
+
+    db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+
+    return { data: { added: true } };
+  });
+
+  app.delete('/topics/:id/notes/:noteId', async (req) => {
+    const userId = requireUserId(req);
+    const { id, noteId: noteIdStr } = req.params as { id: string; noteId: string };
+    const topicId = parseTopicId(id);
+    const noteId = parseResourceId(noteIdStr, '笔记 ID');
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const existing = db
+      .select()
+      .from(topicNotes)
+      .where(and(eq(topicNotes.topic_id, topicId), eq(topicNotes.note_id, noteId)))
+      .get();
+    if (!existing) {
+      throw notFound('关联不存在');
+    }
+
+    db.delete(topicNotes)
+      .where(and(eq(topicNotes.topic_id, topicId), eq(topicNotes.note_id, noteId)))
+      .run();
+
+    db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+
+    return { data: { removed: true } };
+  });
+
+  app.post('/topics/:id/segments', async (req) => {
+    const userId = requireUserId(req);
+    const { id } = req.params as { id: string };
+    const topicId = parseTopicId(id);
+    const input = validate(createTopicSegmentSchema, req.body);
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const book = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, input.book_id), eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`))
+      .get();
+    if (!book) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '书籍不存在');
+    }
+
+    const timestamp = now();
+    const segment = db
+      .insert(topicSegments)
+      .values({
+        topic_id: topicId,
+        book_id: input.book_id,
+        cfi_start: input.cfi_start,
+        cfi_end: input.cfi_end,
+        label: input.label ?? null,
+        added_at: timestamp,
+      })
+      .returning()
+      .get();
+
+    db.update(topics).set({ updated_at: timestamp }).where(eq(topics.id, topicId)).run();
+
+    return { data: segment };
+  });
+
+  app.patch('/topics/:topicId/segments/:segmentId', async (req) => {
+    const userId = requireUserId(req);
+    const { topicId: topicIdStr, segmentId: segmentIdStr } = req.params as { topicId: string; segmentId: string };
+    const topicId = parseTopicId(topicIdStr);
+    const segmentId = parseResourceId(segmentIdStr, '片段 ID');
+    const input = validate(updateTopicSegmentSchema, req.body);
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const existing = db
+      .select()
+      .from(topicSegments)
+      .where(and(eq(topicSegments.id, segmentId), eq(topicSegments.topic_id, topicId)))
+      .get();
+    if (!existing) {
+      throw notFound('片段不存在');
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (input.cfi_start !== undefined) updateData.cfi_start = input.cfi_start;
+    if (input.cfi_end !== undefined) updateData.cfi_end = input.cfi_end;
+    if (input.label !== undefined) updateData.label = input.label;
+
+    if (Object.keys(updateData).length > 0) {
+      db.update(topicSegments).set(updateData).where(eq(topicSegments.id, segmentId)).run();
+      db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+    }
+
+    const updated = db.select().from(topicSegments).where(eq(topicSegments.id, segmentId)).get();
+    return { data: updated };
+  });
+
+  app.delete('/topics/:topicId/segments/:segmentId', async (req) => {
+    const userId = requireUserId(req);
+    const { topicId: topicIdStr, segmentId: segmentIdStr } = req.params as { topicId: string; segmentId: string };
+    const topicId = parseTopicId(topicIdStr);
+    const segmentId = parseResourceId(segmentIdStr, '片段 ID');
+    const db = getDb();
+
+    requireTopic(topicId, userId);
+
+    const existing = db
+      .select()
+      .from(topicSegments)
+      .where(and(eq(topicSegments.id, segmentId), eq(topicSegments.topic_id, topicId)))
+      .get();
+    if (!existing) {
+      throw notFound('片段不存在');
+    }
+
+    db.delete(topicSegments).where(eq(topicSegments.id, segmentId)).run();
+    db.update(topics).set({ updated_at: now() }).where(eq(topics.id, topicId)).run();
+
+    return { data: { removed: true } };
+  });
 
   app.post('/topics/:id/entries', async (req) => {
     const userId = requireUserId(req);
     const { id } = req.params as { id: string };
-    const topicId = Number(id);
-    if (Number.isNaN(topicId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的话题 ID');
-    }
+    const topicId = parseTopicId(id);
 
     const input = validate(createTopicEntrySchema, req.body);
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId), sql`${topics.deleted_at} IS NULL`))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    requireTopic(topicId, userId);
 
     const timestamp = now();
     const entry = db
@@ -374,23 +598,13 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/topics/:topicId/entries/:entryId', async (req) => {
     const userId = requireUserId(req);
     const { topicId: topicIdStr, entryId: entryIdStr } = req.params as { topicId: string; entryId: string };
-    const topicId = Number(topicIdStr);
-    const entryId = Number(entryIdStr);
-    if (Number.isNaN(topicId) || Number.isNaN(entryId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的 ID');
-    }
+    const topicId = parseTopicId(topicIdStr);
+    const entryId = parseResourceId(entryIdStr, '沉淀内容 ID');
 
     const input = validate(updateTopicEntrySchema, req.body);
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId)))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    requireTopic(topicId, userId);
 
     const existing = db
       .select()
@@ -415,22 +629,11 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/topics/:topicId/entries/:entryId', async (req) => {
     const userId = requireUserId(req);
     const { topicId: topicIdStr, entryId: entryIdStr } = req.params as { topicId: string; entryId: string };
-    const topicId = Number(topicIdStr);
-    const entryId = Number(entryIdStr);
-    if (Number.isNaN(topicId) || Number.isNaN(entryId)) {
-      throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的 ID');
-    }
-
+    const topicId = parseTopicId(topicIdStr);
+    const entryId = parseResourceId(entryIdStr, '沉淀内容 ID');
     const db = getDb();
 
-    const topic = db
-      .select()
-      .from(topics)
-      .where(and(eq(topics.id, topicId), eq(topics.owner_id, userId)))
-      .get();
-    if (!topic) {
-      throw notFound('话题不存在');
-    }
+    requireTopic(topicId, userId);
 
     const existing = db
       .select()

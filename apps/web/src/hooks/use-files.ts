@@ -65,6 +65,14 @@ export interface ApplyFileMatchesResult {
   failed_count: number;
 }
 
+export interface BatchSendFilesToCloudResult {
+  total: number;
+  success_count: number;
+  failed_count: number;
+  synced: BookFileItem[];
+  failed: Array<{ file_id: number; message: string }>;
+}
+
 export function useBookFiles(bookId: number) {
   return useQuery({
     queryKey: ['books', bookId, 'files'],
@@ -271,6 +279,19 @@ export function useDeleteUnassociatedFile() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unassociated-files'] });
       qc.invalidateQueries({ queryKey: ['file-library'] });
+    },
+  });
+}
+
+export function useBatchSendFilesToCloud() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fileIds: number[]) =>
+      api.post<BatchSendFilesToCloudResult>('/files/batch/send-to-cloud', { ids: fileIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['file-library'] });
+      qc.invalidateQueries({ queryKey: ['unassociated-files'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
     },
   });
 }

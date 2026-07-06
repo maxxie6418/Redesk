@@ -1,9 +1,28 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Download, X, CheckCircle2, SkipForward } from 'lucide-react';
-import type { ImportBooksResult, ImportBooksResultRow } from '@redesk/shared';
 import { ApiError, api, API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+
+interface ImportBooksResultRow {
+  row: number;
+  title: string | null;
+  success: boolean;
+  skipped: boolean;
+  book_id: number | null;
+  error: string | null;
+  raw_data: Record<string, string>;
+}
+
+interface ImportBooksResult {
+  dry_run: boolean;
+  total: number;
+  created: number;
+  valid: number;
+  skipped: number;
+  failed: number;
+  rows: ImportBooksResultRow[];
+}
 
 export interface BatchImportPanelProps {
   variant?: 'embedded' | 'dialog';

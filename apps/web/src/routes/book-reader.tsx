@@ -91,6 +91,7 @@ export function BookReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const [activeMarkType, setActiveMarkType] = useState<MarkType>(null);
+  const [selectionHighlightId, setSelectionHighlightId] = useState<number | null>(null);
   const [commentMode, setCommentMode] = useState(false);
   const [commentTargetHighlightId, setCommentTargetHighlightId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditingHighlight | null>(null);
@@ -240,12 +241,14 @@ export function BookReaderPage() {
             const sel = contents.document.getSelection();
             if (!sel || sel.rangeCount === 0 || !sel.toString().trim()) {
               setSelection(null);
+              setSelectionHighlightId(null);
               return;
             }
             const range = sel.getRangeAt(0);
             const rawRect = range.getBoundingClientRect();
             if (rawRect.width === 0 && rawRect.height === 0) {
               setSelection(null);
+              setSelectionHighlightId(null);
               return;
             }
 
@@ -280,19 +283,23 @@ export function BookReaderPage() {
               cfiStr = contents.cfiFromRange(range);
             } catch {
               setSelection(null);
+              setSelectionHighlightId(null);
               return;
             }
 
             if (cfiStr) {
               // 检查选区是否覆盖已有痕迹
               let foundType: MarkType = null;
+              let foundHighlightId: number | null = null;
               for (const [, item] of highlightsMapRef.current) {
                 if (cfiStr.includes(item.cfi_start) || item.cfi_start.includes(cfiStr)) {
                   foundType = item.type as MarkType;
+                  foundHighlightId = item.id;
                   break;
                 }
               }
               setActiveMarkType(foundType);
+              setSelectionHighlightId(foundHighlightId);
               setCommentMode(false);
               setCommentTargetHighlightId(null);
               setSelection({
@@ -430,6 +437,7 @@ export function BookReaderPage() {
     setCommentMode(false);
     setCommentTargetHighlightId(null);
     setActiveMarkType(null);
+    setSelectionHighlightId(null);
   }, []);
 
   const handleCreateHighlight = () => {
@@ -443,6 +451,7 @@ export function BookReaderPage() {
       color: '#fde047',
     });
     setSelection(null);
+    setSelectionHighlightId(null);
   };
 
   const handleCreateUnderline = () => {
@@ -456,6 +465,7 @@ export function BookReaderPage() {
       color: '#3b82f6',
     });
     setSelection(null);
+    setSelectionHighlightId(null);
   };
 
   const handleCreateWavy = () => {
@@ -469,6 +479,13 @@ export function BookReaderPage() {
       color: '#dc2626',
     });
     setSelection(null);
+    setSelectionHighlightId(null);
+  };
+
+  const handleClearMark = () => {
+    if (selectionHighlightId == null) return;
+    deleteHighlight.mutate(selectionHighlightId);
+    handleDismissSelection();
   };
 
   const handleBookmark = () => {
@@ -487,6 +504,7 @@ export function BookReaderPage() {
       });
     }
     setSelection(null);
+    setSelectionHighlightId(null);
   };
 
   const handleOpenComment = () => {
@@ -879,11 +897,13 @@ export function BookReaderPage() {
         visible={selection !== null && !commentMode}
         activeType={activeMarkType}
         hasBookmark={bookmarks.data?.some((b) => b.cfi === selection?.cfi)}
+        showClear={selectionHighlightId != null}
         onHighlight={handleCreateHighlight}
         onUnderline={handleCreateUnderline}
         onWavy={handleCreateWavy}
         onBookmark={handleBookmark}
         onComment={handleOpenComment}
+        onClear={handleClearMark}
         onDismiss={handleDismissSelection}
       />
 

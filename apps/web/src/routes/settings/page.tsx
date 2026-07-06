@@ -1,5 +1,5 @@
-import { useCallback, useState, type ReactNode } from 'react';
-import { AlertTriangle, ChevronRight, Cloud, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { AlertTriangle, ChevronRight, Cloud, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { useSystemStats } from '@/hooks/use-system';
 import { cn } from '@/lib/utils';
 import { AiTab } from './ai-tab';
+import { BatchTab } from './batch-tab';
 import { BackupTab } from './backup-tab';
 import { GeneralTab } from './general-tab';
 import { LoginManagementTab } from './login-management-tab';
@@ -23,6 +24,12 @@ import { SimpleChangePassword } from './simple-change-password';
 import { StorageTab } from './storage-tab';
 import { SystemTab } from './system-tab';
 import type { StatusMessage, Tab } from './types';
+
+const VALID_TABS: Tab[] = ['general', 'batch', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
+
+function isValidTab(value: string | null): value is Tab {
+  return value != null && VALID_TABS.includes(value as Tab);
+}
 
 export function SettingsPage() {
   const user = useShellUser();
@@ -44,8 +51,15 @@ function AdminSettingsPage() {
   const user = useShellUser();
   const navigate = useNavigate();
   const isMobileLayout = useMobileLayout();
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTabFromQuery: Tab = isValidTab(tabParam) ? tabParam : 'general';
+  const [activeTab, setActiveTab] = useState<Tab>(activeTabFromQuery);
   const settings = useSettings();
+
+  useEffect(() => {
+    setActiveTab(activeTabFromQuery);
+  }, [activeTabFromQuery]);
 
   const showToast = useCallback((message: StatusMessage) => {
     if (!message) return;
@@ -60,6 +74,7 @@ function AdminSettingsPage() {
 
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
+    { key: 'batch', label: '批量管理', icon: <Upload className="h-4 w-4" /> },
     { key: 'ai', label: 'AI', icon: <Sparkles className="h-4 w-4" /> },
     { key: 'login', label: '登录管理', icon: <Shield className="h-4 w-4" /> },
     { key: 'properties', label: '属性设置', icon: <List className="h-4 w-4" /> },
@@ -106,9 +121,10 @@ function AdminSettingsPage() {
           <div className={cn(isMobileLayout ? 'space-y-1' : 'mb-5')}>
             <h1 className="text-xl font-semibold text-foreground">设置</h1>
             {isMobileLayout ? (
-              <p className="text-sm text-muted-foreground">管理账户、存储、备份与系统参数</p>
+              <p className="text-sm text-muted-foreground">管理账号、批量任务、存储、备份与系统参数</p>
             ) : null}
           </div>
+
           <nav
             className={cn(
               'mb-6',
@@ -132,7 +148,15 @@ function AdminSettingsPage() {
                       : 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.set('tab', tab.key);
+                  if (tab.key !== 'batch') {
+                    nextParams.delete('books');
+                  }
+                  setSearchParams(nextParams, { replace: true });
+                }}
               >
                 {tab.icon}
                 <span className="truncate">{tab.label}</span>
@@ -141,6 +165,16 @@ function AdminSettingsPage() {
           </nav>
 
           {activeTab === 'general' ? <GeneralTab settings={settings.data ?? {}} onToast={showToast} /> : null}
+          {activeTab === 'batch' ? (
+            <BatchTab
+              settings={settings.data ?? {}}
+              initialBookIds={(searchParams.get('books') ?? '')
+                .split(',')
+                .map((value) => Number(value))
+                .filter((value) => Number.isInteger(value) && value > 0)}
+              onToast={showToast}
+            />
+          ) : null}
           {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
           {activeTab === 'login' ? <LoginManagementTab /> : null}
           {activeTab === 'properties' ? <PropertiesTab /> : null}
@@ -163,12 +197,12 @@ function SimpleSettingsPage({ user }: { user: AuthUser }) {
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">个人设置</h1>
-          <p className="mt-1 text-sm text-muted-foreground">管理你的账户信息和偏好</p>
+          <p className="mt-1 text-sm text-muted-foreground">管理你的账号信息和偏好。</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">账户信息</CardTitle>
+            <CardTitle className="text-base">账号信息</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between border-b border-border pb-2">
@@ -274,13 +308,13 @@ function MobileBackupPage() {
           />
           <MobileActionRow
             title="书架清单"
-            subtitle="导出 CSV，便于表格处理和备份留档"
+            subtitle="导出 CSV，便于表格处理和备份留档。"
             actionLabel="CSV"
             onClick={() => window.open(`${API_BASE}/export/books?format=csv`, '_blank', 'noopener')}
           />
           <MobileActionRow
             title="完整备份包"
-            subtitle="下载数据库、存储文件和 Markdown 导出"
+            subtitle="下载数据库、存储文件和 Markdown 导出。"
             actionLabel="ZIP"
             onClick={() => window.open(`${API_BASE}/backup/full`, '_blank', 'noopener')}
           />
@@ -295,14 +329,14 @@ function MobileBackupPage() {
         <div className="space-y-2">
           <MobileActionRow
             title="最近一次本地备份"
-            subtitle={latestBackup ? new Date(latestBackup.created_at).toLocaleString('zh-CN') : '还没有备份记录'}
+            subtitle={latestBackup ? new Date(latestBackup.created_at).toLocaleString('zh-CN') : '还没有备份记录。'}
             actionLabel={backupPending ? '处理中' : '立即备份'}
             onClick={handleTriggerBackup}
             disabled={backupPending}
           />
           <MobileActionRow
             title="对象存储与高级配置"
-            subtitle="复杂存储策略仍建议在桌面端完成"
+            subtitle="复杂存储策略仍建议在桌面端完成。"
             actionLabel="设置"
             onClick={() => navigate('/settings')}
           />
@@ -314,13 +348,13 @@ function MobileBackupPage() {
         <div className="space-y-2">
           <MobileActionRow
             title="进入完整设置"
-            subtitle="继续管理登录、属性、存储与系统"
+            subtitle="继续管理批量任务、登录、属性、存储与系统。"
             actionLabel="打开"
             onClick={() => navigate('/settings')}
           />
           <MobileActionRow
             title="返回轻管理"
-            subtitle="回到添加、上传、备份入口中心"
+            subtitle="回到添加、上传、导入和概览入口。"
             actionLabel="前往"
             onClick={() => navigate('/overview')}
           />
@@ -343,7 +377,7 @@ function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h1 className="text-lg font-semibold text-foreground">设置</h1>
-              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">移动端保留高频操作，复杂管理建议在桌面端完成。</p>
+              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">移动端保留高频操作，复杂管理仍建议在桌面端完成。</p>
             </div>
             <div className="inline-flex h-10 min-w-10 items-center justify-center rounded-[16px] bg-foreground px-3 text-sm font-semibold text-background">
               {user.display_name?.slice(0, 1) || 'R'}
@@ -352,13 +386,13 @@ function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
           <div className="grid grid-cols-2 gap-2">
             <MobileActionRow
               title="备份与导出"
-              subtitle="查看最近备份并导出 JSON、CSV、ZIP"
+              subtitle="查看最近备份并导出 JSON、CSV、ZIP。"
               actionLabel="打开"
               onClick={() => navigate('/settings?mobile=backup')}
             />
             <MobileActionRow
               title="轻管理"
-              subtitle="回到上传、导入和概览入口"
+              subtitle="回到上传、导入和概览入口。"
               actionLabel="前往"
               onClick={() => navigate('/overview')}
             />
@@ -375,13 +409,13 @@ function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
             <div className="space-y-2">
               <MobileActionRow
                 title="修改口令"
-                subtitle="更新当前账户口令"
+                subtitle="更新当前账号口令。"
                 actionLabel="打开"
                 onClick={() => setShowChangePwd(true)}
               />
               <MobileActionRow
                 title="退出登录"
-                subtitle="退出后需要重新登录"
+                subtitle="退出后需要重新登录。"
                 actionLabel="退出"
                 onClick={() => {
                   logout.mutateAsync().then(() => {
@@ -414,7 +448,7 @@ function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
           <div className="mt-3 flex items-center justify-between rounded-[18px] bg-muted px-3 py-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-foreground">桌面端完整设置</div>
-              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">AI、存储、登录管理、属性设置等高级功能仍建议在桌面端完成。</div>
+              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">批量管理、AI、存储、登录管理、属性设置等高级功能仍建议在桌面端完成。</div>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </div>

@@ -22,6 +22,7 @@ export interface BookSummary {
   publisher: string | null;
   language: string | null;
   reading_purpose: string | null;
+  entry_reason: string | null;
   custom_attributes: Record<string, unknown> | null;
   metadata_source: string | null;
   source_url: string | null;
@@ -103,6 +104,7 @@ export interface CreateBookInput {
   status?: string;
   visibility?: string;
   reading_purpose?: string | null;
+  entry_reason?: string | null;
   rating?: number | null;
   tag_ids?: number[];
   custom_attributes?: Record<string, unknown> | null;
@@ -126,6 +128,7 @@ export interface UpdateBookInput {
   status?: string;
   visibility?: string;
   reading_purpose?: string | null;
+  entry_reason?: string | null;
   rating?: number | null;
   tag_ids?: number[];
   custom_attributes?: Record<string, unknown> | null;
@@ -209,7 +212,7 @@ export function useDeleteBook() {
 
 export interface BatchBooksInput {
   ids: number[];
-  action: 'set_status' | 'set_category' | 'set_genre_category' | 'set_tags' | 'set_visibility' | 'set_favorited' | 'delete';
+  action: 'set_status' | 'set_category' | 'set_genre_category' | 'set_tags' | 'set_visibility' | 'set_favorited' | 'delete' | 'fetch_metadata' | 'fetch_cover';
   params?: Record<string, unknown>;
 }
 

@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useHighlights, useNotes, useReadingMarkStats, useCreateNote, useUpdateNote, useDeleteNote, useNotesSearch, useHighlightsSearch, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
 import { CreateNoteDialog } from '@/components/create-note-dialog';
+import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
+import { useAddTopicHighlight, useAddTopicNote } from '@/hooks/use-topics';
 import { CompactSelect, ExportActions, PaginationButton, ReadingNoteCard, SidebarPanel, SourcePill } from './components';
 
 interface NoteEditForm {
@@ -24,6 +26,7 @@ export function ReadingNotesPage() {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<NoteEditForm | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
+  const [topicTarget, setTopicTarget] = useState<{ type: 'highlight' | 'note'; id: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -40,6 +43,8 @@ export function ReadingNotesPage() {
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
+  const addTopicHighlight = useAddTopicHighlight();
+  const addTopicNote = useAddTopicNote();
 
   const highlights = useMemo(() => highlightsData ?? [], [highlightsData]);
   const allNotes = useMemo(() => notesData ?? [], [notesData]);
@@ -311,6 +316,7 @@ export function ReadingNotesPage() {
                     onEdit={mark.isNote ? () => handleEditNote(mark) : undefined}
                     onDelete={mark.isNote ? () => setDeletingNoteId(mark.noteId!) : undefined}
                     onNavigate={() => handleNavigateToReader(mark.book_id, mark.chapterCfi || undefined)}
+                    onAddToTopic={() => setTopicTarget({ type: mark.isNote ? 'note' : 'highlight', id: mark.rawId })}
                   />
                 ))
               )}
@@ -364,6 +370,22 @@ export function ReadingNotesPage() {
         onConfirm={handleCreateNote}
         onCancel={() => setNoteDialogOpen(false)}
         loading={createNote.isPending}
+      />
+
+      <AddToTopicDialog
+        open={topicTarget !== null}
+        onCancel={() => setTopicTarget(null)}
+        loading={addTopicHighlight.isPending || addTopicNote.isPending}
+        onConfirm={async (topicId) => {
+          if (!topicTarget) return;
+          if (topicTarget.type === 'highlight') {
+            await addTopicHighlight.mutateAsync({ topicId, highlightId: topicTarget.id });
+          } else {
+            await addTopicNote.mutateAsync({ topicId, noteId: topicTarget.id });
+          }
+          toast.success('已加入话题');
+          setTopicTarget(null);
+        }}
       />
 
       {/* 编辑笔记对话框 */}

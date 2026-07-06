@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useBooks } from '@/hooks/use-books';
 import {
   useApplyFileMatches,
@@ -17,6 +19,8 @@ import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { ProtectedShell } from '@/components/protected-shell';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
+import { Button } from '@/components/ui/button';
+import { useShellUser } from '@/components/shell-user-context';
 import { BatchMatchDialog, FileLibraryStats, FileLibraryToolbar, FilesTable, MatchDialog, UnlinkedWarning } from './components';
 import { formatSize, formatTotalSize } from './match-utils';
 
@@ -43,6 +47,8 @@ function createFallbackMatchItem(file: BookFileItem): FileMatchItem {
 
 export function FileLibraryPage() {
   const sidebarStats = useSidebarStats();
+  const user = useShellUser();
+  const navigate = useNavigate();
   const [formatFilter, setFormatFilter] = useState('ALL');
   const [associatedFilter, setAssociatedFilter] = useState<'all' | 'true' | 'false'>('all');
   const [page, setPage] = useState(1);
@@ -171,9 +177,17 @@ export function FileLibraryPage() {
 
   return (
     <ProtectedShell activeKey="files" stats={sidebarStats} mainClassName="min-w-0 flex-1 overflow-y-auto px-8 py-7">
-      <div className="mb-6">
-        <h1 className="font-display text-[26px] font-semibold text-foreground">书库文件</h1>
-        <p className="mt-1 text-[13.5px] text-muted-foreground">管理所有导入的电子书文件，共 {totalCount} 个文件。</p>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[26px] font-semibold text-foreground">书库文件</h1>
+          <p className="mt-1 text-[13.5px] text-muted-foreground">管理所有导入的电子书文件，共 {totalCount} 个文件。</p>
+        </div>
+        {user.is_admin ? (
+          <Button variant="outline" onClick={() => navigate('/settings?tab=batch')}>
+            <Settings2 className="mr-1.5 h-4 w-4" />
+            去批量管理
+          </Button>
+        ) : null}
       </div>
 
       <FileLibraryStats totalCount={totalCount} linkedCount={linkedCount} unlinkedCount={unlinkedCount} totalSize={formatTotalSize(totalSize)} />
@@ -224,7 +238,7 @@ export function FileLibraryPage() {
       <BatchMatchDialog
         open={batchMatchOpen}
         title="批量匹配未关联文件"
-        description="上传后匹配不是必做动作；如果你现在想一口气处理未关联文件，可以在这里批量完成。"
+        description="上传后匹配不是必须动作；如果你现在想一口气处理未关联文件，可以在这里批量完成。"
         items={batchItems}
         matchMode={matchMode}
         onMatchModeChange={(mode) => {

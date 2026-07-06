@@ -18,6 +18,7 @@ export const books = sqliteTable('books', {
   status: text('status').notNull().default('COLLECTED'),
   visibility: text('visibility').notNull().default('PRIVATE'),
   reading_purpose: text('reading_purpose'),
+  entry_reason: text('entry_reason'),
   rating: integer('rating'),
   custom_attributes: text('custom_attributes'),
   metadata_source: text('metadata_source'),

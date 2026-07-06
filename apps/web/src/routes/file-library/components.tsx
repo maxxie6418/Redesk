@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Cloud, FileText, FileWarning, Files, HardD
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { FilterSelect } from '@/components/page-ui/filter-select';
 import { StatCard } from '@/components/page-ui/stat-card';
 import { SegmentedToggle } from '@/components/page-ui/segmented-toggle';
 import { cn } from '@/lib/utils';
@@ -24,16 +25,16 @@ function useBodyScrollLock(active: boolean) {
 }
 
 export function StorageStatusBadge({ file }: { file: BookFileItem }) {
+  const label = file.sync_status === 'pending'
+    ? '待同步'
+    : file.sync_status === 'partial_failed' || file.sync_status === 'failed'
+      ? '同步失败'
+      : storageModeLabel(file.storage_mode);
+
   return (
     <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
       <Cloud className="h-3 w-3" />
-      {file.sync_status === 'pending' ? (
-        <span>同步中</span>
-      ) : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? (
-        <span className="text-destructive">同步失败</span>
-      ) : (
-        <span>{storageModeLabel(file.storage_mode)}</span>
-      )}
+      <span className={file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? 'text-destructive' : undefined}>{label}</span>
     </span>
   );
 }
@@ -81,7 +82,7 @@ export function UnlinkedWarning({
       <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
       <div className="min-w-0 flex-1">
         <span className="text-[13px] font-medium text-amber-700 dark:text-amber-300">{unlinkedCount} 个文件尚未关联书籍</span>
-        <span className="ml-2 text-[12px] text-amber-600/70 dark:text-amber-400/70">可以稍后处理，也可以一次性批量完成匹配。</span>
+        <span className="ml-2 text-[12px] text-amber-600/70 dark:text-amber-400/70">可以稍后处理，也可以直接批量完成匹配。</span>
       </div>
       <div className="flex shrink-0 gap-2">
         <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300" onClick={onShowUnlinked}>
@@ -117,37 +118,26 @@ export function FileLibraryToolbar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 px-5 py-3">
-      {FORMAT_OPTIONS.map((format) => (
-        <button
-          key={format}
-          type="button"
-          onClick={() => onFormatChange(format)}
-          className={cn(
-            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-            formatFilter === format ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {format === 'ALL' ? '全部格式' : format}
-        </button>
-      ))}
-      <span className="mx-1 h-4 w-px bg-border" />
-      {[
-        { value: 'all', label: '全部' },
-        { value: 'true', label: '已关联' },
-        { value: 'false', label: '未关联' },
-      ].map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onAssociatedChange(option.value as 'all' | 'true' | 'false')}
-          className={cn(
-            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-            associatedFilter === option.value ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground',
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
+      <FilterSelect
+        value={formatFilter}
+        onChange={onFormatChange}
+        options={FORMAT_OPTIONS.map((format) => ({ value: format, label: format === 'ALL' ? '全部格式' : format }))}
+        shape="pill"
+        tone="muted"
+        className="min-w-[132px]"
+      />
+      <FilterSelect
+        value={associatedFilter}
+        onChange={(value) => onAssociatedChange(value as 'all' | 'true' | 'false')}
+        options={[
+          { value: 'all', label: '全部文件' },
+          { value: 'true', label: '已关联' },
+          { value: 'false', label: '未关联' },
+        ]}
+        shape="pill"
+        tone="muted"
+        className="min-w-[132px]"
+      />
       <div className="ml-auto flex gap-2">
         <Button variant="outline" size="sm" onClick={onBatchMatch} disabled={batchMatchDisabled}>
           <Wand2 className="mr-1.5 h-4 w-4" />
@@ -218,9 +208,9 @@ export function FilesTable({
                 </div>
               </td>
               <td className="py-3 pr-3">
-                {file.book_id && file.book_title ? (
+                {file.book_id != null ? (
                   <button type="button" className="text-xs text-primary hover:underline" onClick={() => onOpenBook(file.book_id ?? null)}>
-                    {file.book_title}
+                    {file.book_title || `#${file.book_id}`}
                   </button>
                 ) : (
                   <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:bg-amber-950 dark:text-amber-400">未关联</span>
@@ -285,7 +275,7 @@ function MatchModeSwitcher({
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-xs font-medium text-muted-foreground">匹配分级</div>
+      <div className="text-xs font-medium text-muted-foreground">匹配策略</div>
       <SegmentedToggle className="grid grid-cols-3 gap-2 border-0 bg-transparent p-0">
         {MATCH_MODE_OPTIONS.map((option) => (
           <button
@@ -408,7 +398,7 @@ export function MatchDialog({
                   </button>
                 ))
               ) : (
-                <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">当前没有返回匹配候选。</div>
+                <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">当前没有返回候选结果。</div>
               )}
             </div>
           </div>

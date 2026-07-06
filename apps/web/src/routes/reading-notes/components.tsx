@@ -65,7 +65,7 @@ export function ReadingNoteCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-        <Button variant="outline" size="sm" disabled title="主题阅读功能即将上线（M4）">
+        <Button variant="outline" size="sm" onClick={onAddToTopic} disabled={!onAddToTopic}>
           <Brain className="h-3.5 w-3.5" />
           加入话题
         </Button>
@@ -92,7 +92,14 @@ export function ReadingNoteCard({
 }
 
 export function CompactSelect({ options }: { options: string[] }) {
-  return <FilterSelect value={options[0] ?? ''} onChange={() => {}} options={options.map((option) => ({ value: option, label: option })} size="default" />;
+  return (
+    <FilterSelect
+      value={options[0] ?? ''}
+      onChange={() => {}}
+      options={options.map((option) => ({ value: option, label: option }))}
+      size="default"
+    />
+  );
 }
 
 export function SourcePill({

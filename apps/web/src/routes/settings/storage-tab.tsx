@@ -5,7 +5,6 @@ import {
   Clock,
   Database,
   FolderTree,
-  HardDrive,
   Image,
   Link,
   Loader2,
@@ -63,41 +62,61 @@ export function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">本地存储概况</CardTitle>
         </CardHeader>
         <CardContent>
           {storage.isLoading && <p className="text-sm text-muted-foreground">扫描中…</p>}
           {storage.data && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 rounded-lg border border-border bg-popover p-4">
-                <HardDrive className="h-5 w-5 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">总占用</p>
-                  <p className="text-xs text-muted-foreground">
-                    {storage.data.total_files} 个文件
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-lg border border-border bg-popover px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">总占用</p>
+                  <p className="mt-0.5 text-base font-semibold text-foreground">{formatBytes(totalSize)}</p>
+                  <p className="text-[11px] text-muted-foreground">{storage.data.total_files} 个文件</p>
+                </div>
+                <div className="rounded-lg border border-border bg-popover px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">书籍文件</p>
+                  <p className="mt-0.5 text-base font-semibold text-foreground">
+                    {formatBytes(storage.data.breakdown.books?.size_bytes ?? 0)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {storage.data.breakdown.books?.file_count ?? 0} 个
                   </p>
                 </div>
-                <p className="text-lg font-semibold text-foreground">
-                  {formatBytes(totalSize)}
-                </p>
+                <div className="rounded-lg border border-border bg-popover px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">封面图片</p>
+                  <p className="mt-0.5 text-base font-semibold text-foreground">
+                    {formatBytes(storage.data.breakdown.covers?.size_bytes ?? 0)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {storage.data.breakdown.covers?.file_count ?? 0} 个
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-popover px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">数据库</p>
+                  <p className="mt-0.5 text-base font-semibold text-foreground">
+                    {formatBytes(storage.data.db_size_bytes)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">SQLite</p>
+                </div>
               </div>
 
               <div className="space-y-2">
                 {(Object.entries(storage.data.breakdown) as [string, DirInfo][]).map(([key, info]) => {
                   const percentage = totalSize > 0 ? ((info.size_bytes / totalSize) * 100).toFixed(1) : '0';
-                  const dir = dirLabels[key] ?? { label: key, icon: <FolderTree className="h-4 w-4" /> };
+                  const dir = dirLabels[key] ?? { label: key, icon: <FolderTree className="h-3.5 w-3.5" /> };
                   return (
-                    <div key={key} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                    <div key={key} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
                       <span className="text-muted-foreground">{dir.icon}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium text-foreground">{dir.label}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {formatBytes(info.size_bytes)} ({percentage}%)
                           </p>
                         </div>
-                        <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
+                        <div className="mt-1 h-1 w-full rounded-full bg-muted">
                           <div
                             className={cn(
                               'h-full rounded-full transition-all',
@@ -110,22 +129,10 @@ export function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void 
                             style={{ width: `${Math.max(Number(percentage), 1)}%` } as CSSProperties}
                           />
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">{info.file_count} 个文件</p>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-
-              <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-                <Database className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">数据库</p>
-                  <p className="text-xs text-muted-foreground">SQLite 数据文件</p>
-                </div>
-                <p className="text-sm font-semibold text-foreground">
-                  {formatBytes(storage.data.db_size_bytes)}
-                </p>
               </div>
             </div>
           )}

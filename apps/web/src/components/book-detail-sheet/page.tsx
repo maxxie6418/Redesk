@@ -130,6 +130,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const progress = useReadingProgress(bookId ?? 0);
   const bookNotes = useNotes(bookId ?? 0);
   const bookHighlights = useHighlights(bookId ?? 0);
+  const addTopicBook = useAddTopicBook();
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');
   const genreCategories = useCategories('GENRE');
@@ -924,6 +925,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   <EditableDateField label="开始阅读" value={b.started_at} editMode={editMode} onSave={async (v) => saveDate('started_at', v)} />
                   <EditableDateField label="完成阅读" value={b.finished_at} editMode={editMode} onSave={async (v) => saveDate('finished_at', v)} />
                   <EditableLongTextField label="阅读目的" value={b.reading_purpose ?? ''} editMode={editMode} onSave={async (v) => saveText('reading_purpose', v)} />
+                  <EditableLongTextField label="录入原因" value={b.entry_reason ?? ''} editMode={editMode} onSave={async (v) => saveText('entry_reason', v)} />
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">元数据来源</span>
                     <span className="font-medium text-foreground">{b.metadata_source ?? '—'}</span>
