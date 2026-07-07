@@ -1,24 +1,16 @@
-import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent, type CSSProperties } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BookOpen,
-  Heart,
-  ImageDown,
   Lightbulb,
   Loader2,
   NotebookPen,
   RefreshCcw,
-  Trash2,
-  Upload,
   X,
   FolderOpen,
-  Pencil,
-  ArrowUpFromLine,
   Archive,
   Highlighter,
   Sparkles,
   Tags,
-  Cloud,
   type LucideIcon,
 } from 'lucide-react';
 import { BOOK_STATUS_LABELS, VISIBILITY, selectReadableFile } from '@redesk/shared';
@@ -59,7 +51,7 @@ import { EditableLongTextField } from './editable-long-text-field';
 import { EditableJsonField } from './editable-json-field';
 import { EditableTagsField } from './editable-tags-field';
 import { RatingDisplay } from './rating-display';
-import { BookDetailFrameHeader, StatusToast } from './components';
+import { BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, ReadingProgressBlock, StatusToast, type CoverGroups } from './components';
 import { extractDomain, type StatusMessage, type ToastType } from './types';
 
 const COVER_URL_BASE = API_BASE;
@@ -77,41 +69,13 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
-function formatTimelineDate(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
-}
-
-function formatFileSize(bytes: number | null) {
-  if (bytes == null) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const STORAGE_MODE_LABELS: Record<BookFileItem['storage_mode'], string> = {
-  local_only: '本地',
-  cloud_only: '云端',
-  dual: '本地 + 云端',
-};
-
-function StorageStatusBadge({ file }: { file: BookFileItem }) {
-  const labels: string[] = [];
-  if (file.storage_mode === 'local_only') labels.push('本地');
-  if (file.storage_mode === 'cloud_only') labels.push('云端');
-  if (file.storage_mode === 'dual') labels.push('本地', '云端');
-
-  return (
-    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-      <Cloud className="h-3 w-3" />
-      {file.sync_status === 'pending' ? (
-        <span>同步中</span>
-      ) : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? (
-        <span className="text-destructive">同步失败</span>
-      ) : (
-        <span>{STORAGE_MODE_LABELS[file.storage_mode]}</span>
-      )}
-    </span>
-  );
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  const kb = size / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
 }
 
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
@@ -358,11 +322,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   }, [bookId, metadataResult, selectedFields, fetchCoverChecked, applyMetadata]);
 
   const b = book.data;
-  const hasCover = Boolean(b?.cover_path);
   const progressPercent = progress.data?.percentage ?? 0;
   const readableFile = selectReadableFile<BookFileItem>(files.data);
 
-  const coverGroups = useMemo(() => {
+  const coverGroups = useMemo<CoverGroups | null>(() => {
     if (!covers.data) return null;
     const groups: Record<string, { label: string; items: BookCoverItem[] }> = {
       EPUB_EXTRACTED: { label: 'EPUB 抽取', items: [] },
@@ -431,247 +394,37 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               <div className="h-full overflow-y-auto px-6 py-6 pr-9">
               <StatusToast message={message} />
 
-              {/* Cover Group */}
-              <div className="mb-6">
-                {hasCover ? (
-                  <img
-                    src={`${COVER_URL_BASE}/books/${bookId}/cover?v=${encodeURIComponent(b.cover_path ?? b.updated_at)}`}
-                    alt={b.title}
-                    className="w-full rounded-xl object-cover shadow-lg aspect-[2/3]"
-                  />
-                ) : (
-                  <div
-                    className={cn('flex w-full aspect-[2/3] items-center justify-center rounded-xl shadow-lg font-display text-5xl font-bold', COVER_TONES[(bookId ?? 0) % COVER_TONES.length])}
-                  >
-                    {b.title.slice(0, 1)}
-                  </div>
-                )}
-              </div>
-
-              {/* Progress Group */}
-              <div className="mb-6">
-                <div className="mb-1.5 flex items-center justify-between text-[12px]">
-                  <span className="text-muted-foreground">阅读进度</span>
-                  <span className="font-semibold text-foreground">{progressPercent}%</span>
-                </div>
-                <div className="h-[6px] overflow-hidden rounded-full bg-border">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${progressPercent}%` } as CSSProperties}
-                  />
-                </div>
-              </div>
-
-              {/* Timeline Group */}
-              <div className="mb-6">
-                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">时间</div>
-                <div className="space-y-1.5 text-[12px]">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                      录入
-                    </span>
-                    <span className="font-medium text-foreground">{formatTimelineDate(b.created_at)}</span>
-                  </div>
-                  {b.started_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-                        开始阅读
-                      </span>
-                      <span className="font-medium text-foreground">{formatTimelineDate(b.started_at)}</span>
-                    </div>
-                  )}
-                  {b.finished_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        阅读完成
-                      </span>
-                      <span className="font-medium text-foreground">{formatTimelineDate(b.finished_at)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions Group */}
-              <div className="mb-6 space-y-2.5">
-                <button
-                  type="button"
-                  disabled={!readableFile}
-                  title={readableFile ? '打开阅读/预览' : '请先上传可预览文件'}
-                  onClick={() => {
-                    if (!bookId || !readableFile) return;
-                    navigate(`/books/${bookId}/read`);
-                  }}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  打开阅读/预览
-                </button>
-                <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">
-                  EPUB 保留阅读留痕能力，PDF、Markdown、TXT 和图片先支持在线预览
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCoverPanel(!showCoverPanel)}
-                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"
-                  >
-                    <ArrowUpFromLine className="h-3.5 w-3.5" />
-                    选择封面
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditMode(!editMode)}
-                    className={cn(
-                      'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px',
-                      editMode ? 'border-primary bg-primary/10 text-primary' : 'border-border',
-                    )}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    {editMode ? '完成编辑' : '编辑信息'}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFavorite}
-                  className={cn(
-                    'flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium shadow-sm transition-all hover:-translate-y-px',
-                    b?.favorited_at
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-foreground',
-                  )}
-                  title={b?.favorited_at ? '取消收藏' : '加入收藏'}
-                >
-                  <Heart className={cn('h-3.5 w-3.5', b?.favorited_at ? 'fill-current' : '')} />
-                  {b?.favorited_at ? '已收藏' : '收藏'}
-                </button>
-
-                <div className="mt-3 border-t border-border pt-3">
-                  <button
-                    type="button"
-                    onClick={handleRequestBookDelete}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
-                    title="将此书移入回收站"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    删除此书
-                  </button>
-                </div>
-              </div>
-
-              {/* Cover Panel */}
+              <BookCoverSection book={b} bookId={bookId} coverUrlBase={COVER_URL_BASE} coverTones={COVER_TONES} />
+              <ReadingProgressBlock progressPercent={progressPercent} />
+              <BookTimeline book={b} />
+              <BookPrimaryActions
+                readableFile={readableFile ?? undefined}
+                favorited={Boolean(b.favorited_at)}
+                editMode={editMode}
+                onRead={() => {
+                  if (!bookId || !readableFile) return;
+                  navigate(`/books/${bookId}/read`);
+                }}
+                onToggleCoverPanel={() => setShowCoverPanel(!showCoverPanel)}
+                onToggleEditMode={() => setEditMode(!editMode)}
+                onFavorite={handleFavorite}
+                onDelete={handleRequestBookDelete}
+              />
               {showCoverPanel && (
-                <div className="mb-6 rounded-xl border border-border bg-card p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground">封面管理</span>
-                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted/70">
-                      <Upload className="h-3 w-3" />
-                      上传
-                      <input
-                        ref={coverInputRef}
-                        type="file"
-                        className="hidden"
-                        accept=".jpg,.jpeg,.png,.webp,.gif,.bmp"
-                        onChange={handleCoverUpload}
-                      />
-                    </label>
-                  </div>
-                  {coverGroups && coverGroups.length > 0 ? (
-                    <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
-                      {coverGroups.map(([type, { label, items }]) => (
-                        <div key={type}>
-                          <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</p>
-                          <div className="space-y-2">
-                            {items.map((cover) => (
-                              <div key={cover.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-2">
-                                <img
-                                  src={`${COVER_URL_BASE}/books/${bookId}/covers/${cover.id}/file?ts=${encodeURIComponent(cover.updated_at)}`}
-                                  alt={b.title}
-                                  className="h-12 w-9 rounded object-cover shadow-sm"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  {cover.is_active === 1 && (
-                                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">当前</span>
-                                  )}
-                                  {cover.source_label && (
-                                    <p className="truncate text-[10px] text-muted-foreground">{cover.source_label}</p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  {cover.is_active !== 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleActivateCover(cover.id)}
-                                      className="text-[10px] text-primary hover:underline"
-                                    >
-                                      设为当前
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteCover(cover.id)}
-                                    className="text-[10px] text-muted-foreground hover:text-destructive"
-                                  >
-                                    删除
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-4 text-center">
-                      <ImageDown className="h-5 w-5 text-muted-foreground/30" />
-                      <p className="mt-2 text-[12px] text-muted-foreground">暂无封面</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground/50">上传或从介绍页下载</p>
-                    </div>
-                  )}
-                  {b.source_url && (
-                    <div className="mt-3 flex items-center justify-end border-t border-border pt-3">
-                      <button
-                        type="button"
-                        onClick={handleFetchCover}
-                        disabled={fetchCover.isPending}
-                        className="text-xs text-primary hover:underline disabled:opacity-50"
-                      >
-                        {fetchCover.isPending ? '下载中...' : '下载封面'}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <BookCoverManager
+                  book={b}
+                  bookId={bookId}
+                  coverUrlBase={COVER_URL_BASE}
+                  coverGroups={coverGroups}
+                  coverInputRef={coverInputRef}
+                  fetchCoverPending={fetchCover.isPending}
+                  onUploadCover={handleCoverUpload}
+                  onActivateCover={handleActivateCover}
+                  onDeleteCover={handleDeleteCover}
+                  onFetchCover={handleFetchCover}
+                />
               )}
-
-              {/* Files Group */}
-              <div>
-                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
-                {files.data && files.data.length > 0 ? (
-                  <div className="space-y-1">
-                    {files.data.map((f: BookFileItem) => (
-                      <div key={f.id} className="group flex items-center gap-2 py-1.5">
-                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{f.original_filename ?? '未知文件'}</span>
-                        <StorageStatusBadge file={f} />
-                        <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(f.file_size)}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRequestFileDelete(f)}
-                          className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                          title="删除文件"
-                          aria-label={`删除 ${f.original_filename ?? '文件'}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-2 text-[12px] text-muted-foreground/60">暂无文件</div>
-                )}
-              </div>
+              <BookFilesList files={files.data} onDeleteFile={handleRequestFileDelete} />
               </div>
 
               {/* Bookmark Tabs: 贴左栏右边缘,靠近底部,不随内容滚动 */}
