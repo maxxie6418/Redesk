@@ -30,12 +30,12 @@
 
 ## 阶段 P1.3 - 抽出 useReaderNavigation
 
-- [ ] 新文件 `use-reader-navigation.ts` 存在
-- [ ] `page.tsx` 中 `openMarkInReader` / `openTraceInReader` 改为 hook 调用
-- [ ] 跳 cfi 行为不变
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] Web/API 测试通过
-- [ ] 提交 `refactor(book-detail): 抽出 useReaderNavigation` 并成功推送
+- [x] 新文件 `use-reader-navigation.ts` 存在
+- [x] `page.tsx` 中 `openMarkInReader` / `openTraceInReader` 改为 hook 调用
+- [x] 跳 cfi 行为不变
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] Web/API 测试通过
+- [x] 提交 `refactor(book-detail): 抽出 useReaderNavigation` 并成功推送
 
 ## 阶段 P1.4 - 抽出 useMetadataDialog
 

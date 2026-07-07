@@ -15,11 +15,11 @@
   - [x] SubTask 3.2: `page.tsx` 中 6+ 处 `setMessage + setTimeout` 改为调用 hook
   - [x] SubTask 3.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
   - [x] SubTask 3.4: 提交 `refactor(book-detail): 抽出 useDetailMessages` 并推送
-- [ ] Task 4: 阶段 P1.3 - 抽出 `useReaderNavigation` hook
-  - [ ] SubTask 4.1: 新增 `use-reader-navigation.ts`
-  - [ ] SubTask 4.2: `page.tsx` 中 `openMarkInReader` / `openTraceInReader` 改为调用 hook
-  - [ ] SubTask 4.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
-  - [ ] SubTask 4.4: 提交 `refactor(book-detail): 抽出 useReaderNavigation` 并推送
+- [x] Task 4: 阶段 P1.3 - 抽出 `useReaderNavigation` hook
+  - [x] SubTask 4.1: 新增 `use-reader-navigation.ts`
+  - [x] SubTask 4.2: `page.tsx` 中 `openMarkInReader` / `openTraceInReader` 改为调用 hook
+  - [x] SubTask 4.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
+  - [x] SubTask 4.4: 提交 `refactor(book-detail): 抽出 useReaderNavigation` 并推送
 - [ ] Task 5: 阶段 P1.4 - 抽出 `useMetadataDialog` hook
   - [ ] SubTask 5.1: 新增 `use-metadata-dialog.ts`，封装 4 个 state + open/close/apply
   - [ ] SubTask 5.2: `page.tsx` 中 `showMetadataDialog / metadataResult / selectedFields / fetchCoverChecked` 与 `handleOpenMetadataDialog` / `handleApplyMetadata` 替换为 hook 调用

@@ -1,5 +1,4 @@
-﻿import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { Loader2 } from 'lucide-react';
 import { selectReadableFile } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
@@ -34,12 +33,12 @@ import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDeta
 import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
 import { useDetailMessages } from './use-detail-messages';
+import { useReaderNavigation } from './use-reader-navigation';
 import { type DetailTab, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
 
 export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { bookId: number | null; open: boolean; onClose: () => void; variant?: 'sheet' | 'dialog' }) {
-  const navigate = useNavigate();
   const book = useBook(bookId ?? 0);
   const review = useBookReview(bookId ?? 0);
   const updateBook = useUpdateBook();
@@ -70,6 +69,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
 
   const { message, info, error, clear } = useDetailMessages();
+  const { openMarkInReader, openTraceInReader, openReader } = useReaderNavigation(bookId);
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
   const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
@@ -297,20 +297,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     : progress.data
       ? Math.round(progress.data.percentage)
       : 0;
-  const openMarkInReader = useCallback((mark: BookRecentMarkItem) => {
-    if (!bookId) return;
-    const cfi = mark.cfi ?? mark.cfi_start;
-    navigate(cfi ? `/books/${bookId}/read?cfi=${encodeURIComponent(cfi)}` : `/books/${bookId}/read`);
-  }, [bookId, navigate]);
-  const openTraceInReader = useCallback((trace: BookTraceItem) => {
-    if (!bookId) return;
-    if (trace.cfi) {
-      navigate(`/books/${bookId}/read?cfi=${encodeURIComponent(trace.cfi)}`);
-    } else {
-      navigate(`/books/${bookId}/read`);
-    }
-  }, [bookId, navigate]);
-
   const coverGroups = useMemo<CoverGroups | null>(() => {
     if (!covers.data) return null;
     const groups: Record<string, { label: string; items: BookCoverItem[] }> = {
@@ -389,7 +375,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 editMode={editMode}
                 onRead={() => {
                   if (!bookId || !readableFile) return;
-                  navigate(`/books/${bookId}/read`);
+                  openReader();
                 }}
                 onToggleCoverPanel={() => setShowCoverPanel(!showCoverPanel)}
                 onToggleEditMode={() => setEditMode(!editMode)}
