@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { rmSync } from 'node:fs';
+import { HIGHLIGHT_TYPE } from '@redesk/shared';
 import { getSqlite, initDatabase } from '../db';
 import { buildServer } from '../server';
 import { hashPassword } from '../lib/auth';
@@ -179,6 +180,12 @@ afterAll(async () => {
   rmSync(testEnv.root, { recursive: true, force: true });
 });
 
+describe('shared highlight type contract', () => {
+  it('includes every highlight rendering type accepted by highlight schemas', () => {
+    expect(Object.values(HIGHLIGHT_TYPE)).toEqual(['HIGHLIGHT', 'UNDERLINE', 'WAVY']);
+  });
+});
+
 describe('backup permission boundaries', () => {
   it('rejects full backup and manual backup trigger for non-admin users', async () => {
     const { app, sqlite } = sharedContext!;
@@ -206,6 +213,24 @@ describe('backup permission boundaries', () => {
     expect(fullResponse.json().error.code).toBe('FORBIDDEN');
     expect(triggerResponse.statusCode).toBe(403);
     expect(triggerResponse.json().error.code).toBe('FORBIDDEN');
+  });
+});
+
+describe('file update contract validation', () => {
+  it('rejects file update fields that are not implemented by the route', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+    const cookie = await authCookie(app);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/books/${seeded.bookId}/files/${seeded.fileId}`,
+      headers: { cookie },
+      payload: { original_filename: 'renamed.epub' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
   });
 });
 

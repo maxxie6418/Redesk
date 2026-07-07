@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { getSqlite, initDatabase } from '../db';
 import { buildServer } from '../server';
 import { hashPassword } from '../lib/auth';
@@ -158,6 +159,19 @@ afterAll(async () => {
   closeSqliteSafely();
 
   rmSync(testEnv.root, { recursive: true, force: true });
+});
+
+describe('topic relation schema constraints', () => {
+  it('declares compound primary keys in Drizzle schema for topic reference tables', () => {
+    const schemaRoot = join(__dirname, '../../../../packages/db/src/schema');
+    const topicBooksSchema = readFileSync(join(schemaRoot, 'topic-books.ts'), 'utf-8');
+    const topicHighlightsSchema = readFileSync(join(schemaRoot, 'topic-highlights.ts'), 'utf-8');
+    const topicNotesSchema = readFileSync(join(schemaRoot, 'topic-notes.ts'), 'utf-8');
+
+    expect(topicBooksSchema).toMatch(/primaryKey\(\{ columns: \[table\.topic_id, table\.book_id\] \}\)/);
+    expect(topicHighlightsSchema).toMatch(/primaryKey\(\{ columns: \[table\.topic_id, table\.highlight_id\] \}\)/);
+    expect(topicNotesSchema).toMatch(/primaryKey\(\{ columns: \[table\.topic_id, table\.note_id\] \}\)/);
+  });
 });
 
 describe('topic routes', () => {

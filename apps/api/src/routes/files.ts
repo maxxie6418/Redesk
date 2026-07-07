@@ -1853,27 +1853,55 @@ export function fileRoutes(app: FastifyInstance): void {
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
 
-    const book = getDb()
+    const db = getDb();
+    const book = db
       .select({ cover_path: books.cover_path })
       .from(books)
       .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
       .get();
 
-    if (!book?.cover_path) {
-      reply.header('Cache-Control', 'no-store');
-      return reply.code(404).send();
-    }
-    const storage = getStorageByDriver('local');
-    const exists = await storage.exists(book.cover_path).catch(() => false);
-    if (!exists) {
+    if (!book) {
       reply.header('Cache-Control', 'no-store');
       return reply.code(404).send();
     }
 
-    const stream = await storage.getStream(book.cover_path);
-    return reply
-      .header('Content-Type', coverMimeFromExt(extname(book.cover_path)))
-      .header('Cache-Control', 'no-store')
-      .send(stream);
+    const activeCover = db
+      .select({
+        local_path: bookCovers.local_path,
+        remote_key: bookCovers.remote_key,
+        primary_location: bookCovers.primary_location,
+        mime_type: bookCovers.mime_type,
+      })
+      .from(bookCovers)
+      .where(and(eq(bookCovers.book_id, bookId), eq(bookCovers.owner_id, userId), eq(bookCovers.is_active, 1)))
+      .orderBy(desc(bookCovers.updated_at), desc(bookCovers.id))
+      .get();
+
+    const candidates = activeCover
+      ? activeCover.primary_location === 'cloud'
+        ? [
+            { driver: 's3' as const, key: activeCover.remote_key, mimeType: activeCover.mime_type },
+            { driver: 'local' as const, key: activeCover.local_path, mimeType: activeCover.mime_type },
+          ]
+        : [
+            { driver: 'local' as const, key: activeCover.local_path, mimeType: activeCover.mime_type },
+            { driver: 's3' as const, key: activeCover.remote_key, mimeType: activeCover.mime_type },
+          ]
+      : [{ driver: 'local' as const, key: book.cover_path, mimeType: null }];
+
+    for (const candidate of candidates) {
+      if (!candidate.key) continue;
+      const storage = getStorageByDriver(candidate.driver);
+      const exists = await storage.exists(candidate.key).catch(() => false);
+      if (!exists) continue;
+      const stream = await storage.getStream(candidate.key);
+      return reply
+        .header('Content-Type', candidate.mimeType ?? coverMimeFromExt(extname(candidate.key)))
+        .header('Cache-Control', 'no-store')
+        .send(stream);
+    }
+
+    reply.header('Cache-Control', 'no-store');
+    return reply.code(404).send();
   });
 }

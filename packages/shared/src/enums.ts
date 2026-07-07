@@ -47,6 +47,7 @@ export type BookCoverSourceType = (typeof BOOK_COVER_SOURCE_TYPE)[keyof typeof B
 export const HIGHLIGHT_TYPE = {
   HIGHLIGHT: 'HIGHLIGHT',
   UNDERLINE: 'UNDERLINE',
+  WAVY: 'WAVY',
 } as const;
 export type HighlightType = (typeof HIGHLIGHT_TYPE)[keyof typeof HIGHLIGHT_TYPE];
 

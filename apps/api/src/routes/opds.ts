@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { extname } from 'node:path';
 import { and, eq, isNull, sql, asc } from 'drizzle-orm';
 import { books, bookFiles, bookTags, tags } from '@redesk/db';
 import { getDb } from '../db';
+import { getStorageByDriver } from '../lib/storage-factory';
 
 interface BookRow {
   id: number;
@@ -37,7 +39,7 @@ ${entries}
 
 function opdsEntry(book: BookRow, primaryFile: FileRow | null): string {
   const coverHref = `/api/v1/books/${book.id}/cover`;
-  const downloadHref = primaryFile ? `/api/v1/books/${book.id}/files/${primaryFile.id}/download` : '';
+  const downloadHref = primaryFile ? `/opds/acquisition/${primaryFile.id}` : '';
   const mime = primaryFile?.mime_type ?? 'application/epub+zip';
 
   return `  <entry>
@@ -137,6 +139,62 @@ export async function opdsRoutes(app: FastifyInstance): Promise<void> {
 
     reply.header('Content-Type', 'application/atom+xml; charset=utf-8');
     return opdsFeed(`redesk:status:${status}`, `Redesk - ${status}`, entries.join('\n'), `/opds/by-status?status=${status}`);
+  });
+
+  app.get('/opds/acquisition/:fileId', async (req, reply) => {
+    const userId = await opdsAuth(req, reply);
+    if (userId === null) return;
+
+    const { fileId: fileIdParam } = req.params as { fileId: string };
+    const fileId = Number(fileIdParam);
+    if (!Number.isInteger(fileId) || fileId <= 0) {
+      reply.code(400).send('Invalid file id');
+      return;
+    }
+
+    const db = getDb();
+    const row = db
+      .select({
+        id: bookFiles.id,
+        local_path: bookFiles.local_path,
+        remote_key: bookFiles.remote_key,
+        primary_location: bookFiles.primary_location,
+        original_filename: bookFiles.original_filename,
+        mime_type: bookFiles.mime_type,
+      })
+      .from(bookFiles)
+      .innerJoin(books, eq(bookFiles.book_id, books.id))
+      .where(and(eq(bookFiles.id, fileId), eq(books.owner_id, userId), isNull(books.deleted_at)))
+      .get();
+
+    if (!row) {
+      reply.code(404).send('File not found');
+      return;
+    }
+
+    const candidates = row.primary_location === 'cloud'
+      ? [
+          { driver: 's3' as const, key: row.remote_key },
+          { driver: 'local' as const, key: row.local_path },
+        ]
+      : [
+          { driver: 'local' as const, key: row.local_path },
+          { driver: 's3' as const, key: row.remote_key },
+        ];
+    for (const candidate of candidates) {
+      if (!candidate.key) continue;
+      const storage = getStorageByDriver(candidate.driver);
+      const exists = await storage.exists(candidate.key).catch(() => false);
+      if (!exists) continue;
+      const filename = encodeURIComponent(row.original_filename ?? `book${extname(candidate.key)}`);
+      const stream = await storage.getStream(candidate.key);
+      return reply
+        .header('Content-Type', row.mime_type ?? 'application/octet-stream')
+        .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
+        .send(stream);
+    }
+
+    reply.code(404).send('File not found');
   });
 
   app.get('/opds/by-tag', async (req, reply) => {

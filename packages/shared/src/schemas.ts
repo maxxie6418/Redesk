@@ -433,12 +433,9 @@ export type CreateFileMetaInput = z.infer<typeof createFileMetaSchema>;
 
 export const updateFileSchema = z
   .object({
-    original_filename: z.string().min(1).max(1024).optional(),
     is_primary: z.boolean().optional(),
-    storage_mode: z.string().optional(),
-    primary_location: z.string().optional(),
-    sync_status: z.string().optional(),
   })
+  .strict()
   .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
 
