@@ -2,7 +2,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
   Loader2,
-  X,
   Archive,
   Highlighter,
   Sparkles,
@@ -35,11 +34,11 @@ import { useNotes, useHighlights, type NoteItem, type HighlightItem } from '@/ho
 import { useAddTopicBook } from '@/hooks/use-topics';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
-import { Button } from '@/components/ui/button';
 import { API_BASE } from '@/lib/api';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
+import { MetadataDialog } from './metadata-dialog';
 import { type StatusMessage, type ToastType } from './types';
 
 const COVER_URL_BASE = API_BASE;
@@ -548,85 +547,20 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
 
     {/* Metadata Dialog */}
     {showMetadataDialog && metadataResult && b && (
-      <div
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
-        onClick={() => setShowMetadataDialog(false)}
-      >
-        <div
-          className="w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl overflow-hidden"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h3 className="font-display text-[15px] font-medium text-foreground">抓取元数据更新</h3>
-            <button
-              type="button"
-              onClick={() => setShowMetadataDialog(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="px-5 py-4 space-y-3 max-h-[60vh] overflow-y-auto">
-            {[
-              { key: 'title', label: '书名' },
-              { key: 'author', label: '作者' },
-              { key: 'subtitle', label: '副标题' },
-              { key: 'translator', label: '译者' },
-              { key: 'original_title', label: '原作名' },
-              { key: 'publisher', label: '出版社' },
-              { key: 'publish_year', label: '出版年' },
-              { key: 'isbn', label: 'ISBN' },
-              { key: 'page_count', label: '页数' },
-              { key: 'description', label: '简介' },
-              { key: 'language', label: '语言' },
-            ]
-              .filter(({ key }) => metadataResult[key as keyof LinkMetadata] != null)
-              .map(({ key, label }) => (
-                <label key={key} className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields[key] ?? false}
-                    onChange={(e) => setSelectedFields((prev) => ({ ...prev, [key]: e.target.checked }))}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground">{label}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      抓取值：{String(metadataResult[key as keyof LinkMetadata] ?? '').slice(0, 100)}
-                      {String(metadataResult[key as keyof LinkMetadata] ?? '').length > 100 ? '...' : ''}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      当前值：{String(b[key as keyof typeof b] ?? '').slice(0, 50) || '空'}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            {metadataResult.cover_url && (
-              <label className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={fetchCoverChecked}
-                  onChange={(e) => setFetchCoverChecked(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-foreground">封面图</p>
-                  <p className="text-xs text-muted-foreground/70">
-                    当前值：{b.cover_path ? '已有封面' : '无封面'}
-                  </p>
-                </div>
-              </label>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <Button variant="outline" onClick={() => setShowMetadataDialog(false)}>取消</Button>
-            <Button onClick={handleApplyMetadata} disabled={applyMetadata.isPending || (Object.values(selectedFields).every((v) => !v) && !fetchCoverChecked)}>
-              {applyMetadata.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              确认应用
-            </Button>
-          </div>
-        </div>
-      </div>
+      <MetadataDialog
+        book={b}
+        metadataResult={metadataResult}
+        selectedFields={selectedFields}
+        setSelectedFields={setSelectedFields}
+        fetchCoverChecked={fetchCoverChecked}
+        setFetchCoverChecked={setFetchCoverChecked}
+        isPending={applyMetadata.isPending}
+        onClose={() => {
+          setShowMetadataDialog(false);
+          setMetadataResult(null);
+        }}
+        onApply={handleApplyMetadata}
+      />
     )}
 
     <ConfirmDialog
