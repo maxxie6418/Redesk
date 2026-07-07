@@ -115,6 +115,7 @@ type StorageBucket = (typeof STORAGE_BUCKETS)[number];
 interface StorageEntryRef {
   local_path: string | null;
   file_size: number | null;
+  book_id?: number | null;
 }
 
 function scanDir(dir: string): DirInfo {
@@ -200,7 +201,7 @@ export function summarizeTrackedStorage(
     if (seenPaths.has(normalizedPath)) continue;
     seenPaths.add(normalizedPath);
 
-    const bucket = classifyStoragePath(normalizedPath);
+    const bucket = entry.book_id != null ? 'books' : classifyStoragePath(normalizedPath);
     if (!bucket) continue;
 
     breakdown[bucket].file_count += 1;
@@ -292,7 +293,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
 
     const storageDir = config.storageDir;
     const trackedFiles = db
-      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size })
+      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size, book_id: bookFiles.book_id })
       .from(bookFiles)
       .where(eq(bookFiles.owner_id, userId))
       .all();
@@ -336,7 +337,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const settingsOwnerId = getSettingsOwnerId();
     const storageDir = config.storageDir;
     const trackedFiles = getDb()
-      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size })
+      .select({ local_path: bookFiles.local_path, file_size: bookFiles.file_size, book_id: bookFiles.book_id })
       .from(bookFiles)
       .where(eq(bookFiles.owner_id, userId))
       .all();

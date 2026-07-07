@@ -49,4 +49,23 @@ describe('summarizeTrackedStorage', () => {
       rmSync(storageDir, { recursive: true, force: true });
     }
   });
+
+  it('counts associated files under books even when their local path remains in unassociated', () => {
+    const storageDir = mkdtempSync(join(tmpdir(), 'redesk-system-test-'));
+    try {
+      const unassociatedDir = join(storageDir, 'unassociated');
+      mkdirSync(unassociatedDir, { recursive: true });
+      writeFileSync(join(unassociatedDir, 'linked.epub'), Buffer.alloc(21));
+
+      const summary = summarizeTrackedStorage(
+        [{ local_path: 'unassociated/linked.epub', file_size: null, book_id: 3 }],
+        storageDir,
+      );
+
+      expect(summary.books).toEqual({ file_count: 1, size_bytes: 21 });
+      expect(summary.unassociated).toEqual({ file_count: 0, size_bytes: 0 });
+    } finally {
+      rmSync(storageDir, { recursive: true, force: true });
+    }
+  });
 });

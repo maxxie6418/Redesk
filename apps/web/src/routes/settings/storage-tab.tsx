@@ -102,33 +102,35 @@ export function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void 
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {(Object.entries(storage.data.breakdown) as [string, DirInfo][]).map(([key, info]) => {
                   const percentage = totalSize > 0 ? ((info.size_bytes / totalSize) * 100).toFixed(1) : '0';
                   const dir = dirLabels[key] ?? { label: key, icon: <FolderTree className="h-3.5 w-3.5" /> };
                   return (
-                    <div key={key} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
-                      <span className="text-muted-foreground">{dir.icon}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">{dir.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatBytes(info.size_bytes)} ({percentage}%)
-                          </p>
+                    <div key={key} className="rounded-lg border border-border px-2.5 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="shrink-0 text-muted-foreground">{dir.icon}</span>
+                          <p className="truncate text-sm font-medium text-foreground">{dir.label}</p>
                         </div>
-                        <div className="mt-1 h-1 w-full rounded-full bg-muted">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all',
-                              key === 'tmp'
-                                ? 'bg-orange-400'
-                                : key === 'backups'
-                                  ? 'bg-blue-400'
-                                  : 'bg-emerald-400',
-                            )}
-                            style={{ width: `${Math.max(Number(percentage), 1)}%` } as CSSProperties}
-                          />
-                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">{percentage}%</p>
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">{formatBytes(info.size_bytes)}</span>
+                        <span>{info.file_count} 个</span>
+                      </div>
+                      <div className="mt-1.5 h-1 w-full rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all',
+                            key === 'tmp'
+                              ? 'bg-orange-400'
+                              : key === 'backups'
+                                ? 'bg-blue-400'
+                                : 'bg-emerald-400',
+                          )}
+                          style={{ width: `${Math.max(Number(percentage), 1)}%` } as CSSProperties}
+                        />
                       </div>
                     </div>
                   );
