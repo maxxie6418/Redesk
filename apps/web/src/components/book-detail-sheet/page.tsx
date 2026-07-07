@@ -1,40 +1,25 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { selectReadableFile } from '@redesk/shared';
 import { cn } from '@/lib/utils';
-import {
-  useBook,
-  useBookReview,
-  useUpdateBook,
-  useDeleteBook,
-  useBookCovers,
-  useFetchBookCover,
-  useActivateBookCover,
-  useDeleteBookCover,
-  useUploadBookCover,
-  useFetchBookMetadata,
-  useApplyBookMetadata,
-  useFavoriteBook,
-  useUnfavoriteBook,
-  type BookCoverItem,
-} from '@/hooks/use-books';
-import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
+import { useActivateBookCover, useApplyBookMetadata, useBook, useBookCovers, useBookReview, useDeleteBook, useDeleteBookCover, useFavoriteBook, useFetchBookCover, useFetchBookMetadata, useUnfavoriteBook, useUpdateBook, useUploadBookCover, type BookCoverItem } from '@/hooks/use-books';
+import { useDeleteFile, useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useReadingProgress } from '@/hooks/use-reading-progress';
-import { useNotes, useHighlights, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
+import { useHighlights, useNotes, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
 import { useAddTopicBook } from '@/hooks/use-topics';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { API_BASE } from '@/lib/api';
-import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
 import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
-import { useDetailMessages } from './use-detail-messages';
-import { useReaderNavigation } from './use-reader-navigation';
-import { useMetadataDialog } from './use-metadata-dialog';
 import { useBookActions } from './use-book-actions';
-import { type DetailTab, COVER_TONES, formatFileSize } from './types';
+import { useDetailMessages } from './use-detail-messages';
+import { useMetadataDialog } from './use-metadata-dialog';
+import { useReaderNavigation } from './use-reader-navigation';
+import { COVER_TONES, formatFileSize, type DetailTab } from './types';
 
 const COVER_URL_BASE = API_BASE;
 
@@ -177,7 +162,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   });
 
   const b = book.data;
-  const progressPercent = progress.data?.percentage ?? 0;
   const readableFile = selectReadableFile<BookFileItem>(files.data);
 
   const reviewSummary = review.data;
@@ -282,7 +266,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               <StatusToast message={message} />
 
               <BookCoverSection book={b} bookId={bookId} coverUrlBase={COVER_URL_BASE} coverTones={COVER_TONES} />
-              <ReadingProgressBlock progressPercent={progressPercent} />
+              <ReadingProgressBlock progressPercent={progress.data?.percentage ?? 0} />
               <BookTimeline book={b} />
               <BookPrimaryActions
                 readableFile={readableFile ?? undefined}

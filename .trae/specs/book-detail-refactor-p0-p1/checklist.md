@@ -57,8 +57,8 @@
 
 ## 整体验证
 
-- [ ] `wc -l page.tsx` ≤ 400
-- [ ] 全部 Web/API 测试通过
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] 6 个新文件全部存在
+- [x] `wc -l page.tsx` ≤ 400
+- [x] 全部 Web/API 测试通过
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] 6 个新文件全部存在
 - [ ] 6 个提交都已在 `origin/main` 可见

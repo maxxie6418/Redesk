@@ -30,10 +30,10 @@
   - [x] SubTask 6.2: `page.tsx` 中对应 `useCallback` 全部删除，替换为 hook 调用
   - [x] SubTask 6.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
   - [x] SubTask 6.4: 提交 `refactor(book-detail): 抽出 useBookActions` 并推送
-- [ ] Task 7: 验证 - 确认 page.tsx 行数下降 + 整体回归
-  - [ ] SubTask 7.1: 用 `wc -l page.tsx` 确认 ≤ 400 行
-  - [ ] SubTask 7.2: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
-  - [ ] SubTask 7.3: 检查 `pnpm build`（如有）
+- [x] Task 7: 验证 - 确认 page.tsx 行数下降 + 整体回归
+  - [x] SubTask 7.1: 用 `wc -l page.tsx` 确认 ≤ 400 行
+  - [x] SubTask 7.2: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
+  - [x] SubTask 7.3: 检查 `pnpm build`（如有）
 
 # Task Dependencies
 
