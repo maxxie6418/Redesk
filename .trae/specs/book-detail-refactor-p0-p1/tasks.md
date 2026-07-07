@@ -20,11 +20,11 @@
   - [x] SubTask 4.2: `page.tsx` 中 `openMarkInReader` / `openTraceInReader` 改为调用 hook
   - [x] SubTask 4.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
   - [x] SubTask 4.4: 提交 `refactor(book-detail): 抽出 useReaderNavigation` 并推送
-- [ ] Task 5: 阶段 P1.4 - 抽出 `useMetadataDialog` hook
-  - [ ] SubTask 5.1: 新增 `use-metadata-dialog.ts`，封装 4 个 state + open/close/apply
-  - [ ] SubTask 5.2: `page.tsx` 中 `showMetadataDialog / metadataResult / selectedFields / fetchCoverChecked` 与 `handleOpenMetadataDialog` / `handleApplyMetadata` 替换为 hook 调用
-  - [ ] SubTask 5.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
-  - [ ] SubTask 5.4: 提交 `refactor(book-detail): 抽出 useMetadataDialog` 并推送
+- [x] Task 5: 阶段 P1.4 - 抽出 `useMetadataDialog` hook
+  - [x] SubTask 5.1: 新增 `use-metadata-dialog.ts`，封装 4 个 state + open/close/apply
+  - [x] SubTask 5.2: `page.tsx` 中 `showMetadataDialog / metadataResult / selectedFields / fetchCoverChecked` 与 `handleOpenMetadataDialog` / `handleApplyMetadata` 替换为 hook 调用
+  - [x] SubTask 5.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
+  - [x] SubTask 5.4: 提交 `refactor(book-detail): 抽出 useMetadataDialog` 并推送
 - [ ] Task 6: 阶段 P1.5 - 抽出 `useBookActions` hook
   - [ ] SubTask 6.1: 新增 `use-book-actions.ts`，封装收藏/封面/删除/抓取/上传 8 个回调
   - [ ] SubTask 6.2: `page.tsx` 中对应 `useCallback` 全部删除，替换为 hook 调用

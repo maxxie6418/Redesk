@@ -18,7 +18,6 @@ import {
   useFavoriteBook,
   useUnfavoriteBook,
   type BookCoverItem,
-  type LinkMetadata,
 } from '@/hooks/use-books';
 import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-files';
 import { useReadingProgress } from '@/hooks/use-reading-progress';
@@ -34,6 +33,7 @@ import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
 import { useDetailMessages } from './use-detail-messages';
 import { useReaderNavigation } from './use-reader-navigation';
+import { useMetadataDialog } from './use-metadata-dialog';
 import { type DetailTab, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
@@ -58,7 +58,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const deleteCover = useDeleteBookCover();
   const uploadCover = useUploadBookCover();
   const fetchMetadata = useFetchBookMetadata();
-  const applyMetadata = useApplyBookMetadata();
+  const applyMetadataMutation = useApplyBookMetadata();
   const favoriteBook = useFavoriteBook();
   const unfavoriteBook = useUnfavoriteBook();
   const deleteFile = useDeleteFile();
@@ -70,10 +70,24 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
 
   const { message, info, error, clear } = useDetailMessages();
   const { openMarkInReader, openTraceInReader, openReader } = useReaderNavigation(bookId);
-  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
-  const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
-  const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
-  const [fetchCoverChecked, setFetchCoverChecked] = useState(false);
+  const {
+    showMetadataDialog,
+    metadataResult,
+    selectedFields,
+    setSelectedFields,
+    fetchCoverChecked,
+    setFetchCoverChecked,
+    openDialog: openMetadataDialog,
+    closeDialog: closeMetadataDialog,
+    applyDialog: applyMetadata,
+  } = useMetadataDialog({
+    bookId,
+    book: book.data,
+    fetchMetadata,
+    applyMetadata: applyMetadataMutation,
+    info,
+    error,
+  });
   const [showCoverPanel, setShowCoverPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('archive');
   const [editMode, setEditMode] = useState(false);
@@ -81,10 +95,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   useEffect(() => {
     setEditMode(false);
     setShowCoverPanel(false);
-    setShowMetadataDialog(false);
+    closeMetadataDialog();
     clear();
     setActiveTab('archive');
-  }, [bookId, open, clear]);
+  }, [bookId, open, clear, closeMetadataDialog]);
 
   const categories = personalCategories;
 
@@ -213,53 +227,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       error(err instanceof ApiError ? err.message : '删除失败');
     }
   }, [bookId, pendingFileDelete, deleteFile, info, error]);
-
-  const handleOpenMetadataDialog = useCallback(async () => {
-    const current = book.data;
-    if (!current?.source_url) {
-      error('请先填写介绍页链接');
-      return;
-    }
-    try {
-      const result = await fetchMetadata.mutateAsync(current.source_url);
-      setMetadataResult(result);
-      const initialSelected: Record<string, boolean> = {};
-      const fieldKeys = ['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count'] as const;
-      for (const key of fieldKeys) {
-        const value = result[key as keyof LinkMetadata];
-        const currentValue = current[key as keyof typeof current];
-        if (value != null && String(value).trim() !== '' && (currentValue == null || String(currentValue).trim() === '')) {
-          initialSelected[key] = true;
-        } else if (value != null && String(value).trim() !== '' && currentValue != null && String(currentValue).trim() !== '') {
-          initialSelected[key] = false;
-        }
-      }
-      setSelectedFields(initialSelected);
-      setFetchCoverChecked(Boolean(result.cover_url) && !current.cover_path);
-      setShowMetadataDialog(true);
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '抓取元数据失败');
-    }
-  }, [book.data, fetchMetadata, error]);
-
-  const handleApplyMetadata = useCallback(async () => {
-    if (!metadataResult || !bookId) return;
-    const fields: Record<string, unknown> = {};
-    for (const [key, checked] of Object.entries(selectedFields)) {
-      if (checked) {
-        const value = metadataResult[key as keyof LinkMetadata];
-        if (value != null) fields[key] = value;
-      }
-    }
-    try {
-      await applyMetadata.mutateAsync({ bookId, fields, fetchCover: fetchCoverChecked });
-      info('元数据已更新');
-      setShowMetadataDialog(false);
-      setMetadataResult(null);
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '更新元数据失败');
-    }
-  }, [bookId, metadataResult, selectedFields, fetchCoverChecked, applyMetadata, info, error]);
 
   const b = book.data;
   const progressPercent = progress.data?.percentage ?? 0;
@@ -418,7 +385,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   onSaveDate={saveDate}
                   onSaveJson={saveJson}
                   onSaveTags={saveTags}
-                  onOpenMetadataDialog={handleOpenMetadataDialog}
+                  onOpenMetadataDialog={openMetadataDialog}
                 />
               )}
 
@@ -468,12 +435,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
         setSelectedFields={setSelectedFields}
         fetchCoverChecked={fetchCoverChecked}
         setFetchCoverChecked={setFetchCoverChecked}
-        isPending={applyMetadata.isPending}
-        onClose={() => {
-          setShowMetadataDialog(false);
-          setMetadataResult(null);
-        }}
-        onApply={handleApplyMetadata}
+        isPending={applyMetadataMutation.isPending}
+        onClose={closeMetadataDialog}
+        onApply={applyMetadata}
       />
     )}
 

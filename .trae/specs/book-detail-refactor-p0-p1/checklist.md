@@ -39,12 +39,12 @@
 
 ## 阶段 P1.4 - 抽出 useMetadataDialog
 
-- [ ] 新文件 `use-metadata-dialog.ts` 存在
-- [ ] 4 个 state 与 2 个 handler 全部内聚
-- [ ] 字段预勾选逻辑保留
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] Web/API 测试通过
-- [ ] 提交 `refactor(book-detail): 抽出 useMetadataDialog` 并成功推送
+- [x] 新文件 `use-metadata-dialog.ts` 存在
+- [x] 4 个 state 与 2 个 handler 全部内聚
+- [x] 字段预勾选逻辑保留
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] Web/API 测试通过
+- [x] 提交 `refactor(book-detail): 抽出 useMetadataDialog` 并成功推送
 
 ## 阶段 P1.5 - 抽出 useBookActions
 
