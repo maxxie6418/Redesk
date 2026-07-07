@@ -9,6 +9,8 @@ import { useBatchSendFilesToCloud, useFileLibrary, type BookFileItem } from '@/h
 import { BatchUploadMatchCard } from './batch-upload-card';
 import type { StatusMessage } from './types';
 
+const BATCH_PAGE_SIZE = 50;
+
 function BatchBookActionsCard({
   initialBookIds,
   onToast,
@@ -18,7 +20,9 @@ function BatchBookActionsCard({
 }) {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const booksQuery = useBooks({ q: search.trim() || undefined, page_size: 120, sort: '-updated_at' });
+  const [page, setPage] = useState(1);
+  const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
+  const booksQuery = useBooks({ q: search.trim() || undefined, page, page_size: BATCH_PAGE_SIZE, sort: '-updated_at' });
   const batchBooks = useBatchBooks();
 
   useEffect(() => {
@@ -26,7 +30,21 @@ function BatchBookActionsCard({
     setSelectedIds((current) => [...new Set([...current, ...initialBookIds])]);
   }, [initialBookIds]);
 
-  const books = booksQuery.data?.data ?? [];
+  useEffect(() => {
+    setPage(1);
+    setLoadedBooks([]);
+  }, [search]);
+
+  useEffect(() => {
+    const nextBooks = booksQuery.data?.data;
+    if (!nextBooks) return;
+    setLoadedBooks((current) => (page === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
+  }, [booksQuery.data?.data, page]);
+
+  const books = loadedBooks;
+  const total = booksQuery.data?.pagination.total;
+  const hasMore = total != null && books.length < total;
+  const isFetchingMore = booksQuery.isFetching && page > 1;
 
   const toggleBook = (bookId: number) => {
     setSelectedIds((current) => (current.includes(bookId) ? current.filter((id) => id !== bookId) : [...current, bookId]));
@@ -87,32 +105,39 @@ function BatchBookActionsCard({
         </div>
 
         <div className="max-h-[360px] space-y-2 overflow-y-auto rounded-xl border border-border bg-background p-3">
-          {booksQuery.isLoading ? (
+          {booksQuery.isLoading && page === 1 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">正在加载书籍…</div>
           ) : books.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">当前没有可处理的书籍。</div>
           ) : (
-            books.map((book: BookSummary) => {
-              const selected = selectedIds.includes(book.id);
-              return (
-                <button
-                  key={book.id}
-                  type="button"
-                  onClick={() => toggleBook(book.id)}
-                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'}`}
-                >
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
-                    {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-foreground">{book.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {[book.author, book.category_name, book.source_url ? '有来源链接' : '无来源链接'].filter(Boolean).join(' · ')}
+            <>
+              {books.map((book: BookSummary) => {
+                const selected = selectedIds.includes(book.id);
+                return (
+                  <button
+                    key={book.id}
+                    type="button"
+                    onClick={() => toggleBook(book.id)}
+                    className={`flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'}`}
+                  >
+                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
+                      {selected ? <Check className="h-3.5 w-3.5" /> : null}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-foreground">{book.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[book.author, book.category_name, book.source_url ? '有来源链接' : '无来源链接'].filter(Boolean).join(' · ')}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })
+                  </button>
+                );
+              })}
+              {hasMore ? (
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setPage((value) => value + 1)} disabled={isFetchingMore}>
+                  {isFetchingMore ? '正在加载下一页...' : '加载更多'}
+                </Button>
+              ) : null}
+            </>
           )}
         </div>
       </CardContent>
@@ -128,13 +153,24 @@ function BatchCloudSyncCard({
   onToast: (msg: StatusMessage) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const filesQuery = useFileLibrary({ page: 1, page_size: 200 });
+  const [page, setPage] = useState(1);
+  const [loadedFiles, setLoadedFiles] = useState<BookFileItem[]>([]);
+  const filesQuery = useFileLibrary({ page, page_size: BATCH_PAGE_SIZE });
   const sendToCloud = useBatchSendFilesToCloud();
 
+  useEffect(() => {
+    const nextFiles = filesQuery.data?.data;
+    if (!nextFiles) return;
+    setLoadedFiles((current) => (page === 1 ? nextFiles : [...current, ...nextFiles.filter((file) => !current.some((item) => item.id === file.id))]));
+  }, [filesQuery.data?.data, page]);
+
   const candidates = useMemo(() => {
-    const items = filesQuery.data?.data ?? [];
-    return items.filter((file: BookFileItem) => file.local_path && (file.storage_mode === 'local_only' || file.sync_status !== 'synced'));
-  }, [filesQuery.data]);
+    return loadedFiles.filter((file: BookFileItem) => file.local_path && (file.storage_mode === 'local_only' || file.sync_status !== 'synced'));
+  }, [loadedFiles]);
+
+  const total = filesQuery.data?.pagination.total;
+  const hasMore = total != null && loadedFiles.length < total;
+  const isFetchingMore = filesQuery.isFetching && page > 1;
 
   useEffect(() => {
     setSelectedIds((current) => current.filter((id) => candidates.some((file) => file.id === id)));
@@ -192,32 +228,39 @@ function BatchCloudSyncCard({
         </div>
 
         <div className="max-h-[360px] space-y-2 overflow-y-auto rounded-xl border border-border bg-background p-3">
-          {filesQuery.isLoading ? (
+          {filesQuery.isLoading && page === 1 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">正在扫描文件…</div>
           ) : candidates.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">当前没有需要补发到云端的文件。</div>
           ) : (
-            candidates.map((file) => {
-              const selected = selectedIds.includes(file.id);
-              return (
-                <button
-                  key={file.id}
-                  type="button"
-                  onClick={() => toggleFile(file.id)}
-                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'}`}
-                >
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
-                    {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-foreground">{file.original_filename ?? `文件 #${file.id}`}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {[file.book_title ?? '未关联书籍', file.storage_mode, file.sync_status].join(' · ')}
+            <>
+              {candidates.map((file) => {
+                const selected = selectedIds.includes(file.id);
+                return (
+                  <button
+                    key={file.id}
+                    type="button"
+                    onClick={() => toggleFile(file.id)}
+                    className={`flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'}`}
+                  >
+                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
+                      {selected ? <Check className="h-3.5 w-3.5" /> : null}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-foreground">{file.original_filename ?? `文件 #${file.id}`}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[file.book_title ?? '未关联书籍', file.storage_mode, file.sync_status].join(' · ')}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })
+                  </button>
+                );
+              })}
+              {hasMore ? (
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setPage((value) => value + 1)} disabled={isFetchingMore}>
+                  {isFetchingMore ? '正在加载下一页...' : '加载更多'}
+                </Button>
+              ) : null}
+            </>
           )}
         </div>
       </CardContent>

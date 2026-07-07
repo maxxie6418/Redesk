@@ -39,6 +39,10 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [booksPage, setBooksPage] = useState(1);
+  const [trashPage, setTrashPage] = useState(1);
+  const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
+  const [loadedTrashBooks, setLoadedTrashBooks] = useState<BookSummary[]>([]);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -77,7 +81,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   const booksQueryParams = useMemo(
     () => ({
-      page_size: 200,
+      page: booksPage,
+      page_size: BOOKSHELF_PAGE_SIZE,
       sort: SORT_API_MAP[sort],
       ...(debouncedSearch ? { q: debouncedSearch } : {}),
       ...(status !== 'ALL' ? { status } : {}),
@@ -88,35 +93,61 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       ...(readableFilter === 'readable' ? { has_readable_file: true } : {}),
       ...(readableFilter === 'unreadable' ? { has_readable_file: false } : {}),
     }),
-    [category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility],
+    [booksPage, category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility],
   );
 
   const trashQueryParams = useMemo(
     () => ({
-      page_size: 200,
+      page: trashPage,
+      page_size: BOOKSHELF_PAGE_SIZE,
       sort: '-deleted_at',
       ...(debouncedSearch ? { q: debouncedSearch } : {}),
     }),
-    [debouncedSearch],
+    [debouncedSearch, trashPage],
   );
 
   const booksQuery = useBooks(booksQueryParams);
   const trashQuery = useTrash(trashQueryParams);
+
+  useEffect(() => {
+    setBooksPage(1);
+    setLoadedBooks([]);
+  }, [category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility]);
+
+  useEffect(() => {
+    setTrashPage(1);
+    setLoadedTrashBooks([]);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    const nextBooks = booksQuery.data?.data;
+    if (!nextBooks) return;
+    setLoadedBooks((current) => (booksPage === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
+  }, [booksPage, booksQuery.data?.data]);
+
+  useEffect(() => {
+    const nextBooks = trashQuery.data?.data;
+    if (!nextBooks) return;
+    setLoadedTrashBooks((current) => (trashPage === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
+  }, [trashPage, trashQuery.data?.data]);
+
   const restoreBook = useRestoreBook();
   const permanentDeleteBook = usePermanentDeleteBook();
   const emptyTrash = useEmptyTrash();
 
   const books = useMemo<BookSummary[]>(() => {
     if (pageView === 'trash') {
-      return trashQuery.data?.data ?? [];
+      return loadedTrashBooks;
     }
-    return booksQuery.data?.data ?? [];
-  }, [booksQuery.data?.data, pageView, trashQuery.data?.data]);
+    return loadedBooks;
+  }, [loadedBooks, loadedTrashBooks, pageView]);
 
-  const isLoading = pageView === 'trash' ? trashQuery.isLoading : booksQuery.isLoading;
+  const isLoading = pageView === 'trash' ? trashQuery.isLoading && trashPage === 1 : booksQuery.isLoading && booksPage === 1;
+  const isFetchingMore = pageView === 'trash' ? trashQuery.isFetching && trashPage > 1 : booksQuery.isFetching && booksPage > 1;
   const isError = pageView === 'trash' ? trashQuery.isError : booksQuery.isError;
   const error = pageView === 'trash' ? trashQuery.error : booksQuery.error;
   const total = pageView === 'trash' ? trashQuery.data?.pagination.total : booksQuery.data?.pagination.total;
+  const hasMore = total != null && books.length < total;
   const retryRefetch = pageView === 'trash' ? () => trashQuery.refetch() : () => booksQuery.refetch();
 
   const categoryOptions = useMemo<FilterSelectOption[]>(
@@ -203,6 +234,15 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       // mutation handles error
     }
   }, [batchBooks, selectedIds]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || isFetchingMore) return;
+    if (pageView === 'trash') {
+      setTrashPage((page) => page + 1);
+      return;
+    }
+    setBooksPage((page) => page + 1);
+  }, [hasMore, isFetchingMore, pageView]);
 
   return (
     <>
@@ -359,16 +399,25 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             ) : null}
 
             {!isLoading && !isError && books.length > 0 ? (
-              <BookshelfContent
-                books={books}
-                viewMode={viewMode}
-                isTrash={pageView === 'trash'}
-                onOpenDetail={setDetailBookId}
-                onRestore={handleRestore}
-                onPermanentDelete={handlePermanentDelete}
-                selectedIds={selectedIds}
-                onSelect={handleSelect}
-              />
+              <>
+                <BookshelfContent
+                  books={books}
+                  viewMode={viewMode}
+                  isTrash={pageView === 'trash'}
+                  onOpenDetail={setDetailBookId}
+                  onRestore={handleRestore}
+                  onPermanentDelete={handlePermanentDelete}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                />
+                {hasMore ? (
+                  <div className="mt-5 flex justify-center">
+                    <Button variant="outline" onClick={handleLoadMore} disabled={isFetchingMore}>
+                      {isFetchingMore ? '正在加载下一页...' : '加载更多'}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </>
         )}

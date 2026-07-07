@@ -3,7 +3,7 @@ import {
   createReadingProgressSyncTracker,
   getReadingProgressSyncMessage,
   shouldShowReadingProgressSyncWarning,
-} from './reading-progress-sync';
+} from './reading-progress-sync-core';
 
 describe('reading progress sync tracker', () => {
   it('保存失败后允许同一位置重试，连续失败后显示轻量提示，成功后清除提示', () => {

@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import {
+  INITIAL_READING_PROGRESS_SYNC_STATUS,
+  createReadingProgressSyncTracker,
+  getReadingProgressSyncMessage,
+  shouldShowReadingProgressSyncWarning,
+  type ReadingProgressSyncStatus,
+} from './reading-progress-sync-core';
+
+export {
+  createReadingProgressSyncTracker,
+  getReadingProgressSyncMessage,
+  shouldShowReadingProgressSyncWarning,
+  type ReadingProgressSyncStatus,
+};
 
 export interface ReadingProgressData {
   id: number;
@@ -13,61 +27,6 @@ export interface ReadingProgressData {
   updated_at: string;
 }
 
-export interface ReadingProgressSyncStatus {
-  failedAttempts: number;
-  lastErrorAt: string | null;
-}
-
-const INITIAL_STATUS: ReadingProgressSyncStatus = {
-  failedAttempts: 0,
-  lastErrorAt: null,
-};
-
-const WARNING_FAILURE_THRESHOLD = 2;
-
-function createProgressKey(cfi: string, percentage: number) {
-  return `${cfi}:${percentage}`;
-}
-
-export function shouldShowReadingProgressSyncWarning(status: ReadingProgressSyncStatus) {
-  return status.failedAttempts >= WARNING_FAILURE_THRESHOLD;
-}
-
-export function getReadingProgressSyncMessage(status: ReadingProgressSyncStatus) {
-  return shouldShowReadingProgressSyncWarning(status) ? '阅读进度暂未同步' : null;
-}
-
-export function createReadingProgressSyncTracker() {
-  let lastSuccessfulKey = '';
-  let status = INITIAL_STATUS;
-
-  return {
-    shouldSave(cfi: string, percentage: number) {
-      return createProgressKey(cfi, percentage) !== lastSuccessfulKey;
-    },
-    markSuccess(cfi: string, percentage: number) {
-      lastSuccessfulKey = createProgressKey(cfi, percentage);
-      status = INITIAL_STATUS;
-      return status;
-    },
-    markFailure() {
-      status = {
-        failedAttempts: status.failedAttempts + 1,
-        lastErrorAt: new Date().toISOString(),
-      };
-      return status;
-    },
-    reset() {
-      lastSuccessfulKey = '';
-      status = INITIAL_STATUS;
-      return status;
-    },
-    getStatus() {
-      return status;
-    },
-  };
-}
-
 interface UseReadingProgressSyncOptions {
   bookId: number;
   fileId?: number;
@@ -75,7 +34,7 @@ interface UseReadingProgressSyncOptions {
 
 export function useReadingProgressSync({ bookId, fileId }: UseReadingProgressSyncOptions) {
   const trackerRef = useRef(createReadingProgressSyncTracker());
-  const [status, setStatus] = useState<ReadingProgressSyncStatus>(INITIAL_STATUS);
+  const [status, setStatus] = useState<ReadingProgressSyncStatus>(INITIAL_READING_PROGRESS_SYNC_STATUS);
 
   useEffect(() => {
     setStatus(trackerRef.current.reset());

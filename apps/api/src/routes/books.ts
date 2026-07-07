@@ -22,41 +22,7 @@ import { validate } from '../lib/zod';
 import { extname } from 'node:path';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
-
-
-interface RawBookRow {
-  id: number;
-  owner_id: number;
-  category_id: number | null;
-  genre_category_id: number | null;
-  title: string;
-  author: string | null;
-  subtitle: string | null;
-  isbn: string | null;
-  publisher: string | null;
-  publish_year: number | null;
-  description: string | null;
-  language: string | null;
-  cover_path: string | null;
-  status: string;
-  visibility: string;
-  reading_purpose: string | null;
-  entry_reason: string | null;
-  rating: number | null;
-  custom_attributes: string | null;
-  metadata_source: string | null;
-  source_url: string | null;
-  translator: string | null;
-  original_title: string | null;
-  page_count: number | null;
-  favorited_at: string | null;
-  started_at: string | null;
-  finished_at: string | null;
-  import_order: number;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { serializeBookRow, type RawBookRow } from './book-serialization';
 
 function now(): string {
   return new Date().toISOString();
@@ -116,18 +82,6 @@ function bookSelect() {
     created_at: books.created_at,
     updated_at: books.updated_at,
   };
-}
-
-function parseCustomAttributes(value: string | null): Record<string, unknown> | null {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
 }
 
 function recordStatusChange(bookId: number, fromStatus: string | null, toStatus: string): void {
@@ -332,22 +286,15 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
     }
   }
 
-  return rows.map((row) => {
-    const tagMeta = tagMap.get(row.id) ?? { tag_ids: [], tag_names: [] };
-    const personalCategory = row.category_id ? categoryMap.get(row.category_id) : null;
-    const genreCategory = row.genre_category_id ? categoryMap.get(row.genre_category_id) : null;
-
-    return {
-      ...row,
-      custom_attributes: parseCustomAttributes(row.custom_attributes),
-      category_name: personalCategory?.name ?? null,
-      genre_category_name: genreCategory?.name ?? null,
-      tag_ids: tagMeta.tag_ids,
-      tag_names: tagMeta.tag_names,
-      has_files: fileMap.get(row.id) ?? false,
-      has_readable_file: readableFileMap.get(row.id) ?? false,
-    };
-  });
+  return rows.map((row) =>
+    serializeBookRow(row, {
+      personalCategory: row.category_id ? categoryMap.get(row.category_id) : null,
+      genreCategory: row.genre_category_id ? categoryMap.get(row.genre_category_id) : null,
+      tags: tagMap.get(row.id),
+      hasFiles: fileMap.get(row.id) ?? false,
+      hasReadableFile: readableFileMap.get(row.id) ?? false,
+    }),
+  );
 }
 
 function buildBookListQuery(input: BookQueryInput, ownerId: number) {

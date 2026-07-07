@@ -204,7 +204,6 @@ export function BookReaderPage() {
       setError(null);
       setToc([]);
       setCurrentTitle(bookTitle);
-      lastSaveRef.current = '';
 
       const epubModule = await import('epubjs');
       if (cancelled || !viewerRef.current) return;
@@ -732,8 +731,9 @@ export function BookReaderPage() {
         <Button variant="ghost" size="icon" onClick={toggleNotesPanel}>
           <StickyNote className="h-5 w-5" />
         </Button>
-        <div className="flex-1 truncate text-sm font-medium text-foreground">
-          {currentTitle || book.data?.title}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-foreground">{currentTitle || book.data?.title}</div>
+          {syncMessage ? <div className="truncate text-xs text-amber-600 dark:text-amber-300">{syncMessage}</div> : null}
         </div>
         <Button variant="ghost" size="icon" onClick={goPrev}>
           <ChevronLeft className="h-5 w-5" />
