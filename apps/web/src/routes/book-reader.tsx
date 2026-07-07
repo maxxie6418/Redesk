@@ -15,20 +15,13 @@ import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { api, API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
-import { ReaderNotesPanel, ReaderTopBar, TocPanel, type TocItem } from './book-reader/components';
+import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
 
 interface SelectionState {
   rect: DOMRect;
   cfi: string;
   text: string;
-}
-
-interface EditingHighlight {
-  id: number;
-  note: string | null;
-  markType: string;
-  position: { top: number; left: number };
 }
 
 function shouldIgnoreKeydown(target: EventTarget | null) {
@@ -795,74 +788,22 @@ export function BookReaderPage() {
       />
 
       {editing && (
-        <div
-          className="fixed z-50 anim-pop"
-          style={{
-            top: (editing.position?.top ?? 0) - 60,
-            left: editing.position?.left ?? 0,
+        <HighlightEditPopover
+          editing={editing}
+          onComment={(id) => {
+            setCommentTargetHighlightId(id);
+            setCommentMode(true);
+            setEditing(null);
           }}
-        >
-          <div
-            className="relative flex items-center gap-1 rounded-[14px] border bg-white px-2 py-1.5"
-            style={{
-              borderColor: '#e5e5e5',
-              boxShadow: '0 10px 30px -8px rgba(0,0,0,0.08)',
-            }}
-          >
-            <div
-              className="absolute -bottom-[6px] left-4 w-3 h-3 bg-white"
-              style={{
-                borderRight: '1px solid #e5e5e5',
-                borderBottom: '1px solid #e5e5e5',
-                transform: 'rotate(45deg)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setCommentTargetHighlightId(editing.id);
-                setCommentMode(true);
-                setEditing(null);
-              }}
-              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-neutral-100 text-xs text-neutral-600"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              {editing.note ? '编辑附注' : '添加附注'}
-            </button>
-            <div className="w-px h-5 bg-neutral-200" />
-            <button
-              type="button"
-              onClick={() => {
-                setTopicHighlightId(editing.id);
-                setEditing(null);
-              }}
-              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-neutral-100 text-xs text-neutral-600"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 12V7a2 2 0 0 0-2-2h-5" />
-                <path d="M14 17H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
-                <path d="M8 12h8" /><path d="M12 8v8" />
-              </svg>
-              加入话题
-            </button>
-            <div className="w-px h-5 bg-neutral-200" />
-            <button
-              type="button"
-              onClick={() => {
-                deleteHighlight.mutate(editing.id);
-                setEditing(null);
-              }}
-              className="flex items-center gap-1 rounded-lg px-2.5 h-8 hover:bg-red-50 text-xs text-red-500"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-              删除
-            </button>
-          </div>
-        </div>
+          onAddToTopic={(id) => {
+            setTopicHighlightId(id);
+            setEditing(null);
+          }}
+          onDelete={(id) => {
+            deleteHighlight.mutate(id);
+            setEditing(null);
+          }}
+        />
       )}
     </div>
   );

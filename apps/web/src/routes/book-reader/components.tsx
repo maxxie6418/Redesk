@@ -8,6 +8,13 @@ export interface TocItem {
   href: string;
 }
 
+export interface EditingHighlight {
+  id: number;
+  note: string | null;
+  markType: string;
+  position: { top: number; left: number };
+}
+
 interface ReaderTopBarProps {
   title: string | undefined;
   syncMessage: string | null;
@@ -212,6 +219,79 @@ export function ReaderNotesPanel({
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+interface HighlightEditPopoverProps {
+  editing: EditingHighlight;
+  onComment: (id: number) => void;
+  onAddToTopic: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+export function HighlightEditPopover({ editing, onComment, onAddToTopic, onDelete }: HighlightEditPopoverProps) {
+  return (
+    <div
+      className="fixed z-50 anim-pop"
+      style={{
+        top: (editing.position?.top ?? 0) - 60,
+        left: editing.position?.left ?? 0,
+      }}
+    >
+      <div
+        className="relative flex items-center gap-1 rounded-[14px] border bg-white px-2 py-1.5"
+        style={{
+          borderColor: '#e5e5e5',
+          boxShadow: '0 10px 30px -8px rgba(0,0,0,0.08)',
+        }}
+      >
+        <div
+          className="absolute -bottom-[6px] left-4 h-3 w-3 bg-white"
+          style={{
+            borderRight: '1px solid #e5e5e5',
+            borderBottom: '1px solid #e5e5e5',
+            transform: 'rotate(45deg)',
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => onComment(editing.id)}
+          className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs text-neutral-600 hover:bg-neutral-100"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          {editing.note ? '编辑附注' : '添加附注'}
+        </button>
+        <div className="h-5 w-px bg-neutral-200" />
+        <button
+          type="button"
+          onClick={() => onAddToTopic(editing.id)}
+          className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs text-neutral-600 hover:bg-neutral-100"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 12V7a2 2 0 0 0-2-2h-5" />
+            <path d="M14 17H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+            <path d="M8 12h8" />
+            <path d="M12 8v8" />
+          </svg>
+          加入话题
+        </button>
+        <div className="h-5 w-px bg-neutral-200" />
+        <button
+          type="button"
+          onClick={() => onDelete(editing.id)}
+          className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs text-red-500 hover:bg-red-50"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          </svg>
+          删除
+        </button>
       </div>
     </div>
   );
