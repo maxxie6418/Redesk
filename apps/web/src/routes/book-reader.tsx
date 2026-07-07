@@ -17,23 +17,12 @@ import { api, API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
 import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
+import { useReaderKeyboardNavigation } from './book-reader/use-reader-keyboard-navigation';
 
 interface SelectionState {
   rect: DOMRect;
   cfi: string;
   text: string;
-}
-
-function shouldIgnoreKeydown(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName;
-  return (
-    target.isContentEditable ||
-    tagName === 'INPUT' ||
-    tagName === 'TEXTAREA' ||
-    tagName === 'SELECT' ||
-    target.closest('[contenteditable="true"]') !== null
-  );
 }
 
 export function BookReaderPage() {
@@ -620,30 +609,8 @@ export function BookReaderPage() {
     setTocOpen(false);
   };
 
-  useEffect(() => {
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (shouldIgnoreKeydown(event.target)) return;
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-        event.preventDefault();
-        renditionRef.current?.prev();
-      }
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        event.preventDefault();
-        renditionRef.current?.next();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeydown);
-    const rendition = renditionRef.current;
-    if (rendition?.hooks?.content) {
-      rendition.hooks.content.register((contents: any) => {
-        contents.document.addEventListener('keydown', handleKeydown);
-      });
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeydown);
-    };
-  }, [primaryEpubId]);
+  const getKeyboardRendition = useCallback(() => renditionRef.current, []);
+  useReaderKeyboardNavigation({ activeKey: primaryEpubId, getRendition: getKeyboardRendition });
 
   if (book.isLoading || files.isLoading) {
     return (
