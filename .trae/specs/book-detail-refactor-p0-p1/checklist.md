@@ -26,7 +26,7 @@
 - [x] 自动 2s 清除行为不变
 - [x] `pnpm typecheck` / `pnpm lint` 通过
 - [x] Web/API 测试通过
-- [ ] 提交 `refactor(book-detail): 抽出 useDetailMessages` 并成功推送
+  - [x] 提交 `refactor(book-detail): 抽出 useDetailMessages` 并成功推送
 
 ## 阶段 P1.3 - 抽出 useReaderNavigation
 
