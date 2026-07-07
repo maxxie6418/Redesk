@@ -17,14 +17,9 @@ import { api, API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
 import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
+import { useReaderHighlightActions, type ReaderSelectionState } from './book-reader/use-reader-highlight-actions';
 import { useReaderKeyboardNavigation } from './book-reader/use-reader-keyboard-navigation';
 import { useReaderNotes } from './book-reader/use-reader-notes';
-
-interface SelectionState {
-  rect: DOMRect;
-  cfi: string;
-  text: string;
-}
 
 export function BookReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,7 +55,7 @@ export function BookReaderPage() {
   const [currentTitle, setCurrentTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<SelectionState | null>(null);
+  const [selection, setSelection] = useState<ReaderSelectionState | null>(null);
   const [activeMarkType, setActiveMarkType] = useState<MarkType>(null);
   const [selectionHighlightId, setSelectionHighlightId] = useState<number | null>(null);
   const [commentMode, setCommentMode] = useState(false);
@@ -97,6 +92,36 @@ export function BookReaderPage() {
     createNote,
     updateNote,
     deleteNote,
+  });
+  const {
+    handleCreateHighlight,
+    handleCreateUnderline,
+    handleCreateWavy,
+    handleClearMark,
+    handleBookmark,
+    handleOpenComment,
+    handleCommentSave,
+    handleCommentCancel,
+    handleDismissSelection,
+  } = useReaderHighlightActions({
+    bookId,
+    primaryEpubId,
+    selection,
+    selectionHighlightId,
+    commentTargetHighlightId,
+    bookmarks: bookmarks.data,
+    highlightsMap: highlightsMapRef.current,
+    createHighlight,
+    updateHighlight,
+    deleteHighlight,
+    createBookmark,
+    deleteBookmark,
+    setSelection,
+    setCommentMode,
+    setCommentTargetHighlightId,
+    setActiveMarkType,
+    setSelectionHighlightId,
+    setEditing,
   });
 
   const renderHighlights = useCallback(() => {
@@ -416,143 +441,6 @@ export function BookReaderPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updateHighlight.isSuccess, deleteHighlight.isSuccess]);
-
-  const handleDismissSelection = useCallback(() => {
-    setSelection(null);
-    setCommentMode(false);
-    setCommentTargetHighlightId(null);
-    setActiveMarkType(null);
-    setSelectionHighlightId(null);
-  }, []);
-
-  const handleCreateHighlight = () => {
-    if (!selection || !primaryEpubId) return;
-    createHighlight.mutate({
-      book_id: bookId,
-      cfi_start: selection.cfi,
-      cfi_end: selection.cfi,
-      text: selection.text,
-      type: 'HIGHLIGHT',
-      color: '#fde047',
-    });
-    setSelection(null);
-    setSelectionHighlightId(null);
-  };
-
-  const handleCreateUnderline = () => {
-    if (!selection || !primaryEpubId) return;
-    createHighlight.mutate({
-      book_id: bookId,
-      cfi_start: selection.cfi,
-      cfi_end: selection.cfi,
-      text: selection.text,
-      type: 'UNDERLINE',
-      color: '#3b82f6',
-    });
-    setSelection(null);
-    setSelectionHighlightId(null);
-  };
-
-  const handleCreateWavy = () => {
-    if (!selection || !primaryEpubId) return;
-    createHighlight.mutate({
-      book_id: bookId,
-      cfi_start: selection.cfi,
-      cfi_end: selection.cfi,
-      text: selection.text,
-      type: 'WAVY',
-      color: '#dc2626',
-    });
-    setSelection(null);
-    setSelectionHighlightId(null);
-  };
-
-  const handleClearMark = () => {
-    if (selectionHighlightId == null) return;
-    deleteHighlight.mutate(selectionHighlightId);
-    handleDismissSelection();
-  };
-
-  const handleBookmark = () => {
-    if (!selection || !primaryEpubId) return;
-    const cfi = selection.cfi;
-    // 检查是否已有锚点
-    const existing = bookmarks.data?.find((b) => b.cfi === cfi);
-    if (existing) {
-      deleteBookmark.mutate(existing.id);
-    } else {
-      createBookmark.mutate({
-        book_id: bookId,
-        cfi,
-        label: selection.text.slice(0, 50) || null,
-        percentage: null,
-      });
-    }
-    setSelection(null);
-    setSelectionHighlightId(null);
-  };
-
-  const handleOpenComment = () => {
-    if (!selection || !primaryEpubId) return;
-    // 检查选区是否已有高亮，若有则绑定到该高亮
-    let targetId: number | null = null;
-    for (const [, item] of highlightsMapRef.current) {
-      if (selection.cfi.includes(item.cfi_start) || item.cfi_start.includes(selection.cfi)) {
-        targetId = item.id;
-        break;
-      }
-    }
-    setCommentTargetHighlightId(targetId);
-    setCommentMode(true);
-  };
-
-  const handleCommentSave = (content: string) => {
-    if (commentTargetHighlightId) {
-      // 绑定到已有高亮的评论：更新高亮附注
-      updateHighlight.mutate({
-        id: commentTargetHighlightId,
-        note: content,
-      });
-      setCommentMode(false);
-      setCommentTargetHighlightId(null);
-      setEditing(null);
-      return;
-    }
-
-    if (!selection || !primaryEpubId) return;
-    const cfi = selection.cfi;
-    const text = selection.text;
-
-    // 独立评论：创建高亮 + 附注
-    createHighlight.mutate(
-      {
-        book_id: bookId,
-        cfi_start: cfi,
-        cfi_end: cfi,
-        text,
-        type: 'HIGHLIGHT',
-        color: '#fde047',
-      },
-      {
-        onSuccess: (res: any) => {
-          if (res?.data?.id) {
-            updateHighlight.mutate({
-              id: res.data.id,
-              note: content,
-            });
-          }
-        },
-      },
-    );
-    setCommentMode(false);
-    setCommentTargetHighlightId(null);
-    setSelection(null);
-  };
-
-  const handleCommentCancel = () => {
-    setCommentMode(false);
-    setCommentTargetHighlightId(null);
-  };
 
   const toggleToc = () => {
     setTocOpen(!tocOpen);
