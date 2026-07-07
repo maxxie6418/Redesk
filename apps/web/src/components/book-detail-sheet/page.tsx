@@ -1,19 +1,17 @@
-import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
+﻿import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Lightbulb,
   Loader2,
   NotebookPen,
-  RefreshCcw,
   X,
-  FolderOpen,
   Archive,
   Highlighter,
   Sparkles,
   Tags,
   type LucideIcon,
 } from 'lucide-react';
-import { BOOK_STATUS_LABELS, VISIBILITY, selectReadableFile } from '@redesk/shared';
+import { selectReadableFile } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -37,22 +35,14 @@ import { useBookFiles, useDeleteFile, type BookFileItem } from '@/hooks/use-file
 import { useReadingProgress } from '@/hooks/use-reading-progress';
 import { useNotes, useHighlights, type NoteItem, type HighlightItem } from '@/hooks/use-notes';
 import { useAddTopicBook } from '@/hooks/use-topics';
-import { useCategories, type CategoryItem } from '@/hooks/use-categories';
+import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
 import { Button } from '@/components/ui/button';
 import { API_BASE } from '@/lib/api';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
-import { EditableTextField } from './editable-text-field';
-import { EditableSelectField } from './editable-select-field';
-import { EditableNumberField } from './editable-number-field';
-import { EditableDateField } from './editable-date-field';
-import { EditableLongTextField } from './editable-long-text-field';
-import { EditableJsonField } from './editable-json-field';
-import { EditableTagsField } from './editable-tags-field';
-import { RatingDisplay } from './rating-display';
-import { BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, ReadingProgressBlock, StatusToast, type CoverGroups } from './components';
-import { extractDomain, type StatusMessage, type ToastType } from './types';
+import { BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, ReadingProgressBlock, StatusToast, type CoverGroups } from './components';
+import { type StatusMessage, type ToastType } from './types';
 
 const COVER_URL_BASE = API_BASE;
 
@@ -64,10 +54,6 @@ const COVER_TONES = [
   'bg-[#d7c8d5] text-[#342535]',
   'bg-[#d6d0c6] text-[#332f28]',
 ];
-
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(new Date(value));
-}
 
 function formatFileSize(size: number) {
   if (size < 1024) return `${size} B`;
@@ -462,239 +448,21 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
             {/* Right Column */}
             <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-8">
               {activeTab === 'archive' && (
-              <>
-              {/* Header */}
-              <div className="mb-6">
-                {editMode ? (
-                  <EditableTextField
-                    label=""
-                    value={b.title}
-                    editMode={editMode}
-                    required
-                    layout="block"
-                    align="left"
-                    truncate={false}
-                    valueClassName="font-display text-[28px] font-semibold leading-tight text-foreground"
-                    onSave={async (v) => saveText('title', v, { required: true })}
-                  />
-                ) : (
-                  <h1 className="font-display text-[28px] font-semibold leading-tight text-foreground">
-                    {b.title}
-                  </h1>
-                )}
-                {b.subtitle && editMode && (
-                  <EditableTextField
-                    label=""
-                    value={b.subtitle}
-                    editMode={editMode}
-                    layout="block"
-                    align="left"
-                    truncate={false}
-                    valueClassName="text-[15px] text-muted-foreground italic"
-                    onSave={async (v) => saveText('subtitle', v)}
-                  />
-                )}
-                {b.subtitle && !editMode && (
-                  <p className="mb-3 text-[15px] text-muted-foreground italic">{b.subtitle}</p>
-                )}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted-foreground">
-                  {b.author && <span className="font-medium text-foreground">{b.author}</span>}
-                  {b.translator && <span>·</span>}
-                  {b.translator && <span>{b.translator} 译</span>}
-                  {b.publisher && <span>·</span>}
-                  {b.publisher && <span>{b.publisher}</span>}
-                  {b.publish_year && <span>·</span>}
-                  {b.publish_year && <span>{b.publish_year}年</span>}
-                </div>
-
-                {/* Category Badge */}
-                {b.category_name && (
-                  <div className="mt-3">
-                    {editMode ? (
-                      <EditableSelectField
-                        label=""
-                        value={b.category_id ? String(b.category_id) : ''}
-                        options={[
-                          { value: '', label: '未分类' },
-                          ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
-                        ]}
-                        editMode={editMode}
-                        layout="block"
-                        align="left"
-                        truncate={false}
-                        valueClassName="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary"
-                        renderValue={(label) => (
-                          <>
-                            <FolderOpen className="h-4 w-4 text-primary" />
-                            {label}
-                          </>
-                        )}
-                        onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
-                      />
-                    ) : (
-                      <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-[13px] font-semibold text-foreground shadow-sm border-l-[3px] border-l-primary">
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                        {b.category_name}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Rating + Tags */}
-                <div className="mt-4 flex items-center gap-0 border-t border-border pt-4">
-                  <RatingDisplay
-                    rating={b.rating}
-                    editMode={editMode}
-                    onSave={async (r) => saveSelect('rating', String(r ?? ''), { numberTransform: true })}
-                  />
-                  <div className="mx-4 h-6 w-px bg-border" />
-                  <EditableTagsField
-                    label=""
-                    tagIds={b.tag_ids}
-                    tagNames={b.tag_names}
-                    allTags={tagsQuery.data ?? []}
-                    editMode={editMode}
-                    onSave={saveTags}
-                  />
-                </div>
-              </div>
-
-              {/* Archive Card */}
-              <div className="mb-5 rounded-xl border border-border bg-muted/30 p-5">
-                <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
-                  <span className="inline-block h-3.5 w-[3px] rounded-sm bg-primary" />
-                  书籍档案
-                </h3>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-2 text-[13px]">
-                  <EditableTextField label="书名" value={b.title} editMode={editMode} required onSave={async (v) => saveText('title', v, { required: true })} />
-                  <EditableTextField label="作者" value={b.author ?? ''} editMode={editMode} onSave={async (v) => saveText('author', v)} />
-                  <EditableTextField label="副标题" value={b.subtitle ?? ''} editMode={editMode} onSave={async (v) => saveText('subtitle', v)} />
-                  <EditableTextField label="译者" value={b.translator ?? ''} editMode={editMode} onSave={async (v) => saveText('translator', v)} />
-                  <EditableTextField label="原作名" value={b.original_title ?? ''} editMode={editMode} onSave={async (v) => saveText('original_title', v)} />
-                  <EditableTextField label="出版社" value={b.publisher ?? ''} editMode={editMode} onSave={async (v) => saveText('publisher', v)} />
-                  <EditableNumberField label="出版年" value={b.publish_year} editMode={editMode} min={0} max={2100} integer onSave={async (v) => saveNumber('publish_year', v)} />
-                  <EditableTextField label="ISBN" value={b.isbn ?? ''} editMode={editMode} onSave={async (v) => saveText('isbn', v)} />
-                  <EditableTextField label="语言" value={b.language ?? ''} editMode={editMode} onSave={async (v) => saveText('language', v)} />
-                  <EditableNumberField label="页数" value={b.page_count} editMode={editMode} min={0} integer onSave={async (v) => saveNumber('page_count', v)} />
-                  <EditableSelectField
-                    label="个人分类"
-                    value={b.category_id ? String(b.category_id) : ''}
-                    options={[
-                      { value: '', label: '未分类' },
-                      ...(categories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
-                    ]}
-                    editMode={editMode}
-                    onSave={async (v) => saveSelect('category_id', v, { numberTransform: true })}
-                  />
-                  <EditableSelectField
-                    label="常规分类"
-                    value={b.genre_category_id ? String(b.genre_category_id) : ''}
-                    options={[
-                      { value: '', label: '未分类' },
-                      ...(genreCategories.data?.map((c: CategoryItem) => ({ value: String(c.id), label: c.name })) ?? []),
-                    ]}
-                    editMode={editMode}
-                    onSave={async (v) => saveSelect('genre_category_id', v, { numberTransform: true })}
-                  />
-                  <EditableSelectField
-                    label="可见性"
-                    value={b.visibility}
-                    options={[
-                      { value: VISIBILITY.PRIVATE, label: '私密' },
-                      { value: VISIBILITY.PUBLIC, label: '公开' },
-                    ]}
-                    editMode={editMode}
-                    onSave={async (v) => saveSelect('visibility', v)}
-                  />
-                  <EditableSelectField
-                    label="状态"
-                    value={b.status}
-                    options={Object.entries(BOOK_STATUS_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-                    editMode={editMode}
-                    onSave={async (v) => saveSelect('status', v)}
-                  />
-                  <RatingDisplay
-                    rating={b.rating}
-                    editMode={editMode}
-                    onSave={async (r) => saveSelect('rating', String(r ?? ''), { numberTransform: true })}
-                  />
-                  {editMode ? (
-                    <EditableTextField label="书籍链接" value={b.source_url ?? ''} editMode={editMode} onSave={async (v) => saveText('source_url', v)} />
-                  ) : (
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">书籍链接</span>
-                      {b.source_url ? (
-                        <a
-                          href={b.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline truncate max-w-[200px]"
-                          title={b.source_url}
-                        >
-                          {extractDomain(b.source_url)}
-                        </a>
-                      ) : (
-                        <span className="font-medium text-muted-foreground/50">—</span>
-                      )}
-                    </div>
-                  )}
-                  <EditableDateField label="开始阅读" value={b.started_at} editMode={editMode} onSave={async (v) => saveDate('started_at', v)} />
-                  <EditableDateField label="完成阅读" value={b.finished_at} editMode={editMode} onSave={async (v) => saveDate('finished_at', v)} />
-                  <EditableLongTextField label="阅读目的" value={b.reading_purpose ?? ''} editMode={editMode} onSave={async (v) => saveText('reading_purpose', v)} />
-                  <EditableLongTextField label="录入原因" value={b.entry_reason ?? ''} editMode={editMode} onSave={async (v) => saveText('entry_reason', v)} />
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">元数据来源</span>
-                    <span className="font-medium text-foreground">{b.metadata_source ?? '—'}</span>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="mt-4 border-t border-border pt-4">
-                  <EditableLongTextField
-                    label="简介"
-                    value={b.description ?? ''}
-                    editMode={editMode}
-                    layout="block"
-                    align="left"
-                    truncate={false}
-                    valueClassName="text-[14px] leading-relaxed text-muted-foreground font-normal whitespace-pre-wrap"
-                    onSave={async (v) => saveText('description', v)}
-                  />
-                </div>
-
-                {/* Timestamps */}
-                <div className="mt-4 flex items-center gap-4 text-[12px] text-muted-foreground/60">
-                  <span>收录于 {formatShortDate(b.created_at)}</span>
-                  <span>·</span>
-                  <span>最后更新 {formatShortDate(b.updated_at)}</span>
-                </div>
-
-                {/* Custom Attributes */}
-                <div className="mt-3 border-t border-border pt-3">
-                  <EditableJsonField
-                    label="自定义属性"
-                    value={b.custom_attributes}
-                    editMode={editMode}
-                    onSave={async (v) => saveJson('custom_attributes', v)}
-                  />
-                </div>
-
-                {editMode && b.source_url && (
-                  <div className="mt-3 border-t border-border pt-3">
-                    <button
-                      type="button"
-                      onClick={handleOpenMetadataDialog}
-                      disabled={fetchMetadata.isPending}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground shadow-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
-                      title="从源页面抓取最新元数据，可勾选要更新的字段"
-                    >
-                      <RefreshCcw className={cn('h-3.5 w-3.5', fetchMetadata.isPending && 'animate-spin')} />
-                      {fetchMetadata.isPending ? '抓取中…' : '抓取更新信息'}
-                    </button>
-                  </div>
-                )}
-              </div>
-              </>
+                <BookArchiveTab
+                  book={b}
+                  editMode={editMode}
+                  categories={categories.data}
+                  genreCategories={genreCategories.data}
+                  tags={tagsQuery.data}
+                  fetchMetadataPending={fetchMetadata.isPending}
+                  onSaveText={saveText}
+                  onSaveNumber={saveNumber}
+                  onSaveSelect={saveSelect}
+                  onSaveDate={saveDate}
+                  onSaveJson={saveJson}
+                  onSaveTags={saveTags}
+                  onOpenMetadataDialog={handleOpenMetadataDialog}
+                />
               )}
 
               {activeTab === 'traces' && (
