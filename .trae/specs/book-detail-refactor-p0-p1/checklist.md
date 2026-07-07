@@ -21,11 +21,11 @@
 
 ## 阶段 P1.2 - 抽出 useDetailMessages
 
-- [ ] 新文件 `use-detail-messages.ts` 存在，导出 `useDetailMessages`
-- [ ] `page.tsx` 中 6+ 处 `setMessage + setTimeout` 被替换为 `info / error` 调用
-- [ ] 自动 2s 清除行为不变
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] Web/API 测试通过
+- [x] 新文件 `use-detail-messages.ts` 存在，导出 `useDetailMessages`
+- [x] `page.tsx` 中 6+ 处 `setMessage + setTimeout` 被替换为 `info / error` 调用
+- [x] 自动 2s 清除行为不变
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] Web/API 测试通过
 - [ ] 提交 `refactor(book-detail): 抽出 useDetailMessages` 并成功推送
 
 ## 阶段 P1.3 - 抽出 useReaderNavigation

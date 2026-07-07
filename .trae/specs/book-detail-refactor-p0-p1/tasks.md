@@ -10,10 +10,10 @@
   - [x] SubTask 2.2: `page.tsx` 460-488 行的 tab JSX 替换为 `<BookDetailTabs />`
   - [x] SubTask 2.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
   - [x] SubTask 2.4: 提交 `refactor(book-detail): 抽出 BookDetailTabs` 并推送
-- [ ] Task 3: 阶段 P1.2 - 抽出 `useDetailMessages` hook
-  - [ ] SubTask 3.1: 新增 `use-detail-messages.ts`，包含 `info / error / warning / clear` 自动 2s 清理
-  - [ ] SubTask 3.2: `page.tsx` 中 6+ 处 `setMessage + setTimeout` 改为调用 hook
-  - [ ] SubTask 3.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
+- [x] Task 3: 阶段 P1.2 - 抽出 `useDetailMessages` hook
+  - [x] SubTask 3.1: 新增 `use-detail-messages.ts`，包含 `info / error / warning / clear` 自动 2s 清理
+  - [x] SubTask 3.2: `page.tsx` 中 6+ 处 `setMessage + setTimeout` 改为调用 hook
+  - [x] SubTask 3.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
   - [ ] SubTask 3.4: 提交 `refactor(book-detail): 抽出 useDetailMessages` 并推送
 - [ ] Task 4: 阶段 P1.3 - 抽出 `useReaderNavigation` hook
   - [ ] SubTask 4.1: 新增 `use-reader-navigation.ts`

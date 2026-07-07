@@ -33,7 +33,8 @@ import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
 import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
-import { type DetailTab, type StatusMessage, type ToastType, COVER_TONES, formatFileSize } from './types';
+import { useDetailMessages } from './use-detail-messages';
+import { type DetailTab, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
 
@@ -68,7 +69,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const [pendingFileDelete, setPendingFileDelete] = useState<BookFileItem | null>(null);
   const [topicDialogOpen, setTopicDialogOpen] = useState(false);
 
-  const [message, setMessage] = useState<StatusMessage>(null);
+  const { message, info, error, clear } = useDetailMessages();
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
   const [metadataResult, setMetadataResult] = useState<LinkMetadata | null>(null);
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({});
@@ -81,22 +82,17 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     setEditMode(false);
     setShowCoverPanel(false);
     setShowMetadataDialog(false);
-    setMessage(null);
+    clear();
     setActiveTab('archive');
-  }, [bookId, open]);
+  }, [bookId, open, clear]);
 
   const categories = personalCategories;
-
-  const showMessage = useCallback((text: string, type: ToastType = 'info') => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 2000);
-  }, []);
 
   const handleUpdate = useCallback(async (_field: string, payload: Record<string, unknown>) => {
     if (!bookId) return;
     await updateBook.mutateAsync({ id: bookId, ...payload });
-    showMessage('已更新');
-  }, [bookId, updateBook, showMessage]);
+    info('已更新');
+  }, [bookId, updateBook, info]);
 
   const saveText = useCallback(async (field: string, value: string, options?: { required?: boolean }) => {
     if (options?.required && !value.trim()) throw new Error('不能为空');
@@ -144,34 +140,31 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     if (!bookId) return;
     try {
       await fetchCover.mutateAsync({ bookId });
-      setMessage({ type: 'info', text: '封面已下载' });
-      setTimeout(() => setMessage(null), 2000);
+      info('封面已下载');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '封面下载失败' });
+      error(err instanceof ApiError ? err.message : '封面下载失败');
     }
-  }, [bookId, fetchCover]);
+  }, [bookId, fetchCover, info, error]);
 
   const handleActivateCover = useCallback(async (coverId: number) => {
     if (!bookId) return;
     try {
       await activateCover.mutateAsync({ bookId, coverId });
-      setMessage({ type: 'info', text: '已切换当前封面' });
-      setTimeout(() => setMessage(null), 2000);
+      info('已切换当前封面');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '切换封面失败' });
+      error(err instanceof ApiError ? err.message : '切换封面失败');
     }
-  }, [activateCover, bookId]);
+  }, [activateCover, bookId, info, error]);
 
   const handleDeleteCover = useCallback(async (coverId: number) => {
     if (!bookId) return;
     try {
       await deleteCover.mutateAsync({ bookId, coverId });
-      setMessage({ type: 'info', text: '封面已删除' });
-      setTimeout(() => setMessage(null), 2000);
+      info('封面已删除');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除封面失败' });
+      error(err instanceof ApiError ? err.message : '删除封面失败');
     }
-  }, [bookId, deleteCover]);
+  }, [bookId, deleteCover, info, error]);
 
   const handleCoverUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -179,14 +172,13 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       if (!file || !bookId) return;
       try {
         await uploadCover.mutateAsync({ bookId, file });
-        setMessage({ type: 'info', text: '封面已上传' });
-        setTimeout(() => setMessage(null), 2000);
+        info('封面已上传');
       } catch (err) {
-        setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '上传封面失败' });
+        error(err instanceof ApiError ? err.message : '上传封面失败');
       }
       if (coverInputRef.current) coverInputRef.current.value = '';
     },
-    [bookId, uploadCover],
+    [bookId, uploadCover, info, error],
   );
 
   const handleRequestBookDelete = useCallback(() => {
@@ -201,10 +193,10 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       setPendingBookDelete(false);
       onClose();
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除失败' });
+      error(err instanceof ApiError ? err.message : '删除失败');
       setPendingBookDelete(false);
     }
-  }, [bookId, deleteBook, pendingBookDeleteFiles, onClose]);
+  }, [bookId, deleteBook, pendingBookDeleteFiles, onClose, error]);
 
   const handleRequestFileDelete = useCallback((file: BookFileItem) => {
     setPendingFileDelete(file);
@@ -216,17 +208,16 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     setPendingFileDelete(null);
     try {
       await deleteFile.mutateAsync({ bookId, fileId: target.id });
-      setMessage({ type: 'info', text: '文件已删除' });
-      setTimeout(() => setMessage(null), 2000);
+      info('文件已删除');
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '删除失败' });
+      error(err instanceof ApiError ? err.message : '删除失败');
     }
-  }, [bookId, pendingFileDelete, deleteFile]);
+  }, [bookId, pendingFileDelete, deleteFile, info, error]);
 
   const handleOpenMetadataDialog = useCallback(async () => {
     const current = book.data;
     if (!current?.source_url) {
-      setMessage({ type: 'error', text: '请先填写介绍页链接' });
+      error('请先填写介绍页链接');
       return;
     }
     try {
@@ -247,9 +238,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       setFetchCoverChecked(Boolean(result.cover_url) && !current.cover_path);
       setShowMetadataDialog(true);
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '抓取元数据失败' });
+      error(err instanceof ApiError ? err.message : '抓取元数据失败');
     }
-  }, [book.data, fetchMetadata]);
+  }, [book.data, fetchMetadata, error]);
 
   const handleApplyMetadata = useCallback(async () => {
     if (!metadataResult || !bookId) return;
@@ -262,14 +253,13 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     }
     try {
       await applyMetadata.mutateAsync({ bookId, fields, fetchCover: fetchCoverChecked });
-      setMessage({ type: 'info', text: '元数据已更新' });
-      setTimeout(() => setMessage(null), 2000);
+      info('元数据已更新');
       setShowMetadataDialog(false);
       setMetadataResult(null);
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof ApiError ? err.message : '更新元数据失败' });
+      error(err instanceof ApiError ? err.message : '更新元数据失败');
     }
-  }, [bookId, metadataResult, selectedFields, fetchCoverChecked, applyMetadata]);
+  }, [bookId, metadataResult, selectedFields, fetchCoverChecked, applyMetadata, info, error]);
 
   const b = book.data;
   const progressPercent = progress.data?.percentage ?? 0;
@@ -478,7 +468,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
       onConfirm={async (topicId: number) => {
         if (!bookId) return;
         await addTopicBook.mutateAsync({ topicId, bookId });
-        setMessage({ type: 'info', text: '已加入话题' });
+        info('已加入话题');
         setTopicDialogOpen(false);
       }}
     />
