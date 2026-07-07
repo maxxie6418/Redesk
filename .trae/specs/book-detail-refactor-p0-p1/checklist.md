@@ -12,12 +12,12 @@
 
 ## 阶段 P1.1 - 抽出 BookDetailTabs
 
-- [ ] 新文件 `book-detail-tabs.tsx` 存在
-- [ ] `page.tsx` 460-488 行 tab JSX 已被 `<BookDetailTabs />` 替换
-- [ ] 切换 tab 行为不变（含 `editMode=true` 时自动关闭）
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] Web/API 测试通过
-- [ ] 提交 `refactor(book-detail): 抽出 BookDetailTabs` 并成功推送
+- [x] 新文件 `book-detail-tabs.tsx` 存在
+- [x] `page.tsx` 460-488 行 tab JSX 已被 `<BookDetailTabs />` 替换
+- [x] 切换 tab 行为不变（含 `editMode=true` 时自动关闭）
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] Web/API 测试通过
+- [x] 提交 `refactor(book-detail): 抽出 BookDetailTabs` 并成功推送
 
 ## 阶段 P1.2 - 抽出 useDetailMessages
 

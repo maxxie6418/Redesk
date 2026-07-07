@@ -5,11 +5,11 @@
   - [x] SubTask 1.2: 删除 `components.tsx` 中内联 `StorageStatusBadge` 与 `STORAGE_MODE_LABELS`，改用 `./storage-status-badge` 与 `./types` 导出
   - [x] SubTask 1.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试 全部通过
   - [x] SubTask 1.4: 提交 `chore(book-detail): 收敛重复定义` 并推送
-- [ ] Task 2: 阶段 P1.1 - 抽出 `BookDetailTabs` 组件
-  - [ ] SubTask 2.1: 新增 `book-detail-tabs.tsx`，复用 `types.ts` 中 `DetailTab` / `DetailTabItem`
-  - [ ] SubTask 2.2: `page.tsx` 460-488 行的 tab JSX 替换为 `<BookDetailTabs />`
-  - [ ] SubTask 2.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
-  - [ ] SubTask 2.4: 提交 `refactor(book-detail): 抽出 BookDetailTabs` 并推送
+- [x] Task 2: 阶段 P1.1 - 抽出 `BookDetailTabs` 组件
+  - [x] SubTask 2.1: 新增 `book-detail-tabs.tsx`，复用 `types.ts` 中 `DetailTab` / `DetailTabItem`
+  - [x] SubTask 2.2: `page.tsx` 460-488 行的 tab JSX 替换为 `<BookDetailTabs />`
+  - [x] SubTask 2.3: 跑 `pnpm typecheck` / `pnpm lint` / Web+API 测试
+  - [x] SubTask 2.4: 提交 `refactor(book-detail): 抽出 BookDetailTabs` 并推送
 - [ ] Task 3: 阶段 P1.2 - 抽出 `useDetailMessages` hook
   - [ ] SubTask 3.1: 新增 `use-detail-messages.ts`，包含 `info / error / warning / clear` 自动 2s 清理
   - [ ] SubTask 3.2: `page.tsx` 中 6+ 处 `setMessage + setTimeout` 改为调用 hook

@@ -1,13 +1,6 @@
 ﻿import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Loader2,
-  Archive,
-  Highlighter,
-  Sparkles,
-  Tags,
-  type LucideIcon,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { selectReadableFile } from '@redesk/shared';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -38,19 +31,11 @@ import { API_BASE } from '@/lib/api';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
+import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
-import { type StatusMessage, type ToastType, COVER_TONES, formatFileSize } from './types';
+import { type DetailTab, type StatusMessage, type ToastType, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
-
-type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
-
-const TAB_LABELS: { id: DetailTab; label: string; icon: LucideIcon; tint: string }[] = [
-  { id: 'archive', label: '档案', icon: Archive, tint: 'bg-[hsl(15,28%,91%)] text-[hsl(15,24%,38%)]' },
-  { id: 'traces', label: '笔记', icon: Highlighter, tint: 'bg-[hsl(22,28%,91%)] text-[hsl(22,24%,38%)]' },
-  { id: 'topics', label: '主题', icon: Tags, tint: 'bg-[hsl(8,28%,91%)] text-[hsl(8,24%,38%)]' },
-  { id: 'ai', label: 'AI', icon: Sparkles, tint: 'bg-[hsl(28,28%,91%)] text-[hsl(28,24%,38%)]' },
-];
 
 export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { bookId: number | null; open: boolean; onClose: () => void; variant?: 'sheet' | 'dialog' }) {
   const navigate = useNavigate();
@@ -438,36 +423,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               <BookFilesList files={files.data} onDeleteFile={handleRequestFileDelete} />
               </div>
 
-              {/* Bookmark Tabs: 贴左栏右边缘,靠近底部,不随内容滚动 */}
-              <div className="absolute right-0 bottom-4 flex flex-col gap-2">
-                {TAB_LABELS.map((tab) => {
-                  const active = activeTab === tab.id;
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(tab.id);
-                        if (editMode) {
-                          setEditMode(false);
-                        }
-                      }}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'flex flex-col items-center justify-center gap-1.5 rounded-l-lg py-2.5 transition-colors duration-150',
-                        'w-9',
-                        active
-                          ? 'mr-2 bg-primary text-primary-foreground shadow-md'
-                          : cn('hover:brightness-[0.97]', tab.tint),
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="[writing-mode:vertical-rl] text-[11px] font-semibold leading-none">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <BookDetailTabs activeTab={activeTab} editMode={editMode} onChange={setActiveTab} onEditModeChange={setEditMode} />
             </div>
 
             {/* Right Column */}
