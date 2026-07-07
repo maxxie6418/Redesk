@@ -1,5 +1,5 @@
 import type { ChangeEvent, CSSProperties, RefObject } from 'react';
-import { AlertTriangle, ArrowUpFromLine, BookOpen, Check, Cloud, FolderOpen, Heart, ImageDown, Pencil, RefreshCcw, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, ArrowUpFromLine, BookOpen, Check, Cloud, FolderOpen, Heart, ImageDown, Lightbulb, NotebookPen, Pencil, RefreshCcw, Trash2, Upload, X } from 'lucide-react';
 import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { cn } from '@/lib/utils';
 import type { BookCoverItem, BookDetail } from '@/hooks/use-books';
@@ -308,6 +308,143 @@ interface BookArchiveTabProps {
   onSaveJson: (field: string, value: Record<string, unknown> | null) => Promise<void>;
   onSaveTags: (tagIds: number[]) => Promise<void>;
   onOpenMetadataDialog: () => void;
+}
+
+export interface BookTraceItem {
+  id: string;
+  type: '笔记' | '高亮';
+  title: string;
+  cfi: string | null | undefined;
+  createdAt: string;
+}
+
+export interface BookRecentMarkItem {
+  id: number;
+  type: string;
+  title?: string | null;
+  text?: string | null;
+  cfi?: string | null;
+  cfi_start?: string | null;
+}
+
+interface BookTraceCounts {
+  highlights: number;
+  notes: number;
+  bookmarks: number;
+}
+
+interface BookTracesTabProps {
+  progressPercent: number;
+  counts: BookTraceCounts;
+  recentMarks: BookRecentMarkItem[];
+  traces: BookTraceItem[];
+  onOpenMark: (mark: BookRecentMarkItem) => void;
+  onOpenTrace: (trace: BookTraceItem) => void;
+}
+
+export function BookTracesTab({ progressPercent, counts, recentMarks, traces, onOpenMark, onOpenTrace }: BookTracesTabProps) {
+  return (
+    <div>
+      <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
+        <NotebookPen className="h-4 w-4 text-emerald-500" />
+        阅读留痕
+      </h3>
+      {traces.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
+          <p className="mt-3 text-[14px] text-muted-foreground">暂无阅读留痕</p>
+          <p className="mt-1 text-[12px] text-muted-foreground/50">开始阅读后笔记和高亮会自动汇总</p>
+        </div>
+      ) : (
+        <div>
+          <div className="mb-4 grid grid-cols-4 gap-3">
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{progressPercent}%</p>
+              <p className="text-[11px] text-muted-foreground">阅读进度</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{counts.highlights}</p>
+              <p className="text-[11px] text-muted-foreground">高亮</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{counts.notes}</p>
+              <p className="text-[11px] text-muted-foreground">笔记</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{counts.bookmarks}</p>
+              <p className="text-[11px] text-muted-foreground">书签</p>
+            </div>
+          </div>
+          {recentMarks.length > 0 && (
+            <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
+              <p className="mb-2 text-[12px] font-semibold text-foreground">最近回看入口</p>
+              <div className="flex flex-wrap gap-2">
+                {recentMarks.slice(0, 8).map((mark) => (
+                  <button key={`${mark.type}-${mark.id}`} type="button" onClick={() => onOpenMark(mark)} className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">
+                    {mark.type === 'highlight' ? '高亮' : mark.type === 'note' ? '笔记' : '书签'} · {(mark.title ?? mark.text ?? '阅读位置').slice(0, 16)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-2">
+            {traces.slice(0, 20).map((trace) => (
+              <div key={trace.id} className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+                <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{trace.type}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] text-foreground">{trace.title}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/60">{new Date(trace.createdAt).toLocaleDateString('zh-CN')}</p>
+                </div>
+                <button type="button" onClick={() => onOpenTrace(trace)} className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground opacity-0 transition-all hover:border-primary hover:text-primary group-hover:opacity-100">
+                  跳转
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface BookTopicsTabProps {
+  bookId: number | null;
+  onOpenTopicDialog: () => void;
+}
+
+export function BookTopicsTab({ bookId, onOpenTopicDialog }: BookTopicsTabProps) {
+  return (
+    <div className="rounded-xl border-l-[3px] border-l-primary/60 border-y border-r border-border bg-card p-5">
+      <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+        <Lightbulb className="h-4 w-4 text-primary/60" />
+        主题关联
+      </h3>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Lightbulb className="h-8 w-8 text-muted-foreground/20" />
+        <p className="mt-3 text-[14px] text-muted-foreground">围绕一个主题组织多本书</p>
+        <p className="mt-1 text-[12px] text-muted-foreground/50">将当前书加入主题阅读工作区，和其他书一起整理痕迹与沉淀。</p>
+        <button type="button" className="mt-4 inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50" onClick={onOpenTopicDialog} disabled={!bookId}>
+          加入话题
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function BookAiTab() {
+  return (
+    <div className="rounded-xl border-l-[3px] border-l-[#9c87f5] border-y border-r border-border bg-[#f8f7fd] p-5">
+      <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold text-foreground">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c6bc4" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+        AI 衍生内容
+      </h3>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground/20"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+        <p className="mt-3 text-[14px] text-muted-foreground">AI 摘要、问答、标签建议</p>
+        <p className="mt-1 text-[12px] text-muted-foreground/50">接入 LLM 后（S3）自动生成</p>
+      </div>
+    </div>
+  );
 }
 
 export function BookArchiveTab({ book, editMode, categories, genreCategories, tags, fetchMetadataPending, onSaveText, onSaveNumber, onSaveSelect, onSaveDate, onSaveJson, onSaveTags, onOpenMetadataDialog }: BookArchiveTabProps) {
