@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import type EpubFactory from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
-import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem } from '@/hooks/use-notes';
+import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark } from '@/hooks/use-notes';
 import { useAddTopicHighlight } from '@/hooks/use-topics';
 import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
@@ -18,6 +18,7 @@ import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
 import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
 import { useReaderHighlightActions, type ReaderSelectionState } from './book-reader/use-reader-highlight-actions';
+import { useReaderHighlightRenderer } from './book-reader/use-reader-highlight-renderer';
 import { useReaderKeyboardNavigation } from './book-reader/use-reader-keyboard-navigation';
 import { useReaderNotes } from './book-reader/use-reader-notes';
 
@@ -46,7 +47,6 @@ export function BookReaderPage() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<ReturnType<typeof EpubFactory> | null>(null);
   const renditionRef = useRef<any>(null);
-  const highlightsMapRef = useRef<Map<string, HighlightItem>>(new Map());
   const currentCfiRef = useRef<string>('');
 
   const [toc, setToc] = useState<TocItem[]>([]);
@@ -75,6 +75,16 @@ export function BookReaderPage() {
     fileId: primaryEpubId,
   });
   const getCurrentCfi = useCallback(() => renditionRef.current?.location?.start?.cfi ?? currentCfiRef.current, []);
+  const getHighlightRendition = useCallback(() => renditionRef.current, []);
+  const { highlightsMapRef } = useReaderHighlightRenderer({
+    loading,
+    highlights,
+    createHighlight,
+    updateHighlight,
+    deleteHighlight,
+    getRendition: getHighlightRendition,
+    setEditing,
+  });
   const {
     noteForm,
     editingNote,
@@ -123,93 +133,6 @@ export function BookReaderPage() {
     setSelectionHighlightId,
     setEditing,
   });
-
-  const renderHighlights = useCallback(() => {
-    const rendition = renditionRef.current;
-    if (!rendition) return;
-    const items = highlights.data ?? [];
-    const map = new Map<string, HighlightItem>();
-
-    try {
-      rendition.annotations.clear();
-    } catch { /* ignore */ }
-
-    for (const item of items) {
-      const key = `${item.cfi_start}:${item.cfi_end}`;
-      map.set(key, item);
-
-      const type = item.type;
-
-      try {
-        if (type === 'UNDERLINE') {
-          rendition.annotations.underline(
-            item.cfi_start,
-            {},
-            (e: any) => {
-              e.stopPropagation();
-              const rect = (e.target as HTMLElement)?.getBoundingClientRect();
-              if (rect) {
-                setEditing({
-                  id: item.id,
-                  note: item.note,
-                  markType: item.mark_type,
-                  position: { top: rect.bottom + 4, left: rect.left },
-                });
-              }
-            },
-            '',
-            { 'border-bottom': '2.2px solid rgba(59,130,246,0.75)' },
-          );
-        } else if (type === 'WAVY') {
-          // 波浪线使用 highlight 机制但覆盖样式为波浪下划线
-          rendition.annotations.highlight(
-            item.cfi_start,
-            {},
-            (e: any) => {
-              e.stopPropagation();
-              const rect = (e.target as HTMLElement)?.getBoundingClientRect();
-              if (rect) {
-                setEditing({
-                  id: item.id,
-                  note: item.note,
-                  markType: item.mark_type,
-                  position: { top: rect.bottom + 4, left: rect.left },
-                });
-              }
-            },
-            'rd-wavy',
-            {
-              background: 'transparent',
-              'text-decoration': 'underline wavy rgba(220,38,38,0.7)',
-              'text-underline-offset': '3px',
-            },
-          );
-        } else {
-          // HIGHLIGHT 默认黄色半透明
-          rendition.annotations.highlight(
-            item.cfi_start,
-            {},
-            (e: any) => {
-              e.stopPropagation();
-              const rect = (e.target as HTMLElement)?.getBoundingClientRect();
-              if (rect) {
-                setEditing({
-                  id: item.id,
-                  note: item.note,
-                  markType: item.mark_type,
-                  position: { top: rect.bottom + 4, left: rect.left },
-                });
-              }
-            },
-            '',
-            { 'background-color': 'rgba(250,204,21,0.35)' },
-          );
-        }
-      } catch { /* CFI 失效的高亮跳过 */ }
-    }
-
-    highlightsMapRef.current = map;
-  }, [highlights.data]);
 
   useEffect(() => {
     if (!primaryEpubId || !viewerRef.current) return;
@@ -413,34 +336,7 @@ export function BookReaderPage() {
         bookRef.current = null;
       }
     };
-  }, [bookId, bookTitle, primaryEpubId, saveProgress]);
-
-  // 高亮数据加载完成后渲染
-  useEffect(() => {
-    if (!loading && highlights.data) {
-      renderHighlights();
-    }
-  }, [loading, highlights.data, renderHighlights]);
-
-  // 创建高亮后重新渲染
-  useEffect(() => {
-    if (createHighlight.isSuccess) {
-      highlights.refetch().then(() => {
-        renderHighlights();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createHighlight.isSuccess]);
-
-  // 更新/删除高亮后重新渲染
-  useEffect(() => {
-    if (updateHighlight.isSuccess || deleteHighlight.isSuccess) {
-      highlights.refetch().then(() => {
-        renderHighlights();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updateHighlight.isSuccess, deleteHighlight.isSuccess]);
+  }, [bookId, bookTitle, highlightsMapRef, primaryEpubId, saveProgress]);
 
   const toggleToc = () => {
     setTocOpen(!tocOpen);
