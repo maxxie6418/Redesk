@@ -200,10 +200,11 @@ function buildQuery(params?: BookQueryParams): string {
   return qs ? `?${qs}` : '';
 }
 
-export function useBooks(params?: BookQueryParams) {
+export function useBooks(params?: BookQueryParams, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['books', params],
     queryFn: () => api.getBody<PaginatedBooks>(`/books${buildQuery(params)}`),
+    enabled: options.enabled,
   });
 }
 

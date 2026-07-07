@@ -5,8 +5,11 @@ import type { BookSummary } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
 import { FilterSelect, type FilterSelectOption } from '@/components/page-ui/filter-select';
 import { SegmentedToggle, SegmentedToggleItem } from '@/components/page-ui/segmented-toggle';
+import { BookCover } from '@/components/book-cover';
+import { TagPill } from '@/components/tag-pill';
+import { RatingValue } from '@/components/rating-value';
 import { cn } from '@/lib/utils';
-import { COVER_TONES, COVER_URL_BASE, STATUS_OPTIONS, type SortMode, type ViewMode } from './constants';
+import { STATUS_OPTIONS, type SortMode, type ViewMode } from './constants';
 import { bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils';
 
 interface BookCardProps {
@@ -22,47 +25,6 @@ interface BookCardProps {
 
 function getBookSummaryText(book: BookSummary) {
   return book.description || book.entry_reason || book.reading_purpose || null;
-}
-
-export function BookCoverImage({
-  book,
-  index,
-  className,
-  rounded = 'rounded-md',
-}: {
-  book: BookSummary;
-  index: number;
-  className: string;
-  rounded?: string;
-}) {
-  const hasCover = Boolean(book.cover_path);
-
-  if (hasCover) {
-    return (
-      <img
-        src={`${COVER_URL_BASE}/books/${book.id}/cover`}
-        alt={book.title}
-        className={cn('object-cover', rounded, className)}
-        onError={(event) => {
-          (event.target as HTMLImageElement).style.display = 'none';
-        }}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        'flex flex-col justify-between px-2 py-1.5 font-display shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]',
-        rounded,
-        className,
-        COVER_TONES[index % COVER_TONES.length],
-      )}
-    >
-      <span className="line-clamp-3 text-xs font-medium leading-tight">{book.title}</span>
-      <span className="truncate text-[10px] opacity-70">{book.publish_year ?? 'Redesk'}</span>
-    </div>
-  );
 }
 
 function MenuMore({
@@ -88,30 +50,6 @@ function MenuMore({
       <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
       <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
     </button>
-  );
-}
-
-function TagAtom({ children, size = 'default' }: { children: React.ReactNode; size?: 'default' | 'small' | 'tiny' }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground',
-        size === 'default' && 'rounded-md px-2.5 py-[3px] text-xs leading-[1.4]',
-        size === 'small' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
-        size === 'tiny' && 'rounded px-2 py-[2px] text-[11px] leading-[1.4]',
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function RatingDisplay({ rating, size = 'sm' }: { rating: number | null; size?: 'sm' | 'xs' }) {
-  return (
-    <div className={cn('inline-flex items-center gap-1 font-semibold text-foreground', size === 'xs' ? 'text-[13px]' : 'text-sm')}>
-      <Star className={cn('fill-[#f5c842] text-[#f5c842]', size === 'xs' ? 'h-3 w-3' : 'h-[13px] w-[13px]')} />
-      {rating ?? '—'}
-    </div>
   );
 }
 
@@ -234,7 +172,7 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCoverImage book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
+        <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col" onClick={onOpenDetail}>
@@ -252,15 +190,15 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
         ) : null}
         <div className="mb-2 flex flex-wrap gap-1.5">
           {book.category_name ? (
-            <TagAtom size="small">{book.category_name}</TagAtom>
+            <TagPill size="small">{book.category_name}</TagPill>
           ) : null}
           {book.tag_names.slice(0, 3).map((tag) => (
-            <TagAtom key={tag} size="small">{tag}</TagAtom>
+            <TagPill key={tag} size="small">{tag}</TagPill>
           ))}
         </div>
         <p className="mb-3 text-[12px] leading-[1.5] tabular-nums text-muted-foreground">{bookMetaLine(book)}</p>
         <div className="mt-auto flex items-center gap-3.5 border-t border-border pt-3">
-          <RatingDisplay rating={book.rating} />
+          <RatingValue rating={book.rating} variant="compact" />
           <ProgressBar progress={progress} />
         </div>
       </div>
@@ -300,7 +238,7 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
           title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
           onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
         >
-          <BookCoverImage book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
+          <BookCover book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
         <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
           <span className={cn('h-1.5 w-1.5 rounded-full', statusDotClass(book.status))} />
@@ -394,7 +332,7 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCoverImage book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
+        <BookCover book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
         <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col pr-7">
@@ -409,15 +347,15 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
         <p className="mb-2 truncate text-[13px] leading-[1.5] text-muted-foreground">{book.author || '未填写作者'}</p>
         <div className="mb-2 flex flex-wrap gap-1.5">
           {book.category_name ? (
-            <TagAtom size="small">{book.category_name}</TagAtom>
+            <TagPill size="small">{book.category_name}</TagPill>
           ) : null}
           {book.tag_names.slice(0, 2).map((tag) => (
-            <TagAtom key={tag} size="small">{tag}</TagAtom>
+            <TagPill key={tag} size="small">{tag}</TagPill>
           ))}
         </div>
         {summaryText ? <p className="mb-2 line-clamp-2 text-[12px] leading-[1.5] text-muted-foreground/80">{summaryText}</p> : null}
         <div className="mt-auto flex items-center justify-between gap-2">
-          <RatingDisplay rating={book.rating} size="xs" />
+          <RatingValue rating={book.rating} size="xs" variant="compact" />
           <div className="shrink-0">
             <ProgressBar progress={progress} trackWidth="w-[80px]" />
           </div>
@@ -459,7 +397,7 @@ export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPer
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCoverImage book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
+        <BookCover book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
         <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="min-w-0 flex-1 cursor-pointer pr-12" onClick={onOpenDetail}>

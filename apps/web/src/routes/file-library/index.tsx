@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBooks } from '@/hooks/use-books';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import {
   useApplyFileMatches,
   useDeleteFile,
@@ -75,7 +76,11 @@ export function FileLibraryPage() {
   const applyMatches = useApplyFileMatches();
   const deleteUnassociated = useDeleteUnassociatedFile();
   const deleteFile = useDeleteFile();
-  const manualBookSearch = useBooks({ q: singleSearchQuery, page_size: 20 });
+  const debouncedSingleSearchQuery = useDebouncedValue(singleSearchQuery.trim());
+  const manualBookSearch = useBooks(
+    { q: debouncedSingleSearchQuery, page_size: 20 },
+    { enabled: singleMatchFileId != null && debouncedSingleSearchQuery.length > 0 },
+  );
 
   const allFiles = useMemo<BookFileItem[]>(() => files.data?.data ?? [], [files.data]);
   const unlinkedFiles = useMemo(() => allFiles.filter((file) => file.book_id == null), [allFiles]);

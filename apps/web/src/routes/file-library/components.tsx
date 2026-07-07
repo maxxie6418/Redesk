@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Cloud, FileText, FileWarning, Files, HardDrive, Link, Search, Trash2, Upload, Wand2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, FileWarning, Files, HardDrive, Link, Search, Trash2, Upload, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { FilterSelect } from '@/components/page-ui/filter-select';
 import { StatCard } from '@/components/page-ui/stat-card';
 import { SegmentedToggle } from '@/components/page-ui/segmented-toggle';
+import { StorageStatusBadge } from '@/components/book-detail-sheet/storage-status-badge';
 import { cn } from '@/lib/utils';
 import type { BookSummary } from '@/hooks/use-books';
 import type { BookFileItem, FileMatchCandidate, FileMatchItem, MatchMode } from '@/hooks/use-files';
-import { FORMAT_OPTIONS, MATCH_MODE_OPTIONS, buildDerivedSummary, confidenceClassName, confidenceLabel, formatSize, storageModeLabel } from './match-utils';
+import { FORMAT_OPTIONS, MATCH_MODE_OPTIONS, buildDerivedSummary, confidenceClassName, confidenceLabel, formatSize } from './match-utils';
 
 function useBodyScrollLock(active: boolean) {
   useEffect(() => {
@@ -22,21 +23,6 @@ function useBodyScrollLock(active: boolean) {
       document.body.style.overflow = previousOverflow;
     };
   }, [active]);
-}
-
-export function StorageStatusBadge({ file }: { file: BookFileItem }) {
-  const label = file.sync_status === 'pending'
-    ? '待同步'
-    : file.sync_status === 'partial_failed' || file.sync_status === 'failed'
-      ? '同步失败'
-      : storageModeLabel(file.storage_mode);
-
-  return (
-    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-      <Cloud className="h-3 w-3" />
-      <span className={file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? 'text-destructive' : undefined}>{label}</span>
-    </span>
-  );
 }
 
 export function FileLibraryStats({

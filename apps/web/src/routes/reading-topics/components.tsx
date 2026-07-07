@@ -7,6 +7,7 @@ import { SegmentedToggle, SegmentedToggleItem } from '@/components/page-ui/segme
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useBooks } from '@/hooks/use-books';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import type { TopicDetail, TopicTimelineEvent } from '@/hooks/use-topics';
 import { cn } from '@/lib/utils';
 import type { Topic, TopicInsight, TopicTrace, TopicWorkspaceBlock } from './data';
@@ -116,7 +117,12 @@ function AddBookDialog({
 }) {
   const [query, setQuery] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<number>(0);
-  const booksQuery = useBooks({ q: query.trim() || undefined, page_size: 20, sort: '-updated_at' });
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const normalizedQuery = debouncedQuery.trim();
+  const booksQuery = useBooks(
+    { q: normalizedQuery || undefined, page_size: 20, sort: '-updated_at' },
+    { enabled: open },
+  );
   const books = booksQuery.data?.data ?? [];
 
   useEffect(() => {
