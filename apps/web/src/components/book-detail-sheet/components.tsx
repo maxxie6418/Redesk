@@ -1,5 +1,5 @@
 import type { ChangeEvent, CSSProperties, RefObject } from 'react';
-import { AlertTriangle, ArrowUpFromLine, BookOpen, Check, Cloud, FolderOpen, Heart, ImageDown, Lightbulb, NotebookPen, Pencil, RefreshCcw, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, ArrowUpFromLine, BookOpen, Check, FolderOpen, Heart, ImageDown, Lightbulb, NotebookPen, Pencil, RefreshCcw, Trash2, Upload, X } from 'lucide-react';
 import { BOOK_STATUS_LABELS, VISIBILITY } from '@redesk/shared';
 import { cn } from '@/lib/utils';
 import type { BookCoverItem, BookDetail } from '@/hooks/use-books';
@@ -14,7 +14,8 @@ import { EditableLongTextField } from './editable-long-text-field';
 import { EditableJsonField } from './editable-json-field';
 import { EditableTagsField } from './editable-tags-field';
 import { RatingDisplay } from './rating-display';
-import { extractDomain, formatShortDate, type StatusMessage } from './types';
+import { extractDomain, formatFileSize, formatShortDate, type StatusMessage } from './types';
+import { StorageStatusBadge } from './storage-status-badge';
 
 interface BookDetailFrameHeaderProps {
   isDialog: boolean;
@@ -239,28 +240,6 @@ export function BookCoverManager({ book, bookId, coverUrlBase, coverGroups, cove
       )}
       {book.source_url && <div className="mt-3 flex items-center justify-end border-t border-border pt-3"><button type="button" onClick={onFetchCover} disabled={fetchCoverPending} className="text-xs text-primary hover:underline disabled:opacity-50">{fetchCoverPending ? '下载中...' : '下载封面'}</button></div>}
     </div>
-  );
-}
-
-function formatFileSize(bytes: number | null) {
-  if (bytes == null) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const STORAGE_MODE_LABELS: Record<BookFileItem['storage_mode'], string> = {
-  local_only: '本地',
-  cloud_only: '云端',
-  dual: '本地 + 云端',
-};
-
-function StorageStatusBadge({ file }: { file: BookFileItem }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-      <Cloud className="h-3 w-3" />
-      {file.sync_status === 'pending' ? <span>同步中</span> : file.sync_status === 'partial_failed' || file.sync_status === 'failed' ? <span className="text-destructive">同步失败</span> : <span>{STORAGE_MODE_LABELS[file.storage_mode]}</span>}
-    </span>
   );
 }
 

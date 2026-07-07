@@ -39,27 +39,9 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
 import { MetadataDialog } from './metadata-dialog';
-import { type StatusMessage, type ToastType } from './types';
+import { type StatusMessage, type ToastType, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
-
-const COVER_TONES = [
-  'bg-[#d8c6b7] text-[#3d2f28]',
-  'bg-[#cfd8c8] text-[#26301f]',
-  'bg-[#c7d4dc] text-[#22313a]',
-  'bg-[#ded7c2] text-[#3c3422]',
-  'bg-[#d7c8d5] text-[#342535]',
-  'bg-[#d6d0c6] text-[#332f28]',
-];
-
-function formatFileSize(size: number) {
-  if (size < 1024) return `${size} B`;
-  const kb = size / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(1)} MB`;
-  return `${(mb / 1024).toFixed(1)} GB`;
-}
 
 type DetailTab = 'archive' | 'traces' | 'topics' | 'ai';
 
