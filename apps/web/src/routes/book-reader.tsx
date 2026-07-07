@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Loader2, Menu, X, StickyNote, Plus, Trash2, Check, Pencil } from 'lucide-react';
+import { ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
 import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
 import { CommentInput } from '@/components/reader/comment-input';
 import { ImagePreviewViewer, PdfPreviewViewer, TextPreviewViewer, UnsupportedPreviewViewer } from '@/components/reader/preview-viewers';
@@ -15,13 +15,8 @@ import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { api, API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
+import { ReaderNotesPanel, ReaderTopBar, TocPanel, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
-
-interface TocItem {
-  id: string;
-  label: string;
-  href: string;
-}
 
 interface SelectionState {
   rect: DOMRect;
@@ -721,185 +716,34 @@ export function BookReaderPage() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/books/${bookId}`)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={toggleToc}>
-          <Menu className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={toggleNotesPanel}>
-          <StickyNote className="h-5 w-5" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-foreground">{currentTitle || book.data?.title}</div>
-          {syncMessage ? <div className="truncate text-xs text-amber-600 dark:text-amber-300">{syncMessage}</div> : null}
-        </div>
-        <Button variant="ghost" size="icon" onClick={goPrev}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={goNext}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
-      </header>
+      <ReaderTopBar
+        title={currentTitle || book.data?.title}
+        syncMessage={syncMessage}
+        onBack={() => navigate(`/books/${bookId}`)}
+        onToggleToc={toggleToc}
+        onToggleNotes={toggleNotesPanel}
+        onPrev={goPrev}
+        onNext={goNext}
+      />
 
       <div className="relative flex-1 overflow-hidden">
-        {tocOpen && (
-          <div className="absolute left-0 top-0 z-20 h-full w-64 border-r border-border bg-background shadow-lg">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-sm font-medium">目录</span>
-              <Button variant="ghost" size="icon" onClick={() => setTocOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="h-[calc(100%-49px)] overflow-y-auto">
-              {toc.length === 0 ? (
-                <div className="px-4 py-6 text-center text-xs text-muted-foreground">
-                  暂无目录
-                </div>
-              ) : (
-                <ul className="py-1">
-                  {toc.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => goToHref(item.href)}
-                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-muted"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
+        {tocOpen && <TocPanel toc={toc} onClose={() => setTocOpen(false)} onOpenItem={goToHref} />}
 
         {notesPanelOpen && (
-          <div className="absolute left-0 top-0 z-20 h-full w-72 border-r border-border bg-background shadow-lg flex flex-col">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-sm font-medium">笔记</span>
-              <Button variant="ghost" size="icon" onClick={() => setNotesPanelOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {noteForm ? (
-                <div className="space-y-2">
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="笔记标题"
-                    value={noteForm.title}
-                    onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
-                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <textarea
-                    placeholder="笔记内容（可选）"
-                    value={noteForm.content}
-                    onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
-                    className="w-full resize-none rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    rows={4}
-                  />
-                  <div className="flex items-center gap-1 justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => setNoteForm(null)}>
-                      取消
-                    </Button>
-                    <Button variant="default" size="sm" onClick={handleSubmitNote}>
-                      <Check className="mr-1 h-3 w-3" />
-                      保存
-                    </Button>
-                  </div>
-                </div>
-              ) : editingNote ? (
-                <div className="space-y-2">
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="笔记标题"
-                    value={editingNote.title}
-                    onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <textarea
-                    placeholder="笔记内容"
-                    value={editingNote.content}
-                    onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
-                    className="w-full resize-none rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    rows={4}
-                  />
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="sm" onClick={() => setEditingNote(null)}>
-                      取消
-                    </Button>
-                    <Button variant="default" size="sm" onClick={handleSubmitEditNote}>
-                      <Check className="mr-1 h-3 w-3" />
-                      更新
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleOpenNoteForm}
-                    className="flex w-full items-center gap-1.5 rounded border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    在当前页添加笔记
-                  </button>
-                  <div className="pt-1 space-y-1.5">
-                    {bookNotes.isLoading ? (
-                      <div className="px-1 py-4 text-center text-xs text-muted-foreground">加载中...</div>
-                    ) : (bookNotes.data ?? []).length === 0 ? (
-                      <div className="px-1 py-4 text-center text-xs text-muted-foreground">暂无笔记</div>
-                    ) : (
-                      (bookNotes.data ?? []).map((note: NoteItem) => (
-                        <div
-                          key={note.id}
-                          className="group rounded border border-border/50 bg-muted/20 px-3 py-2"
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="text-xs font-medium text-foreground">
-                              {note.title || '无标题'}
-                            </span>
-                            <div className="flex shrink-0 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={() => handleEditNote(note)}
-                                className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteNote(note.id)}
-                                className="rounded p-0.5 text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-                          {note.content_markdown && (
-                            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/70 line-clamp-3">
-                              {note.content_markdown}
-                            </p>
-                          )}
-                          {note.cfi && (
-                            <p className="mt-1 text-[10px] text-muted-foreground/40 font-mono truncate">
-                              {note.cfi.slice(0, 40)}...
-                            </p>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <ReaderNotesPanel
+            notes={bookNotes.data ?? []}
+            isLoading={bookNotes.isLoading}
+            noteForm={noteForm}
+            editingNote={editingNote}
+            onClose={() => setNotesPanelOpen(false)}
+            onOpenNoteForm={handleOpenNoteForm}
+            onChangeNoteForm={setNoteForm}
+            onSubmitNote={handleSubmitNote}
+            onEditNote={handleEditNote}
+            onChangeEditingNote={setEditingNote}
+            onSubmitEditNote={handleSubmitEditNote}
+            onDeleteNote={handleDeleteNote}
+          />
         )}
 
         <div ref={viewerRef} className="h-full w-full" />
