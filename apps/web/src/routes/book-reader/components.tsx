@@ -1,4 +1,5 @@
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Menu, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Menu, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
 import type { NoteItem } from '@/hooks/use-notes';
 import { Button } from '@/components/ui/button';
 
@@ -293,6 +294,47 @@ export function HighlightEditPopover({ editing, onComment, onAddToTopic, onDelet
           删除
         </button>
       </div>
+    </div>
+  );
+}
+
+interface ReaderEmptyStateProps {
+  onBack: () => void;
+}
+
+export function ReaderEmptyState({ onBack }: ReaderEmptyStateProps) {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+      <BookOpen className="h-10 w-10 text-muted-foreground/40" />
+      <p className="text-muted-foreground">没有可在线预览的主阅读文件</p>
+      <Button variant="outline" onClick={onBack}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        返回详情
+      </Button>
+    </div>
+  );
+}
+
+interface ReaderPreviewShellProps {
+  title: string;
+  subtitle: string | null | undefined;
+  onBack: () => void;
+  children: ReactNode;
+}
+
+export function ReaderPreviewShell({ title, subtitle, onBack, children }: ReaderPreviewShellProps) {
+  return (
+    <div className="flex h-screen flex-col bg-background">
+      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-foreground">{title}</div>
+          <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+        </div>
+      </header>
+      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
     </div>
   );
 }

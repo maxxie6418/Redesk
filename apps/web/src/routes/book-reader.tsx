@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
 import { CommentInput } from '@/components/reader/comment-input';
 import { ImagePreviewViewer, PdfPreviewViewer, TextPreviewViewer, UnsupportedPreviewViewer } from '@/components/reader/preview-viewers';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { API_BASE } from '@/lib/api';
 import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
-import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight } from './book-reader/components';
+import { HighlightEditPopover, ReaderEmptyState, ReaderNotesPanel, ReaderPreviewShell, ReaderTopBar, TocPanel, type EditingHighlight } from './book-reader/components';
 import { useEpubReader } from './book-reader/use-epub-reader';
 import { useReadingProgressSync } from './book-reader/reading-progress-sync';
 import { useReaderHighlightActions, type ReaderSelectionState } from './book-reader/use-reader-highlight-actions';
@@ -174,16 +174,7 @@ export function BookReaderPage() {
   }
 
   if (!readableFile) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
-        <BookOpen className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-muted-foreground">没有可在线预览的主阅读文件</p>
-        <Button variant="outline" onClick={() => navigate(`/books/${bookId}`)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          返回详情
-        </Button>
-      </div>
-    );
+    return <ReaderEmptyState onBack={() => navigate(`/books/${bookId}`)} />;
   }
 
   if (!isEpub) {
@@ -200,18 +191,9 @@ export function BookReaderPage() {
     }
 
     return (
-      <div className="flex h-screen flex-col bg-background">
-        <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/books/${bookId}`)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-foreground">{title}</div>
-            <div className="truncate text-xs text-muted-foreground">{readableFile.original_filename ?? readableFormat}</div>
-          </div>
-        </header>
-        <div className="min-h-0 flex-1 overflow-hidden">{viewer}</div>
-      </div>
+      <ReaderPreviewShell title={title} subtitle={readableFile.original_filename ?? readableFormat} onBack={() => navigate(`/books/${bookId}`)}>
+        {viewer}
+      </ReaderPreviewShell>
     );
   }
 
