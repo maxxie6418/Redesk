@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, type MutableRefObject } from 'react';
 import type { HighlightItem } from '@/hooks/use-notes';
 import type { EditingHighlight } from './components';
 
@@ -28,6 +28,7 @@ interface MutationStatus {
 
 interface UseReaderHighlightRendererOptions {
   loading: boolean;
+  highlightsMapRef: MutableRefObject<Map<string, HighlightItem>>;
   highlights: HighlightsQuery;
   createHighlight: MutationStatus;
   updateHighlight: MutationStatus;
@@ -55,8 +56,7 @@ function buildAnnotationClickHandler(item: HighlightItem, setEditing: (value: Ed
   };
 }
 
-export function useReaderHighlightRenderer({ loading, highlights, createHighlight, updateHighlight, deleteHighlight, getRendition, setEditing }: UseReaderHighlightRendererOptions) {
-  const highlightsMapRef = useRef<Map<string, HighlightItem>>(new Map());
+export function useReaderHighlightRenderer({ loading, highlightsMapRef, highlights, createHighlight, updateHighlight, deleteHighlight, getRendition, setEditing }: UseReaderHighlightRendererOptions) {
   const { data: highlightItems, refetch } = highlights;
 
   const renderHighlights = useCallback(() => {
@@ -95,7 +95,7 @@ export function useReaderHighlightRenderer({ loading, highlights, createHighligh
     }
 
     highlightsMapRef.current = map;
-  }, [getRendition, highlightItems, setEditing]);
+  }, [getRendition, highlightItems, highlightsMapRef, setEditing]);
 
   useEffect(() => {
     if (!loading && highlightItems) {
@@ -119,5 +119,5 @@ export function useReaderHighlightRenderer({ loading, highlights, createHighligh
     }
   }, [deleteHighlight.isSuccess, refetch, renderHighlights, updateHighlight.isSuccess]);
 
-  return { highlightsMapRef };
+  return null;
 }
