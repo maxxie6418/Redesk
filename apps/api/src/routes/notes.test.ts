@@ -22,6 +22,7 @@ const testEnv = vi.hoisted(() => {
 interface SeedResult {
   userId: number;
   bookId: number;
+  fileId: number;
 }
 
 type SqliteDatabase = ReturnType<typeof getSqlite>;
@@ -60,9 +61,11 @@ async function createApp(): Promise<TestAppContext> {
 async function seedBase(sqlite: SqliteDatabase): Promise<SeedResult> {
   sqlite.exec(`
     PRAGMA foreign_keys = OFF;
+    DELETE FROM reading_progress;
     DELETE FROM highlights;
     DELETE FROM notes;
     DELETE FROM bookmarks;
+    DELETE FROM book_files;
     DELETE FROM books;
     DELETE FROM users;
     DELETE FROM notes_fts;
@@ -81,8 +84,12 @@ async function seedBase(sqlite: SqliteDatabase): Promise<SeedResult> {
     INSERT INTO books (owner_id, title, author, status, visibility, import_order, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(userId, '笔记分页测试书', '测试作者', 'READING', 'PRIVATE', 1, ts, ts).lastInsertRowid);
+  const fileId = Number(sqlite.prepare(`
+    INSERT INTO book_files (owner_id, book_id, storage_mode, primary_location, sync_status, original_filename, file_format, file_size, is_primary, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(userId, bookId, 'local_only', 'local', 'synced', 'main.epub', 'EPUB', 100, 1, ts, ts).lastInsertRowid);
 
-  return { userId, bookId };
+  return { userId, bookId, fileId };
 }
 
 function seedMarks(sqlite: SqliteDatabase, seeded: SeedResult, count: number, options: { includeBookmarks?: boolean } = {}) {
@@ -170,6 +177,79 @@ afterAll(async () => {
   closeSqliteSafely();
 
   rmSync(testEnv.root, { recursive: true, force: true });
+});
+
+describe('backup permission boundaries', () => {
+  it('rejects full backup and manual backup trigger for non-admin users', async () => {
+    const { app, sqlite } = sharedContext!;
+    await seedBase(sqlite);
+    const ts = now();
+    const passwordHash = await hashPassword('reader-password');
+    sqlite.prepare(`
+      INSERT INTO users (username, password_hash, display_name, is_active, is_admin, must_change_password, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(`reader-${Date.now()}`, passwordHash, '普通读者', 1, 0, 0, ts, ts);
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { password: 'reader-password' },
+    });
+    expect(loginResponse.statusCode).toBe(200);
+    const setCookie = loginResponse.headers['set-cookie'];
+    const cookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie)?.split(';')[0];
+    if (!cookie) throw new Error('普通用户登录响应缺少会话 Cookie');
+
+    const fullResponse = await app.inject({ method: 'POST', url: '/api/v1/backup/full', headers: { cookie } });
+    const triggerResponse = await app.inject({ method: 'POST', url: '/api/v1/backup/trigger', headers: { cookie } });
+
+    expect(fullResponse.statusCode).toBe(403);
+    expect(fullResponse.json().error.code).toBe('FORBIDDEN');
+    expect(triggerResponse.statusCode).toBe(403);
+    expect(triggerResponse.json().error.code).toBe('FORBIDDEN');
+  });
+});
+
+describe('reading progress ownership validation', () => {
+  it('rejects progress updates when file does not belong to the target book', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+    const ts = now();
+    const otherBookId = Number(sqlite.prepare(`
+      INSERT INTO books (owner_id, title, author, status, visibility, import_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(seeded.userId, '另一本书', '测试作者', 'READING', 'PRIVATE', 2, ts, ts).lastInsertRowid);
+    const otherFileId = Number(sqlite.prepare(`
+      INSERT INTO book_files (owner_id, book_id, storage_mode, primary_location, sync_status, original_filename, file_format, file_size, is_primary, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(seeded.userId, otherBookId, 'local_only', 'local', 'synced', 'other.epub', 'EPUB', 100, 1, ts, ts).lastInsertRowid);
+    const cookie = await authCookie(app);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/books/${seeded.bookId}/reading-progress`,
+      headers: { cookie },
+      payload: { file_id: otherFileId, cfi: 'epubcfi(/6/2!/4/2)', percentage: 10 },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('saves progress when file belongs to the target book', async () => {
+    const { app, sqlite } = sharedContext!;
+    const seeded = await seedBase(sqlite);
+    const cookie = await authCookie(app);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/books/${seeded.bookId}/reading-progress`,
+      headers: { cookie },
+      payload: { file_id: seeded.fileId, cfi: 'epubcfi(/6/2!/4/2)', percentage: 10 },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toMatchObject({ book_id: seeded.bookId, file_id: seeded.fileId, percentage: 10 });
+  });
 });
 
 describe('note routes query validation and pagination', () => {

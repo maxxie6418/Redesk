@@ -64,7 +64,7 @@ export interface ReadingMarkSearchResponse<T> {
   pagination: PaginationInfo;
 }
 
-export function useHighlights(bookId?: number) {
+export function useHighlights(bookId?: number, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['highlights', { bookId }],
     queryFn: () => {
@@ -72,6 +72,7 @@ export function useHighlights(bookId?: number) {
       if (bookId) params.set('book_id', String(bookId));
       return api.get<HighlightItem[]>(`/highlights?${params.toString()}`);
     },
+    enabled: options.enabled,
   });
 }
 
@@ -118,7 +119,7 @@ export function useDeleteHighlight() {
   });
 }
 
-export function useNotes(bookId?: number) {
+export function useNotes(bookId?: number, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['notes', { bookId }],
     queryFn: () => {
@@ -126,6 +127,7 @@ export function useNotes(bookId?: number) {
       if (bookId) params.set('book_id', String(bookId));
       return api.get<NoteItem[]>(`/notes?${params.toString()}`);
     },
+    enabled: options.enabled,
   });
 }
 

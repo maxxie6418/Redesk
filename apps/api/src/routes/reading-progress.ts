@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, desc } from 'drizzle-orm';
-import { readingProgress } from '@redesk/db';
+import { bookFiles, books, readingProgress } from '@redesk/db';
 import { ERROR_CODE, updateReadingProgressSchema } from '@redesk/shared';
 import type { UpdateReadingProgressInput } from '@redesk/shared';
 import { getDb } from '../db';
-import { AppError } from '../lib/errors';
+import { AppError, notFound } from '../lib/errors';
 import { requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 
@@ -50,6 +50,24 @@ export async function readingProgressRoutes(app: FastifyInstance): Promise<void>
     const input = validate(updateReadingProgressSchema, req.body) as UpdateReadingProgressInput;
     const db = getDb();
     const timestamp = now();
+
+    const ownedBook = db
+      .select({ id: books.id })
+      .from(books)
+      .where(and(eq(books.id, bookId), eq(books.owner_id, userId)))
+      .get();
+    if (!ownedBook) {
+      throw notFound('书籍不存在');
+    }
+
+    const ownedFile = db
+      .select({ id: bookFiles.id })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.id, input.file_id), eq(bookFiles.owner_id, userId), eq(bookFiles.book_id, bookId)))
+      .get();
+    if (!ownedFile) {
+      throw notFound('阅读文件不存在');
+    }
 
     const existing = db
       .select({ id: readingProgress.id })

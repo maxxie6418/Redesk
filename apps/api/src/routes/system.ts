@@ -250,6 +250,32 @@ function getAppVersion(): string {
   }
 }
 
+export const RESET_TABLES = [
+  'topic_entries',
+  'topic_segments',
+  'topic_notes',
+  'topic_highlights',
+  'topic_books',
+  'topics',
+  'reading_progress',
+  'bookmarks',
+  'notes_fts',
+  'highlights_fts',
+  'notes',
+  'highlights',
+  'book_files',
+  'book_covers',
+  'book_relations',
+  'book_tags',
+  'status_history',
+  'categories',
+  'tags',
+  'books_fts',
+  'books',
+  'settings',
+  'users',
+] as const;
+
 export async function systemRoutes(app: FastifyInstance): Promise<void> {
   app.get('/system/stats', async (req) => {
     const userId = requireUserId(req);
@@ -503,13 +529,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
 
     db.run(sql.raw('PRAGMA foreign_keys = OFF;'));
 
-    const tables = [
-      'bookmarks', 'book_files', 'book_covers', 'book_relations',
-      'book_tags', 'status_history', 'categories', 'tags',
-      'books_fts',
-      'books', 'settings', 'users',
-    ];
-    for (const t of tables) {
+    for (const t of RESET_TABLES) {
       db.run(sql.raw(`DROP TABLE IF EXISTS "${t}"`));
     }
 

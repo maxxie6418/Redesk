@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, asc, desc } from 'drizzle-orm';
 import { books, notes, highlights } from '@redesk/db';
 import { ERROR_CODE, exportQuerySchema, importNotesSchema } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
-import { requireUserId } from '../lib/auth';
+import { requireAdmin, requireUserId } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { validate } from '../lib/zod';
 import { config } from '../config';
@@ -265,7 +265,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/backup/full', async (req, reply) => {
-    requireUserId(req);
+    requireAdmin(req);
     const dbPath = config.databaseUrl;
     if (!existsSync(dbPath)) throw new AppError(ERROR_CODE.INTERNAL_ERROR, '数据库文件不存在');
 
@@ -294,7 +294,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/backup/trigger', async (req) => {
-    requireUserId(req);
+    requireAdmin(req);
     const sqlite = getSqlite();
     const dir = join(config.storageDir, 'backups');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

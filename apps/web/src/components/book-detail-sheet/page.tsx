@@ -132,8 +132,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const deleteBook = useDeleteBook();
   const files = useBookFiles(bookId ?? 0);
   const progress = useReadingProgress(bookId ?? 0);
-  const bookNotes = useNotes(bookId ?? 0);
-  const bookHighlights = useHighlights(bookId ?? 0);
+  const hasActiveBook = open && typeof bookId === 'number' && bookId > 0;
+  const bookNotes = useNotes(bookId ?? 0, { enabled: hasActiveBook });
+  const bookHighlights = useHighlights(bookId ?? 0, { enabled: hasActiveBook });
   const addTopicBook = useAddTopicBook();
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');

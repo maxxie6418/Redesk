@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { classifyStoragePath, summarizeTrackedStorage } from './system';
+import { RESET_TABLES, classifyStoragePath, summarizeTrackedStorage } from './system';
 
 describe('classifyStoragePath', () => {
   it('maps known storage prefixes to buckets', () => {
@@ -15,6 +15,36 @@ describe('classifyStoragePath', () => {
   it('returns null for unknown paths', () => {
     expect(classifyStoragePath('misc/file.bin')).toBeNull();
     expect(classifyStoragePath(null)).toBeNull();
+  });
+});
+
+describe('RESET_TABLES', () => {
+  it('covers every runtime table that system reset must remove before migrations recreate schema', () => {
+    expect(RESET_TABLES).toEqual([
+      'topic_entries',
+      'topic_segments',
+      'topic_notes',
+      'topic_highlights',
+      'topic_books',
+      'topics',
+      'reading_progress',
+      'bookmarks',
+      'notes_fts',
+      'highlights_fts',
+      'notes',
+      'highlights',
+      'book_files',
+      'book_covers',
+      'book_relations',
+      'book_tags',
+      'status_history',
+      'categories',
+      'tags',
+      'books_fts',
+      'books',
+      'settings',
+      'users',
+    ]);
   });
 });
 
