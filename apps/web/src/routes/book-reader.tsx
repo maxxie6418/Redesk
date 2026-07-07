@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import type EpubFactory from 'epubjs';
 import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
-import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
+import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem } from '@/hooks/use-notes';
 import { useAddTopicHighlight } from '@/hooks/use-topics';
 import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
@@ -18,6 +18,7 @@ import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
 import { HighlightEditPopover, ReaderNotesPanel, ReaderTopBar, TocPanel, type EditingHighlight, type TocItem } from './book-reader/components';
 import { useReadingProgressSync, type ReadingProgressData } from './book-reader/reading-progress-sync';
 import { useReaderKeyboardNavigation } from './book-reader/use-reader-keyboard-navigation';
+import { useReaderNotes } from './book-reader/use-reader-notes';
 
 interface SelectionState {
   rect: DOMRect;
@@ -66,8 +67,6 @@ export function BookReaderPage() {
   const [commentTargetHighlightId, setCommentTargetHighlightId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditingHighlight | null>(null);
   const [topicHighlightId, setTopicHighlightId] = useState<number | null>(null);
-  const [noteForm, setNoteForm] = useState<{ title: string; content: string } | null>(null);
-  const [editingNote, setEditingNote] = useState<{ id: number; title: string; content: string } | null>(null);
 
 
   const readableFile = selectReadableFile<BookFileItem>(files.data);
@@ -79,6 +78,25 @@ export function BookReaderPage() {
   const { saveProgress, syncMessage } = useReadingProgressSync({
     bookId,
     fileId: primaryEpubId,
+  });
+  const getCurrentCfi = useCallback(() => renditionRef.current?.location?.start?.cfi ?? currentCfiRef.current, []);
+  const {
+    noteForm,
+    editingNote,
+    setNoteForm,
+    setEditingNote,
+    handleOpenNoteForm,
+    handleSubmitNote,
+    handleEditNote,
+    handleSubmitEditNote,
+    handleDeleteNote,
+  } = useReaderNotes({
+    bookId,
+    getCurrentCfi,
+    notesQuery: bookNotes,
+    createNote,
+    updateNote,
+    deleteNote,
   });
 
   const renderHighlights = useCallback(() => {
@@ -534,62 +552,6 @@ export function BookReaderPage() {
   const handleCommentCancel = () => {
     setCommentMode(false);
     setCommentTargetHighlightId(null);
-  };
-
-  const handleOpenNoteForm = () => {
-    const cfi = renditionRef.current?.location?.start?.cfi ?? currentCfiRef.current;
-    if (!cfi) return;
-    setNoteForm({ title: '', content: '' });
-  };
-
-  const handleSubmitNote = () => {
-    if (!noteForm || !noteForm.title.trim()) return;
-    const cfi = renditionRef.current?.location?.start?.cfi ?? currentCfiRef.current;
-    createNote.mutate(
-      {
-        book_id: bookId,
-        cfi: cfi || null,
-        title: noteForm.title.trim(),
-        content_markdown: noteForm.content.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          setNoteForm(null);
-          bookNotes.refetch();
-        },
-      },
-    );
-  };
-
-  const handleEditNote = (note: NoteItem) => {
-    setEditingNote({
-      id: note.id,
-      title: note.title ?? '',
-      content: note.content_markdown ?? '',
-    });
-  };
-
-  const handleSubmitEditNote = () => {
-    if (!editingNote) return;
-    updateNote.mutate(
-      {
-        id: editingNote.id,
-        title: editingNote.title.trim() || undefined,
-        content_markdown: editingNote.content.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          setEditingNote(null);
-          bookNotes.refetch();
-        },
-      },
-    );
-  };
-
-  const handleDeleteNote = (id: number) => {
-    deleteNote.mutate(id, {
-      onSuccess: () => bookNotes.refetch(),
-    });
   };
 
   const toggleToc = () => {
