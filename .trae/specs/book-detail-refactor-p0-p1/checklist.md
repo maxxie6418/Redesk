@@ -48,12 +48,12 @@
 
 ## 阶段 P1.5 - 抽出 useBookActions
 
-- [ ] 新文件 `use-book-actions.ts` 存在
-- [ ] 8 个 `useCallback` 全部收敛
-- [ ] 收藏/封面/删除/抓取行为不变
-- [ ] `pnpm typecheck` / `pnpm lint` 通过
-- [ ] Web/API 测试通过
-- [ ] 提交 `refactor(book-detail): 抽出 useBookActions` 并成功推送
+- [x] 新文件 `use-book-actions.ts` 存在
+- [x] 8 个 `useCallback` 全部收敛
+- [x] 收藏/封面/删除/抓取行为不变
+- [x] `pnpm typecheck` / `pnpm lint` 通过
+- [x] Web/API 测试通过
+- [x] 提交 `refactor(book-detail): 抽出 useBookActions` 并成功推送
 
 ## 整体验证
 

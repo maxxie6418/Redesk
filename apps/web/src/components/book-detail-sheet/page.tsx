@@ -1,7 +1,6 @@
-import { useMemo, useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { selectReadableFile } from '@redesk/shared';
-import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   useBook,
@@ -34,6 +33,7 @@ import { MetadataDialog } from './metadata-dialog';
 import { useDetailMessages } from './use-detail-messages';
 import { useReaderNavigation } from './use-reader-navigation';
 import { useMetadataDialog } from './use-metadata-dialog';
+import { useBookActions } from './use-book-actions';
 import { type DetailTab, COVER_TONES, formatFileSize } from './types';
 
 const COVER_URL_BASE = API_BASE;
@@ -137,96 +137,44 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
     await handleUpdate(field, { [field]: value });
   }, [handleUpdate]);
 
-  const handleFavorite = useCallback(async () => {
-    if (!book.data || !bookId) return;
-    try {
-      if (book.data.favorited_at) {
-        await unfavoriteBook.mutateAsync(bookId);
-      } else {
-        await favoriteBook.mutateAsync(bookId);
-      }
-    } catch {
-      // ignore
-    }
-  }, [book.data, bookId, favoriteBook, unfavoriteBook]);
-
-  const handleFetchCover = useCallback(async () => {
-    if (!bookId) return;
-    try {
-      await fetchCover.mutateAsync({ bookId });
-      info('封面已下载');
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '封面下载失败');
-    }
-  }, [bookId, fetchCover, info, error]);
-
-  const handleActivateCover = useCallback(async (coverId: number) => {
-    if (!bookId) return;
-    try {
-      await activateCover.mutateAsync({ bookId, coverId });
-      info('已切换当前封面');
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '切换封面失败');
-    }
-  }, [activateCover, bookId, info, error]);
-
-  const handleDeleteCover = useCallback(async (coverId: number) => {
-    if (!bookId) return;
-    try {
-      await deleteCover.mutateAsync({ bookId, coverId });
-      info('封面已删除');
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '删除封面失败');
-    }
-  }, [bookId, deleteCover, info, error]);
-
-  const handleCoverUpload = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file || !bookId) return;
-      try {
-        await uploadCover.mutateAsync({ bookId, file });
-        info('封面已上传');
-      } catch (err) {
-        error(err instanceof ApiError ? err.message : '上传封面失败');
-      }
-      if (coverInputRef.current) coverInputRef.current.value = '';
+  const {
+    handleFavorite,
+    handleFetchCover,
+    handleActivateCover,
+    handleDeleteCover,
+    handleCoverUpload,
+    handleRequestBookDelete,
+    handleConfirmBookDelete,
+    handleRequestFileDelete,
+    handleConfirmFileDelete,
+    handleOpenMetadataDialog,
+    handleApplyMetadata,
+    handleToggleCoverPanel,
+  } = useBookActions({
+    bookId,
+    book: book.data,
+    mutations: {
+      favoriteBook,
+      unfavoriteBook,
+      fetchCover,
+      activateCover,
+      deleteCover,
+      uploadCover,
+      deleteBook,
+      deleteFile,
     },
-    [bookId, uploadCover, info, error],
-  );
-
-  const handleRequestBookDelete = useCallback(() => {
-    setPendingBookDeleteFiles(false);
-    setPendingBookDelete(true);
-  }, []);
-
-  const handleConfirmBookDelete = useCallback(async () => {
-    if (!bookId) return;
-    try {
-      await deleteBook.mutateAsync({ id: bookId, deleteFiles: pendingBookDeleteFiles });
-      setPendingBookDelete(false);
-      onClose();
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '删除失败');
-      setPendingBookDelete(false);
-    }
-  }, [bookId, deleteBook, pendingBookDeleteFiles, onClose, error]);
-
-  const handleRequestFileDelete = useCallback((file: BookFileItem) => {
-    setPendingFileDelete(file);
-  }, []);
-
-  const handleConfirmFileDelete = useCallback(async () => {
-    if (!bookId || !pendingFileDelete) return;
-    const target = pendingFileDelete;
-    setPendingFileDelete(null);
-    try {
-      await deleteFile.mutateAsync({ bookId, fileId: target.id });
-      info('文件已删除');
-    } catch (err) {
-      error(err instanceof ApiError ? err.message : '删除失败');
-    }
-  }, [bookId, pendingFileDelete, deleteFile, info, error]);
+    openMetadataDialog,
+    applyMetadata,
+    setPendingBookDelete,
+    setPendingBookDeleteFiles,
+    setPendingFileDelete,
+    pendingBookDeleteFiles,
+    pendingFileDelete,
+    setShowCoverPanel,
+    info,
+    error,
+    onClose,
+  });
 
   const b = book.data;
   const progressPercent = progress.data?.percentage ?? 0;
@@ -344,7 +292,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   if (!bookId || !readableFile) return;
                   openReader();
                 }}
-                onToggleCoverPanel={() => setShowCoverPanel(!showCoverPanel)}
+                onToggleCoverPanel={handleToggleCoverPanel}
                 onToggleEditMode={() => setEditMode(!editMode)}
                 onFavorite={handleFavorite}
                 onDelete={handleRequestBookDelete}
@@ -385,7 +333,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   onSaveDate={saveDate}
                   onSaveJson={saveJson}
                   onSaveTags={saveTags}
-                  onOpenMetadataDialog={openMetadataDialog}
+                  onOpenMetadataDialog={handleOpenMetadataDialog}
                 />
               )}
 
@@ -437,7 +385,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
         setFetchCoverChecked={setFetchCoverChecked}
         isPending={applyMetadataMutation.isPending}
         onClose={closeMetadataDialog}
-        onApply={applyMetadata}
+        onApply={handleApplyMetadata}
       />
     )}
 
