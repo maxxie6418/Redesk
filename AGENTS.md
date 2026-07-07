@@ -61,6 +61,55 @@ doc/          # 全部设计文档（勿放代码）
 6. **一书一分类**：`books.category_id` 单意外键；分类是"对个人的主要用途"，用户自定义，不建多对多关联表。
 7. **owner_id 预留多用户**：用户拥有的根实体表带 `owner_id`，当前单账户下恒为同一值；从属关系表通过父表继承归属，查询与写入必须校验 owner 边界。
 
+## 数据库迁移红线（Drizzle / SQLite）
+
+本节是过去 3 次数据库升级故障的总结。**任何 AI 代理在改 schema、写新 migration、改 migrate.ts 前必须通读本节**。详细恢复步骤见 [doc/灾难恢复 SOP.md](doc/灾难恢复 SOP.md)。
+
+### 红线 1：已应用的 migration 永远不可修改或删除
+
+Drizzle 的 migrator 通过对比 `__drizzle_migrations` 表的 `hash` 与 `drizzle/meta/_journal.json` / `drizzle/meta/00007_snapshot.json` 的 hash 决定是否重跑。**已被记录为"已应用"的 migration 文件一旦修改，下次启动会判为"未应用"并重跑整张表的 CREATE，导致 `table already exists` 崩溃**。
+
+具体规则：
+
+- 不得修改 `drizzle/0000_*.sql` 之后任何已合并到 main 的 SQL 文件的正文。
+- 不得删除任何已合并的 `drizzle/00NN_*.sql` 文件（包括回滚 PR）。
+- 修改 schema 必须**新增**一个 `00NN_+1_*.sql`，通过 `ALTER TABLE` / 整表重建模式迁移，不得"改 0005 让其产生新效果"。
+- 若发现早期 migration 写错（例如缺了索引），补救方式是新增一个 `00NN_+1_*.sql` 来 ALTER，绝不直接改 00NN。
+
+> 例外：尚未合并、仅在分支上的 migration，可在分支内重命名 / 重写 / 删除，但合并后立刻按上述红线执行。
+
+### 红线 2：禁止 journal 跳跃（gap）
+
+`drizzle/meta/_journal.json` 的 `entries` 是有序数组。**绝不允许在中间删除某条 entry 然后把后面的条目顶上来**（即"压缩 journal"）。这会导致：
+
+- 现有数据库的 `__drizzle_migrations` 表里已有该条 hash；
+- 新的 journal 缺少该条 hash；
+- 启动时 migrator 看到"应该应用 X 但 Y 已经应用了"，抛 `Found at least one unapplied migration`，且**绝不会自动回退**。
+
+规则：
+
+- 任何时候都不动 `_journal.json` 的已有 entries，只能 append。
+- 不做"清理旧 migration""合并 migration"等操作。
+- 改 schema 加新表 / 改字段 = 新增 `00NN_+1_*.sql` + 在 `drizzle/meta/_journal.json` 末尾 append 新 entry + 在 `drizzle/meta/` 下生成 `000NN_snapshot.json`。
+
+### 红线 3：升级前的 6 步自检
+
+每次发布版本 / 升级镜像 / 部署新代码前，AI 代理或部署者必须走完以下 6 步；任何一步失败都应停下，先解决再继续。
+
+1. **检查 journal 与 meta 是否完整**：`drizzle/meta/_journal.json` 末尾的 idx 与 `drizzle/` 下 `00NN_*.sql` 文件数量一致；最新 snapshot 是 `000NN_snapshot.json` 而非 `000NM_snapshot.json`。
+2. **本地 dry-run 迁移**：用一份空库（`rm data/redesk.db` 或 `docker volume rm`）跑一次 `pnpm db:migrate`，确认无错。
+3. **CI 演练通过**：查看 `.github/workflows/ci.yml` 的 `migrate-drill` 任务最近一次跑成功（详见《灾难恢复 SOP》§3）。
+4. **已发布版本的旧数据库兼容性**：参考 [doc/数据库兼容性与可锁定数据.html](doc/说明/Redesk-数据库兼容性与可锁定数据.html) 走一遍对照表，确认本次 migration 不触碰"可锁定数据"段。
+5. **snapshot 预检**：第一次启动新版本时，`packages/db/src/preflight.ts` 会自动 `VACUUM INTO` 一份 `data/.snapshots/redesk-snapshot-YYYYMMDD-HHMMSS-mmm.db`。若 `__drizzle_migrations` 报异常，自动停服并提示恢复。
+6. **回滚预案**：手边有"上一次正常运行的 git tag / Docker image tag"。若新版本启动 5 分钟内观察到反复重启或启动失败，立即 `docker compose down` 后 `docker compose up -d <old-tag>` 回滚。
+
+### 启动期保护（实现位置）
+
+- **预检**：`packages/db/src/preflight.ts` 的 `preflight()` 在 migrate 之前检查 10 张核心表（users/books/book_files/book_covers/highlights/notes/reading_progress/bookmarks/topics/settings）是否齐全。
+- **快照**：`snapshotBefore()` 在 migrate 之前用 `VACUUM INTO` 备份当前数据库到 `data/snapshots/`。
+- **残留清理**：`cleanupResidualTables()` 清理前缀为 `_redesk_residual_*` 的临时表。
+- **强制作弊**：环境变量 `REDESK_FORCE_REBUILD=true` + 调用方显式 `allowForce: true` 才会绕过缺失表预检。CI / 生产绝不允许此环境变量。
+
 ## 代码规范
 
 - **语言**：TypeScript 严格模式（`strict: true`），前后端统一。
@@ -121,6 +170,7 @@ docker compose up -d
 ## AI 代理工作守则
 
 1. **先读文档再动手**：涉及表结构读《数据模型》，涉及接口读《API 接口》，涉及选择读《决策记录》。不要凭假设实现。
+0. **不得删除 `doc/` 和 `dataLab/`**：这两个目录下的所有内容均为项目重要资产——`doc/` 包含全部设计文档、决策记录、说明、审计与原型；`dataLab/` 包含测试用导入模板、样本数据与验证 EPUB。任何情况下 AI 代理不得建议删除或自行删除这些目录下的任何文件。即使出现重复/冗余，也必须先向用户确认再操作。
 2. **遵循执行顺序**：按《开发执行计划》的里程碑与执行项编号推进；不得跳过依赖项。
 3. **不擅改架构**：技术栈、数据模型红线、API 契约的变更须先与决策者讨论并更新文档。
 4. **YAGNI**：只实现当前执行项所需；增强层（阅读器 3.21–3.31、统计 5.09–5.17 等"待定位"功能）不提前实现，预留接口即可。

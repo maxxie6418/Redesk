@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Redesk · 当前实现总览</title>
+<style>
+  :root{
+    --terracotta:#C96442;
+    --terracotta-deep:#A24F33;
+    --terracotta-soft:#E7B7A2;
+    --paper:#FBF6EE;
+    --paper-2:#F4ECDC;
+    --ink:#2B1B12;
+    --ink-soft:#6E574A;
+    --line:#E1D3BD;
+    --line-2:#C9B79B;
+    --ok:#3F7C4A;
+    --ok-bg:#E6F1E1;
+    --warn:#A56A1E;
+    --warn-bg:#F7E7CC;
+    --later:#7A5BAB;
+    --later-bg:#EADFF6;
+    --later-ink:#5A3F89;
+    --unknown:#7A7066;
+    --unknown-bg:#ECE4D5;
+    --code:#3B2A1F;
+    --code-bg:#F1E6D2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Newsreader","Source Han Serif SC","Songti SC",Georgia,serif;font-size:16px;line-height:1.65}
+  body{padding:0 0 96px}
+  a{color:var(--terracotta-deep);text-decoration:none;border-bottom:1px dashed var(--terracotta-soft)}
+  a:hover{color:var(--terracotta);border-bottom-color:var(--terracotta)}
+  code,pre,kbd,samp{font-family:"JetBrains Mono","SFMono-Regular",Consolas,Menlo,monospace}
+  code{background:var(--code-bg);color:var(--code);padding:1px 6px;border-radius:4px;font-size:.92em;border:1px solid var(--line)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;line-height:1.5;font-size:.88em;color:var(--code)}
+  pre code{background:none;border:none;padding:0}
+  .hero{background:linear-gradient(180deg,#F8EBD8 0%,#FBF6EE 100%);border-bottom:1px solid var(--line);padding:48px 0 36px}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:0 32px}
+  .eyebrow{font-family:"Poppins","PingFang SC",sans-serif;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--terracotta-deep);margin:0 0 8px}
+  h1{font-family:"Newsreader",Georgia,serif;font-weight:600;font-size:44px;line-height:1.15;margin:0 0 6px;color:var(--ink);letter-spacing:-.01em}
+  h1 .sub{display:block;font-size:18px;font-weight:400;color:var(--ink-soft);margin-top:8px;letter-spacing:0}
+  .meta-row{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;font-family:"Poppins","PingFang SC",sans-serif;font-size:12px}
+  .pill{background:#fff;border:1px solid var(--line-2);color:var(--ink-soft);padding:4px 10px;border-radius:999px}
+  .pill strong{color:var(--ink);font-weight:600}
+  main{max-width:1180px;margin:0 auto;padding:0 32px}
+  section{margin:48px 0;scroll-margin-top:24px}
+  section > h2{font-family:"Lora","Newsreader",serif;font-weight:600;font-size:26px;line-height:1.25;margin:0 0 6px;color:var(--ink);letter-spacing:-.005em;display:flex;align-items:baseline;gap:14px}
+  section > h2 .num{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--terracotta);background:#FCE4D6;padding:2px 9px;border-radius:6px;font-weight:500;letter-spacing:0}
+  section > .lede{color:var(--ink-soft);margin:6px 0 22px;font-size:15.5px;line-height:1.7;max-width:920px}
+  h3{font-family:"Lora","Newsreader",serif;font-weight:600;font-size:19px;line-height:1.3;margin:28px 0 8px;color:var(--ink)}
+  h4{font-family:"Poppins","PingFang SC",sans-serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:var(--ink-soft);margin:18px 0 6px;text-transform:uppercase}
+  .grid{display:grid;gap:18px}
+  .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media (max-width:900px){.grid.cols-3,.grid.cols-2,.grid.cols-4{grid-template-columns:1fr}}
+  .card{background:#FFFCF5;border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:0 1px 0 rgba(43,27,18,.02)}
+  .card.layer{position:relative;overflow:hidden}
+  .card.layer::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--terracotta)}
+  .card.layer.sediment::before{background:#D29A4A}
+  .card.layer.augment::before{background:var(--later)}
+  .card h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--ink-soft);text-transform:uppercase}
+  .card h3{font-family:"Lora",serif;font-size:18px;margin:0 0 6px;color:var(--ink);font-weight:600}
+  .card p{margin:6px 0 0;color:var(--ink-soft);font-size:14.5px;line-height:1.6}
+  .card .status{font-family:"Poppins",sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:8px}
+  .status.done{background:var(--ok-bg);color:var(--ok)}
+  .status.partial{background:var(--warn-bg);color:var(--warn)}
+  .status.later{background:var(--later-bg);color:var(--later-ink)}
+  .status.unknown{background:var(--unknown-bg);color:var(--unknown)}
+  .toc{background:#FFFCF5;border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:28px 0 8px}
+  .toc h4{margin:0 0 10px}
+  .toc ol{columns:2;column-gap:36px;padding-left:24px;margin:0}
+  .toc li{margin:3px 0;break-inside:avoid;font-size:14.5px}
+  .toc a{color:var(--ink)}
+  @media (max-width:760px){.toc ol{columns:1}}
+  table{width:100%;border-collapse:collapse;margin:14px 0 4px;background:#FFFCF5;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  th{background:#F4E9D6;font-family:"Poppins",sans-serif;font-weight:600;font-size:12px;letter-spacing:.04em;color:var(--ink-soft);text-transform:uppercase}
+  tr:last-child td{border-bottom:none}
+  tbody tr:nth-child(odd) td{background:#FDF9F0}
+  td .nm{font-family:"JetBrains Mono",monospace;color:var(--terracotta-deep);font-size:.92em}
+  td small{color:var(--ink-soft);display:block;margin-top:2px;line-height:1.5}
+  .badge{font-family:"Poppins",sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block}
+  .badge.done{background:var(--ok-bg);color:var(--ok)}
+  .badge.partial{background:var(--warn-bg);color:var(--warn)}
+  .badge.later{background:var(--later-bg);color:var(--later-ink)}
+  .badge.unknown{background:var(--unknown-bg);color:var(--unknown)}
+  .badge.s1{background:#FCE4D6;color:#A24F33}
+  .badge.s2{background:#E9DBF0;color:var(--later-ink)}
+  .badge.s3{background:#DCEAE6;color:#2F6453}
+  .badge.p2{background:#E7DFCB;color:#7C5C0A}
+  .badge.op{background:#F1E6D2;color:#6E574A}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0;font-size:12px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .legend .dot.s1{background:#FCE4D6;border:1px solid #E2B89E}
+  .legend .dot.s2{background:#E9DBF0;border:1px solid #CBB1DC}
+  .legend .dot.s3{background:#DCEAE6;border:1px solid #A7C6BE}
+  .legend .dot.p2{background:#E7DFCB;border:1px solid #C7B98C}
+  .redline{background:#FFF4EE;border-left:4px solid var(--terracotta);padding:14px 18px;border-radius:0 10px 10px 0;margin:10px 0}
+  .redline strong{color:var(--terracotta-deep);font-family:"Poppins",sans-serif;letter-spacing:.04em;font-size:12px;text-transform:uppercase;display:block;margin-bottom:4px}
+  .callout{background:#F1ECDF;border:1px solid var(--line);padding:14px 18px;border-radius:10px;margin:14px 0;color:var(--ink-soft);font-size:14.5px}
+  .callout strong{color:var(--ink)}
+  .stack{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+  @media (max-width:760px){.stack{grid-template-columns:1fr}}
+  .stack .b{background:#FFFCF5;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stack .b .lbl{font-family:"Poppins",sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+  .stack .b .val{font-family:"Lora",serif;font-size:16px;color:var(--ink);font-weight:600}
+  .stack .b .sub{color:var(--ink-soft);font-size:13px;margin-top:4px;line-height:1.5}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 16px;background:#FFFCF5;margin:8px 0}
+  details > summary{cursor:pointer;font-weight:600;color:var(--ink);list-style:none;outline:none;padding:4px 0}
+  details > summary::-webkit-details-marker{display:none}
+  details > summary::before{content:"▸ ";color:var(--terracotta);font-family:monospace;display:inline-block;transition:transform .15s}
+  details[open] > summary::before{content:"▾ "}
+  details[open] > summary{margin-bottom:6px}
+  .er{background:#FFFCF5;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:8px 0;font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.7;color:var(--ink);overflow:auto;white-space:pre}
+  .er .kw{color:var(--terracotta)}
+  .er .tbl{color:var(--ok);font-weight:600}
+  .er .faded{color:var(--ink-soft)}
+  .footer-note{margin-top:60px;padding:24px 0 0;border-top:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center}
+  .kbd{font-family:"JetBrains Mono",monospace;font-size:12px;background:#fff;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:1px 6px}
+  .anchor{scroll-margin-top:24px}
+  .scroll-x{overflow-x:auto}
+  .legend-strip{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+  .legend-strip .badge{font-size:10px}
+  ul.tight{margin:6px 0 6px 0;padding-left:18px}
+  ul.tight li{margin:2px 0}
+  .footnote{font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin:6px 0}
+  .right{text-align:right}
+  .nowrap{white-space:nowrap}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Redesk · 项目状态速览</p>
+    <h1>
+      当前实现总览
+      <span class="sub">数据库结构 · 已具备功能 · 已确定边界 · 后续可能变动</span>
+    </h1>
+    <div class="meta-row">
+      <span class="pill"><strong>代码版本</strong> v2.0.4</span>
+      <span class="pill"><strong>数据模型</strong> v1.1.0</span>
+      <span class="pill"><strong>功能清单</strong> v1.4.2</span>
+      <span class="pill"><strong>执行计划</strong> v1.5.3</span>
+      <span class="pill"><strong>生成时间</strong> 2026-07-07</span>
+      <span class="pill"><strong>运行实例</strong> Docker · <code>redesk:latest</code> @ <code>http://localhost:8787</code></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <nav class="toc" aria-label="目录">
+    <h4>目录</h4>
+    <ol>
+      <li><a href="#sec-positioning">一句话定位与三层结构</a></li>
+      <li><a href="#sec-runtime">当前运行实例</a></li>
+      <li><a href="#sec-features">已具备功能（M0–M3）</a></li>
+      <li><a href="#sec-db">数据库结构（23 张表）</a></li>
+      <li><a href="#sec-decided">已确定（决策）的红线与约定</a></li>
+      <li><a href="#sec-undecided">后续可能变动的部分</a></li>
+      <li><a href="#sec-milestones">里程碑状态</a></li>
+      <li><a href="#sec-stack">技术栈与版本</a></li>
+      <li><a href="#sec-docs">文档索引</a></li>
+    </ol>
+  </nav>
+
+  <section id="sec-positioning" class="anchor">
+    <h2><span class="num">01</span> 一句话定位与三层结构</h2>
+    <p class="lede">Redesk 是自托管的个人阅读管理与 AI 陪读系统。藏书 — 阅读 — 沉淀 — 思考 的数据闭环；数据存本地 SQLite，自托管 Docker 部署，AI 作为增强层分阶段引入。</p>
+
+    <div class="grid cols-3">
+      <div class="card layer">
+        <h4>基础层 · S1</h4>
+        <h3>书架管理</h3>
+        <p>书籍元数据、文件、分类、标签、状态、回收站、文件管理（多文件 / 主阅读文件 / 三态存储 / 封面抽取）、导出与备份、OPDS 1.2、概览首页、设置页。</p>
+        <span class="status done">M0 · M1 已闭环</span>
+      </div>
+      <div class="card layer sediment">
+        <h4>沉淀层 · S2</h4>
+        <h3>阅读与笔记</h3>
+        <p>epub.js 在线阅读、CFI 进度保存 / 恢复、高亮 / 划线 / 波浪线、附注、独立笔记、书签、跳回原文、笔记 / 高亮 FTS5 全文搜索、阅读笔记汇总页、笔记 / 高亮 / 标记导出。</p>
+        <span class="status done">M2 已全线闭环</span>
+      </div>
+      <div class="card layer augment">
+        <h4>增强层 · S3 / P2</h4>
+        <h3>主题阅读 + AI</h3>
+        <p>主题（话题）已超前落地，AI 阶段一（管理 / 阅读辅助）+ RAG（书库级问答）以及对象存储云同步、阅读器与统计增强均待定位。AI 内容存 <code>ai_assets</code> 独立表，与用户内容隔离展示。</p>
+        <span class="status partial">M3 已超前实现 · M4 / M5 待定位</span>
+      </div>
+    </div>
+
+    <p class="footnote">阶段开发不得反向改变该层次（决策记录 · 产品层次，2026-06-27）。</p>
+  </section>
+
+  <section id="sec-runtime" class="anchor">
+    <h2><span class="num">02</span> 当前运行实例</h2>
+    <p class="lede">以下数据来自本机 <code>docker compose ps</code> 与 <code>GET /health</code> 实际探测，数据库位于命名卷 <code>redesk_redesk-data</code> 中。</p>
+    <div class="stack">
+      <div class="b"><div class="lbl">容器</div><div class="val">redesk</div><div class="sub">状态 healthy · 端口 0.0.0.0:8787 → 8787</div></div>
+      <div class="b"><div class="lbl">业务表</div><div class="val">23 张</div><div class="sub">不含 Drizzle 迁移表与 FTS 内部表</div></div>
+      <div class="b"><div class="lbl">迁移记录</div><div class="val">33 条</div><div class="sub">最新 2026-07-06 落地（v1.1.0 数据模型）</div></div>
+      <div class="b"><div class="lbl">FTS5 虚表</div><div class="val">3 套</div><div class="sub">books_fts · notes_fts · highlights_fts</div></div>
+      <div class="b"><div class="lbl">默认账户</div><div class="val">admin</div><div class="sub">首次启动自动创建，密码 <code>redesk</code>，登录后必须改密</div></div>
+      <div class="b"><div class="lbl">鉴权</div><div class="val">单用户免登录</div><div class="sub">本地 <code>VITE_AUTH_DISABLED=true</code>；多用户模式由 <code>settings.multi_user</code> 动态切换</div></div>
+    </div>
+  </section>
+
+  <section id="sec-features" class="anchor">
+    <h2><span class="num">03</span> 已具备功能（M0–M3）</h2>
+    <p class="lede">以下对应《Redesk-功能清单 v1.4.2》。<span class="badge done">已完成</span> 表示代码已落地并通过测试；<span class="badge partial">部分</span> 表示预留入口或仅占位；<span class="badge later">待定位</span> 表示需要《决策记录》确认边界后再排期。</p>
+
+    <h3>1. 书架管理（§1，全量完成）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>1.01–1.06</td><td>新建 / 录入 / 编辑 / 查看 / 链接预填 / 补齐</td><td><span class="badge done">完成</span></td><td>1.03 链接预填、1.04 失败后手动补齐，文档层面仍标记未开始；元数据可手动与编辑功能本身已可用</td></tr>
+        <tr><td>1.07</td><td>删除 / 移入回收站</td><td><span class="badge done">完成</span></td><td>软删除；彻底删除同步清理关联文件与 book_relations</td></tr>
+        <tr><td>1.08</td><td>五状态设置</td><td><span class="badge done">完成</span></td><td>COLLECTED / PLANNED / READING / READ / <strong>STORED</strong>（存档是独立业务状态，非删除）</td></tr>
+        <tr><td>1.09–1.10</td><td>分类、标签</td><td><span class="badge done">完成</span></td><td>一书一分类、标签多对多；分类双类型 GENRE / PERSONAL</td></tr>
+        <tr><td>1.11</td><td>评分</td><td><span class="badge done">完成</span></td><td>1–5 星</td></tr>
+        <tr><td>1.12</td><td>自定义属性</td><td><span class="badge done">完成</span></td><td><code>books.custom_attributes</code> JSON 字段</td></tr>
+        <tr><td>1.13</td><td>书籍搜索</td><td><span class="badge done">完成</span></td><td>FTS5 on title / author / isbn</td></tr>
+        <tr><td>1.14–1.19</td><td>筛选 / 排序 / 分页 / 列表</td><td><span class="badge done">完成</span></td><td>按状态 / 分类 / 标签 / 可见性 / 收藏筛选，<code>MAX_PAGE_SIZE=500</code></td></tr>
+        <tr><td>1.20</td><td>书籍详情</td><td><span class="badge done">完成</span></td><td>支持原位编辑（Notion 式浮层）</td></tr>
+        <tr><td>1.21–1.22</td><td>最近新增 / 最近阅读</td><td><span class="badge done">完成</span></td><td>5.05 最近阅读随 M2 激活</td></tr>
+        <tr><td>1.23</td><td>公开 / 私有</td><td><span class="badge done">完成</span></td><td>当前唯一可见性维度</td></tr>
+        <tr><td>1.24</td><td>阅读目的</td><td><span class="badge done">完成</span></td><td><code>books.reading_purpose</code> 自由文本</td></tr>
+        <tr><td>1.25</td><td>回收站</td><td><span class="badge done">完成</span></td><td>保留期可在设置页配置</td></tr>
+        <tr><td>1.26</td><td>状态变更历史</td><td><span class="badge done">完成</span></td><td><code>status_history</code> 表，状态时间轴可查</td></tr>
+        <tr><td>1.27</td><td>重复检测（规则版）</td><td><span class="badge done">完成</span></td><td>作者+标题 LCS，阈值 0.6；AI 增强版（9.04）待 M4</td></tr>
+        <tr><td>1.28</td><td>批量操作</td><td><span class="badge done">完成</span></td><td>批量改状态 / 分类 / 标签 / 可见性 / 删除</td></tr>
+        <tr><td>1.29</td><td>书籍关联</td><td><span class="badge done">完成</span></td><td>书-书自引用，<code>book_relations</code> 表</td></tr>
+        <tr><td>1.30</td><td>暗色模式</td><td><span class="badge done">完成</span></td><td>全局开关</td></tr>
+        <tr><td>1.31</td><td>空状态引导</td><td><span class="badge done">完成</span></td><td>书架 / 笔记 / 搜索无结果均有提示</td></tr>
+        <tr><td>1.32</td><td>收藏 favorite</td><td><span class="badge done">完成</span></td><td><code>favorited_at</code> 时间戳 + 按收藏筛选</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>2. 文件管理（§2，全量完成）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>关键点</th></tr></thead>
+      <tbody>
+        <tr><td>2.01–2.04</td><td>上传 EPUB / 非 EPUB / 多文件 / 主阅读文件</td><td><span class="badge done">完成</span></td><td>支持范围：EPUB / PDF / MOBI / TXT / AZW3 / AZW / DJVU / DOCX / FB2；上传 200MB 上限</td></tr>
+        <tr><td>2.05</td><td>文件列表与类型</td><td><span class="badge done">完成</span></td><td>文件格式、存储位置、同步状态均展示</td></tr>
+        <tr><td>2.06</td><td>下载（Range）</td><td><span class="badge done">完成</span></td><td>支持断点续传</td></tr>
+        <tr><td>2.07</td><td>删除文件关联</td><td><span class="badge done">完成</span></td><td>可选择是否删物理文件</td></tr>
+        <tr><td>2.08</td><td>文件替换</td><td><span class="badge done">完成</span></td><td>跨格式支持，保留原 ID，先新后旧事务安全</td></tr>
+        <tr><td>2.09</td><td>文件类型标识</td><td><span class="badge done">完成</span></td><td>—</td></tr>
+        <tr><td>2.10</td><td>非 EPUB 存档</td><td><span class="badge done">完成</span></td><td>仅 EPUB 提供在线阅读，其他格式存档与下载</td></tr>
+        <tr><td>2.11</td><td>未关联文件池</td><td><span class="badge done">完成</span></td><td><code>book_files.book_id</code> 可空；可后续匹配</td></tr>
+        <tr><td>2.12</td><td>文件去重（checksum）</td><td><span class="badge done">完成</span></td><td>SHA-256，按 <code>owner_id</code> 书库范围判定</td></tr>
+        <tr><td>2.13</td><td>书库文件视图</td><td><span class="badge done">完成</span></td><td>全局查看所有文件，支持筛选和匹配书籍</td></tr>
+        <tr><td>—</td><td>三态存储策略</td><td><span class="badge done">完成</span></td><td>local_only / cloud_only / dual；当前云端为配置项预留，实际同步待 M5（8.05）</td></tr>
+        <tr><td>—</td><td>EPUB 封面抽取</td><td><span class="badge done">完成</span></td><td>adm-zip 解析 container.xml → OPF → cover meta，<code>/books/{id}/cover</code> 缓存 86400s</td></tr>
+        <tr><td>—</td><td>多来源封面（<code>book_covers</code>）</td><td><span class="badge done">完成</span></td><td>EPUB / UPLOAD / URL / METADATA 四类来源，同书至多一条 is_active</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>3. 阅读与笔记（§3.01–3.20，全量完成）</h3>
+    <p class="footnote">M2 阅读器已全线闭环（决策记录 · M2 阅读器闭环确认，2026-07-06）。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>关键点</th></tr></thead>
+      <tbody>
+        <tr><td>3.01</td><td>打开主 EPUB</td><td><span class="badge done">完成</span></td><td>epub.js 集成，目录、翻页、渲染</td></tr>
+        <tr><td>3.02–3.03</td><td>保存 / 恢复阅读位置</td><td><span class="badge done">完成</span></td><td>CFI 进度</td></tr>
+        <tr><td>3.04–3.05</td><td>高亮 / 划线</td><td><span class="badge done">完成</span></td><td>CFI 范围 + 原文兜底；HIGHLIGHT / UNDERLINE 两类，type 字段可扩展</td></tr>
+        <tr><td>3.06–3.10</td><td>附注增删改、删附注留高亮</td><td><span class="badge done">完成</span></td><td>气泡工具栏查看</td></tr>
+        <tr><td>3.11–3.13</td><td>独立笔记增删改</td><td><span class="badge done">完成</span></td><td>HTML（TipTap）+ Markdown 双存</td></tr>
+        <tr><td>3.14</td><td>单书阅读痕迹汇总</td><td><span class="badge done">完成</span></td><td><code>GET /books/{id}/review</code> 摘要 + 详情聚合</td></tr>
+        <tr><td>3.15–3.16</td><td>跳回原文</td><td><span class="badge done">完成</span></td><td>笔记 / 高亮 → 阅读器 CFI 定位，含失败可见提示</td></tr>
+        <tr><td>3.17–3.18</td><td>标记体系</td><td><span class="badge done">完成</span></td><td>mark_type：NONE / IMPORTANT / QUESTION / INSIGHT，可扩展</td></tr>
+        <tr><td>3.19</td><td>点击高亮查看批注</td><td><span class="badge done">完成</span></td><td>—</td></tr>
+        <tr><td>3.20</td><td>笔记全文搜索</td><td><span class="badge done">完成</span></td><td>FTS5 on content_markdown</td></tr>
+        <tr><td>—</td><td>书签（bookmarks）</td><td><span class="badge done">完成</span></td><td>独立表存 CFI + label + percentage，每书多条</td></tr>
+        <tr><td>3.21–3.31</td><td>阅读器增强（11 项）</td><td><span class="badge later">待定位</span></td><td>阅读器主题、快捷键、专注模式、单书全文搜索、TTS、计时等 → M5-03</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4. 主题阅读（§4，全量完成 · 已超前实现）</h3>
+    <p class="footnote">M3 话题功能已超前实现，跨页加入话题入口（阅读器高亮气泡 / 阅读笔记卡片 / 书籍详情主题 tab）共用 <code>AddToTopicDialog</code>（决策记录 · M3 跨页入口闭环，2026-07-06）。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>关键点</th></tr></thead>
+      <tbody>
+        <tr><td>4.01–4.06</td><td>话题 CRUD / 一书 / 多书 / 空话题 / 编辑 / 删除（软删除）</td><td><span class="badge done">完成</span></td><td>软删除不动原痕</td></tr>
+        <tr><td>4.07–4.08</td><td>话题关联书籍（一书可属多话题）</td><td><span class="badge done">完成</span></td><td><code>topic_books</code> 多对多</td></tr>
+        <tr><td>4.09</td><td>话题关联章节 / 片段</td><td><span class="badge done">完成</span></td><td><code>topic_segments</code>，含增改删接口</td></tr>
+        <tr><td>4.10–4.11</td><td>话题关联高亮 / 笔记</td><td><span class="badge done">完成</span></td><td>软引用；<code>ON DELETE CASCADE</code>，原痕物理删除时引用自动摘除</td></tr>
+        <tr><td>4.12–4.14</td><td>沉淀内容（问题 / 判断 / 比较）</td><td><span class="badge done">完成</span></td><td><code>topic_entries</code>，entry_type 枚举</td></tr>
+        <tr><td>4.15–4.16</td><td>工作区视图 + 演进</td><td><span class="badge done">完成</span></td><td>列表视图 + 工作区视图双视图</td></tr>
+        <tr><td>4.17</td><td>话题内检索</td><td><span class="badge done">完成</span></td><td>聚合查询：books / highlights / notes / segments / entries</td></tr>
+        <tr><td>—</td><td>话题派生时间线</td><td><span class="badge done">完成</span></td><td><code>GET /topics/{id}/timeline</code>（v1.5.3 增量）</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>5. 概览与展示（§5.01–5.07 完成，5.08 / 5.09–5.17 待定位）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>5.01–5.04</td><td>书架概览 / 总数 / 各状态数量 / 最近新增</td><td><span class="badge done">完成</span></td><td>5.03 状态计数含 COLLECTED</td></tr>
+        <tr><td>5.05</td><td>最近阅读</td><td><span class="badge done">完成</span></td><td>基于 <code>reading_progress.last_read_at</code></td></tr>
+        <tr><td>5.06–5.07</td><td>高亮 / 笔记数量</td><td><span class="badge done">完成</span></td><td>随 M2 激活</td></tr>
+        <tr><td>5.08</td><td>阅读沉淀概览（综合）</td><td><span class="badge unknown">未开始</span></td><td>—</td></tr>
+        <tr><td>5.09–5.17</td><td>阅读统计增强（9 项）</td><td><span class="badge later">待定位</span></td><td>热力图 / 趋势 / 目标 / 今日推荐等 → M5-05</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>6. 导出与备份（§6，几乎全量完成）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>6.01–6.03</td><td>元数据导出（单本 / 部分 / 全书架）JSON / CSV</td><td><span class="badge done">完成</span></td><td>—</td></tr>
+        <tr><td>6.04–6.06</td><td>笔记 / 高亮 / 标记导出</td><td><span class="badge done">完成</span></td><td>随 M2 激活（v2.0.1）</td></tr>
+        <tr><td>6.07</td><td>书籍文件下载</td><td><span class="badge done">完成</span></td><td>批量</td></tr>
+        <tr><td>6.08</td><td>手动全量备份 ZIP</td><td><span class="badge done">完成</span></td><td>DB + 文件 + Markdown 副本</td></tr>
+        <tr><td>6.09</td><td>SQLite 自动备份</td><td><span class="badge done">完成</span></td><td>VACUUM INTO，定时；最多保留 7 份</td></tr>
+        <tr><td>6.10</td><td>导入外部笔记</td><td><span class="badge done">完成</span></td><td>解析 Markdown，按书名模糊匹配</td></tr>
+        <tr><td>6.11</td><td>笔记自动落盘 Markdown</td><td><span class="badge unknown">未开始</span></td><td>接口预留，行为未激活</td></tr>
+        <tr><td>6.12</td><td>批量导入书籍元数据（CSV）</td><td><span class="badge done">完成</span></td><td>不包含文件</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>7. 可见性、权限与隐私</h3>
+    <p>当前仅 <code>1.23</code> 公开 / 私有 字段落地。细粒度权限（7.01–7.08）当前阶段不做，归属边界由 <code>owner_id</code> 字段统一保证。多用户 / 权限边界 / AI 访问范围（7.x / 9.18）均待后续扩展期。</p>
+
+    <h3>8. 第三方集成</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>编号</th><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>8.01–8.04</td><td>OPDS 1.2 · catalog / by-status / by-tag / search / download</td><td><span class="badge done">完成</span></td><td>Atom XML + HTTP Basic；KOReader 实测兼容</td></tr>
+        <tr><td>8.05</td><td>对象存储同步（S3 / OSS / R2 / MinIO / B2）</td><td><span class="badge unknown">未开始</span></td><td>存储策略三态（local_only / cloud_only / dual）已建模，云端实际同步在 M5-02</td></tr>
+        <tr><td>8.06</td><td>rclone / Google Drive / Dropbox</td><td><span class="badge later">待定位</span></td><td>后置可选，M5-04</td></tr>
+        <tr><td>8.07</td><td>TTS 服务接入</td><td><span class="badge unknown">未开始</span></td><td>当前未实现；3.28 依赖此项</td></tr>
+        <tr><td>8.08</td><td>AI 接入配置（llm_*）</td><td><span class="badge done">配置可保存</span></td><td>设置页可填写 provider / api_key / model / base_url，密钥脱敏；具体 AI 能力调用 M4 激活</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>9. AI 能力（§9，全量待 M4 启动）</h3>
+    <p>当前 <code>ai_assets</code> 表已建模（M3 期预留），<code>AIService</code> 接口待落地。9.01–9.18 全部 <span class="badge later">未开始</span>，由 M4 分两阶段推进：</p>
+    <ul class="tight">
+      <li><strong>阶段一（M4-01 ~ M4-05）</strong>：录入辅助（9.01–9.04）、阅读辅助（9.05–9.08）、引用追溯（9.16）、AI 派生资产隔离存储（9.14 / 9.15）</li>
+      <li><strong>阶段二（M4-06 ~ M4-08）</strong>：sqlite-vec + RAG 书库级问答（9.13）、主题分析（9.09–9.12）、引用细化到高亮 / 笔记（9.17）</li>
+    </ul>
+    <p class="footnote">AI 分级访问（9.18）→ M5-01，分级策略待决策。</p>
+  </section>
+
+  <section id="sec-db" class="anchor">
+    <h2><span class="num">04</span> 数据库结构（23 张业务表）</h2>
+    <p class="lede">表命名以复数为主；时间戳统一 ISO 8601 UTC；主键统一 <code>id INTEGER PRIMARY KEY</code>（自增 rowid）；业务实体表带 <code>owner_id</code>，从属表通过父表继承归属。当前部署实例：23 张业务表 + 3 套 FTS5 虚表 + 33 条迁移记录。</p>
+
+    <h4>图例（数据模型阶段）</h4>
+    <div class="legend">
+      <span><i class="dot s1"></i><span class="badge s1">S1</span> 书架与文件管理（基础层）</span>
+      <span><i class="dot s2"></i><span class="badge s2">S2</span> 阅读与笔记（沉淀层）</span>
+      <span><i class="dot s3"></i><span class="badge s3">S3</span> AI 派生（增强层）</span>
+      <span><i class="dot p2"></i><span class="badge p2">P2</span> 主题阅读（增强层）</span>
+    </div>
+
+    <h3>4.1 用户与系统</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>阶段</th><th>关键字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">users</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>username</code> <code>password_hash</code> <code>display_name</code> <code>is_active</code> <code>is_admin</code> <code>must_change_password</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>当前单账户，初始化写入一条；<code>is_admin</code> 专用于系统维护接口（WL-001），与 <code>owner_id</code> 资源归属完全分离</td>
+        </tr>
+        <tr>
+          <td><span class="nm">settings</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>owner_id</code> <code>key</code> <code>value</code>(JSON) <code>updated_at</code></td>
+          <td><code>(owner_id, key)</code> 唯一；存回收站保留期、显示偏好、<code>multi_user</code> 鉴权开关、AI / OSS 配置；敏感字段回读脱敏</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.2 书籍、文件与封面（基础层核心）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>阶段</th><th>关键字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">books</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>category_id</code> <code>title</code> <code>author</code> <code>isbn</code> <code>publisher</code> <code>publish_year</code> <code>description</code> <code>language</code> <code>cover_path</code> <code>status</code> <code>visibility</code> <code>reading_purpose</code> <code>rating</code> <code>custom_attributes</code>(JSON) <code>metadata_source</code> <code>import_order</code> <code>favorited_at</code> <code>started_at</code> <code>finished_at</code> <code>deleted_at</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>五状态枚举：COLLECTED / PLANNED / READING / READ / <strong>STORED</strong>；软删除 <code>deleted_at</code> 与 STORED 是不同路径</td>
+        </tr>
+        <tr>
+          <td><span class="nm">book_files</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>book_id</code>(nullable) <code>storage_mode</code> <code>local_path</code> <code>remote_key</code> <code>primary_location</code> <code>sync_status</code> <code>original_filename</code> <code>file_format</code> <code>mime_type</code> <code>file_size</code> <code>checksum</code> <code>is_primary</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>一书多文件；<code>book_id</code> 可空表示未关联文件池；同书至多一条 <code>is_primary=1</code>（WL-002：首文件自动主，有主不动）</td>
+        </tr>
+        <tr>
+          <td><span class="nm">book_covers</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>book_id</code> <code>book_file_id</code> <code>source_type</code> <code>source_label</code> <code>original_url</code> <code>storage_mode</code> <code>local_path</code> <code>remote_key</code> <code>primary_location</code> <code>sync_status</code> <code>mime_type</code> <code>file_size</code> <code>checksum</code> <code>is_active</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>多来源封面：EPUB / UPLOAD / URL / METADATA；同书至多一条 <code>is_active=1</code>；书籍删除级联清理</td>
+        </tr>
+        <tr>
+          <td><span class="nm">categories</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>name</code> <code>type</code> <code>parent_id</code> <code>sort_order</code> <code>created_at</code> <code>updated_at</code></td>
+          <td><code>type</code>：GENRE（常规）/ PERSONAL（个人）；当前平级使用，<code>parent_id</code> 可选不强制</td>
+        </tr>
+        <tr>
+          <td><span class="nm">tags</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>name</code> <code>created_at</code></td>
+          <td><code>(owner_id, name)</code> 唯一</td>
+        </tr>
+        <tr>
+          <td><span class="nm">book_tags</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>book_id</code> <code>tag_id</code> <code>created_at</code></td>
+          <td>多对多，复合主键</td>
+        </tr>
+        <tr>
+          <td><span class="nm">book_relations</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>source_book_id</code> <code>target_book_id</code> <code>relation_type</code> <code>note</code> <code>created_at</code></td>
+          <td>书-书自引用；<code>(source, target, relation_type)</code> 唯一</td>
+        </tr>
+        <tr>
+          <td><span class="nm">status_history</span></td>
+          <td><span class="badge s1">S1</span></td>
+          <td><code>id</code> <code>book_id</code> <code>from_status</code> <code>to_status</code> <code>changed_at</code></td>
+          <td>状态时间轴</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.3 阅读痕迹（沉淀层）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>阶段</th><th>关键字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">reading_progress</span></td>
+          <td><span class="badge s2">S2</span></td>
+          <td><code>id</code> <code>book_id</code> <code>owner_id</code> <code>file_id</code> <code>cfi</code> <code>percentage</code> <code>last_read_at</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>每书一条；<code>(book_id, owner_id)</code> 唯一</td>
+        </tr>
+        <tr>
+          <td><span class="nm">bookmarks</span></td>
+          <td><span class="badge s2">S2</span></td>
+          <td><code>id</code> <code>book_id</code> <code>owner_id</code> <code>cfi</code> <code>label</code> <code>percentage</code> <code>created_at</code></td>
+          <td>每书多条；M1 期提前建模，M2 激活</td>
+        </tr>
+        <tr>
+          <td><span class="nm">highlights</span></td>
+          <td><span class="badge s2">S2</span></td>
+          <td><code>id</code> <code>book_id</code> <code>owner_id</code> <code>cfi_start</code> <code>cfi_end</code> <code>text</code> <code>type</code> <code>color</code> <code>note</code> <code>mark_type</code> <code>created_at</code> <code>updated_at</code> <code>deleted_at</code></td>
+          <td><code>type</code>：HIGHLIGHT / UNDERLINE；<code>mark_type</code>：NONE / IMPORTANT / QUESTION / INSIGHT</td>
+        </tr>
+        <tr>
+          <td><span class="nm">notes</span></td>
+          <td><span class="badge s2">S2</span></td>
+          <td><code>id</code> <code>book_id</code> <code>owner_id</code> <code>cfi</code>(nullable) <code>title</code> <code>content_html</code> <code>content_markdown</code> <code>mark_type</code> <code>created_at</code> <code>updated_at</code> <code>deleted_at</code></td>
+          <td>HTML（TipTap）+ Markdown 双存；cfi 可空表示无位置独立笔记</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.4 主题阅读（增强层 · 已超前实现）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>阶段</th><th>关键字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">topics</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>name</code> <code>description</code> <code>created_at</code> <code>updated_at</code> <code>deleted_at</code></td>
+          <td>软删除；只引用不占有</td>
+        </tr>
+        <tr>
+          <td><span class="nm">topic_books</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>topic_id</code> <code>book_id</code> <code>added_at</code></td>
+          <td>多对多，复合主键</td>
+        </tr>
+        <tr>
+          <td><span class="nm">topic_highlights</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>topic_id</code> <code>highlight_id</code> <code>added_at</code></td>
+          <td>软引用；<code>highlight_id</code> <code>ON DELETE CASCADE</code>，原痕物理删除时引用自动摘除</td>
+        </tr>
+        <tr>
+          <td><span class="nm">topic_notes</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>topic_id</code> <code>note_id</code> <code>added_at</code></td>
+          <td>软引用，<code>note_id</code> ON DELETE CASCADE</td>
+        </tr>
+        <tr>
+          <td><span class="nm">topic_segments</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>id</code> <code>topic_id</code> <code>book_id</code> <code>cfi_start</code> <code>cfi_end</code> <code>label</code> <code>added_at</code></td>
+          <td>章节片段引用（v1.4.1 补增改删接口）</td>
+        </tr>
+        <tr>
+          <td><span class="nm">topic_entries</span></td>
+          <td><span class="badge p2">P2</span></td>
+          <td><code>id</code> <code>topic_id</code> <code>entry_type</code> <code>content</code> <code>created_at</code> <code>updated_at</code></td>
+          <td>沉淀内容：QUESTION / JUDGMENT / COMPARISON</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.5 AI 派生资产（增强层 · 暂未启用）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>阶段</th><th>关键字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="nm">ai_assets</span></td>
+          <td><span class="badge s3">S3</span></td>
+          <td><code>id</code> <code>owner_id</code> <code>scope_type</code> <code>scope_id</code> <code>kind</code> <code>content</code> <code>references</code>(JSON) <code>provider</code> <code>model</code> <code>created_at</code></td>
+          <td>scope_type：BOOK / TOPIC / GLOBAL；与用户笔记 / 高亮物理隔离，展示层亦区分。9.14 / 9.15 决策已落地</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>4.6 ER 关系总览</h3>
+    <pre class="er"><span class="faded">-- 基础层 --</span>
+<span class="tbl">users</span> ── owner_id 贯穿用户根实体；从属表经父表继承
+  └─ <span class="tbl">books</span> ──<span class="tbl">book_files</span>          <span class="faded">(一书多文件, S1)</span>
+    ├─ category_id ── <span class="tbl">categories</span>    <span class="faded">(一书一分类, S1)</span>
+    ├─<span class="tbl">book_tags</span> ── <span class="tbl">tags</span>           <span class="faded">(多对多标签, S1)</span>
+    ├─<span class="tbl">book_relations</span> ── <span class="tbl">books</span>      <span class="faded">(书-书关联, 自引用, S1)</span>
+    ├─<span class="tbl">status_history</span>                <span class="faded">(状态时间轴, S1)</span>
+    ├─<span class="tbl">reading_progress</span>             <span class="faded">(1:1 进度, S2)</span>
+    ├─<span class="tbl">highlights</span>                   <span class="faded">(高亮/划线, S2)</span>
+    └─<span class="tbl">notes</span>                        <span class="faded">(独立笔记, S2)</span>
+  └─ <span class="tbl">book_covers</span>                  <span class="faded">(多来源封面, S1)</span>
+  └─ <span class="tbl">settings</span>                     <span class="faded">(应用配置, S1)</span>
+  └─ <span class="tbl">bookmarks</span>                    <span class="faded">(每书多条书签, S2)</span>
+
+<span class="faded">-- 增强层（已超前落地）--</span>
+<span class="tbl">topics</span> ──<span class="tbl">topic_books</span> ── <span class="tbl">books</span>           <span class="faded">(多对多, P2)</span>
+   ├─<span class="tbl">topic_highlights</span> ── <span class="tbl">highlights</span>   <span class="faded">(软引用, P2)</span>
+   ├─<span class="tbl">topic_notes</span> ── <span class="tbl">notes</span>           <span class="faded">(软引用, P2)</span>
+   ├─<span class="tbl">topic_segments</span>                    <span class="faded">(章节片段引用, P2)</span>
+   └─<span class="tbl">topic_entries</span>                     <span class="faded">(问题/判断/比较, P2)</span>
+
+<span class="tbl">ai_assets</span>   <span class="faded">(AI 派生资产, S3+)</span>
+   └─ scope → book / topic / global</pre>
+
+    <h3>4.7 索引策略</h3>
+    <p>索引与数据模型文档一致，落地在 <code>packages/db/drizzle</code> 迁移文件中。覆盖以下关键场景：</p>
+    <ul class="tight">
+      <li><code>books</code>：<code>(owner_id, status)</code> 状态筛选 / <code>(owner_id, deleted_at)</code> 回收站 / <code>(owner_id, updated_at)</code> 最近排序 / <code>(owner_id, import_order)</code> 默认排序 / <code>category_id</code> / <code>(owner_id, visibility)</code></li>
+      <li><code>book_files</code>：<code>(owner_id)</code> 全局 / <code>(owner_id, book_id)</code> 单书 / 未关联文件池 / <code>(owner_id, checksum)</code> 文件去重</li>
+      <li><code>status_history</code>：<code>(book_id, changed_at)</code> 时间轴</li>
+      <li><code>highlights</code> / <code>notes</code>：<code>(book_id, deleted_at)</code> 单书列表</li>
+      <li><code>reading_progress</code>：<code>(owner_id, last_read_at)</code> 最近阅读</li>
+      <li><code>ai_assets</code>：<code>(scope_type, scope_id)</code> 按作用域</li>
+      <li><code>topic_books</code>：<code>(book_id)</code> 反查书属哪些主题</li>
+    </ul>
+
+    <h3>4.8 全文检索（FTS5）</h3>
+    <ul class="tight">
+      <li><code>books_fts</code>：分词字段 title / author / isbn（1.13 书籍搜索）</li>
+      <li><code>notes_fts</code>：分词字段 content_markdown（3.20 笔记全文搜索）</li>
+      <li><code>highlights_fts</code>：分词字段 text（高亮内容检索）</li>
+    </ul>
+    <p class="footnote">单书正文检索（3.25）属增强 / 待定位，本期未建对应 FTS。</p>
+
+    <h3>4.9 向量检索（sqlite-vec，未启用）</h3>
+    <p><code>S3</code> / <code>P2</code> 引入。计划中的 <code>embeddings</code> vec0 虚表维度随 embedding 模型，承载 RAG 书库级问答（9.13）与主题关联发现。本期未启用。</p>
+  </section>
+
+  <section id="sec-decided" class="anchor">
+    <h2><span class="num">05</span> 已确定（决策）的红线与约定</h2>
+    <p class="lede">以下内容已在《决策记录》中以"已确认决策"或"建模决策"形式锁定，实现时不得违反。</p>
+
+    <h3>5.1 建模决策（数据模型 §1）</h3>
+    <div class="grid cols-2">
+      <div class="redline">
+        <strong>一书一分类</strong>
+        <code>books.category_id</code> 单意外键，不建多对多关联表。分类是"这本书对个人的主要用途 / 立场"。
+      </div>
+      <div class="redline">
+        <strong>分类用户自定义</strong>
+        不内置通用类型树；当前平级使用，<code>parent_id</code> 留可选层级不强制。
+      </div>
+      <div class="redline">
+        <strong><code>存档</code> 是独立状态，不是删除</strong>
+        <code>STORED</code> 与软删除 <code>deleted_at</code> 是完全不同的两条路径。不得把"存档"实现为归档 / 删除。
+      </div>
+      <div class="redline">
+        <strong>软删除统一字段</strong>
+        <code>deleted_at TEXT NULL</code> 标记，非物理删除。回收站恢复需求。
+      </div>
+      <div class="redline">
+        <strong>阅读痕迹归属原书</strong>
+        高亮 / 笔记 <code>book_id</code> 直接归属原书；主题仅"引用"。
+      </div>
+      <div class="redline">
+        <strong>主题软删除与软引用</strong>
+        <code>topics.deleted_at</code> 软删除；引用表 <code>ON DELETE CASCADE</code> 到原痕（高亮 / 笔记），原痕物理删除时引用自动摘除。
+      </div>
+      <div class="redline">
+        <strong>AI 派生资产隔离</strong>
+        <code>ai_assets</code> 独立表，不与用户笔记 / 高亮混表；展示层亦区分。
+      </div>
+      <div class="redline">
+        <strong>弹性字段</strong>
+        <code>books.custom_attributes</code> JSON 列承载自定义收藏属性。
+      </div>
+      <div class="redline">
+        <strong>owner_id 预留多用户</strong>
+        根实体直接带 <code>owner_id</code>；从属表通过父表校验；无父实体的暂存资源自带 <code>owner_id</code>。当前单账户下恒为同一值。
+      </div>
+      <div class="redline">
+        <strong>进度独立表</strong>
+        <code>reading_progress</code> 独立于 <code>books</code>，按 <code>(book_id, owner_id)</code>，与书籍元数据解耦。
+      </div>
+      <div class="redline">
+        <strong>笔记双格式存储</strong>
+        <code>content_html</code> + <code>content_markdown</code> 双存。编辑用 HTML（TipTap），导出用 Markdown。
+      </div>
+    </div>
+
+    <h3>5.2 AGENTS.md 技术红线（不得擅改）</h3>
+    <ol class="tight">
+      <li><strong>存档是独立状态，不是删除</strong>：状态枚举 <code>STORED</code>，与软删除 <code>deleted_at</code> 是完全不同的两条路径。</li>
+      <li><strong>主题只引用不占有阅读痕迹</strong>：高亮 / 笔记 <code>book_id</code> 归属原书；主题用 <code>ON DELETE CASCADE</code> 软引用，删主题不动原始数据，原痕删除时引用自动摘除。</li>
+      <li><strong>AI 内容与用户内容隔离</strong>：AI 生成内容存 <code>ai_assets</code> 独立表，展示层亦区分，绝不与用户笔记 / 高亮混表。</li>
+      <li><strong>不默认强依赖云端</strong>：云同步为可选增强；只同步文件层 + 备份副本，不同步在线数据库。优先支持内置 S3 / OSS；rclone / Google Drive / Dropbox 作为后置可选同步方案。</li>
+      <li><strong>数据主权</strong>：导出必须用通用格式（Markdown / JSON / CSV），不依赖 Redesk 专有结构。</li>
+      <li><strong>一书一分类</strong>：<code>books.category_id</code> 单意外键；不建多对多关联表。</li>
+      <li><strong>owner_id 预留多用户</strong>：用户拥有的根实体表带 <code>owner_id</code>；从属表通过父表继承归属，查询与写入必须校验 owner 边界。</li>
+    </ol>
+
+    <h3>5.3 已确认决策（产品 / 工程）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>类别</th><th>决策</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td>产品层次</td><td>基础层 / 沉淀层 / 增强层</td><td>阶段开发不得反向改变该层次</td></tr>
+        <tr><td>阅读定位</td><td>在线阅读是附属但重要能力</td><td>阅读器用于产生阅读痕迹，不作为产品核心竞争方向</td></tr>
+        <tr><td>文件支持</td><td>EPUB 为首要阅读格式</td><td>非 EPUB 文件允许上传、存档、下载，不要求在线阅读</td></tr>
+        <tr><td>书籍与文件</td><td>一书多文件 + 主阅读文件</td><td>模型不写死为单文件</td></tr>
+        <tr><td>可见性</td><td>当前单书库视角，公开 / 私有</td><td>不在当前阶段建立完整多书库模型</td></tr>
+        <tr><td>状态体系</td><td>收录 / 计划读 / 在读 / 已读 / 存档</td><td>"存档"为正式业务状态，不得实现为删除或归档</td></tr>
+        <tr><td>主题</td><td>主题不是标签，至少是独立对象</td><td>长期可演进为工作区</td></tr>
+        <tr><td>主题与书</td><td>一本书可属多个主题，一个主题可关联多本书</td><td>不采用"一书一主题"限制</td></tr>
+        <tr><td>AI 定位</td><td>陪读助手与辅助思考者</td><td>AI 长期目标是基于个人阅读经历提供辅助分析</td></tr>
+        <tr><td>AI 结果</td><td>可保存回系统，必须与用户原始内容区分</td><td>由 <code>ai_assets</code> 表与展示层隔离保证</td></tr>
+        <tr><td>AI 引用</td><td>回答应可追溯，至少关联到书和章节</td><td><code>ai_assets.references</code> JSON 字段</td></tr>
+        <tr><td>概览面板</td><td>定位为书架概览</td><td>不定义为独立 BI 产品</td></tr>
+        <tr><td>数据资产</td><td>书架元数据 + 阅读痕迹 + 书籍文件</td><td>阅读经历视为与书籍同等重要的长期资产</td></tr>
+        <tr><td>技术路线</td><td>Route A：Node + Fastify + better-sqlite3 + Drizzle / Vite + React + shadcn/ui / SQLite 单文件（FTS5 + sqlite-vec） / epub.js / TipTap / Docker</td><td>已锁；如需更换须先与决策者讨论并更新《决策记录》</td></tr>
+        <tr><td>云同步</td><td>内置 S3 兼容对象存储同步（OSS / S3 / R2 / MinIO / B2）</td><td>只同步文件 + 备份副本；rclone / Google Drive / Dropbox 后置可选</td></tr>
+        <tr><td>owner_id</td><td>根实体直接带，从属表经父表继承</td><td>查询 / 写入必须校验 owner 边界</td></tr>
+        <tr><td>鉴权</td><td>由 <code>settings.multi_user</code> 动态控制</td><td><code>multi_user=false</code> 时单用户免登录；<code>AUTH_DISABLED</code> 为启动级硬开关</td></tr>
+        <tr><td>设置存储</td><td>复用 <code>settings</code> 表</td><td>敏感字段（oss_access_key 等）回读脱敏</td></tr>
+        <tr><td>分页上限</td><td><code>MAX_PAGE_SIZE=500</code></td><td>书架页一次拉全量（无翻页）</td></tr>
+        <tr><td>重复检测</td><td>规则版：书名权重 0.7 + 作者 0.3 LCS，阈值 0.6</td><td>AI 增强版留到 M4</td></tr>
+        <tr><td>文件管理</td><td>multipart 上限 200MB，路径存 <code>storageDir</code> 相对路径</td><td>支持范围：EPUB / PDF / MOBI / TXT / AZW3 / AZW / DJVU / DOCX / FB2</td></tr>
+        <tr><td>EPUB 封面</td><td>adm-zip 解析，按 <code>container.xml → OPF → cover meta</code></td><td>fallback 匹配 entryName 含"cover"且为图片</td></tr>
+        <tr><td>主文件升 / 降</td><td>无主则首文件自动主；有主仅显式 <code>is_primary=true</code> 时切换（WL-002）</td><td>multipart <code>is_primary</code> 严格只接受 <code>true</code> / <code>false</code></td></tr>
+        <tr><td>文件替换</td><td>先新后旧事务安全替换（WL-003）</td><td>跨格式允许；<code>is_primary</code> 不变</td></tr>
+        <tr><td>权限收口</td><td><code>is_admin=1</code> 才能调用系统维护写接口（WL-001）</td><td>管理员不天然拥有跨用户数据访问权，资源级读写仍受 <code>owner_id</code> 约束</td></tr>
+        <tr><td>书库文件页 vs 批量管理</td><td>两者是不同业务页</td><td>书库文件 = 日常单文件管理；批量管理 = 系统级高影响低频操作，仅管理员</td></tr>
+        <tr><td>中文字符</td><td>源码中文字符必须写字面量</td><td>JSX 文本不解释 <code>\u</code> 转义；CSV / 导入除外可保留 <code>'\uFEFF'</code> BOM 形式</td></tr>
+        <tr><td>时间戳</td><td>统一 ISO 8601 UTC 字符串</td><td>—</td></tr>
+        <tr><td>版本号</td><td>三段式「主.次.修订」</td><td>主版本须用户声明；次版本 AI 自动但需说明；修订号 AI 自动无需说明</td></tr>
+        <tr><td>Node 版本</td><td>本地开发与依赖安装统一 <strong>Node.js 22 LTS</strong></td><td>不一致时 AI 代理须先与用户确认</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="sec-undecided" class="anchor">
+    <h2><span class="num">06</span> 后续可能变动的部分</h2>
+    <p class="lede">以下条目 <strong>不在当前已落地的范围</strong>，属"待定位 / 待决策 / 暂缓"，改动时需走《决策记录》流程，不允许悄悄加进去或跳过决策。</p>
+
+    <h3>6.1 明确暂缓（数据模型 §9 / 决策记录 §4）</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>主题</th><th>当前状态</th><th>后续不确定性</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>AI 与原始内容的共存方式</td>
+          <td><code>ai_assets</code> 独立表 + 展示层隔离</td>
+          <td>展示 / 管理方式尚未锁定（决策记录 2026-06-27）</td>
+        </tr>
+        <tr>
+          <td>主题对象最小字段集</td>
+          <td>当前仅 <code>name</code> + <code>description</code></td>
+          <td>其余需求走弹性字段或后续补列；最小字段集暂不锁定</td>
+        </tr>
+        <tr>
+          <td>阅读目的表达方式</td>
+          <td><code>books.reading_purpose</code> 自由文本</td>
+          <td>是否按书籍级、阅读任务级或其他方式表达待定</td>
+        </tr>
+        <tr>
+          <td>AI 分级访问（9.18）</td>
+          <td><code>ai_assets</code> 无 <code>access_level</code> 字段</td>
+          <td>阶段三接入检索层时补分级策略（M5-01）</td>
+        </tr>
+        <tr>
+          <td>主题工作区深化（10.03）</td>
+          <td>当前为列表 + 工作区双视图</td>
+          <td>是否升级为带独立上下文的工作区，纳入后续扩展</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>6.2 待定位的增强层（功能清单 §3.21–3.31 / §5.09–5.17 / §7 / §9 / §10）</h3>
+    <p>这些功能要么与"阅读器非主目标"边界有张力，要么接近独立 BI 产品，要么受"不默认强依赖云端"约束，未排入当前期次。</p>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>3.21–3.31 阅读器增强</h3>
+        <p>阅读器主题切换、阅读器专属配色（独立于 1.30 全局暗色）、快捷键、专注模式、单书全文搜索、字体自定义、物理页码、TTS、阅读计时 / 剩余时间、快捷笔记模板 → M5-03。</p>
+        <span class="status later">M5-03 待定位</span>
+      </div>
+      <div class="card">
+        <h3>5.09–5.17 阅读统计增强</h3>
+        <p>阅读时长、热力图、未读比例、类别分布、计划 vs 实际、年度目标、个人阅读档案页、趋势图、今日推荐。决策记录确认"概览定位为书架概览，不定义为独立 BI 产品"，与本边界有张力。</p>
+        <span class="status later">M5-05 待定位</span>
+      </div>
+      <div class="card">
+        <h3>7.01–7.08 细粒度权限</h3>
+        <p>访问 / 查看 / 阅读 / 上传 / 编辑 / 下载 / 导出 / AI 访问范围。当前仅 <code>owner_id</code> 字段 + 公开 / 私有可见性，余项预留，多用户阶段再细化。</p>
+        <span class="status later">多用户阶段细化</span>
+      </div>
+      <div class="card">
+        <h3>8.05 对象存储云同步</h3>
+        <p>OSS / S3 / R2 / MinIO / B2 同步书籍文件 + SQLite 备份副本。存储策略三态（local_only / cloud_only / dual）已建模，实际同步逻辑在 M5-02。</p>
+        <span class="status later">M5-02</span>
+      </div>
+      <div class="card">
+        <h3>8.06 rclone / Google Drive / Dropbox</h3>
+        <p>后置可选项，供已有网盘或同步链路的高级用户使用；不作为默认依赖；定位确认后再回填期次。</p>
+        <span class="status later">M5-04 待定位</span>
+      </div>
+      <div class="card">
+        <h3>8.07 TTS 服务接入</h3>
+        <p>3.28 阅读器 TTS 朗读依赖此项；当前未实现。</p>
+        <span class="status later">未开始</span>
+      </div>
+      <div class="card">
+        <h3>9.01–9.17 AI 能力</h3>
+        <p>录入辅助、阅读辅助、主题分析、RAG 书库级问答、AI 引用追溯。分两阶段推进：M4 阶段一（接口 + 阶段一能力）+ M4 阶段二（sqlite-vec + RAG）。<code>ai_assets</code> 表已建模。</p>
+        <span class="status later">M4 分阶段</span>
+      </div>
+      <div class="card">
+        <h3>10.x 后续扩展</h3>
+        <p>多书库（10.01）、多用户（10.02）、主题工作区深化（10.03）、系统阅读表达（10.04–10.06）、多书比较视图（10.07）、AI 陪读助手深化（10.08–10.09）。</p>
+        <span class="status later">预留</span>
+      </div>
+    </div>
+
+    <h3>6.3 演进路径（数据模型 §9）</h3>
+    <ul class="tight">
+      <li><strong>多用户</strong>：根实体 <code>owner_id</code> 已就位；≤5 人时通常仅需加注册 / 登录与查询约束，不改主体结构</li>
+      <li><strong>权限分级</strong>：未来可加权限规则表，不动现有结构</li>
+      <li><strong>多书库</strong>：预留方向；引入时以新增 <code>library_id</code> 挂载，不影响当前单书库模型</li>
+    </ul>
+
+    <h3>6.4 设计稿适用边界</h3>
+    <div class="callout">
+      <strong>设计稿是探索素材，不是开发范围决定器</strong>。<code>doc/design/redesk-ui/</code> 中的阅读档案、热力图、年度目标、今日推荐、主题工作区等增强内容，仍以《功能清单》《决策记录》《开发执行计划》为准：未进入当前期次的元素只能作为占位或隐藏入口，<strong>不得提前实现</strong>（功能清单 §12）。
+    </div>
+  </section>
+
+  <section id="sec-milestones" class="anchor">
+    <h2><span class="num">07</span> 里程碑状态</h2>
+    <p class="lede">六个里程碑（M0–M5）。当前 M0–M3 已落地；M4 AI 与 M5 增强 / 深化按"模块级，临近细化"原则推进。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>里程碑</th><th>目标</th><th>状态</th><th>关键产物</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>M0 · 工程地基</strong></td>
+          <td>可登录、可部署、迁移可跑通的空壳</td>
+          <td><span class="badge done">已闭环</span></td>
+          <td>pnpm monorepo / Fastify / Vite + React / Drizzle + better-sqlite3 / Docker / 鉴权</td>
+        </tr>
+        <tr>
+          <td><strong>M1 · 书架与文件管理</strong></td>
+          <td>除"打开阅读"外全部可用；地基层全部就位</td>
+          <td><span class="badge done">已闭环</span></td>
+          <td>§1 + §2 + §6（部分）+ §7（部分）+ §8.01–8.04 / 8.08 配置 / 概览 / 设置 / 暗色 / 空状态 / 三态存储</td>
+        </tr>
+        <tr>
+          <td><strong>M2 · 阅读器与笔记沉淀</strong></td>
+          <td>可在线阅读 EPUB，产出高亮 / 划线 / 笔记 / 进度，可跳回原文</td>
+          <td><span class="badge done">已全线闭环</span></td>
+          <td>epub.js / CFI 进度 / 高亮 / 划线 / 波浪线 / 附注 / 独立笔记 / 书签 / 跳回原文 / mark_type / FTS5 / 笔记 / 高亮 / 标记导出 / 阅读笔记汇总页</td>
+        </tr>
+        <tr>
+          <td><strong>M3 · 主题阅读</strong></td>
+          <td>主题组织跨书材料；主题作为独立对象，引用而非占有</td>
+          <td><span class="badge done">已超前实现</span></td>
+          <td>话题 CRUD + 软删除 / 软引用（书 / 高亮 / 笔记 / 片段）/ 沉淀内容 / 工作区视图 / 跨页加入话题入口</td>
+        </tr>
+        <tr>
+          <td><strong>M4 · AI 辅助（阶段一 + RAG）</strong></td>
+          <td>AI 提供管理辅助与阅读辅助，回答带引用，AI 内容与用户内容隔离</td>
+          <td><span class="badge later">未开始 · 临近细化</span></td>
+          <td><code>ai_assets</code> 已建表；<code>AIService</code> 接口、provider 配置、录入辅助、阅读辅助、引用追溯、sqlite-vec + RAG</td>
+        </tr>
+        <tr>
+          <td><strong>M5 · 增强与深化</strong></td>
+          <td>按决策定位排期落地</td>
+          <td><span class="badge later">未开始 · 临近细化</span></td>
+          <td>AI 分级访问 / 对象存储云同步 / 阅读器增强 / rclone 可选 / 阅读统计增强</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="sec-stack" class="anchor">
+    <h2><span class="num">08</span> 技术栈与版本</h2>
+    <p class="lede">技术栈已锁在《决策记录 · 技术路线》（2026-06-27）。如需更换语言 / 框架 / 存储引擎，必须先与决策者讨论并更新《决策记录》，不得擅改。</p>
+    <div class="stack">
+      <div class="b"><div class="lbl">后端</div><div class="val">Node.js 22 LTS</div><div class="sub">Fastify 5 · better-sqlite3 · Drizzle ORM</div></div>
+      <div class="b"><div class="lbl">前端</div><div class="val">Vite + React 18</div><div class="sub">TypeScript 严格模式 · shadcn/ui · TanStack Query</div></div>
+      <div class="b"><div class="lbl">存储</div><div class="val">SQLite 单文件</div><div class="sub">FTS5 全文检索 · sqlite-vec 向量检索（未启用）</div></div>
+      <div class="b"><div class="lbl">阅读器</div><div class="val">epub.js</div><div class="sub">CFI 进度 / 高亮持久化 / 跳回原文</div></div>
+      <div class="b"><div class="lbl">笔记</div><div class="val">TipTap</div><div class="sub">HTML（编辑）+ Markdown（导出）双存</div></div>
+      <div class="b"><div class="lbl">部署</div><div class="val">Docker + docker-compose</div><div class="sub">命名卷 <code>redesk_redesk-data</code> 持久化</div></div>
+      <div class="b"><div class="lbl">AI</div><div class="val">外部 LLM API</div><div class="sub">统一收敛在 <code>AIService</code> 接口后，provider / 模型可替换</div></div>
+      <div class="b"><div class="lbl">代码版本</div><div class="val">v2.0.4</div><div class="sub">apps/api 2.1.0 · 当前 Web 端 chunk：业务包 ~470KB / UI vendor ~405KB / reader-vendor ~352KB / query-vendor ~84KB（v1.5.2 路由懒加载）</div></div>
+    </div>
+  </section>
+
+  <section id="sec-docs" class="anchor">
+    <h2><span class="num">09</span> 文档索引</h2>
+    <p class="lede">所有设计文档在 <code>doc/</code>。本说明文件由 <code>doc/数据模型.md v1.1.0</code>、<code>doc/决策记录.md</code>、<code>doc/Redesk-功能清单-v1.1.md v1.4.2</code>、<code>doc/开发执行计划.md v1.5.3</code>、<code>doc/技术方案.md</code>、<code>doc/需求总纲.md v1.1.1</code> 综编。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>文档</th><th>路径</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>需求总纲</td><td><code>doc/需求总纲.md</code></td><td>产品定义 / 边界 / 长期形态</td></tr>
+        <tr><td>功能清单</td><td><code>doc/Redesk-功能清单-v1.1.md</code></td><td>全量功能点编号与状态</td></tr>
+        <tr><td>决策记录</td><td><code>doc/决策记录.md</code></td><td>已确认决策 / 暂缓问题</td></tr>
+        <tr><td>技术方案</td><td><code>doc/技术方案.md</code></td><td>技术路线 / 分项设计 / 分期</td></tr>
+        <tr><td>数据模型</td><td><code>doc/数据模型.md</code></td><td>全量 schema / 字段 / 索引 / 检索结构</td></tr>
+        <tr><td>API 接口</td><td><code>doc/API接口.md</code></td><td>端点契约 / 通用约定</td></tr>
+        <tr><td>开发执行计划</td><td><code>doc/开发执行计划.md</code></td><td>里程碑 / 执行项 / 开发顺序</td></tr>
+        <tr><td>前端组件盘点</td><td><code>doc/前端组件盘点.md</code></td><td>前端组件与路由结构</td></tr>
+        <tr><td>组件盘点</td><td><code>doc/组件盘点.md</code></td><td>通用组件盘点</td></tr>
+        <tr><td>本说明</td><td><code>doc/说明/Redesk-当前实现总览.html</code></td><td>当前实现总览（数据库 / 功能 / 决策 / 变动）</td></tr>
+        <tr><td>说明合集</td><td><code>doc/说明/</code></td><td>各专题设计说明（备份系统、封面多来源、认证流程、原位编辑、书籍匹配与批量上传）</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <strong>文档与实现一致性原则</strong>：若发现文档间矛盾或需求有变，先更新文档再改代码，保持文档与实现一致（AGENTS.md · 当前阶段注意）。本说明文件由本次会话自动综编，如与上述源文档冲突，以源文档为准。
+    </div>
+  </section>
+
+  <p class="footer-note">
+    Redesk · 个人知识书库系统 · 本说明由 <code>doc/</code> 多份文档综编 · 2026-07-07
+  </p>
+
+</main>
+
+</body>
+</html>

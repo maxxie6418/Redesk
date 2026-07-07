@@ -1,7 +1,7 @@
 services:
   redesk:
     build: .
-    image: redesk:latest
+    image: redesk:2.1.1
     container_name: redesk
     restart: unless-stopped
     # 容器以 root 启动，entrypoint 会 chown /data 给 redesk 后再降权运行应用。
@@ -17,6 +17,7 @@ services:
       - DATABASE_URL=/data/redesk.db
       - STORAGE_DIR=/data/storage
       - SESSION_SECRET=${SESSION_SECRET:?请在环境变量或 .env 中设置强随机 SESSION_SECRET}
+      - AUTH_DISABLED=true
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

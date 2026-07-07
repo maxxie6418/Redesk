@@ -5,7 +5,7 @@ let handle: DatabaseHandle | undefined;
 
 export function initDatabase(): AppDatabase {
   handle = createDatabase({ url: config.databaseUrl });
-  runMigrationsOn(handle.db);
+  runMigrationsOn(handle);
   return handle.db;
 }
 

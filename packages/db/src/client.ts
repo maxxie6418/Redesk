@@ -14,6 +14,7 @@ export interface CreateDatabaseOptions {
 export interface DatabaseHandle {
   db: AppDatabase;
   sqlite: Database.Database;
+  path: string;
   close: () => void;
 }
 
@@ -27,6 +28,7 @@ export function createDatabase({ url, readonly = false }: CreateDatabaseOptions)
   return {
     db,
     sqlite,
+    path: url,
     close: () => sqlite.close(),
   };
 }

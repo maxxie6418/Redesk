@@ -166,10 +166,9 @@ interface BookPrimaryActionsProps {
   onToggleCoverPanel: () => void;
   onToggleEditMode: () => void;
   onFavorite: () => void;
-  onDelete: () => void;
 }
 
-export function BookPrimaryActions({ readableFile, favorited, editMode, onRead, onToggleCoverPanel, onToggleEditMode, onFavorite, onDelete }: BookPrimaryActionsProps) {
+export function BookPrimaryActions({ readableFile, favorited, editMode, onRead, onToggleCoverPanel, onToggleEditMode, onFavorite }: BookPrimaryActionsProps) {
   return (
     <div className="mb-6 space-y-2.5">
       <button type="button" disabled={!readableFile} title={readableFile ? '打开阅读/预览' : '请先上传可预览文件'} onClick={onRead} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed">
@@ -183,9 +182,27 @@ export function BookPrimaryActions({ readableFile, favorited, editMode, onRead, 
       <button type="button" onClick={onFavorite} className={cn('flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium shadow-sm transition-all hover:-translate-y-px', favorited ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground')} title={favorited ? '取消收藏' : '加入收藏'}>
         <Heart className={cn('h-3.5 w-3.5', favorited ? 'fill-current' : '')} />{favorited ? '已收藏' : '收藏'}
       </button>
-      <div className="mt-3 border-t border-border pt-3">
-        <button type="button" onClick={onDelete} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive" title="将此书移入回收站"><Trash2 className="h-3.5 w-3.5" />删除此书</button>
-      </div>
+    </div>
+  );
+}
+
+interface BookDetailLeftFooterProps {
+  onDelete: () => void;
+  deletePending: boolean;
+}
+
+export function BookDetailLeftFooter({ onDelete, deletePending }: BookDetailLeftFooterProps) {
+  return (
+    <div className="mt-6 border-t border-border pt-3">
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={deletePending}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50"
+        title="将此书移入回收站"
+      >
+        <Trash2 className="h-3.5 w-3.5" />删除此书
+      </button>
     </div>
   );
 }
@@ -246,12 +263,34 @@ export function BookCoverManager({ book, bookId, coverUrlBase, coverGroups, cove
 interface BookFilesListProps {
   files: BookFileItem[] | undefined;
   onDeleteFile: (file: BookFileItem) => void;
+  onUploadFile: (file: File) => void;
+  uploadPending: boolean;
 }
 
-export function BookFilesList({ files, onDeleteFile }: BookFilesListProps) {
+const BOOK_FILE_ACCEPT = '.epub,.pdf,.mobi,.azw,.azw3,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp';
+
+export function BookFilesList({ files, onDeleteFile, onUploadFile, uploadPending }: BookFilesListProps) {
   return (
     <div>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
+        <label className={cn('inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border bg-card px-1.5 text-[11px] font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-primary', uploadPending && 'pointer-events-none opacity-50')}>
+          <Upload className="h-3 w-3" />
+          {uploadPending ? '上传中…' : '上传'}
+          <input
+            type="file"
+            className="hidden"
+            accept={BOOK_FILE_ACCEPT}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                onUploadFile(file);
+                event.target.value = '';
+              }
+            }}
+          />
+        </label>
+      </div>
       {files && files.length > 0 ? (
         <div className="space-y-1">
           {files.map((file) => (

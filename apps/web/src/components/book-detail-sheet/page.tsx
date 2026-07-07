@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { selectReadableFile } from '@redesk/shared';
 import { cn } from '@/lib/utils';
 import { useActivateBookCover, useApplyBookMetadata, useBook, useBookCovers, useBookReview, useDeleteBook, useDeleteBookCover, useFavoriteBook, useFetchBookCover, useFetchBookMetadata, useUnfavoriteBook, useUpdateBook, useUploadBookCover, type BookCoverItem } from '@/hooks/use-books';
-import { useDeleteFile, useBookFiles, type BookFileItem } from '@/hooks/use-files';
+import { useDeleteFile, useBookFiles, useUploadFile, type BookFileItem } from '@/hooks/use-files';
 import { useReadingProgress } from '@/hooks/use-reading-progress';
 import { useHighlights, useNotes, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
 import { useAddTopicBook } from '@/hooks/use-topics';
@@ -12,7 +12,7 @@ import { useTags } from '@/hooks/use-tags';
 import { API_BASE } from '@/lib/api';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
+import { BookAiTab, BookArchiveTab, BookCoverManager, BookCoverSection, BookDetailFrameHeader, BookDetailLeftFooter, BookFilesList, BookPrimaryActions, BookTimeline, BookTopicsTab, BookTracesTab, ReadingProgressBlock, StatusToast, type BookRecentMarkItem, type BookTraceItem, type CoverGroups } from './components';
 import { BookDetailTabs } from './book-detail-tabs';
 import { MetadataDialog } from './metadata-dialog';
 import { useBookActions } from './use-book-actions';
@@ -47,6 +47,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const favoriteBook = useFavoriteBook();
   const unfavoriteBook = useUnfavoriteBook();
   const deleteFile = useDeleteFile();
+  const uploadFile = useUploadFile();
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [pendingBookDelete, setPendingBookDelete] = useState(false);
   const [pendingBookDeleteFiles, setPendingBookDeleteFiles] = useState(false);
@@ -121,6 +122,19 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const saveJson = useCallback(async (field: string, value: Record<string, unknown> | null) => {
     await handleUpdate(field, { [field]: value });
   }, [handleUpdate]);
+
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      if (!bookId) return;
+      try {
+        await uploadFile.mutateAsync({ bookId, file });
+        info('文件已上传');
+      } catch (err) {
+        error(err instanceof Error ? err.message : '上传失败');
+      }
+    },
+    [bookId, uploadFile, info, error],
+  );
 
   const {
     handleFavorite,
@@ -279,7 +293,6 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 onToggleCoverPanel={handleToggleCoverPanel}
                 onToggleEditMode={() => setEditMode(!editMode)}
                 onFavorite={handleFavorite}
-                onDelete={handleRequestBookDelete}
               />
               {showCoverPanel && (
                 <BookCoverManager
@@ -295,7 +308,16 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   onFetchCover={handleFetchCover}
                 />
               )}
-              <BookFilesList files={files.data} onDeleteFile={handleRequestFileDelete} />
+              <BookFilesList
+                files={files.data}
+                onDeleteFile={handleRequestFileDelete}
+                onUploadFile={handleUploadFile}
+                uploadPending={uploadFile.isPending}
+              />
+              <BookDetailLeftFooter
+                onDelete={handleRequestBookDelete}
+                deletePending={deleteBook.isPending}
+              />
               </div>
 
               <BookDetailTabs activeTab={activeTab} editMode={editMode} onChange={setActiveTab} onEditModeChange={setEditMode} />

@@ -69,8 +69,6 @@ async function seedBase(sqlite: SqliteDatabase): Promise<SeedResult> {
     DELETE FROM book_files;
     DELETE FROM books;
     DELETE FROM users;
-    DELETE FROM notes_fts;
-    DELETE FROM highlights_fts;
     PRAGMA foreign_keys = ON;
   `);
 
@@ -107,12 +105,10 @@ function seedMarks(sqlite: SqliteDatabase, seeded: SeedResult, count: number, op
     INSERT INTO bookmarks (book_id, owner_id, cfi, label, percentage, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
-  const insertNoteFts = sqlite.prepare('INSERT INTO notes_fts(rowid, title, content_markdown, content_html) VALUES (?, ?, ?, ?)');
-  const insertHighlightFts = sqlite.prepare('INSERT INTO highlights_fts(rowid, text, note) VALUES (?, ?, ?)');
 
   for (let index = 1; index <= count; index += 1) {
     const ts = new Date(Date.UTC(2026, 0, index, 0, 0, 0)).toISOString();
-    const noteResult = insertNote.run(
+    insertNote.run(
       seeded.bookId,
       seeded.userId,
       `epubcfi(/6/2[test]!/4/2/${index})`,
@@ -123,9 +119,8 @@ function seedMarks(sqlite: SqliteDatabase, seeded: SeedResult, count: number, op
       ts,
       ts,
     );
-    insertNoteFts.run(Number(noteResult.lastInsertRowid), `笔记 ${index}`, `共同搜索词 Markdown ${index}`, `<p>共同搜索词 HTML ${index}</p>`);
 
-    const highlightResult = insertHighlight.run(
+    insertHighlight.run(
       seeded.bookId,
       seeded.userId,
       `epubcfi(/6/2[test]!/4/4/${index})`,
@@ -138,7 +133,6 @@ function seedMarks(sqlite: SqliteDatabase, seeded: SeedResult, count: number, op
       ts,
       ts,
     );
-    insertHighlightFts.run(Number(highlightResult.lastInsertRowid), `共同搜索词 高亮 ${index}`, `共同搜索词 备注 ${index}`);
 
     if (includeBookmarks) {
       insertBookmark.run(

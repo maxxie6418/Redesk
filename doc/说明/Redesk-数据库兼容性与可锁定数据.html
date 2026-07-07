@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Redesk · 数据库兼容性与可锁定数据</title>
+<style>
+  :root{
+    --terracotta:#C96442;
+    --terracotta-deep:#A24F33;
+    --terracotta-soft:#E7B7A2;
+    --paper:#FBF6EE;
+    --ink:#2B1B12;
+    --ink-soft:#6E574A;
+    --line:#E1D3BD;
+    --line-2:#C9B79B;
+    --ok:#3F7C4A;
+    --ok-bg:#E6F1E1;
+    --warn:#A56A1E;
+    --warn-bg:#F7E7CC;
+    --later:#7A5BAB;
+    --later-bg:#EADFF6;
+    --later-ink:#5A3F89;
+    --danger:#9B2C2C;
+    --danger-bg:#F8DCDC;
+    --info:#2C5A78;
+    --info-bg:#DDEBF2;
+    --code:#3B2A1F;
+    --code-bg:#F1E6D2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Newsreader","Source Han Serif SC","Songti SC",Georgia,serif;font-size:16px;line-height:1.65}
+  body{padding:0 0 96px}
+  a{color:var(--terracotta-deep);text-decoration:none;border-bottom:1px dashed var(--terracotta-soft)}
+  a:hover{color:var(--terracotta);border-bottom-color:var(--terracotta)}
+  code,pre,kbd,samp{font-family:"JetBrains Mono","SFMono-Regular",Consolas,Menlo,monospace}
+  code{background:var(--code-bg);color:var(--code);padding:1px 6px;border-radius:4px;font-size:.92em;border:1px solid var(--line)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;line-height:1.5;font-size:.88em;color:var(--code)}
+  pre code{background:none;border:none;padding:0}
+  .hero{background:linear-gradient(180deg,#F8EBD8 0%,#FBF6EE 100%);border-bottom:1px solid var(--line);padding:48px 0 36px}
+  .hero-inner{max-width:1180px;margin:0 auto;padding:0 32px}
+  .eyebrow{font-family:"Poppins","PingFang SC",sans-serif;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--terracotta-deep);margin:0 0 8px}
+  h1{font-family:"Newsreader",Georgia,serif;font-weight:600;font-size:44px;line-height:1.15;margin:0 0 6px;color:var(--ink);letter-spacing:-.01em}
+  h1 .sub{display:block;font-size:18px;font-weight:400;color:var(--ink-soft);margin-top:8px;letter-spacing:0}
+  .meta-row{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;font-family:"Poppins","PingFang SC",sans-serif;font-size:12px}
+  .pill{background:#fff;border:1px solid var(--line-2);color:var(--ink-soft);padding:4px 10px;border-radius:999px}
+  .pill strong{color:var(--ink);font-weight:600}
+  main{max-width:1180px;margin:0 auto;padding:0 32px}
+  section{margin:48px 0;scroll-margin-top:24px}
+  section > h2{font-family:"Lora","Newsreader",serif;font-weight:600;font-size:26px;line-height:1.25;margin:0 0 6px;color:var(--ink);letter-spacing:-.005em;display:flex;align-items:baseline;gap:14px}
+  section > h2 .num{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--terracotta);background:#FCE4D6;padding:2px 9px;border-radius:6px;font-weight:500;letter-spacing:0}
+  section > .lede{color:var(--ink-soft);margin:6px 0 22px;font-size:15.5px;line-height:1.7;max-width:920px}
+  h3{font-family:"Lora","Newsreader",serif;font-weight:600;font-size:19px;line-height:1.3;margin:28px 0 8px;color:var(--ink)}
+  h4{font-family:"Poppins","PingFang SC",sans-serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:var(--ink-soft);margin:18px 0 6px;text-transform:uppercase}
+  .grid{display:grid;gap:18px}
+  .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media (max-width:900px){.grid.cols-3,.grid.cols-2,.grid.cols-4{grid-template-columns:1fr}}
+  .card{background:#FFFCF5;border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:0 1px 0 rgba(43,27,18,.02)}
+  .card h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;color:var(--ink-soft);text-transform:uppercase}
+  .card h3{font-family:"Lora",serif;font-size:18px;margin:0 0 6px;color:var(--ink);font-weight:600}
+  .card p{margin:6px 0 0;color:var(--ink-soft);font-size:14.5px;line-height:1.6}
+  .card .status{font-family:"Poppins",sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:8px}
+  .status.lock{background:var(--ok-bg);color:var(--ok)}
+  .status.rebuild{background:var(--info-bg);color:var(--info)}
+  .status.drop{background:var(--danger-bg);color:var(--danger)}
+  .status.warn{background:var(--warn-bg);color:var(--warn)}
+  .toc{background:#FFFCF5;border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:28px 0 8px}
+  .toc h4{margin:0 0 10px}
+  .toc ol{columns:2;column-gap:36px;padding-left:24px;margin:0}
+  .toc li{margin:3px 0;break-inside:avoid;font-size:14.5px}
+  .toc a{color:var(--ink)}
+  @media (max-width:760px){.toc ol{columns:1}}
+  table{width:100%;border-collapse:collapse;margin:14px 0 4px;background:#FFFCF5;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  th{background:#F4E9D6;font-family:"Poppins",sans-serif;font-weight:600;font-size:12px;letter-spacing:.04em;color:var(--ink-soft);text-transform:uppercase}
+  tr:last-child td{border-bottom:none}
+  tbody tr:nth-child(odd) td{background:#FDF9F0}
+  td .nm{font-family:"JetBrains Mono",monospace;color:var(--terracotta-deep);font-size:.92em}
+  td small{color:var(--ink-soft);display:block;margin-top:2px;line-height:1.5}
+  .badge{font-family:"Poppins",sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:4px;display:inline-block}
+  .badge.lock{background:var(--ok-bg);color:var(--ok)}
+  .badge.rebuild{background:var(--info-bg);color:var(--info)}
+  .badge.drop{background:var(--danger-bg);color:var(--danger)}
+  .badge.warn{background:var(--warn-bg);color:var(--warn)}
+  .redline{background:#FFF4EE;border-left:4px solid var(--terracotta);padding:14px 18px;border-radius:0 10px 10px 0;margin:10px 0}
+  .redline strong{color:var(--terracotta-deep);font-family:"Poppins",sans-serif;letter-spacing:.04em;font-size:12px;text-transform:uppercase;display:block;margin-bottom:4px}
+  .redline.warn{background:#F8E6CF;border-left-color:#A56A1E}
+  .redline.warn strong{color:#7E4F18}
+  .redline.danger{background:#F8DCDC;border-left-color:#9B2C2C}
+  .redline.danger strong{color:#7C1F1F}
+  .callout{background:#F1ECDF;border:1px solid var(--line);padding:14px 18px;border-radius:10px;margin:14px 0;color:var(--ink-soft);font-size:14.5px}
+  .callout strong{color:var(--ink)}
+  .stack{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+  @media (max-width:760px){.stack{grid-template-columns:1fr}}
+  .stack .b{background:#FFFCF5;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stack .b .lbl{font-family:"Poppins",sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+  .stack .b .val{font-family:"Lora",serif;font-size:16px;color:var(--ink);font-weight:600}
+  .stack .b .sub{color:var(--ink-soft);font-size:13px;margin-top:4px;line-height:1.5}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 16px;background:#FFFCF5;margin:8px 0}
+  details > summary{cursor:pointer;font-weight:600;color:var(--ink);list-style:none;outline:none;padding:4px 0}
+  details > summary::-webkit-details-marker{display:none}
+  details > summary::before{content:"▸ ";color:var(--terracotta);font-family:monospace;display:inline-block;transition:transform .15s}
+  details[open] > summary::before{content:"▾ "}
+  details[open] > summary{margin-bottom:6px}
+  .er{background:#FFFCF5;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:8px 0;font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.7;color:var(--ink);overflow:auto;white-space:pre}
+  .er .kw{color:var(--terracotta)}
+  .er .tbl{color:var(--ok);font-weight:600}
+  .er .faded{color:var(--ink-soft)}
+  .footer-note{margin-top:60px;padding:24px 0 0;border-top:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center}
+  .scroll-x{overflow-x:auto}
+  ul.tight{margin:6px 0 6px 0;padding-left:18px}
+  ul.tight li{margin:2px 0}
+  .footnote{font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin:6px 0}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0;font-size:12px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Redesk · 数据库专项</p>
+    <h1>
+      数据库兼容性与可锁定数据
+      <span class="sub">当前真实状态 · 兼容性风险点 · 升级时必须保住的字段 · 启动失败恢复路径</span>
+    </h1>
+    <div class="meta-row">
+      <span class="pill"><strong>数据库文件</strong> <code>/data/redesk.db</code> · 命名卷 <code>redesk_redesk-data</code></span>
+      <span class="pill"><strong>SQLite</strong> WAL 模式 · foreign_keys=1 · integrity_check=ok</span>
+      <span class="pill"><strong>迁移历史</strong> 33 条全部应用（journal idx 0–32）</span>
+      <span class="pill"><strong>最新一次</strong> 0032_deep_skin · 2026-07-06 17:37</span>
+      <span class="pill"><strong>生成时间</strong> 2026-07-07</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <nav class="toc" aria-label="目录">
+    <h4>目录</h4>
+    <ol>
+      <li><a href="#sec-snapshot">当前数据库真实快照</a></li>
+      <li><a href="#sec-startup">启动时迁移与 FTS 流程</a></li>
+      <li><a href="#sec-risks">已知兼容性与一致性风险</a></li>
+      <li><a href="#sec-versions">迁移历史版本逐条说明</a></li>
+      <li><a href="#sec-locking">可锁定数据范围（按重建代价分级）</a></li>
+      <li><a href="#sec-business">业务不变量与字段约束</a></li>
+      <li><a href="#sec-failures">启动失败的恢复路径</a></li>
+      <li><a href="#sec-checklist">升级前自检 Checklist</a></li>
+    </ol>
+  </nav>
+
+  <section id="sec-snapshot" class="anchor">
+    <h2><span class="num">01</span> 当前数据库真实快照</h2>
+    <p class="lede">以下数据来自本机运行中容器 <code>redesk</code> 内的 <code>/data/redesk.db</code>（数据模型 v1.1.0 / 33 条迁移全部应用），通过只读连接直接读出。</p>
+
+    <h3>1.1 PRAGMA 与全局状态</h3>
+    <div class="stack">
+      <div class="b"><div class="lbl">journal_mode</div><div class="val">wal</div><div class="sub">写前日志；产生 <code>-shm</code> / <code>-wal</code> 副文件，正常</div></div>
+      <div class="b"><div class="lbl">foreign_keys</div><div class="val">1 (on)</div><div class="sub">外键约束开启</div></div>
+      <div class="b"><div class="lbl">integrity_check</div><div class="val">ok</div><div class="sub">库结构自检通过</div></div>
+      <div class="b"><div class="lbl">user_version</div><div class="val">0</div><div class="sub">PRAGMA user_version 未被 Drizzle 使用；版本信息在 <code>__drizzle_migrations</code> 表</div></div>
+      <div class="b"><div class="lbl">schema_version</div><div class="val">154</div><div class="sub">SQLite 内部 schema 写入计数（含 FTS 虚表）</div></div>
+      <div class="b"><div class="lbl">迁移记录</div><div class="val">33 / 33</div><div class="sub">journal 中 idx 0–32 全部应用，hash 校验通过</div></div>
+    </div>
+
+    <h3>1.2 对象清单（37 张表 + 9 个 trigger + 7 个 index）</h3>
+    <details>
+      <summary>23 张业务表 + 1 张 Drizzle 迁移表 + 1 张 sqlite_sequence + 12 张 FTS 虚表/内部表</summary>
+      <div class="er"><span class="tbl">book_covers</span>        <span class="faded">多来源封面 (S1)</span>
+<span class="tbl">book_files</span>         <span class="faded">书籍文件 + 三态存储 (S1)</span>
+<span class="tbl">book_relations</span>     <span class="faded">书-书关联 (S1)</span>
+<span class="tbl">book_tags</span>          <span class="faded">标签多对多 (S1)</span>
+<span class="tbl">bookmarks</span>          <span class="faded">书签 (S2)</span>
+<span class="tbl">books</span>              <span class="faded">书籍元数据 (S1)</span>
+<span class="tbl">books_fts</span>          <span class="faded">FTS5 虚表</span>
+<span class="tbl">books_fts_config</span>   <span class="faded">FTS5 内部</span>
+<span class="tbl">books_fts_data</span>     <span class="faded">FTS5 内部</span>
+<span class="tbl">books_fts_docsize</span>  <span class="faded">FTS5 内部</span>
+<span class="tbl">books_fts_idx</span>      <span class="faded">FTS5 内部</span>
+<span class="tbl">categories</span>         <span class="faded">分类 (S1)</span>
+<span class="tbl">highlights</span>         <span class="faded">高亮/划线 (S2)</span>
+<span class="tbl">highlights_fts</span>     <span class="faded">FTS5 虚表</span>
+<span class="tbl">highlights_fts_*</span>   <span class="faded">4 张 FTS 内部</span>
+<span class="tbl">notes</span>              <span class="faded">独立笔记 (S2)</span>
+<span class="tbl">notes_fts</span>          <span class="faded">FTS5 虚表</span>
+<span class="tbl">notes_fts_*</span>        <span class="faded">4 张 FTS 内部</span>
+<span class="tbl">reading_progress</span>   <span class="faded">阅读进度 (S2)</span>
+<span class="tbl">settings</span>           <span class="faded">应用配置 (S1)</span>
+<span class="tbl">status_history</span>     <span class="faded">状态时间轴 (S1)</span>
+<span class="tbl">tags</span>               <span class="faded">标签 (S1)</span>
+<span class="tbl">topic_books</span>        <span class="faded">主题-书 (P2)</span>
+<span class="tbl">topic_entries</span>      <span class="faded">主题沉淀 (P2)</span>
+<span class="tbl">topic_highlights</span>   <span class="faded">主题-高亮 (P2)</span>
+<span class="tbl">topic_notes</span>        <span class="faded">主题-笔记 (P2)</span>
+<span class="tbl">topic_segments</span>     <span class="faded">主题-片段 (P2)</span>
+<span class="tbl">topics</span>             <span class="faded">主题 (P2)</span>
+<span class="tbl">users</span>              <span class="faded">用户 (S1)</span>
+<span class="tbl">__drizzle_migrations</span> <span class="faded">迁移历史</span>
+<span class="tbl">sqlite_sequence</span>    <span class="faded">AUTOINSEQ 计数</span>
+
+<span class="kw">-- 9 个 FTS 触发器</span>
+books_fts_insert / books_fts_update / books_fts_delete
+notes_fts_insert / notes_fts_update / notes_fts_delete
+highlights_fts_insert / highlights_fts_update / highlights_fts_delete
+
+<span class="kw">-- 7 个索引</span>
+idx_book_rel_unique          <span class="faded">(book_relations 唯一)</span>
+idx_reading_progress_owner_last_read   <span class="faded">(概览"最近阅读")</span>
+uq_reading_progress_book_owner         <span class="faded">(进度 1:1 唯一)</span>
+users_username_unique                  <span class="faded">(登录名唯一)</span>
++ sqlite_autoindex: __drizzle_migrations、book_tags、settings</div>
+    </details>
+
+    <h3>1.3 当前业务数据</h3>
+    <p>这是新部署的库（用户没有预先录入过数据）：</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>行数</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td><span class="nm">users</span></td><td>1</td><td>默认管理员 <code>admin</code>，首次启动由 seed 写入</td></tr>
+        <tr><td><span class="nm">books</span></td><td>0</td><td>31 列，含 0032 新增 8 个字段（见 §1.4）</td></tr>
+        <tr><td>其余 18 张业务表</td><td>0</td><td>空</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>1.4 books 表当前结构（31 列）</h3>
+    <p class="footnote">重点：0032 重建后新增 8 列：<code>entry_reason</code> · <code>source_url</code> · <code>translator</code> · <code>original_title</code> · <code>page_count</code> · <code>genre_category_id</code> · <code>favorited_at</code> · <code>started_at</code> · <code>finished_at</code>。</p>
+    <details>
+      <summary>逐列说明（含 NOT NULL / DEFAULT / PK 标记）</summary>
+      <div class="er">id                    INTEGER  NOT NULL  PK
+owner_id              INTEGER  NOT NULL
+category_id           INTEGER
+title                 TEXT     NOT NULL
+author                TEXT
+subtitle              TEXT
+isbn                  TEXT
+publisher             TEXT
+publish_year          INTEGER
+description           TEXT
+language              TEXT
+cover_path            TEXT
+status                TEXT     NOT NULL  DEFAULT 'COLLECTED'
+visibility            TEXT     NOT NULL  DEFAULT 'PRIVATE'
+reading_purpose       TEXT     <span class="kw">-- 决策：自由文本</span>
+entry_reason          TEXT     <span class="kw">-- 0032 新增</span>
+rating                INTEGER
+custom_attributes     TEXT     <span class="kw">-- JSON</span>
+metadata_source       TEXT
+source_url            TEXT     <span class="kw">-- 0032 新增</span>
+translator            TEXT     <span class="kw">-- 0032 新增</span>
+original_title        TEXT     <span class="kw">-- 0032 新增</span>
+page_count            INTEGER  <span class="kw">-- 0032 新增</span>
+genre_category_id     INTEGER  <span class="kw">-- 0032 新增</span>
+favorited_at          TEXT     <span class="kw">-- 0032 新增</span>
+started_at            TEXT     <span class="kw">-- 0032 新增</span>
+finished_at           TEXT     <span class="kw">-- 0032 新增</span>
+import_order          INTEGER  NOT NULL  DEFAULT 0
+deleted_at            TEXT     <span class="kw">-- 软删除</span>
+created_at            TEXT     NOT NULL
+updated_at            TEXT     NOT NULL</div>
+    </details>
+  </section>
+
+  <section id="sec-startup" class="anchor">
+    <h2><span class="num">02</span> 启动时迁移与 FTS 流程</h2>
+    <p class="lede">API 进程启动时 <code>apps/api/src/index.ts</code> → <code>apps/api/src/db.ts</code> → <code>packages/db/src/migrate.ts</code>，按下列顺序执行：</p>
+
+    <div class="er"><span class="kw">// 启动序列（migrate.ts）</span>
+
+1. <span class="tbl">setupStorage()</span>  <span class="faded">// 确认 /data 与 /data/storage 存在并可写</span>
+
+2. <span class="tbl">migrate(db, { migrationsFolder: 'packages/db/drizzle' })</span>
+   <span class="faded">// Drizzle migrator 读 __drizzle_migrations 与 _journal.json</span>
+   <span class="faded">// 对比 hash，跳过已应用，跑未应用</span>
+   <span class="faded">// ⚠️ 一条失败 → 进程崩出 1，启动失败</span>
+
+3. <span class="tbl">setupFts5(db)</span>     <span class="faded">// 幂等创建 3 套 FTS5 虚表 + 9 个 trigger</span>
+   <span class="faded">// CREATE ... IF NOT EXISTS 安全</span>
+   <span class="faded">// + 回填 notes_fts / highlights_fts (INSERT OR IGNORE)</span>
+   <span class="faded">// ⚠️ books_fts 无回填 SQL</span>
+
+4. <span class="tbl">setupPeriodicBackup(db)</span>
+   <span class="faded">// 定时 VACUUM INTO 备份 DB 至多保留 7 份</span></div>
+
+    <h3>2.1 Drizzle migrator 的 hash 对比机制</h3>
+    <ul class="tight">
+      <li>每条 journal 里的迁移都带一个 <code>hash</code>（由 SQL 内容生成）</li>
+      <li>启动时 <code>migrate()</code> 把 <code>__drizzle_migrations</code> 里的 hash 集合与 journal 对比</li>
+      <li><strong>未在已应用集合里</strong>的迁移 → 执行；<strong>已应用</strong>的 → 跳过</li>
+      <li><strong>关键风险</strong>：journal 改了 hash（哪怕只是改 created_at 字段），Drizzle 会重跑该迁移</li>
+    </ul>
+
+    <h3>2.2 FTS5 触发器行为分析</h3>
+    <div class="redline warn">
+      <strong>软删除不会被 FTS 同步</strong>
+      <code>notes_fts_update</code> / <code>highlights_fts_update</code> 是 <code>AFTER UPDATE</code> 无 WHEN 子句；软删除（<code>UPDATE ... SET deleted_at = ...</code>）<strong>会</strong>触发 FTS 重索引该行，导致已软删除的笔记/高亮仍出现在全文搜索结果中。
+    </div>
+    <div class="redline">
+      <strong>books_fts 启动时无回填</strong>
+      <code>setupFts5</code> 中只对 <code>notes</code> 和 <code>highlights</code> 有 <code>INSERT OR IGNORE INTO ... SELECT ...</code> 回填，<code>books_fts</code> 没有对应回填 SQL。若在 FTS 触发器创建前已存在 books 行，它们不会进 books_fts。
+    </div>
+    <div class="callout">
+      <strong>但因为 INSERT / UPDATE / DELETE 触发器齐全，正常运营中新增的书会自动进入 FTS</strong>，因此当前观察到的 <code>books_fts = 0 行</code> 仅因为当前业务表本身为空。一旦录入书籍，FTS 会自动跟上。
+    </div>
+  </section>
+
+  <section id="sec-risks" class="anchor">
+    <h2><span class="num">03</span> 已知兼容性与一致性风险</h2>
+    <p class="lede">把"更新优化后旧库不兼容"的现象拆解成 5 个独立风险点，逐条说明触发条件与解法。</p>
+
+    <h3>3.1 Drizzle 跳跃编号</h3>
+    <div class="redline">
+      <strong>风险</strong>
+      <code>packages/db/drizzle/meta/_journal.json</code> 当前 idx 30–32 编号为 0014 / 0015 / <strong>0032</strong>，<strong>中间缺失 0016–0031</strong>。journal 被人为压缩过。
+    </div>
+    <p class="footnote">如果未来开发者在本地执行 <code>drizzle-kit generate</code> 重排/重生成 journal，可能导致：① journal 与源码 snapshot 错位；② 旧库对比时 hash 不匹配；③ Drizzle 决定重跑某条迁移 → 整表重建（__new_xxx → DROP）模式下容易因旧表已被前一次重建重命名而失败。</p>
+
+    <h3>3.2 整表重建（__new_xxx）模式的脆弱性</h3>
+    <p>SQLite 不支持 DROP COLUMN / ALTER CONSTRAINT / 改 PK 顺序等，因此 0032_deep_skin 对 12 张核心表使用了"新建 __new_xxx → INSERT SELECT → DROP 旧 → RENAME __new → 正式"模式：</p>
+    <div class="er"><span class="kw">-- 0032_deep_skin 模式片段</span>
+<span class="tbl">CREATE TABLE __new_books</span> (...)  <span class="faded">-- 新结构</span>
+<span class="tbl">INSERT INTO __new_books</span>(id, owner_id, title, ...)
+  SELECT id, owner_id, title, ... <span class="kw">FROM books</span>  <span class="faded">-- ⚠️ 旧表必须存在</span>
+<span class="tbl">DROP TABLE books</span>
+<span class="tbl">ALTER TABLE __new_books RENAME TO books</span></div>
+    <div class="redline danger">
+      <strong>本次部署就因此失败</strong>。旧库中 <code>books</code> 表被人为清理过（残留仅 FTS 虚表壳），0032 跑 <code>INSERT INTO __new_books SELECT ... FROM books</code> 时 SQLite 抛 <code>no such table: books</code>，迁移中断，容器启动失败。
+    </div>
+
+    <h3>3.3 FTS5 软删除感知缺失</h3>
+    <p>见 §2.2。表现：用户删除一条笔记（软删除 <code>deleted_at</code>），但全文搜索结果中仍能看到该笔记内容片段。</p>
+
+    <h3>3.4 0032 的 settings 表 PK 顺序变更</h3>
+    <p>0032 把 <code>settings</code> 表 PK 从 <code>(key, owner_id)</code> 改为 <code>(owner_id, key)</code>。语义等价（复合主键），但对老版本生成过同 <code>owner_id</code> 多行的旧库，若原本数据有 PK 冲突可能 INSERT 失败（实际不会因为 unique 不变）。</p>
+
+    <h3>3.5 物理文件与 DB 分离</h3>
+    <p>数据库迁移不会动到命名卷 <code>/data/storage/</code> 下的文件。但若把旧库迁移到新代码，物理文件目录结构可能不再匹配（multer 写入的 <code>book_id/...</code> 子目录未必被新 schema 强约定）。建议：<strong>升级时同时做一次 §6.4 的"启用下载完整性体检"</strong>。</p>
+
+    <h3>3.6 风险等级总结</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>风险</th><th>发生条件</th><th>影响</th><th>可检测性</th></tr></thead>
+      <tbody>
+        <tr><td>3.1 跳跃编号</td><td>journal 被人为编辑</td><td>启动失败</td><td>高（diff journal）</td></tr>
+        <tr><td>3.2 整表重建依赖旧表</td><td>旧库 schema 不完整 / 残留</td><td>启动失败</td><td>高（启动前自检）</td></tr>
+        <tr><td>3.3 FTS 软删除</td><td>日常使用</td><td>搜索结果"已删除仍可见"</td><td>中（功能测试）</td></tr>
+        <tr><td>3.4 settings PK 顺序</td><td>跨 0032 升级</td><td>可能 INSERT 失败</td><td>低（行为改变）</td></tr>
+        <tr><td>3.5 物理文件目录</td><td>DB 与文件目录分别迁移</td><td>下载 404 / 路径错位</td><td>中（GET /books/{id}/file）</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="sec-versions" class="anchor">
+    <h2><span class="num">04</span> 迁移历史版本逐条说明</h2>
+    <p class="lede">本节是"更新优化会动到哪些表"的查找表。每条说明三件事：① 改了什么 ② 兼容性影响 ③ 是否需要重建索引/触发器。</p>
+
+    <details>
+      <summary>0010_storage_mode_a~p（16 段，三态存储策略）</summary>
+      <p><strong>改动</strong>：<code>book_files</code> 新增 <code>storage_mode</code> / <code>remote_key</code> / <code>primary_location</code> / <code>sync_status</code>，对应索引与外键重建。<br>
+        <strong>兼容性</strong>：纯 ADD COLUMN，理论上向后兼容；但分 16 段执行时若任一中断会处于"半成品"状态。<br>
+        <strong>影响面</strong>：book_files、book_covers、status_history、categories、book_tags、book_relations、tags、bookmarks、highlights、notes、reading_progress、settings、topics 全部受影响。</p>
+    </details>
+
+    <details>
+      <summary>0011 / 0011b（书关联、is_admin 角色）</summary>
+      <p><strong>0011</strong>：新建 <code>book_relations</code> 表 + 唯一索引；<strong>0011b</strong>：<code>users</code> 加 <code>is_admin</code>。<br>
+        <strong>兼容性</strong>：纯 ADD，新表 + 新列；向后兼容。</p>
+    </details>
+
+    <details>
+      <summary>0012_auth_token_model（设置表 PK 改顺序）</summary>
+      <p><strong>改动</strong>：<code>settings</code> PK 从 <code>(key, owner_id)</code> 改为 <code>(owner_id, key)</code>。<br>
+        <strong>兼容性</strong>：原表用 <code>__new_settings</code> 重建 INSERT SELECT。<br>
+        <strong>注意</strong>：老代码生成的库若 <code>__drizzle_migrations</code> 标记为已应用，但实际 PK 顺序是旧的，再次启动不会重跑 — 与 schema drift 风险点。</p>
+    </details>
+
+    <details>
+      <summary>0013_reading_notes_topics（M2 笔记 + M3 主题）</summary>
+      <p><strong>改动</strong>：新增 <code>bookmarks</code>、<code>highlights</code>、<code>notes</code>、<code>reading_progress</code>、<code>topics</code>、<code>topic_books</code>、<code>topic_highlights</code>、<code>topic_notes</code>、<code>topic_segments</code>、<code>topic_entries</code>。创建 <code>notes_fts</code> / <code>highlights_fts</code> 虚表与触发器。<br>
+        <strong>兼容性</strong>：纯新增；这是 M2 / M3 的奠基迁移。<br>
+        <strong>特殊</strong>：<code>__drizzle_migrations.created_at = 1751616000000</code>（2025-07-05），是唯一一条时间戳倒退的迁移 — 表明 journal 被手动重排过。</p>
+    </details>
+
+    <details>
+      <summary>0014_add_import_order</summary>
+      <p><strong>改动</strong>：<code>books</code> 加 <code>import_order INTEGER NOT NULL DEFAULT 0</code>；同步加索引。<br>
+        <strong>兼容性</strong>：纯 ADD COLUMN，DEFAULT 0 自动回填。<br>
+        <strong>本次部署失败点</strong>：当旧库 books 表被人为清理，<code>ALTER TABLE books ...</code> 失败。</p>
+    </details>
+
+    <details>
+      <summary>0015_reading_progress</summary>
+      <p><strong>改动</strong>：进度表扩展 + 唯一索引 <code>uq_reading_progress_book_owner</code>。<br>
+        <strong>兼容性</strong>：纯索引 / ALTER。</p>
+    </details>
+
+    <details open>
+      <summary><strong>0032_deep_skin</strong>（最新 · 整表重建）</summary>
+      <p><strong>改动</strong>：一次性重建 12 张表：bookmarks / book_covers / book_files / book_tags / <strong>books</strong> / categories / settings / topic_books / topic_highlights / topic_notes / <strong>users</strong>。<br>
+        <strong>books 新增 8 列</strong>：<code>entry_reason</code>、<code>source_url</code>、<code>translator</code>、<code>original_title</code>、<code>page_count</code>、<code>genre_category_id</code>、<code>favorited_at</code>、<code>started_at</code>、<code>finished_at</code>。<br>
+        <strong>users 新增 2 列</strong>：<code>is_admin</code>、<code>must_change_password</code>。<br>
+        <strong>兼容性</strong>：必须 0032 之前的旧表全部完好；任一表缺失 → 整库启动失败。<br>
+        <strong>跳跃编号</strong>：journal idx 32 = 0032，中间 0016–0031 已删。</p>
+    </details>
+  </section>
+
+  <section id="sec-locking" class="anchor">
+    <h2><span class="num">05</span> 可锁定数据范围（按重建代价分级）</h2>
+    <p class="lede">回答"哪些数据可以锁定"。按"重建代价"分三级，给出每一类的保留策略。</p>
+
+    <h3>5.1 A 类 · 必须锁定（重建成本高）</h3>
+    <p>对应：用户核心元数据 + 阅读痕迹 + 文件记录。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>表</th><th>锁定原因</th><th>字段重点</th></tr></thead>
+      <tbody>
+        <tr><td><span class="nm">books</span></td><td>核心数据，恢复需重新录入 + 重新走 metadata 流程</td><td><code>id</code>、<code>owner_id</code>、<code>title</code>、<code>author</code>、<code>isbn</code>、<code>status</code>、<code>category_id</code>、<code>reading_purpose</code>、<code>started_at</code>、<code>finished_at</code>、<code>favorited_at</code>、<code>page_count</code>、<code>metadata_source</code>、<code>custom_attributes</code>(JSON)、<code>deleted_at</code></td></tr>
+        <tr><td><span class="nm">book_files</span></td><td>文件记录 + 物理文件路径，丢了找不到文件</td><td><code>id</code>、<code>book_id</code>、<code>local_path</code>、<code>remote_key</code>、<code>storage_mode</code>、<code>primary_location</code>、<code>sync_status</code>、<code>checksum</code>、<code>is_primary</code></td></tr>
+        <tr><td><span class="nm">book_covers</span></td><td>多来源封面，物理路径或远程 key</td><td><code>book_id</code>、<code>source_type</code>、<code>local_path</code>、<code>remote_key</code>、<code>is_active</code></td></tr>
+        <tr><td><span class="nm">highlights</span></td><td>CFI 范围 + 原文，丢了对原文阅读就断链</td><td><code>book_id</code>、<code>cfi_start</code>、<code>cfi_end</code>、<code>text</code>、<code>type</code>、<code>color</code>、<code>note</code>、<code>mark_type</code>、<code>deleted_at</code></td></tr>
+        <tr><td><span class="nm">notes</span></td><td>用户思考产物，导出格式不一致会丢图</td><td><code>book_id</code>、<code>cfi</code>、<code>title</code>、<code>content_html</code>、<code>content_markdown</code>、<code>mark_type</code>、<code>deleted_at</code></td></tr>
+        <tr><td><span class="nm">reading_progress</span></td><td>每本书的 CFI 进度 + 百分比</td><td><code>book_id</code>、<code>owner_id</code>、<code>file_id</code>、<code>cfi</code>、<code>percentage</code>、<code>last_read_at</code></td></tr>
+        <tr><td><span class="nm">bookmarks</span></td><td>每本书多条书签</td><td><code>book_id</code>、<code>cfi</code>、<code>label</code>、<code>percentage</code></td></tr>
+        <tr><td><span class="nm">topics</span> + 5 张 topic_*</td><td>主题组织，引用关系会断</td><td><code>topics</code> + <code>topic_books</code> / <code>topic_highlights</code> / <code>topic_notes</code> / <code>topic_segments</code> / <code>topic_entries</code></td></tr>
+        <tr><td><span class="nm">users</span></td><td>登录身份、is_admin</td><td><code>id</code>、<code>username</code>、<code>password_hash</code>、<code>is_admin</code>、<code>must_change_password</code></td></tr>
+        <tr><td><span class="nm">settings</span></td><td>multi_user / 回收站保留期 / 显示偏好 / AI / OSS 配置（密钥脱敏）</td><td>全部 <code>(owner_id, key)</code> 行</td></tr>
+        <tr><td><span class="nm">status_history</span></td><td>状态时间轴，丢了看不出阅读历程</td><td><code>book_id</code>、<code>from_status</code>、<code>to_status</code>、<code>changed_at</code></td></tr>
+        <tr><td><span class="nm">categories</span> / <span class="nm">tags</span> / <span class="nm">book_tags</span> / <span class="nm">book_relations</span></td><td>用户的组织 / 关联结构</td><td>全部行</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>5.2 B 类 · 可重新生成（重建成本低 / 可自动恢复）</h3>
+    <p>这类在每次启动都被 <code>setupFts5</code> 重建，启动一次即可恢复；不视为"必须保住"的对象。</p>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>对象</th><th>重建方式</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td><span class="nm">books_fts</span> + 4 张内部表</td><td>启动时 <code>setupFts5</code> 重建 + INSERT trigger 自动跟</td><td>⚠️ 见 §3.3 软删除感知缺失</td></tr>
+        <tr><td><span class="nm">notes_fts</span> / <span class="nm">highlights_fts</span> + 内部</td><td>同上 + 启动时 <code>INSERT OR IGNORE</code> 回填</td><td>软删除问题同上</td></tr>
+        <tr><td>9 个 FTS 触发器</td><td><code>CREATE TRIGGER ... IF NOT EXISTS</code></td><td>幂等安全</td></tr>
+        <tr><td><span class="nm">sqlite_sequence</span></td><td>INSERT 新行时 SQLite 自动维护</td><td>可删可重建</td></tr>
+        <tr><td><span class="nm">__drizzle_migrations</span></td><td>新启动按 <code>_journal.json</code> 重新写入</td><td><strong>不锁定</strong>；旧记录 hash 不匹配则全部重跑</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>5.3 C 类 · 必须清理的残留（升级前清理）</h3>
+    <div class="redline danger">
+      <strong>残留的 <code>__new_xxx</code> 临时表是启动失败的高发原因</strong>。整表重建（__new → DROP → RENAME）中断时，旧库会留下一堆 <code>__new_books</code> / <code>__new_settings</code> / <code>__new_users</code>，下次启动时 <code>CREATE TABLE __new_xxx</code> 冲突抛错。
+    </div>
+    <p>当前实例已确认无残留（<code>__new_xxx count: 0</code>），但升级失败时一定要先做以下清理：</p>
+<pre><code>-- 升级前必跑（保留 A 类表；B / C 类可丢）
+DROP TABLE IF EXISTS __new_books;
+DROP TABLE IF EXISTS __new_book_files;
+DROP TABLE IF EXISTS __new_book_covers;
+DROP TABLE IF EXISTS __new_users;
+DROP TABLE IF EXISTS __new_settings;
+DROP TABLE IF EXISTS __new_categories;
+DROP TABLE IF EXISTS __new_book_tags;
+DROP TABLE IF EXISTS __new_bookmarks;
+DROP TABLE IF EXISTS __new_highlights;
+DROP TABLE IF EXISTS __new_notes;
+DROP TABLE IF EXISTS __new_reading_progress;
+DROP TABLE IF EXISTS __new_topics;
+DROP TABLE IF EXISTS __new_topic_books;
+DROP TABLE IF EXISTS __new_topic_highlights;
+DROP TABLE IF EXISTS __new_topic_notes;
+DROP TABLE IF EXISTS __new_topic_segments;
+DROP TABLE IF EXISTS __new_topic_entries;
+DROP TABLE IF EXISTS __new_status_history;
+DROP TABLE IF EXISTS __new_tags;
+DROP TABLE IF EXISTS __new_book_relations;</code></pre>
+
+    <h3>5.4 物理文件 /data/storage</h3>
+    <p>命名卷下 <code>/data/storage/</code> 由 multer 写入，记录在 <code>book_files.local_path</code>。两份必须同时备份，<strong>分开导出 / 分开恢复都会破坏完整性</strong>。建议备份用 API 提供的"手动全量备份 ZIP"（6.08）会同时打包 DB + 文件 + Markdown 副本。</p>
+  </section>
+
+  <section id="sec-business" class="anchor">
+    <h2><span class="num">06</span> 业务不变量与字段约束</h2>
+    <p class="lede">这些约束是"应用怎么用数据库"的硬性约定，写在《数据模型》《决策记录》《AGENTS.md》中。升级时任何破坏这些约束的迁移都应被立即回退。</p>
+
+    <div class="grid cols-2">
+      <div class="redline">
+        <strong>owner_id 必填 + 边界校验</strong>
+        根实体（users / books / book_files / book_covers / settings / highlights / notes / reading_progress / bookmarks / topics）必须带 <code>owner_id</code>；从属表（book_tags / topic_books / topic_highlights / topic_notes / topic_segments / topic_entries）通过父表继承归属；查询 / 写入必须校验 owner 边界。
+      </div>
+      <div class="redline">
+        <strong>deleted_at 软删除</strong>
+        <code>deleted_at TEXT NULL</code> 标记，非物理删除；<code>WHERE deleted_at IS NULL</code> 是主业务查询的默认过滤。
+      </div>
+      <div class="redline">
+        <strong>STORED ≠ 删除</strong>
+        <code>books.status</code> 枚举 <code>COLLECTED / PLANNED / READING / READ / STORED</code>，<code>STORED</code> 是独立业务状态，与 <code>deleted_at IS NOT NULL</code> 完全不同。
+      </div>
+      <div class="redline">
+        <strong>主题软引用 ON DELETE CASCADE</strong>
+        <code>topic_highlights.highlight_id</code>、<code>topic_notes.note_id</code>、<code>topic_segments.*</code> 在原痕物理删除时自动摘除；删主题不动原痕。
+      </div>
+      <div class="redline">
+        <strong>ai_assets 隔离</strong>
+        AI 派生内容只走 <code>ai_assets</code>，与用户 notes / highlights 物理隔离；展示层不混入。
+      </div>
+      <div class="redline">
+        <strong>进度 1:1 唯一</strong>
+        <code>reading_progress</code> 通过 <code>uq_reading_progress_book_owner</code> 唯一索引，每书每用户一条。
+      </div>
+      <div class="redline">
+        <strong>笔记双格式</strong>
+        <code>notes.content_html</code> + <code>content_markdown</code> 同步写；编辑用 HTML（TipTap），导出用 Markdown。
+      </div>
+      <div class="redline">
+        <strong>一书一分类</strong>
+        <code>books.category_id</code> 单意外键；不建多对多关联表。
+      </div>
+      <div class="redline">
+        <strong>分类用户自定义</strong>
+        不内置通用类型树；分类名称由用户定。当前平级使用，<code>parent_id</code> 留可选不强制。
+      </div>
+      <div class="redline">
+        <strong>主阅读文件唯一</strong>
+        <code>book_files.is_primary</code> 同书至多 1 条；无主则首文件自动主，有主不自动切换（WL-002）。
+      </div>
+      <div class="redline">
+        <strong>封面来源唯一激活</strong>
+        <code>book_covers.is_active</code> 同书至多 1 条；书籍删除级联清理封面记录与物理文件。
+      </div>
+      <div class="redline">
+        <strong>状态时间轴只增</strong>
+        <code>status_history</code> 不更新不删除，APPEND-ONLY；状态变更时插一行。
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-failures" class="anchor">
+    <h2><span class="num">07</span> 启动失败的恢复路径</h2>
+    <p class="lede">按失败症状分 4 类，每类给出"先做哪 3 步"。</p>
+
+    <h3>7.1 症状：<code>no such table: books</code>（本次部署遇到）</h3>
+    <div class="callout">
+      <strong>原因</strong>：旧库 schema 不完整（缺核心表），但 <code>__drizzle_migrations</code> 记录未跟上。journal 决定重跑某条 <code>ALTER TABLE books ...</code>，旧表不存在而失败。
+    </div>
+    <p>恢复三步：</p>
+    <ol>
+      <li><strong>备份现状</strong>：<code>cp /data/redesk.db /data/redesk.db.broken</code>（即使坏库也保留以备事后取证）</li>
+      <li><strong>清残留</strong>：跑 §5.3 的 <code>DROP TABLE IF EXISTS __new_xxx</code>（防御性）</li>
+      <li><strong>二选一</strong>：<br>
+        &nbsp;&nbsp;路径 A — <strong>接受全量重建</strong>：<code>rm -f /data/redesk.db /data/redesk.db-shm /data/redesk.db-wal</code>，重启容器；<br>
+        &nbsp;&nbsp;路径 B — <strong>从备份恢复</strong>：用 §7.6 的 ZIP / VACUUM INTO 备份覆盖 <code>redesk.db</code>，重启。
+      </li>
+    </ol>
+
+    <h3>7.2 症状：<code>__drizzle_migrations</code> 字段不存在 / hash 不匹配</h3>
+    <div class="callout">
+      <strong>原因</strong>：journal 改过 hash（如重排序、改 created_at），Drizzle 误判未应用，重跑迁移失败。
+    </div>
+    <p>恢复：</p>
+    <ol>
+      <li>备份 <code>redesk.db</code></li>
+      <li>备份 <code>__drizzle_migrations</code> 表的内容到外部文件</li>
+      <li>用 SQLite CLI 对比 journal 中每条 hash 与备份里的 hash，找出"理论上已应用但 Drizzle 误判"的条目</li>
+      <li>若无法对齐，<strong>建议接受全量重建</strong>并恢复 A 类表（§5.1）</li>
+    </ol>
+
+    <h3>7.3 症状：<code>UNIQUE constraint failed: books.id</code>（重建中途崩溃）</h3>
+    <div class="callout">
+      <strong>原因</strong>：0032 类整表重建在 <code>INSERT INTO __new_books SELECT * FROM books</code> 之前已经 DROP 旧表或部分完成。
+    </div>
+    <p>恢复：</p>
+    <ol>
+      <li>立即停服（<code>docker compose stop</code>）</li>
+      <li>跑 §5.3 清理残留的 <code>__new_xxx</code></li>
+      <li>若 <code>books</code> 表本身已 DROP，从备份恢复；否则重启</li>
+    </ol>
+
+    <h3>7.4 症状：FTS 触发器缺失但虚表存在</h3>
+    <div class="callout">
+      <strong>原因</strong>：手动清理过触发器或 <code>setupFts5</code> 在迁移失败前未跑到。
+    </div>
+    <p>恢复：直接重启一次容器即可。setupFts5 幂等。</p>
+
+    <h3>7.5 症状：books_fts 行数 0 但 books 有数据</h3>
+    <div class="callout">
+      <strong>原因</strong>：在 <code>setupFts5</code> 创建触发器之前已经写入 books，触发器没有回溯历史数据。
+    </div>
+    <p>恢复：跑一次手动回填（建议作为后续改进纳入 <code>setupFts5</code>）：</p>
+<pre><code>INSERT INTO books_fts(rowid, title, author, isbn)
+  SELECT id, title, author, isbn FROM books
+  WHERE deleted_at IS NULL
+  ON CONFLICT(rowid) DO NOTHING;</code></pre>
+
+    <h3>7.6 推荐的预防 / 备份策略</h3>
+    <ul class="tight">
+      <li><strong>升级前</strong>：<code>GET /api/v1/backup/manual</code> 触发全量 ZIP（DB + 文件 + Markdown 副本）</li>
+      <li><strong>升级后</strong>：保留旧 ZIP 至少 7 天；容器内 <code>setupPeriodicBackup</code> 每天 <code>VACUUM INTO</code> 最多保留 7 份</li>
+      <li><strong>回滚</strong>：API 提供了"最近 7 份 SQLite 备份"恢复入口，文件名带时间戳，可选择覆盖 <code>redesk.db</code></li>
+      <li><strong>原则</strong>：数据库迁移失败 = 启动失败 = 服务不可用；任何想"自动忽略迁移错误继续启动"的实现都应被拒绝（决策记录 · 一致性原则）</li>
+    </ul>
+  </section>
+
+  <section id="sec-checklist" class="anchor">
+    <h2><span class="num">08</span> 升级前自检 Checklist</h2>
+    <p class="lede">把以上结论凝练为一份"动手前 6 步"。</p>
+
+    <ol>
+      <li><strong>备份</strong>：先用 API 触发手动全量 ZIP，同时 <code>cp</code> 容器内 <code>redesk.db</code> + <code>redesk.db-wal</code> + <code>redesk.db-shm</code> 一份到主机（即使升级顺利也保留 7 天）。</li>
+      <li><strong>健康自检</strong>：跑 <code>sqlite3 redesk.db "PRAGMA integrity_check; PRAGMA foreign_key_check;"</code>，两者都必须返回 <code>ok</code> / 空集。</li>
+      <li><strong>核心表存在性</strong>：跑 <code>SELECT name FROM sqlite_master WHERE type='table' AND name IN ('books','book_files','users','settings','highlights','notes','reading_progress','topics') ORDER BY name;</code>，缺失任意一条 → 升级前需要先恢复。</li>
+      <li><strong>残留清理</strong>：跑 §5.3 的 <code>DROP TABLE IF EXISTS __new_xxx</code>，避免新迁移被"对象已存在"挡住。</li>
+      <li><strong>journal 视觉对比</strong>：升级前 <code>git diff packages/db/drizzle/meta/_journal.json</code>，关注 hash 变化、idx 重排、新增跳跃编号。任何跳跃都应人工 review。</li>
+      <li><strong>物理文件与 DB 同步</strong>：确认 <code>/data/storage/</code> 备份与 DB 备份在同一次操作里导出，不要分两次。</li>
+    </ol>
+
+    <div class="callout">
+      <strong>本文是诊断与防御文档，不是迁移规范</strong>。具体的"哪条迁移做了什么 / 是否需要人工干预"以 <code>doc/开发执行计划.md</code> 与 <code>doc/数据模型.md</code> 为准；若发现本文与源文档冲突，以源文档为准。
+    </div>
+  </section>
+
+  <p class="footer-note">
+    Redesk · 数据库专项 · 由本次会话综编 · 2026-07-07<br>
+    关联文档：<code>doc/数据模型.md v1.1.0</code> · <code>doc/决策记录.md</code> · <code>doc/AGENTS.md</code> · <code>packages/db/drizzle/meta/_journal.json</code>
+  </p>
+
+</main>
+
+</body>
+</html>
