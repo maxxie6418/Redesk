@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { AlertTriangle, ChevronRight, Cloud, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles, Upload } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Cloud, Database, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,12 @@ const BatchTab = lazy(() => import('./batch-tab').then((module) => ({ default: m
 const BackupTab = lazy(() => import('./backup-tab').then((module) => ({ default: module.BackupTab })));
 const GeneralTab = lazy(() => import('./general-tab').then((module) => ({ default: module.GeneralTab })));
 const LoginManagementTab = lazy(() => import('./login-management-tab').then((module) => ({ default: module.LoginManagementTab })));
+const MaintenanceTab = lazy(() => import('./maintenance-tab').then((module) => ({ default: module.MaintenanceTab })));
 const PropertiesTab = lazy(() => import('./properties-tab').then((module) => ({ default: module.PropertiesTab })));
 const StorageTab = lazy(() => import('./storage-tab').then((module) => ({ default: module.StorageTab })));
 const SystemTab = lazy(() => import('./system-tab').then((module) => ({ default: module.SystemTab })));
 
-const VALID_TABS: Tab[] = ['general', 'batch', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
+const VALID_TABS: Tab[] = ['general', 'batch', 'maintenance', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
 
 function isValidTab(value: string | null): value is Tab {
   return value != null && VALID_TABS.includes(value as Tab);
@@ -84,6 +85,7 @@ function AdminSettingsPage() {
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
     { key: 'batch', label: '书籍管理', icon: <Upload className="h-4 w-4" /> },
+    { key: 'maintenance', label: '数据维护', icon: <Database className="h-4 w-4" /> },
     { key: 'ai', label: 'AI', icon: <Sparkles className="h-4 w-4" /> },
     { key: 'login', label: '登录管理', icon: <Shield className="h-4 w-4" /> },
     { key: 'properties', label: '属性设置', icon: <List className="h-4 w-4" /> },
@@ -126,7 +128,7 @@ function AdminSettingsPage() {
         mobileNavKey="settings"
         mainClassName={isMobileLayout ? 'overflow-y-auto px-0 py-0' : 'overflow-y-auto px-6 py-6'}
       >
-        <div className={cn('mx-auto max-w-5xl', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
+        <div className={cn('mx-auto max-w-7xl', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
           <div className={cn(isMobileLayout ? 'space-y-1' : 'mb-5')}>
             <h1 className="text-xl font-semibold text-foreground">设置</h1>
             {isMobileLayout ? (
@@ -178,6 +180,7 @@ function AdminSettingsPage() {
             {activeTab === 'batch' ? (
               <BatchTab settings={settings.data ?? {}} onToast={showToast} />
             ) : null}
+            {activeTab === 'maintenance' ? <MaintenanceTab /> : null}
             {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
             {activeTab === 'login' ? <LoginManagementTab /> : null}
             {activeTab === 'properties' ? <PropertiesTab /> : null}

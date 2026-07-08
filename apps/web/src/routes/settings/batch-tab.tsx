@@ -1,173 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CloudUpload, Loader2, RefreshCcw, Search, Upload, UploadCloud } from 'lucide-react';
+import { Check, CloudUpload, Loader2, Upload, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { BatchImportPanel } from '@/components/batch-import-panel';
-import {
-  useBatchBooks,
-  useBatchFetchBookCovers,
-  useBatchPreviewMetadata,
-  useBatchApplyMetadata,
-  useBooks,
-  type BookSummary,
-  type BatchPreviewRow,
-  type BatchApplyRow,
-} from '@/hooks/use-books';
 import { useBatchSendFilesToCloud, useFileLibrary, type BookFileItem } from '@/hooks/use-files';
 import { BatchUploadMatchCard } from './batch-upload-card';
-import { BatchFetchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
 import type { StatusMessage } from './types';
 
 const BATCH_PAGE_SIZE = 50;
-
-function BatchBookActionsCard({
-  onToast,
-}: {
-  onToast: (msg: StatusMessage) => void;
-}) {
-  const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState<'fetch_metadata' | 'fetch_cover' | null>(null);
-  const [page, setPage] = useState(1);
-  const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
-  const booksQuery = useBooks({ q: search.trim() || undefined, page, page_size: BATCH_PAGE_SIZE, sort: '-updated_at' });
-  const previewMetadata = useBatchPreviewMetadata();
-  const applyMetadata = useBatchApplyMetadata();
-  const batchFetchCovers = useBatchFetchBookCovers();
-  const batchBooks = useBatchBooks();
-
-  useEffect(() => {
-    setPage(1);
-    setLoadedBooks([]);
-  }, [search]);
-
-  useEffect(() => {
-    const nextBooks = booksQuery.data?.data;
-    if (!nextBooks) return;
-    setLoadedBooks((current) => (page === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
-  }, [booksQuery.data?.data, page]);
-
-  const books = loadedBooks;
-  const total = booksQuery.data?.pagination.total;
-
-  const dialogRows: BatchResultRow[] = useMemo(
-    () =>
-      books.map((book) => ({
-        key: `${book.id}`,
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        publisher: book.publisher,
-        isbn: null,
-        sourceUrl: book.source_url,
-        rating: book.rating,
-        status: 'success',
-      })),
-    [books],
-  );
-
-  const openDialog = (action: 'fetch_metadata' | 'fetch_cover') => {
-    if (books.length === 0) {
-      onToast({ type: 'warning', text: '当前没有可处理的书籍' });
-      return;
-    }
-    setDialogAction(action);
-    setDialogOpen(true);
-  };
-
-  const handlePreview = async (ids: number[]): Promise<BatchPreviewRow[]> => {
-    return previewMetadata.mutateAsync(ids);
-  };
-
-  const handleApply = async (ids: number[], fields?: string[]): Promise<BatchApplyRow[]> => {
-    const rows = await applyMetadata.mutateAsync({ ids, fields });
-    return rows;
-  };
-
-  const handleFetchCovers = async (ids: number[]) => {
-    try {
-      const result = await batchFetchCovers.mutateAsync(ids);
-      onToast({ type: 'info', text: `已抓取 ${result.success}/${result.total} 本书的封面` });
-    } catch (error) {
-      onToast({ type: 'error', text: error instanceof Error ? error.message : '批量更新封面失败' });
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base">批量更新与抓取</CardTitle>
-        <CardDescription>集中处理书籍信息抓取、封面更新等系统级批量操作。</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[280px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索要批量处理的书籍" className="pl-9" />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-3">
-          <span className="text-sm text-muted-foreground">
-            {booksQuery.isLoading ? '正在加载…' : `当前结果 ${books.length} 本书${total != null && total > books.length ? `（共 ${total} 本）` : ''}`}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => openDialog('fetch_metadata')} disabled={batchBooks.isPending || books.length === 0}>
-            <RefreshCcw className="mr-1.5 h-4 w-4" />
-            抓取信息
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => openDialog('fetch_cover')} disabled={batchBooks.isPending || books.length === 0}>
-            <Upload className="mr-1.5 h-4 w-4" />
-            更新封面
-          </Button>
-        </div>
-      </CardContent>
-
-      {dialogOpen && dialogAction === 'fetch_metadata' ? (
-        <BatchFetchResultDialog
-          title="批量抓取信息"
-          subtitle={`当前结果共 ${dialogRows.length} 本书。抓取后请勾选要更新的书并确认。`}
-          rows={dialogRows}
-          onClose={() => {
-            setDialogOpen(false);
-            setDialogAction(null);
-          }}
-          onPreview={handlePreview}
-          onApply={handleApply}
-        />
-      ) : null}
-
-      {dialogOpen && dialogAction === 'fetch_cover' ? (
-        <BatchFetchResultDialog
-          title="批量更新封面"
-          subtitle={`当前结果共 ${dialogRows.length} 本书。封面将直接抓取并应用。`}
-          rows={dialogRows}
-          onClose={() => {
-            setDialogOpen(false);
-            setDialogAction(null);
-          }}
-          onPreview={async (ids) => {
-            const result = await batchFetchCovers.mutateAsync(ids);
-            return result.rows.map((r) => ({
-              book_id: r.book_id,
-              title: books.find((b) => b.id === r.book_id)?.title ?? '',
-              success: r.success,
-              skipped: !r.success && r.error === 'no_source_url',
-              reason: r.error ?? undefined,
-              error: r.success ? undefined : r.error ?? undefined,
-              will_fill: r.success ? ['封面'] : [],
-              existing: r.success ? [] : [],
-            }));
-          }}
-          onApply={async (ids) => {
-            await handleFetchCovers(ids);
-            return ids.map((id) => ({ book_id: id, success: true, filled_fields: ['封面'] }));
-          }}
-        />
-      ) : null}
-    </Card>
-  );
-}
 
 function BatchCloudSyncCard({
   cloudAvailable,
@@ -339,7 +179,6 @@ export function BatchTab({
         </CardContent>
       </Card>
 
-      <BatchBookActionsCard onToast={onToast} />
       <BatchCloudSyncCard cloudAvailable={cloudAvailable} onToast={onToast} />
     </div>
   );

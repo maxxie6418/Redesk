@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesk - 批量数据维护工作台（原型）</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-border: #bfdbfe;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --amber-50: #fffbeb;
+    --amber-600: #d97706;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+  .prototype-banner {
+    background: linear-gradient(135deg, #1e40af, #7c3aed);
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .app { max-width: 1440px; margin: 0 auto; padding: 20px; }
+
+  /* Header */
+  .page-header { margin-bottom: 20px; }
+  .page-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .page-header p { color: var(--text-muted); font-size: 13px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* Entry Bar */
+  .entry-bar { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .entry-bar .section-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; min-width: 60px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-outline { background: var(--card); color: var(--text); border-color: var(--border); }
+  .btn-outline:hover { background: #f9fafb; border-color: #d1d5db; }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: none; padding: 4px 8px; }
+  .btn-ghost:hover { color: var(--text); background: #f3f4f6; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); cursor: pointer; transition: all 0.15s; }
+  .icon-btn:hover { background: #f9fafb; }
+
+  /* Filter Bar */
+  .filter-bar { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); transition: all 0.15s; user-select: none; }
+  .filter-chip:hover { border-color: var(--primary-border); color: var(--primary); }
+  .filter-chip.active { background: var(--primary-light); border-color: var(--primary-border); color: var(--primary); }
+  .filter-chip .count { background: #e5e7eb; padding: 0 5px; border-radius: 999px; font-size: 11px; min-width: 18px; text-align: center; }
+  .filter-chip.active .count { background: var(--primary-border); color: var(--primary); }
+  .filter-divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .search-input { flex: 1; min-width: 200px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
+  .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+
+  /* Column Toggle */
+  .col-toggle-bar { display: flex; gap: 4px; align-items: center; padding: 8px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .col-toggle { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); transition: all 0.15s; }
+  .col-toggle.on { background: #f0fdf4; border-color: #bbf7d0; color: var(--success); }
+  .col-toggle:hover { border-color: #9ca3af; }
+
+  /* Stats Bar */
+  .stats-bar { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
+  .stat { display: flex; align-items: center; gap: 4px; }
+  .stat .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat .dot.green { background: var(--success); }
+  .stat .dot.yellow { background: var(--warning); }
+  .stat .dot.red { background: var(--danger); }
+  .stat .dot.blue { background: var(--primary); }
+
+  /* Table */
+  .table-wrapper { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .table-scroll { overflow-x: auto; max-height: 520px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { position: sticky; top: 0; z-index: 10; }
+  th { background: #f9fafb; padding: 8px 12px; text-align: left; font-weight: 600; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; position: relative; }
+  th:hover { color: var(--text); }
+  th .sort-icon { font-size: 10px; margin-left: 3px; opacity: 0.4; }
+  th.sorted .sort-icon { opacity: 1; color: var(--primary); }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  tr:hover td { background: #f9fafb; }
+  tr.selected td { background: var(--primary-light); }
+  tr.missing td { background: #fffbeb; }
+
+  /* Editable cell */
+  .cell-editable { cursor: pointer; padding: 2px 6px; border-radius: 4px; min-height: 24px; transition: all 0.15s; position: relative; }
+  .cell-editable:hover { background: #e0e7ff; }
+  .cell-editable.empty { color: #d1d5db; font-style: italic; }
+  .cell-editable.editing { background: white; border: 1px solid var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+  .cell-editable input { border: none; outline: none; width: 100%; font-size: 13px; background: transparent; padding: 0; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge-success { background: var(--success-light); color: var(--success); }
+  .badge-warning { background: var(--warning-light); color: var(--warning); }
+  .badge-danger { background: var(--danger-light); color: var(--danger); }
+  .badge-muted { background: #f3f4f6; color: var(--text-muted); }
+  .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: #f3f4f6; color: var(--text-muted); margin-right: 3px; }
+  .tag-missing { background: #fef3c7; color: #92400e; border: 1px dashed #f59e0b; }
+
+  /* Batch Action Bar */
+  .batch-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--primary); color: white; border-radius: 10px; margin-bottom: 12px; animation: slideDown 0.2s ease; }
+  @keyframes slideDown { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .batch-bar .selected-count { font-weight: 600; font-size: 13px; }
+  .batch-bar .btn { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.15); color: white; }
+  .batch-bar .btn:hover { background: rgba(255,255,255,0.25); }
+  .batch-bar .separator { width: 1px; height: 24px; background: rgba(255,255,255,0.2); }
+
+  /* Table Toolbar */
+  .table-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border); background: #fafafa; }
+
+  /* Checkbox */
+  .checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #d1d5db; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .checkbox:hover { border-color: var(--primary); }
+  .checkbox.checked { background: var(--primary); border-color: var(--primary); }
+  .checkbox.checked::after { content: '✓'; color: white; font-size: 11px; font-weight: 700; }
+
+  /* Pagination */
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+  .page-btns { display: flex; gap: 2px; }
+  .page-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 12px; }
+  .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .page-btn:hover:not(.active) { background: #f3f4f6; }
+
+  /* Source link */
+  .source-link { color: var(--primary); text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 3px; }
+  .source-link:hover { text-decoration: underline; }
+  .no-source { color: #d1d5db; font-size: 12px; }
+
+  /* Flow diagram */
+  .flow-section { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+  .flow-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .flow-diagram { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; padding: 16px 0; }
+  .flow-node { padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; text-align: center; min-width: 120px; border: 1px solid var(--border); background: var(--card); }
+  .flow-node.entry { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+  .flow-node.core { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+  .flow-node.action { background: #fef3c7; border-color: #fcd34d; color: #b45309; }
+  .flow-arrow { font-size: 18px; color: #9ca3af; margin: 0 8px; }
+
+  /* Feature list */
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+  .feature-card { padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+  .feature-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .feature-card p { font-size: 12px; color: var(--text-muted); }
+  .feature-card .icon { width: 20px; height: 20px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .feature-card .icon.blue { background: #dbeafe; color: #2563eb; }
+  .feature-card .icon.green { background: #d1fae5; color: #059669; }
+  .feature-card .icon.amber { background: #fef3c7; color: #d97706; }
+  .feature-card .icon.red { background: #fee2e2; color: #dc2626; }
+
+  /* CSV import preview */
+  .import-preview { margin: 16px 0; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+  .import-preview h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .import-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  .import-row .status { width: 16px; text-align: center; }
+
+  /* Tooltip */
+  .tooltip-wrap { position: relative; }
+  .tooltip-wrap .tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; z-index: 100; }
+  .tooltip-wrap:hover .tooltip { display: block; }
+
+  /* Section divider */
+  .section-divider { margin: 24px 0 16px; font-size: 16px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Missing highlight */
+  .missing-indicator { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; margin-right: 4px; vertical-align: middle; }
+
+  /* Source tag */
+  .source-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  .source-tag.csv { background: #ede9fe; color: #6d28d9; }
+  .source-tag.fetched { background: #dbeafe; color: #2563eb; }
+  .source-tag.manual { background: #f3f4f6; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<div class="prototype-banner">
+  📐 原型预览 · 批量数据维护工作台 · 仅供参考，非最终实现
+</div>
+
+<div class="app">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>批量数据维护</h1>
+    <p>统一管理书籍元数据：导入、补全、抓取、修正，一站式完成。</p>
+  </div>
+
+  <!-- ===== Section: Entry & Flow ===== -->
+  <div class="section-divider">入口与流程</div>
+
+  <div class="flow-section">
+    <h3>两个入口 → 一个工作台</h3>
+    <div class="flow-diagram">
+      <div class="flow-node entry">📄 CSV 导入</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node core">📊 批量数据维护工作台</div>
+      <div class="flow-arrow">←</div>
+      <div class="flow-node entry">🔍 书库筛选</div>
+    </div>
+    <p style="text-align:center;color:#6b7280;font-size:12px;margin-top:8px;">CSV 导入后自动进入工作台加载新书；也可从书库按条件筛选进入工作台维护已有书籍。</p>
+
+    <h3 style="margin-top:20px;">工作台内操作闭环</h3>
+    <div class="flow-diagram">
+      <div class="flow-node action">① 筛选定位</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node action">② 补充链接</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node action">③ 批量抓取</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node action">④ 确认更新</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node core">⑤ 完成</div>
+    </div>
+  </div>
+
+  <!-- ===== Section: Core Features ===== -->
+  <div class="section-divider">核心能力</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4><span class="icon blue">📊</span> 表格视图</h4>
+      <p>书籍属性以列展示，支持列显隐切换。可排序、可横向滚动。每行一书，清晰对比。</p>
+    </div>
+    <div class="feature-card">
+      <h4><span class="icon green">🔍</span> 智能筛选</h4>
+      <p>快捷筛选缺失属性（缺作者/ISBN/来源链接等），支持按分类、状态、标签、评分范围筛选。</p>
+    </div>
+    <div class="feature-card">
+      <h4><span class="icon amber">✏️</span> 单元格编辑</h4>
+      <p>点击单元格直接编辑（source_url、作者、ISBN 等）。无 source_url 的书可当场补充链接。</p>
+    </div>
+    <div class="feature-card">
+      <h4><span class="icon blue">🔄</span> 批量抓取</h4>
+      <p>选中多行后一键抓取元数据。支持预览差异 → 勾选确认 → 批量应用，不覆盖已有值。</p>
+    </div>
+    <div class="feature-card">
+      <h4><span class="icon green">📦</span> CSV 导入衔接</h4>
+      <p>CSV 导入完成后直接进入工作台，新导入的书自动加载。失败行可在线修正后重试。</p>
+    </div>
+    <div class="feature-card">
+      <h4><span class="icon red">🏷️</span> 来源追踪</h4>
+      <p>每本书标记数据来源（CSV 导入 / 手动添加 / 抓取更新），区分数据可靠性。</p>
+    </div>
+  </div>
+
+  <!-- ===== Section: Interactive Prototype ===== -->
+  <div class="section-divider">交互原型 · 工作台主体</div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <span style="font-size:12px;font-weight:600;color:#6b7280;">快速筛选</span>
+    <div class="filter-chip active" onclick="this.classList.toggle('active')">
+      缺少作者 <span class="count">23</span>
+    </div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">
+      缺少 ISBN <span class="count">45</span>
+    </div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">
+      缺少出版社 <span class="count">31</span>
+    </div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">
+      缺少来源链接 <span class="count">18</span>
+    </div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">
+      有链接未抓取 <span class="count">12</span>
+    </div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">
+      缺少描述 <span class="count">67</span>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">分类</div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">状态</div>
+    <div class="filter-chip" onclick="this.classList.toggle('active')">标签</div>
+    <div class="filter-divider"></div>
+    <input class="search-input" placeholder="搜索书名、作者、ISBN..." value="">
+  </div>
+
+  <!-- Column Toggle Bar -->
+  <div class="col-toggle-bar">
+    <span style="font-size:11px;font-weight:600;color:#9ca3af;margin-right:4px;">显示列</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">书名</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">作者</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">ISBN</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">出版社</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">出版年</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">来源链接</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">状态</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">分类</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">副标题</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">译者</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">原书名</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">页数</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">描述</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">语言</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">评分</span>
+    <span class="col-toggle" onclick="this.classList.toggle('on')">标签</span>
+    <span class="col-toggle on" onclick="this.classList.toggle('on')">来源</span>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <span>共 238 本书</span>
+    <span class="stat"><span class="dot green"></span> 完整 156</span>
+    <span class="stat"><span class="dot yellow"></span> 缺失 72</span>
+    <span class="stat"><span class="dot red"></span> 无链接 18</span>
+    <span class="stat"><span class="dot blue"></span> 本次选中 3</span>
+  </div>
+
+  <!-- Batch Action Bar (shown when rows selected) -->
+  <div class="batch-bar" id="batchBar">
+    <span class="selected-count">已选 3 本</span>
+    <div class="separator"></div>
+    <button class="btn btn-sm">🔄 批量抓取信息</button>
+    <button class="btn btn-sm">🖼️ 批量更新封面</button>
+    <button class="btn btn-sm">📂 设置分类</button>
+    <button class="btn btn-sm">🏷️ 设置标签</button>
+    <button class="btn btn-sm">📊 设置状态</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-sm" style="opacity:0.7;">✕ 取消选择</button>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-wrapper">
+    <div class="table-toolbar">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="checkbox checked" onclick="this.classList.toggle('checked')"></div>
+        <span style="font-size:12px;color:#6b7280;">全选</span>
+        <span style="font-size:12px;color:#d1d5db;margin:0 4px;">|</span>
+        <button class="btn btn-ghost btn-sm">只选缺失项</button>
+        <button class="btn btn-ghost btn-sm">只选有链接</button>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-outline btn-sm">📥 导出 CSV</button>
+        <button class="btn btn-outline btn-sm">📄 导入 CSV</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;padding-left:12px;">
+              <div class="checkbox checked"></div>
+            </th>
+            <th class="sorted" style="min-width:180px;">书名 <span class="sort-icon">▲</span></th>
+            <th style="min-width:100px;">作者 <span class="sort-icon">↕</span></th>
+            <th style="min-width:120px;">ISBN <span class="sort-icon">↕</span></th>
+            <th style="min-width:100px;">出版社 <span class="sort-icon">↕</span></th>
+            <th style="width:70px;">出版年 <span class="sort-icon">↕</span></th>
+            <th style="min-width:160px;">来源链接 <span class="sort-icon">↕</span></th>
+            <th style="width:70px;">状态 <span class="sort-icon">↕</span></th>
+            <th style="min-width:80px;">分类 <span class="sort-icon">↕</span></th>
+            <th style="width:60px;">来源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row 1: Complete book -->
+          <tr class="selected" onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox checked" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">思考，快与慢</td>
+            <td><div class="cell-editable">丹尼尔·卡尼曼</div></td>
+            <td><div class="cell-editable">978-7-5086-3355-8</div></td>
+            <td><div class="cell-editable">中信出版社</div></td>
+            <td><div class="cell-editable">2012</div></td>
+            <td><a class="source-link" href="#">🔗 douban.com/subject/107...</a></td>
+            <td><span class="badge badge-success">已读</span></td>
+            <td><span class="tag">认知科学</span></td>
+            <td><span class="source-tag fetched">抓取</span></td>
+          </tr>
+          <!-- Row 2: Missing author & ISBN -->
+          <tr class="selected missing" onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox checked" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">从一到无穷大</td>
+            <td>
+              <div class="cell-editable empty" onclick="startEdit(this)" title="点击编辑">
+                <span class="missing-indicator"></span>点击补充...
+              </div>
+            </td>
+            <td>
+              <div class="cell-editable empty" onclick="startEdit(this)" title="点击编辑">
+                <span class="missing-indicator"></span>点击补充...
+              </div>
+            </td>
+            <td><div class="cell-editable empty" onclick="startEdit(this)" title="点击编辑"><span class="missing-indicator"></span>点击补充...</div></td>
+            <td><div class="cell-editable empty" onclick="startEdit(this)">—</div></td>
+            <td>
+              <div class="cell-editable" onclick="startEdit(this)" title="点击编辑">
+                <a class="source-link" href="#">🔗 douban.com/subject/192...</a>
+              </div>
+            </td>
+            <td><span class="badge badge-muted">想读</span></td>
+            <td><span class="tag tag-missing">未分类</span></td>
+            <td><span class="source-tag csv">CSV</span></td>
+          </tr>
+          <!-- Row 3: Has link, not fetched -->
+          <tr class="selected" onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox checked" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">博弈论与生活</td>
+            <td><div class="cell-editable empty"><span class="missing-indicator"></span>点击补充...</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td>
+              <div class="cell-editable" onclick="startEdit(this)" title="点击编辑">
+                <a class="source-link" href="#">🔗 douban.com/subject/359...</a>
+              </div>
+            </td>
+            <td><span class="badge badge-warning">计划读</span></td>
+            <td><span class="tag">博弈论</span></td>
+            <td><span class="source-tag csv">CSV</span></td>
+          </tr>
+          <!-- Row 4: No source URL -->
+          <tr class="missing" onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">打造第二大腦</td>
+            <td><div class="cell-editable">提亞戈·佛特</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable">2022</div></td>
+            <td>
+              <div class="cell-editable empty" onclick="startEdit(this)" title="点击补充来源链接">
+                <span class="missing-indicator"></span>点击补充链接...
+              </div>
+            </td>
+            <td><span class="badge badge-muted">收录</span></td>
+            <td><span class="tag">效率</span></td>
+            <td><span class="source-tag manual">手动</span></td>
+          </tr>
+          <!-- Row 5: Complete -->
+          <tr onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">不原谅也没关系</td>
+            <td><div class="cell-editable">皮特·沃克</div></td>
+            <td><div class="cell-editable">978-7-5217-5647-3</div></td>
+            <td><div class="cell-editable">中信出版社</div></td>
+            <td><div class="cell-editable">2023</div></td>
+            <td><a class="source-link" href="#">🔗 douban.com/subject/363...</a></td>
+            <td><span class="badge badge-primary">在读</span></td>
+            <td><span class="tag">心理学</span></td>
+            <td><span class="source-tag fetched">抓取</span></td>
+          </tr>
+          <!-- Row 6: Missing many -->
+          <tr class="missing" onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">人类简史</td>
+            <td><div class="cell-editable empty"><span class="missing-indicator"></span>点击补充...</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable empty"><span class="missing-indicator"></span>点击补充...</div></td>
+            <td><div class="cell-editable empty">—</div></td>
+            <td><div class="cell-editable empty" onclick="startEdit(this)"><span class="missing-indicator"></span>点击补充链接...</div></td>
+            <td><span class="badge badge-muted">收录</span></td>
+            <td><span class="tag tag-missing">未分类</span></td>
+            <td><span class="source-tag csv">CSV</span></td>
+          </tr>
+          <!-- Row 7: Has ISBN, partial info -->
+          <tr onclick="toggleRow(this)">
+            <td style="padding-left:12px;"><div class="checkbox" onclick="event.stopPropagation();this.classList.toggle('checked');updateSelection()"></div></td>
+            <td style="font-weight:500;">穷查理宝典</td>
+            <td><div class="cell-editable">查理·芒格</div></td>
+            <td><div class="cell-editable">978-7-5086-7092-3</div></td>
+            <td><div class="cell-editable">中信出版社</div></td>
+            <td><div class="cell-editable">2016</div></td>
+            <td><a class="source-link" href="#">🔗 neodb.social/books/...</a></td>
+            <td><span class="badge badge-success">已读</span></td>
+            <td><span class="tag">投资</span></td>
+            <td><span class="source-tag fetched">抓取</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <span>显示 1-7 / 共 238 本（当前筛选：缺作者 23 本）</span>
+      <div class="page-btns">
+        <button class="page-btn">‹</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">...</button>
+        <button class="page-btn">35</button>
+        <button class="page-btn">›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section: CSV Import Flow ===== -->
+  <div class="section-divider">CSV 导入流程</div>
+
+  <div class="flow-section">
+    <h3>导入后自动进入工作台</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">CSV 导入不再是一个孤立操作。导入完成后，新书自动加载到工作台，用户可立即开始补全。</p>
+
+    <div class="import-preview">
+      <h4>📋 CSV 导入预览（dry_run 模式）</h4>
+      <div style="margin:8px 0;font-size:12px;color:#6b7280;">
+        共 10 行 · <span style="color:#059669;">✓ 有效 8</span> · <span style="color:#d97706;">⏭ 跳过 1</span> · <span style="color:#dc2626;">✗ 失败 1</span>
+      </div>
+      <div class="import-row"><span class="status" style="color:#059669;">✓</span> <span style="flex:1">思考，快与慢</span> <span style="color:#6b7280">有效</span></div>
+      <div class="import-row"><span class="status" style="color:#059669;">✓</span> <span style="flex:1">从一到无穷大</span> <span style="color:#6b7280">有效</span></div>
+      <div class="import-row"><span class="status" style="color:#059669;">✓</span> <span style="flex:1">博弈论与生活</span> <span style="color:#6b7280">有效</span></div>
+      <div class="import-row"><span class="status" style="color:#d97706;">⏭</span> <span style="flex:1">思考，快与慢</span> <span style="color:#d97706">重复：已存在相同 ISBN</span></div>
+      <div class="import-row"><span class="status" style="color:#059669;">✓</span> <span style="flex:1">打造第二大腦</span> <span style="color:#6b7280">有效</span></div>
+      <div class="import-row"><span class="status" style="color:#dc2626;">✗</span> <span style="flex:1">(空)</span> <span style="color:#dc2626">错误：书名不能为空</span></div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn btn-primary">确认导入 (7本) → 进入工作台</button>
+        <button class="btn btn-outline">下载失败记录</button>
+        <button class="btn btn-outline">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Section: Batch Fetch Preview ===== -->
+  <div class="section-divider">批量抓取预览</div>
+
+  <div class="flow-section">
+    <h3>抓取结果 → 确认差异 → 应用更新</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">批量抓取后，系统对比现有值与抓取值。只填充空字段，不覆盖已有值。用户可逐字段控制。</p>
+
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:12px;color:#6b7280;">更新字段：</span>
+        <span class="filter-chip active" onclick="this.classList.toggle('active')">作者</span>
+        <span class="filter-chip active" onclick="this.classList.toggle('active')">ISBN</span>
+        <span class="filter-chip active" onclick="this.classList.toggle('active')">出版社</span>
+        <span class="filter-chip active" onclick="this.classList.toggle('active')">出版年</span>
+        <span class="filter-chip active" onclick="this.classList.toggle('active')">描述</span>
+        <span class="filter-chip" onclick="this.classList.toggle('active')">副标题</span>
+        <span class="filter-chip" onclick="this.classList.toggle('active')">译者</span>
+        <span class="filter-chip" onclick="this.classList.toggle('active')">原书名</span>
+        <span class="filter-chip" onclick="this.classList.toggle('active')">页数</span>
+        <span class="filter-chip" onclick="this.classList.toggle('active')">语言</span>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;padding-left:12px;"><div class="checkbox checked"></div></th>
+            <th style="min-width:140px;">书名</th>
+            <th style="min-width:80px;">当前作者</th>
+            <th style="min-width:80px;">抓取到作者</th>
+            <th style="min-width:80px;">当前ISBN</th>
+            <th style="min-width:100px;">抓取到ISBN</th>
+            <th style="min-width:100px;">状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#f0fdf4;">
+            <td style="padding-left:12px;"><div class="checkbox checked"></div></td>
+            <td style="font-weight:500;">从一到无穷大</td>
+            <td><span style="color:#d1d5db;font-style:italic;">空</span></td>
+            <td><span style="color:#059669;font-weight:500;">乔治·伽莫夫 ✓</span></td>
+            <td><span style="color:#d1d5db;font-style:italic;">空</span></td>
+            <td><span style="color:#059669;font-weight:500;">978-7-02-010281-3 ✓</span></td>
+            <td><span class="badge badge-success">将更新 4 个字段</span></td>
+          </tr>
+          <tr style="background:#f0fdf4;">
+            <td style="padding-left:12px;"><div class="checkbox checked"></div></td>
+            <td style="font-weight:500;">博弈论与生活</td>
+            <td><span style="color:#d1d5db;font-style:italic;">空</span></td>
+            <td><span style="color:#059669;font-weight:500;">兰·费雪 ✓</span></td>
+            <td><span style="color:#d1d5db;font-style:italic;">空</span></td>
+            <td><span style="color:#059669;font-weight:500;">978-7-5495-8705-5 ✓</span></td>
+            <td><span class="badge badge-success">将更新 4 个字段</span></td>
+          </tr>
+          <tr>
+            <td style="padding-left:12px;"><div class="checkbox"></div></td>
+            <td style="font-weight:500;">思考，快与慢</td>
+            <td>丹尼尔·卡尼曼</td>
+            <td><span style="color:#6b7280;">已有值，不覆盖</span></td>
+            <td>978-7-5086-3355-8</td>
+            <td><span style="color:#6b7280;">已有值，不覆盖</span></td>
+            <td><span class="badge badge-muted">无需更新</span></td>
+          </tr>
+          <tr style="background:#fef2f2;">
+            <td style="padding-left:12px;"><div class="checkbox"></div></td>
+            <td style="font-weight:500;">打造第二大腦</td>
+            <td colspan="4" style="color:#dc2626;font-size:12px;">⏭ 跳过：无来源链接（需先补充 source_url）</td>
+            <td><span class="badge badge-danger">跳过</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-primary">确认更新 (2本，共 8 个字段)</button>
+      <button class="btn btn-outline">取消</button>
+      <span style="font-size:12px;color:#6b7280;margin-left:8px;">只填充空字段，不覆盖已有值</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleRow(tr) {
+  tr.classList.toggle('selected');
+  const cb = tr.querySelector('.checkbox');
+  if (cb) cb.classList.toggle('checked');
+  updateSelection();
+}
+
+function updateSelection() {
+  const selected = document.querySelectorAll('tbody tr.selected');
+  const bar = document.getElementById('batchBar');
+  if (bar) {
+    bar.querySelector('.selected-count').textContent = `已选 ${selected.length} 本`;
+    bar.style.display = selected.length > 0 ? 'flex' : 'none';
+  }
+}
+
+function startEdit(cell) {
+  if (cell.classList.contains('editing')) return;
+  const text = cell.textContent.trim();
+  const currentVal = (text === '点击补充...' || text === '点击补充链接...' || text === '—') ? '' : text;
+  cell.classList.add('editing');
+  cell.innerHTML = `<input type="text" value="${currentVal}" placeholder="${cell.textContent.includes('链接') ? '粘贴豆瓣/NeoDB链接...' : '输入...'}" onblur="finishEdit(this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.parentElement.classList.remove('editing');this.parentElement.innerHTML='${text}'}">`;
+  cell.querySelector('input').focus();
+}
+
+function finishEdit(input) {
+  const cell = input.parentElement;
+  const val = input.value.trim();
+  cell.classList.remove('editing');
+  if (val) {
+    if (val.includes('douban.com') || val.includes('neodb.social')) {
+      cell.innerHTML = `<a class="source-link" href="#">🔗 ${val.substring(0, 30)}...</a>`;
+    } else {
+      cell.textContent = val;
+    }
+    cell.classList.remove('empty');
+  } else {
+    cell.classList.add('empty');
+    cell.innerHTML = '<span class="missing-indicator"></span>点击补充...';
+  }
+}
+
+updateSelection();
+</script>
+
+</body>
+</html>

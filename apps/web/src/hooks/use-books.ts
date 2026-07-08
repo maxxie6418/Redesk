@@ -497,6 +497,8 @@ export interface BatchPreviewRow {
   error?: string;
   will_fill: string[];
   existing: string[];
+  has_cover: boolean;
+  cover_url: string | null;
 }
 
 export function useBatchPreviewMetadata() {

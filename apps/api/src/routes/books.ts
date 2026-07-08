@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
-import { and, asc, count, desc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, exists, inArray, notExists, or, sql } from 'drizzle-orm';
 import { bookCovers, bookFiles, bookRelations, bookTags, books, categories, statusHistory, tags, highlights, notes, bookmarks, readingProgress, type StorageMode } from '@redesk/db';
 import {
   ERROR_CODE,
@@ -15,8 +15,9 @@ import {
   metadataApplySchema,
   batchPreviewSchema,
   batchApplySchema,
+  maintenanceListSchema,
 } from '@redesk/shared';
-import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
+import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput, MaintenanceListInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
 import { requireUserId, getPublicUserId } from '../lib/auth';
@@ -1024,12 +1025,24 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       error?: string;
       will_fill: string[];
       existing: string[];
+      has_cover: boolean;
+      cover_url: string | null;
     }
     const rows: PreviewRow[] = [];
 
+    const coverMap = new Map<number, boolean>();
+    if (input.ids.length > 0) {
+      const coverRows = db
+        .select({ book_id: bookCovers.book_id })
+        .from(bookCovers)
+        .where(and(inArray(bookCovers.book_id, input.ids), eq(bookCovers.is_active, 1)))
+        .all();
+      for (const c of coverRows) coverMap.set(c.book_id, true);
+    }
+
     async function processOne(b: typeof ownedBooks[number]): Promise<PreviewRow> {
       if (!b.source_url) {
-        return { book_id: b.id, title: b.title, success: false, skipped: true, reason: 'no_source_url', will_fill: [], existing: [] };
+        return { book_id: b.id, title: b.title, success: false, skipped: true, reason: 'no_source_url', will_fill: [], existing: [], has_cover: coverMap.has(b.id), cover_url: null };
       }
       try {
         const metadata = await fetchBookMetadataFromUrl(b.source_url);
@@ -1047,10 +1060,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
             }
           }
         }
-        return { book_id: b.id, title: b.title, success: true, will_fill: willFill, existing: existing };
+        return { book_id: b.id, title: b.title, success: true, will_fill: willFill, existing: existing, has_cover: coverMap.has(b.id), cover_url: metadata.cover_url ?? null };
       } catch (err) {
         const message = err instanceof Error ? err.message : '抓取失败';
-        return { book_id: b.id, title: b.title, success: false, error: message, will_fill: [], existing: [] };
+        return { book_id: b.id, title: b.title, success: false, error: message, will_fill: [], existing: [], has_cover: coverMap.has(b.id), cover_url: null };
       }
     }
 
@@ -1102,6 +1115,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
     const allowedFields = new Set(['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count', 'metadata_source']);
     const restrictedFields = input.fields && input.fields.length > 0 ? new Set(input.fields) : null;
+    const shouldFetchCover = restrictedFields == null || restrictedFields.has('cover');
 
     const rows: { book_id: number; success: boolean; error?: string; filled_fields: string[] }[] = [];
 
@@ -1126,7 +1140,23 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           updates.updated_at = timestamp;
           db.update(books).set(updates).where(eq(books.id, book.id)).run();
         }
-        rows.push({ book_id: book.id, success: true, filled_fields: Object.keys(updates) });
+        const filledFields = Object.keys(updates);
+
+        if (shouldFetchCover && metadata.cover_url) {
+          try {
+            const shouldActivateCover = !hasActiveBookCover(book.id);
+            await downloadRemoteCover({
+              ownerId: userId,
+              bookId: book.id,
+              coverUrl: metadata.cover_url,
+              sourceLabel: metadata.metadata_source,
+              activate: shouldActivateCover,
+            });
+            filledFields.push('cover');
+          } catch { /* 封面下载失败不影响其他字段 */ }
+        }
+
+        rows.push({ book_id: book.id, success: true, filled_fields: filledFields });
       } catch (err) {
         const message = err instanceof Error ? err.message : '抓取失败';
         rows.push({ book_id: book.id, success: false, error: message, filled_fields: [] });
@@ -1938,5 +1968,238 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     db.delete(books).where(and(eq(books.owner_id, userId), inArray(books.id, trashedIds))).run();
 
     return { data: { affected: trashedBooks.length } };
+  });
+
+  app.get('/books/maintenance/stats', async (req) => {
+    const userId = requireUserId(req);
+    const db = getDb();
+
+    const baseCondition = and(eq(books.owner_id, userId), sql`${books.deleted_at} IS NULL`);
+
+    const total = db.select({ value: count() }).from(books).where(baseCondition).get()?.value ?? 0;
+
+    const coreFields = ['author', 'isbn', 'publisher', 'publish_year', 'description'] as const;
+    const allFields = [
+      'author', 'isbn', 'publisher', 'publish_year', 'description',
+      'translator', 'subtitle', 'original_title', 'page_count', 'language',
+    ] as const;
+
+    const missingFields: Record<string, number> = {};
+    for (const field of allFields) {
+      const c = db
+        .select({ value: count() })
+        .from(books)
+        .where(and(baseCondition, sql`(${books[field]} IS NULL OR TRIM(CAST(${books[field]} AS TEXT)) = '')`))
+        .get()?.value ?? 0;
+      missingFields[field] = c;
+    }
+
+    const missingAnyConditions = coreFields.map(
+      (f) => sql`(${books[f]} IS NULL OR TRIM(CAST(${books[f]} AS TEXT)) = '')`,
+    );
+    const missingAny = db
+      .select({ value: count() })
+      .from(books)
+      .where(and(baseCondition, or(...missingAnyConditions)))
+      .get()?.value ?? 0;
+
+    const noSourceUrl = db
+      .select({ value: count() })
+      .from(books)
+      .where(and(baseCondition, sql`${books.source_url} IS NULL OR TRIM(${books.source_url}) = ''`))
+      .get()?.value ?? 0;
+
+    const hasSourceNotFetched = db
+      .select({ value: count() })
+      .from(books)
+      .where(and(
+        baseCondition,
+        sql`${books.source_url} IS NOT NULL AND TRIM(${books.source_url}) <> ''`,
+        eq(books.metadata_source, 'manual'),
+      ))
+      .get()?.value ?? 0;
+
+    const noCover = db
+      .select({ value: count() })
+      .from(books)
+      .where(and(
+        baseCondition,
+        notExists(
+          db.select({ _1: bookCovers.id }).from(bookCovers)
+            .where(and(eq(bookCovers.book_id, books.id), eq(bookCovers.is_active, 1))),
+        ),
+      ))
+      .get()?.value ?? 0;
+
+    return {
+      data: {
+        total,
+        complete: total - missingAny,
+        missing_any: missingAny,
+        missing_fields: missingFields,
+        no_source_url: noSourceUrl,
+        has_source_url_not_fetched: hasSourceNotFetched,
+        no_cover: noCover,
+      },
+    };
+  });
+
+  app.get('/books/maintenance/list', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(maintenanceListSchema, req.query) as MaintenanceListInput;
+    const db = getDb();
+    const page = input.page ?? 1;
+    const pageSize = Math.min(input.page_size ?? 50, 100);
+
+    const conditions: ReturnType<typeof and>[] = [
+      eq(books.owner_id, userId),
+      sql`${books.deleted_at} IS NULL`,
+    ];
+
+    if (input.q) {
+      conditions.push(
+        sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
+      );
+    }
+
+    if (input.missing) {
+      const fields = input.missing.split(',').map((f) => f.trim()).filter(Boolean);
+      for (const field of fields) {
+        if (['author', 'isbn', 'publisher', 'publish_year', 'description', 'translator', 'subtitle', 'original_title', 'page_count', 'language'].includes(field)) {
+          const col = books[field as keyof typeof books];
+          conditions.push(sql`(${col} IS NULL OR TRIM(CAST(${col} AS TEXT)) = '')`);
+        }
+      }
+    }
+
+    if (input.no_source_url) {
+      conditions.push(sql`${books.source_url} IS NULL OR TRIM(${books.source_url}) = ''`);
+    }
+
+    if (input.has_source_url_not_fetched) {
+      conditions.push(sql`${books.source_url} IS NOT NULL AND TRIM(${books.source_url}) <> ''`);
+      conditions.push(eq(books.metadata_source, 'manual'));
+    }
+
+    if (input.no_cover) {
+      conditions.push(
+        notExists(
+          db.select({ _1: bookCovers.id }).from(bookCovers)
+            .where(and(eq(bookCovers.book_id, books.id), eq(bookCovers.is_active, 1))),
+        ),
+      );
+    }
+
+    if (input.category_id) {
+      conditions.push(eq(books.category_id, input.category_id));
+    }
+
+    if (input.genre_category_id) {
+      conditions.push(eq(books.genre_category_id, input.genre_category_id));
+    }
+
+    if (input.status) {
+      const statuses = input.status.split(',').map((s) => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        conditions.push(eq(books.status, statuses[0]));
+      } else if (statuses.length > 1) {
+        conditions.push(inArray(books.status, statuses));
+      }
+    }
+
+    if (input.tag_ids) {
+      const tagIdList = input.tag_ids.split(',').map((t) => Number(t.trim())).filter((n) => !Number.isNaN(n));
+      if (tagIdList.length === 1) {
+        conditions.push(
+          exists(
+            db.select({ _1: bookTags.book_id }).from(bookTags)
+              .where(and(eq(bookTags.book_id, books.id), eq(bookTags.tag_id, tagIdList[0]))),
+          ),
+        );
+      } else if (tagIdList.length > 1) {
+        conditions.push(
+          exists(
+            db.select({ _1: bookTags.book_id }).from(bookTags)
+              .where(and(eq(bookTags.book_id, books.id), inArray(bookTags.tag_id, tagIdList))),
+          ),
+        );
+      }
+    }
+
+    if (input.book_ids) {
+      const idList = input.book_ids.split(',').map((id) => Number(id.trim())).filter((n) => !Number.isNaN(n));
+      if (idList.length > 0) {
+        conditions.push(inArray(books.id, idList));
+      }
+    }
+
+    const where = and(...conditions);
+    const total = db.select({ value: count() }).from(books).where(where).get()?.value ?? 0;
+
+    let orderBy = desc(books.updated_at);
+    if (input.sort) {
+      const descending = input.sort.startsWith('-');
+      const field = descending ? input.sort.slice(1) : input.sort;
+      const sortable: Record<string, ReturnType<typeof desc>> = {
+        title: descending ? desc(books.title) : asc(books.title),
+        author: descending ? desc(books.author) : asc(books.author),
+        isbn: descending ? desc(books.isbn) : asc(books.isbn),
+        publisher: descending ? desc(books.publisher) : asc(books.publisher),
+        publish_year: descending ? desc(books.publish_year) : asc(books.publish_year),
+        created_at: descending ? desc(books.created_at) : asc(books.created_at),
+        updated_at: descending ? desc(books.updated_at) : asc(books.updated_at),
+      };
+      if (sortable[field]) {
+        orderBy = sortable[field];
+      }
+    }
+
+    const offset = (page - 1) * pageSize;
+    const rows = db
+      .select(bookSelect())
+      .from(books)
+      .where(where)
+      .orderBy(orderBy)
+      .limit(pageSize)
+      .offset(offset)
+      .all();
+
+    const bookIds = rows.map((r) => r.id);
+
+    const activeCovers = bookIds.length > 0
+      ? db
+          .select({
+            book_id: bookCovers.book_id,
+            local_path: bookCovers.local_path,
+            remote_key: bookCovers.remote_key,
+            storage_mode: bookCovers.storage_mode,
+            primary_location: bookCovers.primary_location,
+          })
+          .from(bookCovers)
+          .where(and(inArray(bookCovers.book_id, bookIds), eq(bookCovers.is_active, 1)))
+          .all()
+      : [];
+    const coverMap = new Map(activeCovers.map((c) => [c.book_id, c]));
+
+    const data = serializeBooks(rows, userId).map((book) => {
+      const bookId = book.id;
+      const bookTagRows = db
+        .select({ name: tags.name })
+        .from(bookTags)
+        .innerJoin(tags, eq(bookTags.tag_id, tags.id))
+        .where(eq(bookTags.book_id, bookId))
+        .all();
+      const cover = coverMap.get(bookId);
+      return {
+        ...book,
+        tags: bookTagRows.map((t) => t.name),
+        has_cover: Boolean(cover),
+      };
+    });
+
+    return {
+      data,
+      pagination: { page, page_size: pageSize, total },
+    };
   });
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, Loader2, RotateCcw, SkipForward, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, Image, Loader2, RotateCcw, SkipForward, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -271,6 +271,8 @@ interface FetchRowState {
   willFill?: string[];
   existing?: string[];
   filled?: string[];
+  has_cover?: boolean;
+  cover_url?: string | null;
 }
 
 export interface FetchPreviewRow {
@@ -282,6 +284,8 @@ export interface FetchPreviewRow {
   error?: string;
   will_fill: string[];
   existing: string[];
+  has_cover: boolean;
+  cover_url: string | null;
 }
 
 export interface FetchApplyRow {
@@ -303,6 +307,7 @@ export const METADATA_FIELD_LIST = [
   { key: 'translator', label: '译者' },
   { key: 'original_title', label: '原书名' },
   { key: 'page_count', label: '页数' },
+  { key: 'cover', label: '封面' },
 ] as const;
 
 const FIELD_LABEL_MAP = Object.fromEntries(METADATA_FIELD_LIST.map((f) => [f.key, f.label])) as Record<string, string>;
@@ -405,7 +410,13 @@ export function BatchFetchResultDialog({
       } else if (!item.success) {
         newStates.set(rowKey, { status: 'error', error: item.error });
       } else {
-        newStates.set(rowKey, { status: 'fetched', willFill: item.will_fill, existing: item.existing });
+        newStates.set(rowKey, {
+            status: 'fetched',
+            willFill: item.will_fill,
+            existing: item.existing,
+            has_cover: item.has_cover,
+            cover_url: item.cover_url,
+          });
       }
     }
     setFetchStates(newStates);
@@ -422,7 +433,8 @@ export function BatchFetchResultDialog({
     for (const [key, state] of fetchStates) {
       if (state.status === 'fetched') {
         const visibleWillFill = (state.willFill ?? []).filter((f) => visibleFields.has(f));
-        if (visibleWillFill.length > 0) keys.push(key);
+        const hasCoverToFetch = visibleFields.has('cover') && !state.has_cover && Boolean(state.cover_url);
+        if (visibleWillFill.length > 0 || hasCoverToFetch) keys.push(key);
       }
     }
     return keys;
@@ -554,10 +566,11 @@ export function BatchFetchResultDialog({
     }
     if (state?.status === 'fetched') {
       const visibleWillFill = (state.willFill ?? []).filter((f) => visibleFields.has(f));
+      const hasCoverToFetch = visibleFields.has('cover') && !state.has_cover && Boolean(state.cover_url);
       return {
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
         text: willFillText(state.willFill ?? [], visibleFields),
-        checkable: visibleWillFill.length > 0,
+        checkable: visibleWillFill.length > 0 || hasCoverToFetch,
         checked,
       };
     }
@@ -721,7 +734,7 @@ export function BatchFetchResultDialog({
         )}
 
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[800px] text-sm">
             <thead className="sticky top-0 z-10 bg-muted text-xs font-medium text-muted-foreground">
               <tr>
                 <th className="w-10 px-3 py-2 text-left">
@@ -733,6 +746,7 @@ export function BatchFetchResultDialog({
                     disabled={phase === 'fetching' || phase === 'applying' || phase === 'done'}
                   />
                 </th>
+                <th className="w-12 px-3 py-2 text-left">封面</th>
                 <th className="min-w-[120px] px-3 py-2 text-left">书名</th>
                 <th className="min-w-[80px] px-3 py-2 text-left">作者</th>
                 <th className="min-w-[80px] px-3 py-2 text-left">来源链接</th>
@@ -764,6 +778,22 @@ export function BatchFetchResultDialog({
                         />
                       ) : null}
                     </td>
+                    <td className="px-3 py-2.5">
+                      {(state?.cover_url && !state.has_cover) ? (
+                        <div className="flex items-center gap-1">
+                          <img src={state.cover_url} alt="" className="h-10 w-7 rounded object-cover shadow-sm" loading="lazy" />
+                          <span className="text-[10px] text-blue-600">可抓取</span>
+                        </div>
+                      ) : state?.has_cover ? (
+                        <img src={`/api/v1/books/${row.id}/cover`} alt="" className="h-10 w-7 rounded object-cover shadow-sm" loading="lazy" />
+                      ) : row.sourceUrl ? (
+                        <div className="flex h-10 w-7 items-center justify-center rounded border border-dashed border-muted-foreground/30 bg-muted/50">
+                          <Image className="h-3 w-3 text-muted-foreground/40" />
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/40">—</span>
+                      )}
+                    </td>
                     <td className="max-w-[220px] px-3 py-2.5 font-medium">
                       <span className="line-clamp-1" title={row.title ?? ''}>{row.title ?? '—'}</span>
                     </td>
@@ -779,7 +809,7 @@ export function BatchFetchResultDialog({
                           className="inline-flex items-center gap-0.5 text-xs text-blue-600 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          豆瓣 <ExternalLink className="h-3 w-3" />
+                          链接 <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -790,6 +820,7 @@ export function BatchFetchResultDialog({
                         {state?.status === 'fetched' || state?.status === 'applied' ? (
                           <div className="flex flex-wrap gap-1">
                             {METADATA_FIELD_LIST
+                              .filter((f) => f.key !== 'cover')
                               .filter((f) => visibleFields.has(f.key))
                               .map((f) => {
                                 const inWillFill = (state.willFill ?? []).includes(f.key);
@@ -816,6 +847,24 @@ export function BatchFetchResultDialog({
                                   </span>
                                 );
                               })}
+                            {visibleFields.has('cover') && (
+                              <span
+                                className={cn(
+                                  'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                                  (state.filled ?? []).includes('cover') ? 'border-emerald-300 bg-emerald-50 text-emerald-700' :
+                                  state.has_cover ? 'border-border bg-muted text-muted-foreground' :
+                                  state.cover_url ? 'border-blue-300 bg-blue-50 text-blue-700' :
+                                  'border-border bg-card text-muted-foreground/50',
+                                )}
+                                title={
+                                  (state.filled ?? []).includes('cover') ? '封面已下载' :
+                                  state.has_cover ? '已有封面' :
+                                  state.cover_url ? '可抓取封面' : '无封面'
+                                }
+                              >
+                                封面{(state.filled ?? []).includes('cover') ? ' ✓' : !state.has_cover && state.cover_url ? ' +' : ''}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
