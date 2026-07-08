@@ -112,14 +112,20 @@
     border-color: var(--color-border);
   }
   html {
-    scrollbar-gutter: stable;
+    height: 100%;
   }
   body {
+    height: 100%;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  #root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 }
 

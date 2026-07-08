@@ -116,6 +116,7 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, 
 
   return (
     <article
+      data-book-card
       className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
       style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' } as CSSProperties}
     >
@@ -170,7 +171,7 @@ export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete, 
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+    <article data-book-card className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       <div className="relative mb-3 overflow-hidden rounded-xl leading-[0]">
         <button
           type="button"
@@ -240,7 +241,7 @@ export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete, 
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+    <article data-book-card className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
         className={cn('relative block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
@@ -414,7 +415,7 @@ export function BookshelfFilterBar({
   onViewModeChange: (value: ViewMode) => void;
 }) {
   return (
-    <section className="mb-5 flex flex-wrap items-center gap-3">
+    <section className="mb-5 flex flex-wrap items-center gap-3 px-6 lg:px-8">
       <StatusPills value={status} onChange={onStatusChange} />
       <div className="hidden h-5 w-px bg-border sm:block" />
 
@@ -601,6 +602,8 @@ export interface BookshelfPaginationProps {
   totalPages: number;
   pageSize: number;
   pageSizes: readonly number[];
+  displayedCount: number;
+  totalCount: number | null;
   isFetching: boolean;
   onPrev: () => void;
   onNext: () => void;
@@ -613,6 +616,8 @@ export function BookshelfPagination({
   totalPages,
   pageSize,
   pageSizes,
+  displayedCount,
+  totalCount,
   isFetching,
   onPrev,
   onNext,
@@ -630,8 +635,10 @@ export function BookshelfPagination({
   const showEndEllipsis = end < totalPages - 1;
 
   return (
-    <div className="sticky bottom-0 z-10 flex items-center justify-center gap-3 border-t border-border bg-background/95 px-3 py-2 backdrop-blur-sm">
-      <span className="mr-1 text-[11px] text-muted-foreground">{currentPage}/{totalPages}页</span>
+    <div className="shrink-0 z-10 flex items-center justify-between border-t border-border bg-background/95 px-4 py-2 backdrop-blur-sm">
+      <span className="min-w-[140px] text-[11px] text-muted-foreground">
+        显示 {displayedCount} 本{totalCount != null && totalCount > displayedCount ? `，共 ${totalCount} 本` : ''}
+      </span>
 
       <div className="flex items-center gap-1">
         {currentPage > 1 ? (
@@ -693,18 +700,21 @@ export function BookshelfPagination({
             ›
           </button>
         ) : null}
+
+        <span className="ml-1 text-[11px] text-muted-foreground">{currentPage}/{totalPages}</span>
       </div>
 
-      <div className="ml-2 flex items-center gap-1 border-l border-border pl-3 text-[11px] text-muted-foreground">
+      <div className="flex min-w-[140px] items-center justify-end gap-1">
+        <span className="mr-1.5 text-[11px] text-muted-foreground">每页</span>
         {pageSizes.map((size: number) => (
           <button
             key={size}
             type="button"
             className={cn(
-              'inline-flex h-7 min-w-[28px] items-center justify-center rounded border px-1.5 text-xs font-medium transition-colors',
+              'inline-flex h-6 min-w-[26px] items-center justify-center rounded px-1 text-[11px] font-medium transition-colors',
               size === pageSize
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-card text-muted-foreground hover:bg-muted',
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
             onClick={() => onPageSizeChange(size)}
           >

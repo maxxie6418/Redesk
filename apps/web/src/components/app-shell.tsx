@@ -51,8 +51,8 @@ export function AppShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="sticky top-0 self-start">
+    <div className="flex h-full overflow-hidden bg-background">
+      <div className="shrink-0">
         <AppSidebar
           activeKey={activeKey}
           authViewModel={authViewModel}
@@ -62,7 +62,7 @@ export function AppShell({
           stats={stats}
         />
       </div>
-      <main className={cn('min-w-0 flex-1', mainClassName)}>{children}</main>
+      <main className={cn('min-w-0 flex-1 flex flex-col', mainClassName)}>{children}</main>
     </div>
   );
 }

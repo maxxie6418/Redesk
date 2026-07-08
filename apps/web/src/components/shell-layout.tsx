@@ -10,7 +10,7 @@ interface ShellLayoutProps {
 export function ShellLayout({ user, children }: ShellLayoutProps) {
   return (
     <ShellUserContext.Provider value={user}>
-      <div className="min-h-screen bg-background">{children}</div>
+      <div className="h-screen overflow-hidden bg-background">{children}</div>
     </ShellUserContext.Provider>
   );
 }

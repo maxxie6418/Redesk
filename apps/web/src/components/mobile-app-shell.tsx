@@ -67,8 +67,8 @@ export function MobileAppShell({
     : 'border-white/70 bg-[rgba(255,253,248,0.92)]';
 
   return (
-    <div className={cn('min-h-screen', pageClassName)}>
-      <main className={cn('mx-auto min-h-screen w-full max-w-md px-4 pt-4', mainClassName)}>
+    <div className={cn('h-full overflow-y-auto', pageClassName)}>
+      <main className={cn('mx-auto w-full max-w-md px-4 pt-4', mainClassName)}>
         <div className="pb-28">{children}</div>
       </main>
 

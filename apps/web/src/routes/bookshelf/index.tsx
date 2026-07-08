@@ -16,7 +16,7 @@ import { ProtectedShell } from '@/components/protected-shell';
 import { type FilterSelectOption } from '@/components/page-ui/filter-select';
 import { BookshelfContent, BookshelfFilterBar, BookshelfPagination, StatusPills } from './components';
 import { CreateBookForm } from './create-book-form';
-import { SORT_API_MAP, SORT_OPTIONS, VIEW_DEFAULT_PAGE_SIZE, VIEW_PAGE_SIZE_MULTIPLIERS, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
+import { SORT_API_MAP, SORT_OPTIONS, VIEW_PAGE_SIZE_MULTIPLIERS, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
 
 
 
@@ -36,13 +36,13 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [showCreate, setShowCreate] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
-  const [pageSize, setPageSize] = useState<number>(VIEW_DEFAULT_PAGE_SIZE['A']);
+  const [pageSize, setPageSize] = useState(12);
   const [booksPage, setBooksPage] = useState(1);
   const [trashPage, setTrashPage] = useState(1);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const contentViewportRef = useRef<HTMLDivElement | null>(null);
   const contentMeasureRef = useRef<HTMLDivElement | null>(null);
-  const [dynamicPageSizes, setDynamicPageSizes] = useState<readonly number[]>(VIEW_PAGE_SIZE_MULTIPLIERS.map((m: number) => Math.max(1, Math.round(VIEW_DEFAULT_PAGE_SIZE.A * m))));
+  const [dynamicPageSizes, setDynamicPageSizes] = useState<readonly number[]>([8, 12, 18]);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const personalCategories = useCategories('PERSONAL');
@@ -180,11 +180,12 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       const sampleCard = measureRoot.querySelector('[data-book-card]') as HTMLElement | null;
       if (!sampleCard) return;
 
-      const viewportHeight = viewport.clientHeight;
-      const paginationReserve = 56;
+      const availableHeight = viewport.clientHeight;
+      if (availableHeight <= 0) return;
+
       const verticalGap = viewMode === 'D' ? 4 : 12;
-      const availableHeight = Math.max(120, viewportHeight - paginationReserve);
       const cardHeight = Math.ceil(sampleCard.getBoundingClientRect().height);
+      if (cardHeight <= 0) return;
       const rowHeight = cardHeight + verticalGap;
 
       let columns = 1;
@@ -193,32 +194,48 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       } else if (viewMode === 'B') {
         columns = window.innerWidth >= 1536 ? 7 : window.innerWidth >= 1280 ? 6 : window.innerWidth >= 1024 ? 5 : window.innerWidth >= 768 ? 4 : window.innerWidth >= 640 ? 3 : 2;
       } else if (viewMode === 'C') {
-        columns = window.innerWidth >= 1536 ? 5 : 4;
+        columns = window.innerWidth >= 1536 ? 5 : window.innerWidth >= 640 ? 4 : 3;
       }
 
-      const baseRows = Math.max(1, Math.floor((availableHeight + verticalGap) / rowHeight));
-      const baseCount = Math.max(1, baseRows * columns);
-      const sizes = VIEW_PAGE_SIZE_MULTIPLIERS.map((multiplier: number) => {
-        const rows = Math.max(1, Math.round(baseRows * multiplier));
-        return Math.max(1, rows * columns);
-      });
+      const sizes = VIEW_PAGE_SIZE_MULTIPLIERS.map((ratio) => {
+         const totalRows = Math.max(1, Math.ceil(ratio * availableHeight / rowHeight));
+         return Math.max(1, totalRows * columns);
+       });
       const uniqueSizes = Array.from(new Set<number>(sizes)).sort((a: number, b: number) => a - b);
-      const resolvedSizes: readonly number[] = uniqueSizes.length > 0 ? uniqueSizes : [baseCount];
+      const resolvedSizes: readonly number[] = uniqueSizes.length > 0 ? uniqueSizes : [columns];
 
       setDynamicPageSizes(resolvedSizes);
-      setPageSize((current) => (resolvedSizes.includes(current) ? current : resolvedSizes[0]));
+      setPageSize((current) => {
+        if (resolvedSizes.includes(current)) return current;
+        let closest = resolvedSizes[0];
+        let minDiff = Math.abs(current - closest);
+        for (let i = 1; i < resolvedSizes.length; i++) {
+          const diff = Math.abs(current - resolvedSizes[i]);
+          if (diff < minDiff) { minDiff = diff; closest = resolvedSizes[i]; }
+        }
+        return closest;
+      });
     };
 
-    recalculate();
-    const resizeObserver = new ResizeObserver(() => recalculate());
+    let frameId = requestAnimationFrame(() => {
+      frameId = requestAnimationFrame(recalculate);
+    });
+    const resizeTimer = { current: 0 };
+    const debouncedRecalculate = () => {
+      cancelAnimationFrame(resizeTimer.current);
+      resizeTimer.current = requestAnimationFrame(recalculate);
+    };
+    const resizeObserver = new ResizeObserver(debouncedRecalculate);
     if (contentViewportRef.current) resizeObserver.observe(contentViewportRef.current);
     if (contentMeasureRef.current) resizeObserver.observe(contentMeasureRef.current);
-    window.addEventListener('resize', recalculate);
+    window.addEventListener('resize', debouncedRecalculate);
     return () => {
+      cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', recalculate);
+      window.removeEventListener('resize', debouncedRecalculate);
+      cancelAnimationFrame(resizeTimer.current);
     };
-  }, [books.length, isMobileLayout, pageView, viewMode]);
+  }, [isMobileLayout, pageView, viewMode]);
 
   const categoryOptions = useMemo<FilterSelectOption[]>(
     () => [
@@ -285,7 +302,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
         onSearchChange={setSearch}
         stats={sidebarStats}
         mobileNavKey="bookshelf"
-        mainClassName={isMobileLayout ? 'px-0 py-0' : 'px-6 py-6 lg:px-8'}
+        mainClassName={isMobileLayout ? 'px-0 py-0' : 'overflow-hidden pt-6 pb-0'}
       >
         {isMobileLayout ? (
           <MobileBookshelf
@@ -315,13 +332,9 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
           />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
-            <header className="mb-5 flex items-center justify-between">
+            <header className="mb-5 flex items-center justify-between px-6 lg:px-8">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">{pageView === 'trash' ? '回收站' : '书架'}</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {isLoading ? '正在加载' : `显示 ${books.length} 本书`}
-                  {total != null && total > books.length ? `（共 ${total} 本）` : ''}
-                </p>
               </div>
               <div className="flex items-center gap-2">
                 {pageView === 'trash' && books.length > 0 ? (
@@ -362,7 +375,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 onViewModeChange={handleViewModeChange}
               />
             ) : (
-              <section className="mb-5">
+              <section className="mb-5 px-6 lg:px-8">
                 <StatusPills value={status} onChange={setStatus} />
               </section>
             )}
@@ -399,9 +412,9 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             ) : null}
 
             {!isLoading && !isError && books.length > 0 ? (
-              <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-background/40">
-                <div ref={contentViewportRef} className="min-h-0 flex-1 overflow-y-auto px-1 py-1 [scrollbar-gutter:stable]">
-                  <div ref={contentMeasureRef} className="px-1 pb-3 pt-1">
+              <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div ref={contentViewportRef} className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+                  <div ref={contentMeasureRef} className="px-4 pb-2 pt-1">
                     <BookshelfContent
                       books={books}
                       viewMode={viewMode}
@@ -417,6 +430,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                   totalPages={totalPages}
                   pageSize={pageSize}
                   pageSizes={dynamicPageSizes}
+                  displayedCount={books.length}
+                  totalCount={total ?? null}
                   isFetching={isFetchingMore}
                   onPrev={handlePrevPage}
                   onNext={handleNextPage}

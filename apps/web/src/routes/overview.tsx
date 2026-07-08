@@ -161,7 +161,7 @@ export function OverviewPage() {
     <ProtectedShell
       activeKey="overview"
       stats={sidebarStats}
-      mainClassName={isMobileLayout ? 'px-0 py-0' : 'px-8 py-7'}
+      mainClassName={isMobileLayout ? 'px-0 py-0' : 'overflow-y-auto px-8 py-7'}
     >
         <div className={isMobileLayout ? 'px-4 py-4' : ''}>
         <div className="mb-6">

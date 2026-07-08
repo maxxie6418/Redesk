@@ -233,7 +233,7 @@ export function ReadingNotesPage() {
   ];
 
   return (
-    <ProtectedShell activeKey="reading-notes" stats={sidebarStats} mainClassName="min-w-0 flex-1 px-6 py-6 lg:px-8">
+    <ProtectedShell activeKey="reading-notes" stats={sidebarStats} mainClassName="overflow-y-auto px-6 py-6 lg:px-8">
       <div className="space-y-6">
         <section className="border-b border-border pb-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
