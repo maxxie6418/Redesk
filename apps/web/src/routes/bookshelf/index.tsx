@@ -341,6 +341,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                   isTrash={pageView === 'trash'}
                   onRestore={handleRestore}
                   onPermanentDelete={handlePermanentDelete}
+                  onOpenDetail={setDetailBookId}
                 />
                 {hasMore ? (
                   <div className="mt-5 flex justify-center">

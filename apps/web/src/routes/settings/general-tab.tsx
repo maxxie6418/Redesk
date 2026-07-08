@@ -26,15 +26,29 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
   const navigate = useNavigate();
 
   const [recycleDays, setRecycleDays] = useState(settings.recycle_retention_days ?? '30');
+  const [fetchConcurrency, setFetchConcurrency] = useState(settings.fetch_concurrency ?? '1');
 
   const handleSave = useCallback(async () => {
+    const days = Number(recycleDays);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      onToast({ type: 'error', text: '保留天数需在 1~365 之间' });
+      return;
+    }
+    const concurrency = Number(fetchConcurrency);
+    if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 5) {
+      onToast({ type: 'error', text: '抓取并发数需在 1~5 之间' });
+      return;
+    }
     try {
-      await updateSettings.mutateAsync({ recycle_retention_days: recycleDays });
+      await updateSettings.mutateAsync({
+        recycle_retention_days: String(days),
+        fetch_concurrency: String(concurrency),
+      });
       onToast({ type: 'info', text: '设置已保存' });
     } catch {
       onToast({ type: 'error', text: '保存失败' });
     }
-  }, [recycleDays, updateSettings, onToast]);
+  }, [recycleDays, fetchConcurrency, updateSettings, onToast]);
 
   return (
     <div className="space-y-6">
@@ -43,8 +57,8 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
           <CardTitle className="text-base">回收站</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border border-border bg-popover px-4 py-3">
-            <div>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-popover px-4 py-3">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground">保留天数</p>
               <p className="text-xs text-muted-foreground">超过该天数的回收站书籍将被自动清理。</p>
             </div>
@@ -55,6 +69,28 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
               className="w-24"
               value={recycleDays}
               onChange={(e) => setRecycleDays(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">抓取设置</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-popover px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">抓取并发数</p>
+              <p className="text-xs text-muted-foreground">批量抓取豆瓣 / NeoDB 元数据时同时进行的请求数。数值过高可能触发反爬，建议 1~2。</p>
+            </div>
+            <Input
+              type="number"
+              min={1}
+              max={5}
+              className="w-24"
+              value={fetchConcurrency}
+              onChange={(e) => setFetchConcurrency(e.target.value)}
             />
           </div>
         </CardContent>

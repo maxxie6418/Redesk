@@ -4,10 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { BatchImportPanel } from '@/components/batch-import-panel';
-import { useBatchBooks, useBooks, type BookSummary } from '@/hooks/use-books';
+import {
+  useBatchBooks,
+  useBatchFetchBookCovers,
+  useBatchPreviewMetadata,
+  useBatchApplyMetadata,
+  useBooks,
+  type BookSummary,
+  type BatchPreviewRow,
+  type BatchApplyRow,
+} from '@/hooks/use-books';
 import { useBatchSendFilesToCloud, useFileLibrary, type BookFileItem } from '@/hooks/use-files';
 import { BatchUploadMatchCard } from './batch-upload-card';
-import { BatchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
+import { BatchFetchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
 import type { StatusMessage } from './types';
 
 const BATCH_PAGE_SIZE = 50;
@@ -23,6 +32,9 @@ function BatchBookActionsCard({
   const [page, setPage] = useState(1);
   const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
   const booksQuery = useBooks({ q: search.trim() || undefined, page, page_size: BATCH_PAGE_SIZE, sort: '-updated_at' });
+  const previewMetadata = useBatchPreviewMetadata();
+  const applyMetadata = useBatchApplyMetadata();
+  const batchFetchCovers = useBatchFetchBookCovers();
   const batchBooks = useBatchBooks();
 
   useEffect(() => {
@@ -66,13 +78,21 @@ function BatchBookActionsCard({
     setDialogOpen(true);
   };
 
-  const runAction = async (ids: number[]) => {
-    if (!dialogAction || ids.length === 0) return;
+  const handlePreview = async (ids: number[]): Promise<BatchPreviewRow[]> => {
+    return previewMetadata.mutateAsync(ids);
+  };
+
+  const handleApply = async (ids: number[]): Promise<BatchApplyRow[]> => {
+    const rows = await applyMetadata.mutateAsync(ids);
+    return rows;
+  };
+
+  const handleFetchCovers = async (ids: number[]) => {
     try {
-      await batchBooks.mutateAsync({ ids, action: dialogAction });
-      onToast({ type: 'info', text: dialogAction === 'fetch_metadata' ? '已提交批量抓取信息' : '已提交批量更新封面' });
+      const result = await batchFetchCovers.mutateAsync(ids);
+      onToast({ type: 'info', text: `已抓取 ${result.success}/${result.total} 本书的封面` });
     } catch (error) {
-      onToast({ type: 'error', text: error instanceof Error ? error.message : '批量处理失败' });
+      onToast({ type: 'error', text: error instanceof Error ? error.message : '批量更新封面失败' });
     }
   };
 
@@ -132,19 +152,46 @@ function BatchBookActionsCard({
         </div>
       </CardContent>
 
-      {dialogOpen && dialogAction ? (
-        <BatchResultDialog
-          title={dialogAction === 'fetch_metadata' ? '批量抓取信息' : '批量更新封面'}
-          subtitle={`当前结果共 ${dialogRows.length} 本书`}
+      {dialogOpen && dialogAction === 'fetch_metadata' ? (
+        <BatchFetchResultDialog
+          title="批量抓取信息"
+          subtitle={`当前结果共 ${dialogRows.length} 本书。抓取后请勾选要更新的书并确认。`}
           rows={dialogRows}
-          mode="batch"
           onClose={() => {
             setDialogOpen(false);
             setDialogAction(null);
           }}
-          onFetchInfo={runAction}
-          isFetching={batchBooks.isPending}
-          hideDownloadFailed
+          onPreview={handlePreview}
+          onApply={handleApply}
+        />
+      ) : null}
+
+      {dialogOpen && dialogAction === 'fetch_cover' ? (
+        <BatchFetchResultDialog
+          title="批量更新封面"
+          subtitle={`当前结果共 ${dialogRows.length} 本书。封面将直接抓取并应用。`}
+          rows={dialogRows}
+          onClose={() => {
+            setDialogOpen(false);
+            setDialogAction(null);
+          }}
+          onPreview={async (ids) => {
+            const result = await batchFetchCovers.mutateAsync(ids);
+            return result.rows.map((r) => ({
+              book_id: r.book_id,
+              title: books.find((b) => b.id === r.book_id)?.title ?? '',
+              success: r.success,
+              skipped: !r.success && r.error === 'no_source_url',
+              reason: r.error ?? undefined,
+              error: r.success ? undefined : r.error ?? undefined,
+              will_fill: r.success ? ['封面'] : [],
+              existing: r.success ? [] : [],
+            }));
+          }}
+          onApply={async (ids) => {
+            await handleFetchCovers(ids);
+            return ids.map((id) => ({ book_id: id, success: true, filled_fields: ['封面'] }));
+          }}
         />
       ) : null}
     </Card>

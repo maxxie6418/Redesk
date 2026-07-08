@@ -13,6 +13,8 @@ import {
   trashQuerySchema,
   duplicateQuerySchema,
   metadataApplySchema,
+  batchPreviewSchema,
+  batchApplySchema,
 } from '@redesk/shared';
 import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
@@ -23,6 +25,7 @@ import { extname } from 'node:path';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
 import { serializeBookRow, type RawBookRow } from './book-serialization';
+import { readStorageSetting } from '../lib/storage-factory';
 
 function now(): string {
   return new Date().toISOString();
@@ -971,6 +974,164 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .get();
 
     return { data: serializeBooks([updatedBook as RawBookRow], userId)[0] };
+  });
+
+  function getFetchConcurrency(): number {
+    const raw = readStorageSetting('fetch_concurrency');
+    if (!raw) return 1;
+    const num = Number(raw);
+    if (!Number.isInteger(num) || num < 1) return 1;
+    if (num > 5) return 5;
+    return num;
+  }
+
+  app.post('/books/metadata/batch-preview', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(batchPreviewSchema, req.body);
+    const db = getDb();
+
+    const ownedBooks = db
+      .select({
+        id: books.id,
+        title: books.title,
+        author: books.author,
+        subtitle: books.subtitle,
+        isbn: books.isbn,
+        publisher: books.publisher,
+        publish_year: books.publish_year,
+        description: books.description,
+        language: books.language,
+        translator: books.translator,
+        original_title: books.original_title,
+        page_count: books.page_count,
+        source_url: books.source_url,
+      })
+      .from(books)
+      .where(and(eq(books.owner_id, userId), inArray(books.id, input.ids), sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    if (ownedBooks.length === 0) throw notFound('未找到可操作的书籍');
+
+    const concurrency = getFetchConcurrency();
+    const allowedFields = ['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count'];
+
+    interface PreviewRow {
+      book_id: number;
+      title: string;
+      success: boolean;
+      skipped?: boolean;
+      reason?: string;
+      error?: string;
+      will_fill: string[];
+      existing: string[];
+    }
+    const rows: PreviewRow[] = [];
+
+    async function processOne(b: typeof ownedBooks[number]): Promise<PreviewRow> {
+      if (!b.source_url) {
+        return { book_id: b.id, title: b.title, success: false, skipped: true, reason: 'no_source_url', will_fill: [], existing: [] };
+      }
+      try {
+        const metadata = await fetchBookMetadataFromUrl(b.source_url);
+        const willFill: string[] = [];
+        const existing: string[] = [];
+        for (const field of allowedFields) {
+          const currentVal = (b as Record<string, unknown>)[field];
+          const hasValue = currentVal != null && String(currentVal).trim() !== '';
+          if (hasValue) {
+            existing.push(field);
+          } else {
+            const fetchedVal = (metadata as unknown as Record<string, unknown>)[field];
+            if (fetchedVal != null && String(fetchedVal).trim() !== '') {
+              willFill.push(field);
+            }
+          }
+        }
+        return { book_id: b.id, title: b.title, success: true, will_fill: willFill, existing: existing };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '抓取失败';
+        return { book_id: b.id, title: b.title, success: false, error: message, will_fill: [], existing: [] };
+      }
+    }
+
+    let running = 0;
+    let cursor = 0;
+    const queue = [...ownedBooks];
+
+    await new Promise<void>((resolve) => {
+      function next() {
+        while (running < concurrency && cursor < queue.length) {
+          const book = queue[cursor++];
+          running++;
+          processOne(book).then((row) => {
+            rows.push(row);
+            running--;
+            next();
+          });
+        }
+        if (running === 0 && cursor >= queue.length) {
+          resolve();
+        }
+      }
+      next();
+    });
+
+    rows.sort((a, b) => ownedBooks.findIndex((ob) => ob.id === a.book_id) - ownedBooks.findIndex((ob) => ob.id === b.book_id));
+
+    return {
+      data: rows,
+    };
+  });
+
+  app.post('/books/metadata/batch-apply', async (req) => {
+    const userId = requireUserId(req);
+    const input = validate(batchApplySchema, req.body);
+    const db = getDb();
+    const timestamp = now();
+
+    const ownedBooks = db
+      .select({
+        id: books.id,
+        source_url: books.source_url,
+      })
+      .from(books)
+      .where(and(eq(books.owner_id, userId), inArray(books.id, input.ids), sql`${books.deleted_at} IS NULL`))
+      .all();
+
+    if (ownedBooks.length === 0) throw notFound('未找到可操作的书籍');
+
+    const allowedFields = new Set(['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count', 'metadata_source']);
+
+    const rows: { book_id: number; success: boolean; error?: string; filled_fields: string[] }[] = [];
+
+    for (const book of ownedBooks) {
+      if (!book.source_url) {
+        rows.push({ book_id: book.id, success: false, error: '无来源链接', filled_fields: [] });
+        continue;
+      }
+      try {
+        const metadata = await fetchBookMetadataFromUrl(book.source_url);
+        const existing = db.select().from(books).where(eq(books.id, book.id)).get();
+        const updates: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(metadata)) {
+          if (!allowedFields.has(key)) continue;
+          if (value == null || String(value).trim() === '') continue;
+          const currentVal = (existing as Record<string, unknown>)[key];
+          if (currentVal != null && String(currentVal).trim() !== '') continue;
+          updates[key] = value;
+        }
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = timestamp;
+          db.update(books).set(updates).where(eq(books.id, book.id)).run();
+        }
+        rows.push({ book_id: book.id, success: true, filled_fields: Object.keys(updates) });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '抓取失败';
+        rows.push({ book_id: book.id, success: false, error: message, filled_fields: [] });
+      }
+    }
+
+    return { data: rows };
   });
 
   app.get('/books', async (req) => {

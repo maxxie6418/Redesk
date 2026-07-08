@@ -487,3 +487,39 @@ export function useFetchBookMetadata() {
       api.post<LinkMetadata>('/books/metadata/fetch', { source_url: sourceUrl }),
   });
 }
+
+export interface BatchPreviewRow {
+  book_id: number;
+  title: string;
+  success: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  will_fill: string[];
+  existing: string[];
+}
+
+export function useBatchPreviewMetadata() {
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<BatchPreviewRow[]>('/books/metadata/batch-preview', { ids }),
+  });
+}
+
+export interface BatchApplyRow {
+  book_id: number;
+  success: boolean;
+  error?: string;
+  filled_fields: string[];
+}
+
+export function useBatchApplyMetadata() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<BatchApplyRow[]>('/books/metadata/batch-apply', { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}

@@ -18,6 +18,7 @@ interface BookCardProps {
   isTrash?: boolean;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
+  onOpenDetail?: (id: number) => void;
 }
 
 function getBookSummaryText(book: BookSummary) {
@@ -108,7 +109,7 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
   );
 }
 
-export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
@@ -127,7 +128,7 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete }
       >
         <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
       </button>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col cursor-pointer" onClick={() => onOpenDetail?.(book.id)}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
             <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
@@ -163,7 +164,7 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete }
   );
 }
 
-export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
@@ -186,7 +187,7 @@ export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete }
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col cursor-pointer" onClick={() => onOpenDetail?.(book.id)}>
         <div className="mb-1 flex items-center justify-between gap-1">
           <h3 className="line-clamp-1 flex-1 text-base font-semibold leading-tight text-foreground">{book.title}</h3>
         </div>
@@ -233,7 +234,7 @@ export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete }
   );
 }
 
-export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
@@ -249,7 +250,7 @@ export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete }
       >
         <BookCover book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
       </button>
-      <div className="flex min-w-0 flex-1 flex-col pr-7">
+      <div className="flex min-w-0 flex-1 flex-col pr-7 cursor-pointer" onClick={() => onOpenDetail?.(book.id)}>
         <div className="mb-2 flex items-center justify-between">
           <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
             <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
@@ -284,7 +285,7 @@ export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete }
   );
 }
 
-export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
+export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
@@ -300,7 +301,7 @@ export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete }
       >
         <BookCover book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
       </button>
-      <div className="min-w-0 flex-1 cursor-pointer pr-12">
+      <div className="min-w-0 flex-1 cursor-pointer pr-12" onClick={() => onOpenDetail?.(book.id)}>
         <div className="flex items-center gap-2">
           <span className={cn('h-[6px] w-[6px] shrink-0 rounded-full', statusDotClass(book.status))} />
           <span className="truncate text-sm font-medium text-foreground">{book.title}</span>
@@ -505,12 +506,14 @@ export function BookshelfContent({
   isTrash,
   onRestore,
   onPermanentDelete,
+  onOpenDetail,
 }: {
   books: BookSummary[];
   viewMode: ViewMode;
   isTrash: boolean;
   onRestore: (bookId: number) => void;
   onPermanentDelete: (bookId: number) => void;
+  onOpenDetail?: (id: number) => void;
 }) {
   if (viewMode === 'A') {
     return (
@@ -523,6 +526,7 @@ export function BookshelfContent({
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </section>
@@ -540,6 +544,7 @@ export function BookshelfContent({
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </section>
@@ -557,6 +562,7 @@ export function BookshelfContent({
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </section>
@@ -583,6 +589,7 @@ export function BookshelfContent({
           isTrash={isTrash}
           onRestore={() => onRestore(book.id)}
           onPermanentDelete={() => onPermanentDelete(book.id)}
+          onOpenDetail={onOpenDetail}
         />
       ))}
     </section>

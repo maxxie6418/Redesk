@@ -770,3 +770,13 @@ export const applyBatchMatchRequestSchema = z.object({
   matches: z.array(applyBatchMatchItemSchema).min(1).max(500),
 });
 export type ApplyBatchMatchRequestInput = z.infer<typeof applyBatchMatchRequestSchema>;
+
+export const batchPreviewSchema = z.object({
+  ids: z.array(positiveInt).min(1).max(500),
+});
+export type BatchPreviewInput = z.infer<typeof batchPreviewSchema>;
+
+export const batchApplySchema = z.object({
+  ids: z.array(positiveInt).min(1).max(500),
+});
+export type BatchApplyInput = z.infer<typeof batchApplySchema>;

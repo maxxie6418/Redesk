@@ -3,8 +3,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Download, UploadCloud, X } from 'lucide-react';
 import { ApiError, api, API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { useBatchBooks } from '@/hooks/use-books';
-import { BatchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
+import {
+  useBatchPreviewMetadata,
+  useBatchApplyMetadata,
+  type BatchPreviewRow,
+  type BatchApplyRow,
+} from '@/hooks/use-books';
+import {
+  BatchResultDialog,
+  BatchFetchResultDialog,
+  type BatchResultRow,
+} from '@/components/batch-result-dialog';
 
 interface ImportBooksResultRow {
   row: number;
@@ -33,10 +42,12 @@ export interface BatchImportPanelProps {
 
 export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPanelProps) {
   const qc = useQueryClient();
-  const batchBooks = useBatchBooks();
+  const previewMetadata = useBatchPreviewMetadata();
+  const applyMetadata = useBatchApplyMetadata();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportBooksResult | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showFetchDialog, setShowFetchDialog] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [dryRun, setDryRun] = useState(false);
@@ -59,7 +70,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         qc.invalidateQueries({ queryKey: ['categories'] });
         qc.invalidateQueries({ queryKey: ['tags'] });
       }
-      setShowDialog(true);
+      setShowImportDialog(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : '导入失败');
     } finally {
@@ -117,13 +128,20 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
       };
     }) ?? [];
 
-  const handleFetchInfo = async (ids: number[]) => {
-    try {
-      await batchBooks.mutateAsync({ ids, action: 'fetch_metadata' });
-      qc.invalidateQueries({ queryKey: ['books'] });
-    } catch {
-      // mutation handles error
-    }
+  const handleTransitionToFetch = () => {
+    setShowImportDialog(false);
+    setShowFetchDialog(true);
+  };
+
+  const handlePreview = async (ids: number[]): Promise<BatchPreviewRow[]> => {
+    const rows = await previewMetadata.mutateAsync(ids);
+    return rows;
+  };
+
+  const handleApply = async (ids: number[]): Promise<BatchApplyRow[]> => {
+    const rows = await applyMetadata.mutateAsync(ids);
+    qc.invalidateQueries({ queryKey: ['books'] });
+    return rows;
   };
 
   const uploadArea = (
@@ -227,20 +245,36 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     <>
       {panel}
       {dialog}
-      {showDialog && result ? (
+      {showImportDialog && result ? (
         <BatchResultDialog
           title={dryRun ? '校验结果' : '导入结果'}
           subtitle={`共 ${result.total} 行 · 成功 ${result.created || result.valid} · 跳过 ${result.skipped} · 失败 ${result.failed}`}
           rows={dialogRows}
           mode="import"
           onClose={() => {
-            setShowDialog(false);
+            setShowImportDialog(false);
             setResult(null);
             setFile(null);
           }}
-          onFetchInfo={handleFetchInfo}
-          isFetching={batchBooks.isPending}
+          onFetchInfo={() => {
+            handleTransitionToFetch();
+          }}
+          isFetching={false}
           onDownloadFailed={failedRows.length > 0 ? downloadFailedCsv : undefined}
+        />
+      ) : null}
+      {showFetchDialog && result ? (
+        <BatchFetchResultDialog
+          title="抓取书籍信息"
+          subtitle="抓取后请勾选要更新的书并确认。"
+          rows={dialogRows}
+          onClose={() => {
+            setShowFetchDialog(false);
+            setResult(null);
+            setFile(null);
+          }}
+          onPreview={handlePreview}
+          onApply={handleApply}
         />
       ) : null}
     </>
