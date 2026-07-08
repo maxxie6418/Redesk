@@ -6,7 +6,8 @@ import { dirname, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(resolve(here, 'package.json'), 'utf-8'));
+const root = resolve(here, '../..');
+const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'));
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

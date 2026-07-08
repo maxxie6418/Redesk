@@ -64,10 +64,12 @@ export function BatchUploadMatchCard({
   defaultMode,
   cloudAvailable,
   onToast,
+  inline = false,
 }: {
   defaultMode: StorageMode;
   cloudAvailable: boolean;
   onToast: (msg: StatusMessage) => void;
+  inline?: boolean;
 }) {
   const uploadUnassociated = useUploadUnassociatedFile();
   const applyMatches = useApplyFileMatches();
@@ -230,26 +232,60 @@ export function BatchUploadMatchCard({
   const fallbackSingleFile = uploadedFiles.find((file) => file.id === singleMatchFileId) ?? null;
   const batchItems = batchCandidates.data ?? [];
 
-  return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base">批量上传</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            accept={ACCEPTED_EXTENSIONS.join(',')}
-            className="hidden"
-            onChange={(event) => handleFiles(event.target.files)}
-          />
+  const uploadZone = (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={ACCEPTED_EXTENSIONS.join(',')}
+        className="hidden"
+        onChange={(event) => handleFiles(event.target.files)}
+      />
+      <label
+        className="group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-4 text-center transition-colors hover:border-primary/60 hover:bg-primary/10"
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="mb-2 h-8 w-8 text-primary" />
+        <div className="text-sm font-medium text-primary">
+          {items.length > 0 ? `已选择 ${items.length} 个文件` : '点击选择书籍文件'}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">支持 EPUB / PDF / MOBI / TXT 等格式</div>
+      </label>
+    </>
+  );
 
-          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-            <Upload className="mr-1 h-4 w-4" />
-            选择文件批量上传
-          </Button>
+  const content = inline ? (
+    <div className="space-y-3">
+      {uploadZone}
+      <div className="flex items-center justify-between pt-1">
+        <span className="invisible inline-flex h-9 items-center text-sm">占位</span>
+        <Button type="button" size="sm" onClick={() => inputRef.current?.click()}>
+          <Upload className="mr-1 h-4 w-4" />
+          开始上传
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {uploadZone}
+      <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+        <Upload className="mr-1 h-4 w-4" />
+        选择文件批量上传
+      </Button>
+    </div>
+  );
+
+  return (
+    <>
+      {inline ? content : (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">批量上传文件</CardTitle>
+          </CardHeader>
+          <CardContent>{content}</CardContent>
+        </Card>
+      )}
 
           {uploadDialogOpen ? (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -389,8 +425,6 @@ export function BatchUploadMatchCard({
             }}
             pending={matchFile.isPending || singleCandidates.isLoading}
           />
-        </div>
-      </CardContent>
-    </Card>
+    </>
   );
 }

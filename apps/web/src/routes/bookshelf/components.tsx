@@ -9,7 +9,7 @@ import { BookCover } from '@/components/book-cover';
 import { TagPill } from '@/components/tag-pill';
 import { RatingValue } from '@/components/rating-value';
 import { cn } from '@/lib/utils';
-import { STATUS_OPTIONS, VIEW_PAGE_SIZES, type SortMode, type ViewMode } from './constants';
+import { STATUS_OPTIONS, type SortMode, type ViewMode } from './constants';
 import { bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils';
 
 interface BookCardProps {
@@ -121,12 +121,12 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, 
     >
       <button
         type="button"
-        className={cn('relative mt-0.5 block shrink-0 self-stretch overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        className={cn('relative mt-0.5 block shrink-0 self-start overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCover book={book} index={index} className="h-full w-[130px]" rounded="rounded-md" />
+        <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col cursor-pointer" onClick={() => onOpenDetail?.(book.id)}>
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -291,7 +291,7 @@ export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete, 
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className="group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30">
+    <article data-book-card className="group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30">
       <button
         type="button"
         className={cn('relative block shrink-0 overflow-hidden rounded leading-[0] shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
@@ -600,7 +600,7 @@ export interface BookshelfPaginationProps {
   currentPage: number;
   totalPages: number;
   pageSize: number;
-  viewMode: ViewMode;
+  pageSizes: readonly number[];
   isFetching: boolean;
   onPrev: () => void;
   onNext: () => void;
@@ -612,14 +612,13 @@ export function BookshelfPagination({
   currentPage,
   totalPages,
   pageSize,
-  viewMode,
+  pageSizes,
   isFetching,
   onPrev,
   onNext,
   onGoto,
   onPageSizeChange,
 }: BookshelfPaginationProps) {
-  const pageSizes = VIEW_PAGE_SIZES[viewMode] ?? VIEW_PAGE_SIZES.A;
 
   const siblingCount = 2;
   const start = Math.max(1, currentPage - siblingCount);
@@ -631,8 +630,10 @@ export function BookshelfPagination({
   const showEndEllipsis = end < totalPages - 1;
 
   return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 border-t border-border bg-background/95 px-3 py-2 backdrop-blur-sm">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div className="sticky bottom-0 z-10 flex items-center justify-center gap-3 border-t border-border bg-background/95 px-3 py-2 backdrop-blur-sm">
+      <span className="mr-1 text-[11px] text-muted-foreground">{currentPage}/{totalPages}页</span>
+
+      <div className="flex items-center gap-1">
         {currentPage > 1 ? (
           <button
             type="button"
@@ -653,7 +654,7 @@ export function BookshelfPagination({
             1
           </button>
         ) : null}
-        {showStartEllipsis ? <span className="px-0.5">…</span> : null}
+        {showStartEllipsis ? <span className="px-0.5 text-xs text-muted-foreground">…</span> : null}
 
         {pages.map((p) => (
           <button
@@ -671,7 +672,7 @@ export function BookshelfPagination({
           </button>
         ))}
 
-        {showEndEllipsis ? <span className="px-0.5">…</span> : null}
+        {showEndEllipsis ? <span className="px-0.5 text-xs text-muted-foreground">…</span> : null}
         {end < totalPages ? (
           <button
             type="button"
@@ -694,9 +695,8 @@ export function BookshelfPagination({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <span className="mr-1 hidden sm:inline">{currentPage}/{totalPages}页</span>
-        {pageSizes.map((size) => (
+      <div className="ml-2 flex items-center gap-1 border-l border-border pl-3 text-[11px] text-muted-foreground">
+        {pageSizes.map((size: number) => (
           <button
             key={size}
             type="button"

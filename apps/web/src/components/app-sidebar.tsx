@@ -97,6 +97,9 @@ export function AppSidebar({
             R
           </div>
           <div className="font-display text-xl font-medium text-sidebar-foreground">Redesk</div>
+          <span className="rounded-full border border-sidebar-border px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground/70">
+            v{__APP_VERSION__}
+          </span>
         </div>
 
         <div className="relative mt-4">

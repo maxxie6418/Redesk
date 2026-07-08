@@ -5,17 +5,12 @@ export type ViewMode = 'A' | 'B' | 'C' | 'D';
 export type SortMode = 'import_order_asc' | 'updated_desc' | 'title_asc' | 'rating_desc';
 export type PageView = 'bookshelf' | 'trash';
 
-export const VIEW_PAGE_SIZES: Record<ViewMode, readonly number[]> = {
-  A: [12, 24, 30],
-  B: [18, 36, 45],
-  C: [15, 30, 38],
-  D: [15, 30, 38],
-};
+export const VIEW_PAGE_SIZE_MULTIPLIERS = [1, 2, 2.5] as const;
 export const VIEW_DEFAULT_PAGE_SIZE: Record<ViewMode, number> = {
   A: 12,
-  B: 18,
-  C: 15,
-  D: 15,
+  B: 12,
+  C: 12,
+  D: 12,
 };
 
 export const SORT_API_MAP: Record<SortMode, string> = {

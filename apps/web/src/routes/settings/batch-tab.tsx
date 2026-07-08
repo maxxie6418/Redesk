@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CloudUpload, Loader2, RefreshCcw, Search, Upload } from 'lucide-react';
+import { Check, CloudUpload, Loader2, RefreshCcw, Search, Upload, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -305,21 +305,37 @@ export function BatchTab({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">书籍管理</CardTitle>
-          <CardDescription>管理员专用。集中承接批量上传、批量导入、批量更新、批量抓取和发送到对象存储等操作。</CardDescription>
-        </CardHeader>
-      </Card>
-
-      <BatchUploadMatchCard defaultMode={defaultMode} cloudAvailable={cloudAvailable} onToast={onToast} />
-
-      <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base">批量添加</CardTitle>
-          <CardDescription>通过 CSV 批量创建书籍，仅写入元数据，不包含文件内容。</CardDescription>
+          <CardDescription>管理员专用。批量上传文件、CSV批量添加、批量抓取等。</CardDescription>
         </CardHeader>
-        <CardContent>
-          <BatchImportPanel variant="embedded" />
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Upload className="h-4 w-4 text-primary" />
+                上传书籍文件
+              </div>
+              <div className="flex-1">
+                <BatchUploadMatchCard
+                  defaultMode={defaultMode}
+                  cloudAvailable={cloudAvailable}
+                  onToast={onToast}
+                  inline
+                />
+              </div>
+            </div>
+            <div className="relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-2 pr-32 text-sm font-medium text-foreground">
+                <UploadCloud className="h-4 w-4 text-primary" />
+                导入 CSV 书单
+              </div>
+              <div className="flex-1">
+                <BatchImportPanel variant="plain" hideFooter />
+              </div>
+            </div>
+          </div>
+
         </CardContent>
       </Card>
 

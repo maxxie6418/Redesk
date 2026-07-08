@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Download, UploadCloud, X } from 'lucide-react';
 import { ApiError, api, API_BASE } from '@/lib/api';
@@ -36,11 +36,12 @@ interface ImportBooksResult {
 }
 
 export interface BatchImportPanelProps {
-  variant?: 'embedded' | 'dialog';
+  variant?: 'embedded' | 'dialog' | 'plain';
   onClose?: () => void;
+  hideFooter?: boolean;
 }
 
-export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPanelProps) {
+export function BatchImportPanel({ variant = 'dialog', onClose, hideFooter = false }: BatchImportPanelProps) {
   const qc = useQueryClient();
   const previewMetadata = useBatchPreviewMetadata();
   const applyMetadata = useBatchApplyMetadata();
@@ -51,6 +52,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [dryRun, setDryRun] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const importCsv = async () => {
     if (!file) {
@@ -145,29 +147,43 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
   };
 
   const uploadArea = (
-    <label className="group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-5 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
-      <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+    <label className="group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-4 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
       <UploadCloud className="mb-2 h-8 w-8 text-primary" />
       <div className="text-sm font-medium text-primary">{file ? file.name : '点击上传已填写的 CSV'}</div>
       <div className="mt-1 text-xs text-muted-foreground">支持 .csv 格式</div>
     </label>
   );
 
-  const body = (
-    <div className="space-y-5 px-6 py-5">
-      <div className="rounded-lg border border-border bg-card p-4">
-        {uploadArea}
-      </div>
+  const innerContent = (
+    <>
+      {variant === 'plain' ? uploadArea : (
+        <div className="rounded-lg border border-border bg-card p-4">
+          {uploadArea}
+        </div>
+      )}
 
-      <label className="flex items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          checked={dryRun}
-          onChange={(e) => setDryRun(e.target.checked)}
-          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-        />
-        <span>仅校验不导入（预览模式）</span>
-      </label>
+      {variant === 'plain' ? (
+        <label className="absolute right-4 top-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={dryRun}
+            onChange={(e) => setDryRun(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
+          />
+          <span>仅校验不导入</span>
+        </label>
+      ) : (
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={dryRun}
+            onChange={(e) => setDryRun(e.target.checked)}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+          />
+          <span>仅校验不导入（预览模式）</span>
+        </label>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive dark:border-destructive/30 dark:bg-destructive/15">
@@ -176,28 +192,49 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         </div>
       )}
 
-      <div className="flex justify-end gap-2.5 border-t border-border pt-5">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
-        >
-          <Download className="mr-1.5 h-3.5 w-3.5" />
-          下载 CSV 模板
-        </Button>
-        {variant === 'dialog' && onClose ? (
-          <Button type="button" variant="outline" onClick={onClose}>
-            关闭
+      {variant === 'plain' ? (
+        <div className="flex items-center justify-between pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            下载模板
           </Button>
-        ) : null}
-        <Button type="button" onClick={importCsv} disabled={submitting}>
-          {submitting ? (dryRun ? '校验中...' : '导入中...') : dryRun ? '开始校验' : '开始导入'}
-        </Button>
-      </div>
-    </div>
+          <Button type="button" size="sm" onClick={importCsv} disabled={submitting}>
+            {submitting ? (dryRun ? '校验中...' : '导入中...') : dryRun ? '开始校验' : '开始导入'}
+          </Button>
+        </div>
+      ) : null}
+
+      {!hideFooter && variant !== 'plain' ? (
+        <div className="flex justify-end gap-2.5 border-t border-border pt-5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            下载 CSV 模板
+          </Button>
+          {variant === 'dialog' && onClose ? (
+            <Button type="button" variant="outline" onClick={onClose}>
+              关闭
+            </Button>
+          ) : null}
+          <Button type="button" onClick={importCsv} disabled={submitting}>
+            {submitting ? (dryRun ? '校验中...' : '导入中...') : dryRun ? '开始校验' : '开始导入'}
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 
-  const panel = variant === 'embedded' ? <div className="rounded-xl border border-border bg-card">{body}</div> : null;
+  const body = hideFooter ? innerContent : <div className="space-y-5 px-6 py-5">{innerContent}</div>;
+
+  const panel = variant === 'embedded' ? <div className="rounded-xl border border-border bg-card">{body}</div> : variant === 'plain' ? <div className="space-y-3">{body}</div> : null;
 
   const dialog = variant === 'dialog' ? (
     <div
