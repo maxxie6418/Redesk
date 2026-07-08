@@ -5,6 +5,19 @@ export type ViewMode = 'A' | 'B' | 'C' | 'D';
 export type SortMode = 'import_order_asc' | 'updated_desc' | 'title_asc' | 'rating_desc';
 export type PageView = 'bookshelf' | 'trash';
 
+export const VIEW_PAGE_SIZES: Record<ViewMode, readonly number[]> = {
+  A: [12, 24, 30],
+  B: [18, 36, 45],
+  C: [15, 30, 38],
+  D: [15, 30, 38],
+};
+export const VIEW_DEFAULT_PAGE_SIZE: Record<ViewMode, number> = {
+  A: 12,
+  B: 18,
+  C: 15,
+  D: 15,
+};
+
 export const SORT_API_MAP: Record<SortMode, string> = {
   import_order_asc: 'import_order',
   updated_desc: '-updated_at',

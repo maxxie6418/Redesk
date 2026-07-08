@@ -9,7 +9,7 @@ import { BookCover } from '@/components/book-cover';
 import { TagPill } from '@/components/tag-pill';
 import { RatingValue } from '@/components/rating-value';
 import { cn } from '@/lib/utils';
-import { STATUS_OPTIONS, type SortMode, type ViewMode } from './constants';
+import { STATUS_OPTIONS, VIEW_PAGE_SIZES, type SortMode, type ViewMode } from './constants';
 import { bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils';
 
 interface BookCardProps {
@@ -121,12 +121,12 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, 
     >
       <button
         type="button"
-        className={cn('relative mt-0.5 block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        className={cn('relative mt-0.5 block shrink-0 self-stretch overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
-        <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
+        <BookCover book={book} index={index} className="h-full w-[130px]" rounded="rounded-md" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col cursor-pointer" onClick={() => onOpenDetail?.(book.id)}>
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -593,5 +593,125 @@ export function BookshelfContent({
         />
       ))}
     </section>
+  );
+}
+
+export interface BookshelfPaginationProps {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  viewMode: ViewMode;
+  isFetching: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onGoto: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+export function BookshelfPagination({
+  currentPage,
+  totalPages,
+  pageSize,
+  viewMode,
+  isFetching,
+  onPrev,
+  onNext,
+  onGoto,
+  onPageSizeChange,
+}: BookshelfPaginationProps) {
+  const pageSizes = VIEW_PAGE_SIZES[viewMode] ?? VIEW_PAGE_SIZES.A;
+
+  const siblingCount = 2;
+  const start = Math.max(1, currentPage - siblingCount);
+  const end = Math.min(totalPages, currentPage + siblingCount);
+  const pages: number[] = [];
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  const showStartEllipsis = start > 2;
+  const showEndEllipsis = end < totalPages - 1;
+
+  return (
+    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 border-t border-border bg-background/95 px-3 py-2 backdrop-blur-sm">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {currentPage > 1 ? (
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-card text-xs transition-colors hover:bg-muted disabled:opacity-40"
+            onClick={onPrev}
+            disabled={isFetching}
+          >
+            ‹
+          </button>
+        ) : null}
+
+        {start > 1 ? (
+          <button
+            type="button"
+            className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-border bg-card px-1.5 text-xs transition-colors hover:bg-muted"
+            onClick={() => onGoto(1)}
+          >
+            1
+          </button>
+        ) : null}
+        {showStartEllipsis ? <span className="px-0.5">…</span> : null}
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className={cn(
+              'inline-flex h-7 min-w-[28px] items-center justify-center rounded border px-1.5 text-xs font-medium transition-colors',
+              p === currentPage
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted',
+            )}
+            onClick={() => onGoto(p)}
+          >
+            {p}
+          </button>
+        ))}
+
+        {showEndEllipsis ? <span className="px-0.5">…</span> : null}
+        {end < totalPages ? (
+          <button
+            type="button"
+            className="inline-flex h-7 min-w-[28px] items-center justify-center rounded border border-border bg-card px-1.5 text-xs transition-colors hover:bg-muted"
+            onClick={() => onGoto(totalPages)}
+          >
+            {totalPages}
+          </button>
+        ) : null}
+
+        {currentPage < totalPages ? (
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-card text-xs transition-colors hover:bg-muted disabled:opacity-40"
+            onClick={onNext}
+            disabled={isFetching}
+          >
+            ›
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span className="mr-1 hidden sm:inline">{currentPage}/{totalPages}页</span>
+        {pageSizes.map((size) => (
+          <button
+            key={size}
+            type="button"
+            className={cn(
+              'inline-flex h-7 min-w-[28px] items-center justify-center rounded border px-1.5 text-xs font-medium transition-colors',
+              size === pageSize
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted',
+            )}
+            onClick={() => onPageSizeChange(size)}
+          >
+            {size}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -13,13 +13,12 @@ import { MobileBookshelf } from '@/components/mobile-bookshelf';
 import { MobileBookDetailSheet } from '@/components/mobile-book-detail-sheet';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { ProtectedShell } from '@/components/protected-shell';
-import { cn } from '@/lib/utils';
 import { type FilterSelectOption } from '@/components/page-ui/filter-select';
-import { BookshelfContent, BookshelfFilterBar, StatusPills } from './components';
+import { BookshelfContent, BookshelfFilterBar, BookshelfPagination, StatusPills } from './components';
 import { CreateBookForm } from './create-book-form';
-import { SORT_API_MAP, SORT_OPTIONS, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
+import { SORT_API_MAP, SORT_OPTIONS, VIEW_DEFAULT_PAGE_SIZE, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
 
-const BOOKSHELF_PAGE_SIZES = [12, 24, 48] as const;
+
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const isMobileLayout = useMobileLayout();
@@ -37,7 +36,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [showCreate, setShowCreate] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
-  const [pageSize, setPageSize] = useState<number>(24);
+  const [pageSize, setPageSize] = useState<number>(VIEW_DEFAULT_PAGE_SIZE['A']);
   const [booksPage, setBooksPage] = useState(1);
   const [trashPage, setTrashPage] = useState(1);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -151,10 +150,21 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     }
   }, [hasMore, pageView]);
 
-  const handlePageSizeChange = useCallback((value: string) => {
-    const size = Number(value);
-    if (!Number.isInteger(size) || size < 1) return;
+  const handlePageSizeChange = useCallback((size: number) => {
     setPageSize(size);
+    if (pageView === 'trash') setTrashPage(1);
+    else setBooksPage(1);
+  }, [pageView]);
+
+  const handleGotoPage = useCallback((p: number) => {
+    if (pageView === 'trash') setTrashPage(p);
+    else setBooksPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pageView]);
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    setPageSize(VIEW_DEFAULT_PAGE_SIZE[mode]);
   }, []);
 
   const categoryOptions = useMemo<FilterSelectOption[]>(
@@ -261,22 +271,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">
-                  <span>每页</span>
-                  {BOOKSHELF_PAGE_SIZES.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      className={cn(
-                        'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
-                        pageSize === size ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                      )}
-                      onClick={() => handlePageSizeChange(String(size))}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
                 {pageView === 'trash' && books.length > 0 ? (
                   <Button variant="destructive" size="sm" onClick={() => void handleEmptyTrash()}>
                     清空回收站
@@ -312,7 +306,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 onSortChange={setSort}
                 sortOptions={sortOptions}
                 viewMode={viewMode}
-                onViewModeChange={setViewMode}
+                onViewModeChange={handleViewModeChange}
               />
             ) : (
               <section className="mb-5">
@@ -361,17 +355,19 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                   onPermanentDelete={handlePermanentDelete}
                   onOpenDetail={setDetailBookId}
                 />
-                <div className="sticky bottom-0 mt-5 flex items-center justify-center gap-3 border-t border-border bg-background/95 py-3 backdrop-blur-sm">
-                  <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage <= 1 || isFetchingMore}>
-                    上一页
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!hasMore || isFetchingMore}>
-                    下一页
-                  </Button>
-                </div>
+                {totalPages > 1 ? (
+                  <BookshelfPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    viewMode={viewMode}
+                    isFetching={isFetchingMore}
+                    onPrev={handlePrevPage}
+                    onNext={handleNextPage}
+                    onGoto={handleGotoPage}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
+                ) : null}
               </>
             ) : null}
           </>
