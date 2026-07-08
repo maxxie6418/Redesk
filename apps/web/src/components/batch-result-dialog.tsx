@@ -269,6 +269,7 @@ interface FetchRowState {
   status: 'pending' | 'fetching' | 'fetched' | 'error' | 'skipped' | 'applied' | 'unapplied';
   error?: string;
   willFill?: string[];
+  existing?: string[];
   filled?: string[];
 }
 
@@ -290,24 +291,35 @@ export interface FetchApplyRow {
   filled_fields: string[];
 }
 
+export const METADATA_FIELD_LIST = [
+  { key: 'title', label: '标题' },
+  { key: 'author', label: '作者' },
+  { key: 'subtitle', label: '副标题' },
+  { key: 'isbn', label: 'ISBN' },
+  { key: 'publisher', label: '出版社' },
+  { key: 'publish_year', label: '出版年份' },
+  { key: 'description', label: '描述' },
+  { key: 'language', label: '语言' },
+  { key: 'translator', label: '译者' },
+  { key: 'original_title', label: '原书名' },
+  { key: 'page_count', label: '页数' },
+] as const;
+
+const FIELD_LABEL_MAP = Object.fromEntries(METADATA_FIELD_LIST.map((f) => [f.key, f.label])) as Record<string, string>;
+
 export interface BatchFetchResultDialogProps {
   title: string;
   subtitle: string;
   rows: BatchResultRow[];
   onClose: () => void;
   onPreview: (ids: number[]) => Promise<FetchPreviewRow[]>;
-  onApply: (ids: number[]) => Promise<FetchApplyRow[]>;
+  onApply: (ids: number[], fields?: string[]) => Promise<FetchApplyRow[]>;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  title: '标题', author: '作者', subtitle: '副标题', isbn: 'ISBN',
-  publisher: '出版社', publish_year: '出版年份', description: '描述',
-  language: '语言', translator: '译者', original_title: '原书名', page_count: '页数',
-};
-
-function willFillText(willFill: string[]): string {
-  if (willFill.length === 0) return '无新字段';
-  return `将填充: ${willFill.map((f) => FIELD_LABELS[f] ?? f).join('、')}`;
+function willFillText(willFill: string[], visibleFields: Set<string>): string {
+  const filtered = willFill.filter((f) => visibleFields.has(f));
+  if (filtered.length === 0) return '无新字段';
+  return `将填充: ${filtered.map((f) => FIELD_LABEL_MAP[f] ?? f).join('、')}`;
 }
 
 export function BatchFetchResultDialog({
@@ -324,6 +336,9 @@ export function BatchFetchResultDialog({
   );
   const [fetchStates, setFetchStates] = useState<Map<string, FetchRowState>>(new Map());
   const [aborted, setAborted] = useState(false);
+  const [visibleFields, setVisibleFields] = useState<Set<string>>(
+    () => new Set(METADATA_FIELD_LIST.map((f) => f.key)),
+  );
 
   const selectableKeys = useMemo(
     () => rows.filter((row) => row.id != null && row.status !== 'failed').map((row) => row.key),
@@ -346,6 +361,23 @@ export function BatchFetchResultDialog({
   };
 
   const handleClear = () => setSelectedKeys(new Set());
+
+  const handleToggleField = (fieldKey: string) => {
+    setVisibleFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(fieldKey)) next.delete(fieldKey);
+      else next.add(fieldKey);
+      return next;
+    });
+  };
+
+  const handleSelectAllFields = () => {
+    if (visibleFields.size === METADATA_FIELD_LIST.length) {
+      setVisibleFields(new Set());
+    } else {
+      setVisibleFields(new Set(METADATA_FIELD_LIST.map((f) => f.key)));
+    }
+  };
 
   const handleStartFetch = async () => {
     const ids = rows.filter((r) => selectedKeys.has(r.key) && r.id != null).map((r) => r.id as number);
@@ -373,7 +405,7 @@ export function BatchFetchResultDialog({
       } else if (!item.success) {
         newStates.set(rowKey, { status: 'error', error: item.error });
       } else {
-        newStates.set(rowKey, { status: 'fetched', willFill: item.will_fill });
+        newStates.set(rowKey, { status: 'fetched', willFill: item.will_fill, existing: item.existing });
       }
     }
     setFetchStates(newStates);
@@ -388,12 +420,13 @@ export function BatchFetchResultDialog({
   const previewableKeys = useMemo(() => {
     const keys: string[] = [];
     for (const [key, state] of fetchStates) {
-      if (state.status === 'fetched' && (state.willFill ?? []).length > 0) {
-        keys.push(key);
+      if (state.status === 'fetched') {
+        const visibleWillFill = (state.willFill ?? []).filter((f) => visibleFields.has(f));
+        if (visibleWillFill.length > 0) keys.push(key);
       }
     }
     return keys;
-  }, [fetchStates]);
+  }, [fetchStates, visibleFields]);
 
   const handleApplySelectAll = () => {
     setSelectedKeys(new Set(previewableKeys));
@@ -413,7 +446,8 @@ export function BatchFetchResultDialog({
     }
     setFetchStates(newStates);
 
-    const result = await onApply(ids);
+    const fieldsToApply = visibleFields.size > 0 ? Array.from(visibleFields) : undefined;
+    const result = await onApply(ids, fieldsToApply);
     const appliedStates = new Map(fetchStates);
     for (const item of result) {
       const key = rows.find((r) => r.id === item.book_id)?.key;
@@ -494,9 +528,10 @@ export function BatchFetchResultDialog({
     const checked = selectedKeys.has(row.key);
 
     if (state?.status === 'applied') {
+      const visibleFilled = (state.filled ?? []).filter((f) => visibleFields.has(f));
       return {
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
-        text: (state.filled ?? []).length > 0 ? `已更新 ${state.filled!.length} 个字段` : '无新字段',
+        text: visibleFilled.length > 0 ? `已更新 ${visibleFilled.map((f) => FIELD_LABEL_MAP[f] ?? f).join('、')}` : '无新字段',
         checkable: false,
         checked: false,
       };
@@ -518,7 +553,13 @@ export function BatchFetchResultDialog({
       if (state.status === 'fetching') return { icon: <Loader2 className="h-4 w-4 animate-spin text-blue-500" />, text: '抓取中', checkable: false, checked: false };
     }
     if (state?.status === 'fetched') {
-      return { icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />, text: willFillText(state.willFill ?? []), checkable: (state.willFill ?? []).length > 0, checked };
+      const visibleWillFill = (state.willFill ?? []).filter((f) => visibleFields.has(f));
+      return {
+        icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
+        text: willFillText(state.willFill ?? [], visibleFields),
+        checkable: visibleWillFill.length > 0,
+        checked,
+      };
     }
     return { icon: null, text: '—', checkable: false, checked: false };
   };
@@ -558,7 +599,7 @@ export function BatchFetchResultDialog({
       onClick={phase === 'fetching' || phase === 'applying' ? () => {} : onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-card shadow-2xl"
+        className="flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
@@ -605,43 +646,77 @@ export function BatchFetchResultDialog({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 border-b border-border bg-muted/50 px-5 py-3">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={handleToggleAll}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-              disabled={phase === 'done'}
-            />
-            <span className="text-sm">全选</span>
-            {phase === 'preview' ? (
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleApplySelectAll}>
-                选所有可更新
+          <div className="space-y-2 border-b border-border bg-muted/50 px-5 py-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleToggleAll}
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                disabled={phase === 'done'}
+              />
+              <span className="text-sm">全选</span>
+              {phase === 'preview' ? (
+                <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleApplySelectAll}>
+                  选所有可更新
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleClear} disabled={phase === 'done'}>
+                清空选择
               </Button>
-            ) : null}
-            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={handleClear} disabled={phase === 'done'}>
-              清空选择
-            </Button>
-            <div className="flex-1" />
-            {successCount + errorCount + skippedCount > 0 ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {successCount > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> {successCount}
-                  </span>
-                ) : null}
-                {errorCount > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> {errorCount}
-                  </span>
-                ) : null}
-                {skippedCount > 0 ? (
-                  <span className="flex items-center gap-1">
-                    <SkipForward className="h-3.5 w-3.5 text-amber-600" /> {skippedCount}
-                  </span>
-                ) : null}
+              <div className="flex-1" />
+              {successCount + errorCount + skippedCount > 0 ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {successCount > 0 ? (
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> {successCount}
+                    </span>
+                  ) : null}
+                  {errorCount > 0 ? (
+                    <span className="flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> {errorCount}
+                    </span>
+                  ) : null}
+                  {skippedCount > 0 ? (
+                    <span className="flex items-center gap-1">
+                      <SkipForward className="h-3.5 w-3.5 text-amber-600" /> {skippedCount}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            {(phase === 'idle' || phase === 'preview' || phase === 'done') && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">显示字段：</span>
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
+                    visibleFields.size === METADATA_FIELD_LIST.length
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-card text-muted-foreground hover:text-foreground',
+                  )}
+                  onClick={handleSelectAllFields}
+                >
+                  全选
+                </button>
+                {METADATA_FIELD_LIST.map((field) => (
+                  <button
+                    key={field.key}
+                    type="button"
+                    className={cn(
+                      'rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
+                      visibleFields.has(field.key)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-card text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => handleToggleField(field.key)}
+                  >
+                    {field.label}
+                  </button>
+                ))}
               </div>
-            ) : null}
+            )}
           </div>
         )}
 
@@ -658,15 +733,19 @@ export function BatchFetchResultDialog({
                     disabled={phase === 'fetching' || phase === 'applying' || phase === 'done'}
                   />
                 </th>
-                <th className="px-3 py-2 text-left">书名</th>
-                <th className="px-3 py-2 text-left">作者</th>
-                <th className="px-3 py-2 text-left">来源链接</th>
-                <th className="px-3 py-2 text-left">状态</th>
+                <th className="min-w-[120px] px-3 py-2 text-left">书名</th>
+                <th className="min-w-[80px] px-3 py-2 text-left">作者</th>
+                <th className="min-w-[80px] px-3 py-2 text-left">来源链接</th>
+                {(phase === 'preview' || phase === 'done') && visibleFields.size > 0 && (
+                  <th className="px-3 py-2 text-left">字段详情</th>
+                )}
+                <th className="min-w-[100px] px-3 py-2 text-left">状态</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const display = getRowDisplay(row);
+                const state = fetchStates.get(row.key);
                 return (
                   <tr
                     key={row.key}
@@ -706,6 +785,43 @@ export function BatchFetchResultDialog({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
+                    {(phase === 'preview' || phase === 'done') && visibleFields.size > 0 && (
+                      <td className="px-3 py-2.5">
+                        {state?.status === 'fetched' || state?.status === 'applied' ? (
+                          <div className="flex flex-wrap gap-1">
+                            {METADATA_FIELD_LIST
+                              .filter((f) => visibleFields.has(f.key))
+                              .map((f) => {
+                                const inWillFill = (state.willFill ?? []).includes(f.key);
+                                const inExisting = (state.existing ?? []).includes(f.key);
+                                const inFilled = (state.filled ?? []).includes(f.key);
+                                return (
+                                  <span
+                                    key={f.key}
+                                    className={cn(
+                                      'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                                      inFilled ? 'border-emerald-300 bg-emerald-50 text-emerald-700' :
+                                      inWillFill ? 'border-blue-300 bg-blue-50 text-blue-700' :
+                                      inExisting ? 'border-border bg-muted text-muted-foreground' :
+                                      'border-border bg-card text-muted-foreground/50',
+                                    )}
+                                    title={
+                                      inFilled ? '已更新' :
+                                      inWillFill ? '将填充' :
+                                      inExisting ? '已有值' : '无数据'
+                                    }
+                                  >
+                                    {f.label}
+                                    {inFilled ? ' ✓' : inWillFill ? ' +' : ''}
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-3 py-2.5 text-xs">
                       <div className="flex items-center gap-1.5">
                         {display.icon}

@@ -516,8 +516,8 @@ export interface BatchApplyRow {
 export function useBatchApplyMetadata() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: number[]) =>
-      api.post<BatchApplyRow[]>('/books/metadata/batch-apply', { ids }),
+    mutationFn: (params: { ids: number[]; fields?: string[] }) =>
+      api.post<BatchApplyRow[]>('/books/metadata/batch-apply', params),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['books'] });
     },

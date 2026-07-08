@@ -778,5 +778,6 @@ export type BatchPreviewInput = z.infer<typeof batchPreviewSchema>;
 
 export const batchApplySchema = z.object({
   ids: z.array(positiveInt).min(1).max(500),
+  fields: z.array(z.string()).optional(),
 });
 export type BatchApplyInput = z.infer<typeof batchApplySchema>;

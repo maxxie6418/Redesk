@@ -50,8 +50,6 @@ function BatchBookActionsCard({
 
   const books = loadedBooks;
   const total = booksQuery.data?.pagination.total;
-  const hasMore = total != null && books.length < total;
-  const isFetchingMore = booksQuery.isFetching && page > 1;
 
   const dialogRows: BatchResultRow[] = useMemo(
     () =>
@@ -82,8 +80,8 @@ function BatchBookActionsCard({
     return previewMetadata.mutateAsync(ids);
   };
 
-  const handleApply = async (ids: number[]): Promise<BatchApplyRow[]> => {
-    const rows = await applyMetadata.mutateAsync(ids);
+  const handleApply = async (ids: number[], fields?: string[]): Promise<BatchApplyRow[]> => {
+    const rows = await applyMetadata.mutateAsync({ ids, fields });
     return rows;
   };
 
@@ -111,7 +109,9 @@ function BatchBookActionsCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-3">
-          <span className="text-sm text-muted-foreground">当前结果 {books.length} 本书</span>
+          <span className="text-sm text-muted-foreground">
+            {booksQuery.isLoading ? '正在加载…' : `当前结果 ${books.length} 本书${total != null && total > books.length ? `（共 ${total} 本）` : ''}`}
+          </span>
           <Button variant="outline" size="sm" onClick={() => openDialog('fetch_metadata')} disabled={batchBooks.isPending || books.length === 0}>
             <RefreshCcw className="mr-1.5 h-4 w-4" />
             抓取信息
@@ -120,35 +120,6 @@ function BatchBookActionsCard({
             <Upload className="mr-1.5 h-4 w-4" />
             更新封面
           </Button>
-        </div>
-
-        <div className="max-h-[360px] space-y-2 overflow-y-auto rounded-xl border border-border bg-background p-3">
-          {booksQuery.isLoading && page === 1 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">正在加载书籍…</div>
-          ) : books.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">当前没有可处理的书籍。</div>
-          ) : (
-            <>
-              {books.map((book: BookSummary) => (
-                <div
-                  key={book.id}
-                  className="flex w-full items-start gap-3 rounded-lg border border-border px-3 py-3 text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-foreground">{book.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {[book.author, book.category_name, book.source_url ? '有来源链接' : '无来源链接'].filter(Boolean).join(' · ')}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {hasMore ? (
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setPage((value) => value + 1)} disabled={isFetchingMore}>
-                  {isFetchingMore ? '正在加载下一页...' : '加载更多'}
-                </Button>
-              ) : null}
-            </>
-          )}
         </div>
       </CardContent>
 

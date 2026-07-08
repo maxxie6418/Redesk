@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle, Download, ExternalLink, Loader2, RotateCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Download, ExternalLink, Loader2, RefreshCcw, RotateCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -88,30 +88,13 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
           <CardTitle className="text-base">{'版本更新'}</CardTitle>
         </CardHeader>
         <CardContent>
-          {updateCheck.isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : updateCheck.isError ? (
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">{'检查失败'}</p>
-                <p className="text-xs text-muted-foreground">
-                  {updateCheck.error instanceof Error ? updateCheck.error.message : '网络连接异常'}
-                </p>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-popover px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{'当前版本'}</span>
+                <span className="text-sm font-medium text-foreground">v{stats.data.version}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={() => updateCheck.refetch()}>
-                <RotateCw className="mr-1 h-4 w-4" />
-                {'重试'}
-              </Button>
-            </div>
-          ) : updateCheck.data ? (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-border bg-popover px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{'当前版本'}</span>
-                  <span className="text-sm font-medium text-foreground">v{updateCheck.data.current_version}</span>
-                </div>
+              {updateCheck.data ? (
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{'最新版本'}</span>
                   {updateCheck.data.has_update === null ? (
@@ -128,10 +111,25 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                     </span>
                   )}
                 </div>
-              </div>
+              ) : null}
+            </div>
 
-              {updateCheck.data.has_update && (
-                <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => updateCheck.refetch()}
+                disabled={updateCheck.isLoading}
+              >
+                {updateCheck.isLoading ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="mr-1.5 h-4 w-4" />
+                )}
+                {'检查更新'}
+              </Button>
+              {updateCheck.data?.has_update ? (
+                <>
                   {updateCheck.data.release_url && (
                     <Button variant="outline" size="sm" asChild>
                       <a href={updateCheck.data.release_url} target="_blank" rel="noopener noreferrer">
@@ -140,36 +138,51 @@ export function SystemTab({ onToast }: { onToast: (msg: StatusMessage) => void }
                       </a>
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="default" size="sm" asChild>
                     <a href="/api/v1/update-script" download="update.sh">
                       <Download className="mr-1 h-4 w-4" />
-                      {'下载更新脚本'}
+                      {'开始更新'}
                     </a>
                   </Button>
-                </div>
-              )}
-
-              {updateCheck.data.has_update === null && (
-                <p className="text-xs text-muted-foreground">
-                  {'无法连接 GitHub，请检查网络后重试'}
-                </p>
-              )}
-
-              {updateCheck.data.has_update && (
-                <div className="rounded-lg border border-dashed border-green-200 bg-green-50/50 px-4 py-3 dark:border-green-800/50 dark:bg-green-950/30">
-                  <p className="text-xs font-medium text-green-800 dark:text-green-200">
-                    {'ℹ️ 更新方式'}
-                  </p>
-                  <p className="mt-1 text-xs text-green-700 dark:text-green-300">
-                    {'下载脚本传到服务器执行：'}
-                  </p>
-                  <code className="mt-1.5 block rounded bg-green-100/80 px-2 py-1 text-xs text-green-900 dark:bg-green-900/50 dark:text-green-100">
-                    chmod +x update.sh && ./update.sh
-                  </code>
-                </div>
-              )}
+                </>
+              ) : null}
             </div>
-          ) : null}
+
+            {updateCheck.data?.has_update && (
+              <div className="rounded-lg border border-dashed border-green-200 bg-green-50/50 px-4 py-3 dark:border-green-800/50 dark:bg-green-950/30">
+                <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                  {'更新方式'}
+                </p>
+                <p className="mt-1 text-xs text-green-700 dark:text-green-300">
+                  {'下载脚本传到服务器执行：'}
+                </p>
+                <code className="mt-1.5 block rounded bg-green-100/80 px-2 py-1 text-xs text-green-900 dark:bg-green-900/50 dark:text-green-100">
+                  chmod +x update.sh && ./update.sh
+                </code>
+              </div>
+            )}
+
+            {updateCheck.data?.has_update === null && (
+              <p className="text-xs text-muted-foreground">
+                {'无法连接 GitHub，请检查网络后重试'}
+              </p>
+            )}
+
+            {updateCheck.isError && (
+              <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{'检查失败'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {updateCheck.error instanceof Error ? updateCheck.error.message : '网络连接异常'}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => updateCheck.refetch()}>
+                  <RotateCw className="mr-1 h-4 w-4" />
+                  {'重试'}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

@@ -13,12 +13,13 @@ import { MobileBookshelf } from '@/components/mobile-bookshelf';
 import { MobileBookDetailSheet } from '@/components/mobile-book-detail-sheet';
 import { BookDetailSheet } from '@/components/book-detail-sheet';
 import { ProtectedShell } from '@/components/protected-shell';
+import { cn } from '@/lib/utils';
 import { type FilterSelectOption } from '@/components/page-ui/filter-select';
 import { BookshelfContent, BookshelfFilterBar, StatusPills } from './components';
 import { CreateBookForm } from './create-book-form';
 import { SORT_API_MAP, SORT_OPTIONS, type PageView, type SortMode, type ViewMode, VISIBILITY_OPTIONS } from './constants';
 
-const BOOKSHELF_PAGE_SIZE = 50;
+const BOOKSHELF_PAGE_SIZES = [12, 24, 48] as const;
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const isMobileLayout = useMobileLayout();
@@ -36,10 +37,9 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [showCreate, setShowCreate] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
+  const [pageSize, setPageSize] = useState<number>(24);
   const [booksPage, setBooksPage] = useState(1);
   const [trashPage, setTrashPage] = useState(1);
-  const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
-  const [loadedTrashBooks, setLoadedTrashBooks] = useState<BookSummary[]>([]);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -78,7 +78,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const booksQueryParams = useMemo(
     () => ({
       page: booksPage,
-      page_size: BOOKSHELF_PAGE_SIZE,
+      page_size: pageSize,
       sort: SORT_API_MAP[sort],
       ...(debouncedSearch ? { q: debouncedSearch } : {}),
       ...(status !== 'ALL' ? { status } : {}),
@@ -89,17 +89,17 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
       ...(readableFilter === 'readable' ? { has_readable_file: true } : {}),
       ...(readableFilter === 'unreadable' ? { has_readable_file: false } : {}),
     }),
-    [booksPage, category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility],
+    [booksPage, category, debouncedSearch, favorited, pageSize, readableFilter, sort, status, tag, visibility],
   );
 
   const trashQueryParams = useMemo(
     () => ({
       page: trashPage,
-      page_size: BOOKSHELF_PAGE_SIZE,
+      page_size: pageSize,
       sort: '-deleted_at',
       ...(debouncedSearch ? { q: debouncedSearch } : {}),
     }),
-    [debouncedSearch, trashPage],
+    [debouncedSearch, pageSize, trashPage],
   );
 
   const booksQuery = useBooks(booksQueryParams);
@@ -107,25 +107,11 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   useEffect(() => {
     setBooksPage(1);
-    setLoadedBooks([]);
-  }, [category, debouncedSearch, favorited, readableFilter, sort, status, tag, visibility]);
+  }, [category, debouncedSearch, favorited, pageSize, readableFilter, sort, status, tag, visibility]);
 
   useEffect(() => {
     setTrashPage(1);
-    setLoadedTrashBooks([]);
   }, [debouncedSearch]);
-
-  useEffect(() => {
-    const nextBooks = booksQuery.data?.data;
-    if (!nextBooks) return;
-    setLoadedBooks((current) => (booksPage === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
-  }, [booksPage, booksQuery.data?.data]);
-
-  useEffect(() => {
-    const nextBooks = trashQuery.data?.data;
-    if (!nextBooks) return;
-    setLoadedTrashBooks((current) => (trashPage === 1 ? nextBooks : [...current, ...nextBooks.filter((book) => !current.some((item) => item.id === book.id))]));
-  }, [trashPage, trashQuery.data?.data]);
 
   const restoreBook = useRestoreBook();
   const permanentDeleteBook = usePermanentDeleteBook();
@@ -133,18 +119,43 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   const books = useMemo<BookSummary[]>(() => {
     if (pageView === 'trash') {
-      return loadedTrashBooks;
+      return trashQuery.data?.data ?? [];
     }
-    return loadedBooks;
-  }, [loadedBooks, loadedTrashBooks, pageView]);
+    return booksQuery.data?.data ?? [];
+  }, [booksQuery.data?.data, trashQuery.data?.data, pageView]);
 
   const isLoading = pageView === 'trash' ? trashQuery.isLoading && trashPage === 1 : booksQuery.isLoading && booksPage === 1;
   const isFetchingMore = pageView === 'trash' ? trashQuery.isFetching && trashPage > 1 : booksQuery.isFetching && booksPage > 1;
   const isError = pageView === 'trash' ? trashQuery.isError : booksQuery.isError;
   const error = pageView === 'trash' ? trashQuery.error : booksQuery.error;
   const total = pageView === 'trash' ? trashQuery.data?.pagination.total : booksQuery.data?.pagination.total;
+  const currentPage = pageView === 'trash' ? trashPage : booksPage;
+  const totalPages = total != null ? Math.ceil(total / pageSize) : 1;
   const hasMore = total != null && books.length < total;
   const retryRefetch = pageView === 'trash' ? () => trashQuery.refetch() : () => booksQuery.refetch();
+
+  const handlePrevPage = useCallback(() => {
+    if (pageView === 'trash') {
+      setTrashPage((p) => Math.max(1, p - 1));
+    } else {
+      setBooksPage((p) => Math.max(1, p - 1));
+    }
+  }, [pageView]);
+
+  const handleNextPage = useCallback(() => {
+    if (!hasMore) return;
+    if (pageView === 'trash') {
+      setTrashPage((p) => p + 1);
+    } else {
+      setBooksPage((p) => p + 1);
+    }
+  }, [hasMore, pageView]);
+
+  const handlePageSizeChange = useCallback((value: string) => {
+    const size = Number(value);
+    if (!Number.isInteger(size) || size < 1) return;
+    setPageSize(size);
+  }, []);
 
   const categoryOptions = useMemo<FilterSelectOption[]>(
     () => [
@@ -203,15 +214,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     }
   }, [emptyTrash]);
 
-  const handleLoadMore = useCallback(() => {
-    if (!hasMore || isFetchingMore) return;
-    if (pageView === 'trash') {
-      setTrashPage((page) => page + 1);
-      return;
-    }
-    setBooksPage((page) => page + 1);
-  }, [hasMore, isFetchingMore, pageView]);
-
   return (
     <>
       <ProtectedShell
@@ -259,6 +261,22 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">
+                  <span>每页</span>
+                  {BOOKSHELF_PAGE_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                        pageSize === size ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      onClick={() => handlePageSizeChange(String(size))}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
                 {pageView === 'trash' && books.length > 0 ? (
                   <Button variant="destructive" size="sm" onClick={() => void handleEmptyTrash()}>
                     清空回收站
@@ -343,13 +361,17 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                   onPermanentDelete={handlePermanentDelete}
                   onOpenDetail={setDetailBookId}
                 />
-                {hasMore ? (
-                  <div className="mt-5 flex justify-center">
-                    <Button variant="outline" onClick={handleLoadMore} disabled={isFetchingMore}>
-                      {isFetchingMore ? '正在加载下一页...' : '加载更多'}
-                    </Button>
-                  </div>
-                ) : null}
+                <div className="sticky bottom-0 mt-5 flex items-center justify-center gap-3 border-t border-border bg-background/95 py-3 backdrop-blur-sm">
+                  <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage <= 1 || isFetchingMore}>
+                    上一页
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!hasMore || isFetchingMore}>
+                    下一页
+                  </Button>
+                </div>
               </>
             ) : null}
           </>

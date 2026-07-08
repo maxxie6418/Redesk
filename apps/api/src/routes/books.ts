@@ -1101,6 +1101,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     if (ownedBooks.length === 0) throw notFound('未找到可操作的书籍');
 
     const allowedFields = new Set(['title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year', 'description', 'language', 'translator', 'original_title', 'page_count', 'metadata_source']);
+    const restrictedFields = input.fields && input.fields.length > 0 ? new Set(input.fields) : null;
 
     const rows: { book_id: number; success: boolean; error?: string; filled_fields: string[] }[] = [];
 
@@ -1115,6 +1116,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         const updates: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(metadata)) {
           if (!allowedFields.has(key)) continue;
+          if (restrictedFields && !restrictedFields.has(key)) continue;
           if (value == null || String(value).trim() === '') continue;
           const currentVal = (existing as Record<string, unknown>)[key];
           if (currentVal != null && String(currentVal).trim() !== '') continue;

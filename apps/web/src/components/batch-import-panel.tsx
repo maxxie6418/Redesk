@@ -138,8 +138,8 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     return rows;
   };
 
-  const handleApply = async (ids: number[]): Promise<BatchApplyRow[]> => {
-    const rows = await applyMetadata.mutateAsync(ids);
+  const handleApply = async (ids: number[], fields?: string[]): Promise<BatchApplyRow[]> => {
+    const rows = await applyMetadata.mutateAsync({ ids, fields });
     qc.invalidateQueries({ queryKey: ['books'] });
     return rows;
   };
