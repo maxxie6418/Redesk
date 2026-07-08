@@ -275,8 +275,8 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
         {b && (
           <div className="flex h-full">
             {/* Left Column */}
-            <div className="relative w-[300px] shrink-0 border-r border-border bg-muted/30">
-              <div className="h-full overflow-y-auto px-6 py-6 pr-9">
+            <div className="relative flex w-[300px] shrink-0 flex-col border-r border-border bg-muted/30">
+              <div className="flex-1 overflow-y-auto px-6 py-6 pr-9">
               <StatusToast message={message} />
 
               <BookCoverSection book={b} bookId={bookId} coverUrlBase={COVER_URL_BASE} coverTones={COVER_TONES} />
@@ -314,10 +314,13 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 onUploadFile={handleUploadFile}
                 uploadPending={uploadFile.isPending}
               />
-              <BookDetailLeftFooter
-                onDelete={handleRequestBookDelete}
-                deletePending={deleteBook.isPending}
-              />
+              </div>
+
+              <div className="border-t border-border bg-muted/30 px-6 py-4 pr-14">
+                <BookDetailLeftFooter
+                  onDelete={handleRequestBookDelete}
+                  deletePending={deleteBook.isPending}
+                />
               </div>
 
               <BookDetailTabs activeTab={activeTab} editMode={editMode} onChange={setActiveTab} onEditModeChange={setEditMode} />

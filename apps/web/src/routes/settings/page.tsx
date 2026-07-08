@@ -176,14 +176,7 @@ function AdminSettingsPage() {
           <Suspense fallback={<TabFallback />}>
             {activeTab === 'general' ? <GeneralTab settings={settings.data ?? {}} onToast={showToast} /> : null}
             {activeTab === 'batch' ? (
-              <BatchTab
-                settings={settings.data ?? {}}
-                initialBookIds={(searchParams.get('books') ?? '')
-                  .split(',')
-                  .map((value) => Number(value))
-                  .filter((value) => Number.isInteger(value) && value > 0)}
-                onToast={showToast}
-              />
+              <BatchTab settings={settings.data ?? {}} onToast={showToast} />
             ) : null}
             {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
             {activeTab === 'login' ? <LoginManagementTab /> : null}

@@ -193,17 +193,15 @@ interface BookDetailLeftFooterProps {
 
 export function BookDetailLeftFooter({ onDelete, deletePending }: BookDetailLeftFooterProps) {
   return (
-    <div className="mt-6 border-t border-border pt-3">
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deletePending}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50"
-        title="将此书移入回收站"
-      >
-        <Trash2 className="h-3.5 w-3.5" />删除此书
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={onDelete}
+      disabled={deletePending}
+      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50"
+      title="将此书移入回收站"
+    >
+      <Trash2 className="h-3.5 w-3.5" />删除此书
+    </button>
   );
 }
 

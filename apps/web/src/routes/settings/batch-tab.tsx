@@ -7,28 +7,23 @@ import { BatchImportPanel } from '@/components/batch-import-panel';
 import { useBatchBooks, useBooks, type BookSummary } from '@/hooks/use-books';
 import { useBatchSendFilesToCloud, useFileLibrary, type BookFileItem } from '@/hooks/use-files';
 import { BatchUploadMatchCard } from './batch-upload-card';
+import { BatchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
 import type { StatusMessage } from './types';
 
 const BATCH_PAGE_SIZE = 50;
 
 function BatchBookActionsCard({
-  initialBookIds,
   onToast,
 }: {
-  initialBookIds: number[];
   onToast: (msg: StatusMessage) => void;
 }) {
   const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'fetch_metadata' | 'fetch_cover' | null>(null);
   const [page, setPage] = useState(1);
   const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
   const booksQuery = useBooks({ q: search.trim() || undefined, page, page_size: BATCH_PAGE_SIZE, sort: '-updated_at' });
   const batchBooks = useBatchBooks();
-
-  useEffect(() => {
-    if (initialBookIds.length === 0) return;
-    setSelectedIds((current) => [...new Set([...current, ...initialBookIds])]);
-  }, [initialBookIds]);
 
   useEffect(() => {
     setPage(1);
@@ -46,27 +41,36 @@ function BatchBookActionsCard({
   const hasMore = total != null && books.length < total;
   const isFetchingMore = booksQuery.isFetching && page > 1;
 
-  const toggleBook = (bookId: number) => {
-    setSelectedIds((current) => (current.includes(bookId) ? current.filter((id) => id !== bookId) : [...current, bookId]));
-  };
+  const dialogRows: BatchResultRow[] = useMemo(
+    () =>
+      books.map((book) => ({
+        key: `${book.id}`,
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        publisher: book.publisher,
+        isbn: null,
+        sourceUrl: book.source_url,
+        rating: book.rating,
+        status: 'success',
+      })),
+    [books],
+  );
 
-  const selectVisible = () => {
-    setSelectedIds((current) => [...new Set([...current, ...books.map((book) => book.id)])]);
-  };
-
-  const clearSelected = () => {
-    setSelectedIds([]);
-  };
-
-  const runAction = async (action: 'fetch_metadata' | 'fetch_cover') => {
-    if (selectedIds.length === 0) {
-      onToast({ type: 'warning', text: '请先选择要处理的书籍' });
+  const openDialog = (action: 'fetch_metadata' | 'fetch_cover') => {
+    if (books.length === 0) {
+      onToast({ type: 'warning', text: '当前没有可处理的书籍' });
       return;
     }
+    setDialogAction(action);
+    setDialogOpen(true);
+  };
 
+  const runAction = async (ids: number[]) => {
+    if (!dialogAction || ids.length === 0) return;
     try {
-      await batchBooks.mutateAsync({ ids: selectedIds, action });
-      onToast({ type: 'info', text: action === 'fetch_metadata' ? '已提交批量抓取信息' : '已提交批量更新封面' });
+      await batchBooks.mutateAsync({ ids, action: dialogAction });
+      onToast({ type: 'info', text: dialogAction === 'fetch_metadata' ? '已提交批量抓取信息' : '已提交批量更新封面' });
     } catch (error) {
       onToast({ type: 'error', text: error instanceof Error ? error.message : '批量处理失败' });
     }
@@ -84,21 +88,15 @@ function BatchBookActionsCard({
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索要批量处理的书籍" className="pl-9" />
           </div>
-          <Button variant="outline" size="sm" onClick={selectVisible} disabled={books.length === 0}>
-            选择当前结果
-          </Button>
-          <Button variant="ghost" size="sm" onClick={clearSelected} disabled={selectedIds.length === 0}>
-            清空选择
-          </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-3">
-          <span className="text-sm text-muted-foreground">已选 {selectedIds.length} 本书</span>
-          <Button variant="outline" size="sm" onClick={() => void runAction('fetch_metadata')} disabled={batchBooks.isPending || selectedIds.length === 0}>
+          <span className="text-sm text-muted-foreground">当前结果 {books.length} 本书</span>
+          <Button variant="outline" size="sm" onClick={() => openDialog('fetch_metadata')} disabled={batchBooks.isPending || books.length === 0}>
             <RefreshCcw className="mr-1.5 h-4 w-4" />
             抓取信息
           </Button>
-          <Button variant="outline" size="sm" onClick={() => void runAction('fetch_cover')} disabled={batchBooks.isPending || selectedIds.length === 0}>
+          <Button variant="outline" size="sm" onClick={() => openDialog('fetch_cover')} disabled={batchBooks.isPending || books.length === 0}>
             <Upload className="mr-1.5 h-4 w-4" />
             更新封面
           </Button>
@@ -111,27 +109,19 @@ function BatchBookActionsCard({
             <div className="py-10 text-center text-sm text-muted-foreground">当前没有可处理的书籍。</div>
           ) : (
             <>
-              {books.map((book: BookSummary) => {
-                const selected = selectedIds.includes(book.id);
-                return (
-                  <button
-                    key={book.id}
-                    type="button"
-                    onClick={() => toggleBook(book.id)}
-                    className={`flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'}`}
-                  >
-                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
-                      {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-foreground">{book.title}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {[book.author, book.category_name, book.source_url ? '有来源链接' : '无来源链接'].filter(Boolean).join(' · ')}
-                      </div>
+              {books.map((book: BookSummary) => (
+                <div
+                  key={book.id}
+                  className="flex w-full items-start gap-3 rounded-lg border border-border px-3 py-3 text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-foreground">{book.title}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {[book.author, book.category_name, book.source_url ? '有来源链接' : '无来源链接'].filter(Boolean).join(' · ')}
                     </div>
-                  </button>
-                );
-              })}
+                  </div>
+                </div>
+              ))}
               {hasMore ? (
                 <Button variant="outline" size="sm" className="w-full" onClick={() => setPage((value) => value + 1)} disabled={isFetchingMore}>
                   {isFetchingMore ? '正在加载下一页...' : '加载更多'}
@@ -141,6 +131,22 @@ function BatchBookActionsCard({
           )}
         </div>
       </CardContent>
+
+      {dialogOpen && dialogAction ? (
+        <BatchResultDialog
+          title={dialogAction === 'fetch_metadata' ? '批量抓取信息' : '批量更新封面'}
+          subtitle={`当前结果共 ${dialogRows.length} 本书`}
+          rows={dialogRows}
+          mode="batch"
+          onClose={() => {
+            setDialogOpen(false);
+            setDialogAction(null);
+          }}
+          onFetchInfo={runAction}
+          isFetching={batchBooks.isPending}
+          hideDownloadFailed
+        />
+      ) : null}
     </Card>
   );
 }
@@ -270,11 +276,9 @@ function BatchCloudSyncCard({
 
 export function BatchTab({
   settings,
-  initialBookIds,
   onToast,
 }: {
   settings: Record<string, string>;
-  initialBookIds: number[];
   onToast: (msg: StatusMessage) => void;
 }) {
   const defaultMode = (settings.default_storage_mode as 'local_only' | 'cloud_only' | 'dual') || 'local_only';
@@ -301,7 +305,7 @@ export function BatchTab({
         </CardContent>
       </Card>
 
-      <BatchBookActionsCard initialBookIds={initialBookIds} onToast={onToast} />
+      <BatchBookActionsCard onToast={onToast} />
       <BatchCloudSyncCard cloudAvailable={cloudAvailable} onToast={onToast} />
     </div>
   );

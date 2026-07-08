@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookPlus, Check, Trash2, Wand2 } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { BookPlus } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '@/lib/api';
-import { useBooks, useEmptyTrash, usePermanentDeleteBook, useRestoreBook, useTrash, useBatchBooks, type BookSummary } from '@/hooks/use-books';
+import { useBooks, useEmptyTrash, usePermanentDeleteBook, useRestoreBook, useTrash, type BookSummary } from '@/hooks/use-books';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags, type TagItem } from '@/hooks/use-tags';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useMobileLayout } from '@/hooks/use-mobile-layout';
-import { useShellUser } from '@/components/shell-user-context';
+
 import { Button } from '@/components/ui/button';
 import { MobileBookshelf } from '@/components/mobile-bookshelf';
 import { MobileBookDetailSheet } from '@/components/mobile-book-detail-sheet';
@@ -23,8 +23,6 @@ const BOOKSHELF_PAGE_SIZE = 50;
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
   const isMobileLayout = useMobileLayout();
   const sidebarStats = useSidebarStats();
-  const user = useShellUser();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('ALL');
@@ -38,7 +36,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
   const [showCreate, setShowCreate] = useState(false);
   const [pageView, setPageView] = useState<PageView>(initialPageView);
   const [detailBookId, setDetailBookId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [booksPage, setBooksPage] = useState(1);
   const [trashPage, setTrashPage] = useState(1);
   const [loadedBooks, setLoadedBooks] = useState<BookSummary[]>([]);
@@ -48,7 +45,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
 
   const personalCategories = useCategories('PERSONAL');
   const tags = useTags();
-  const batchBooks = useBatchBooks();
 
   useEffect(() => {
     setPageView(initialPageView);
@@ -207,34 +203,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     }
   }, [emptyTrash]);
 
-  const handleSelect = useCallback((id: number, selected: boolean) => {
-    setSelectedIds((prev) => {
-      if (selected) {
-        return [...prev, id];
-      }
-      return prev.filter((item) => item !== id);
-    });
-  }, []);
-
-  const handleClearSelection = useCallback(() => {
-    setSelectedIds([]);
-  }, []);
-
-  const handleOpenBatchManage = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    navigate(`/settings?tab=batch&books=${selectedIds.join(',')}`);
-  }, [navigate, selectedIds]);
-
-  const handleBatchDelete = useCallback(async () => {
-    if (selectedIds.length === 0) return;
-    try {
-      await batchBooks.mutateAsync({ ids: selectedIds, action: 'delete' });
-      setSelectedIds([]);
-    } catch {
-      // mutation handles error
-    }
-  }, [batchBooks, selectedIds]);
-
   const handleLoadMore = useCallback(() => {
     if (!hasMore || isFetchingMore) return;
     if (pageView === 'trash') {
@@ -305,39 +273,6 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               </div>
             </header>
 
-            {selectedIds.length > 0 && pageView === 'bookshelf' ? (
-              <div className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="flex h-5 w-5 items-center justify-center rounded border border-border bg-background"
-                    onClick={handleClearSelection}
-                  >
-                    <Check className="h-3 w-3 text-primary" />
-                  </button>
-                  <span className="text-sm font-medium text-foreground">已选择 {selectedIds.length} 本书</span>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  {user.is_admin ? (
-                    <Button variant="outline" size="sm" onClick={handleOpenBatchManage} className="rounded-lg">
-                      <Wand2 className="h-3.5 w-3.5" />
-                      批量处理
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBatchDelete}
-                    disabled={batchBooks.isPending}
-                    className="rounded-lg"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    删除
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
             {pageView === 'bookshelf' ? (
               <BookshelfFilterBar
                 status={status}
@@ -404,11 +339,8 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                   books={books}
                   viewMode={viewMode}
                   isTrash={pageView === 'trash'}
-                  onOpenDetail={setDetailBookId}
                   onRestore={handleRestore}
                   onPermanentDelete={handlePermanentDelete}
-                  selectedIds={selectedIds}
-                  onSelect={handleSelect}
                 />
                 {hasMore ? (
                   <div className="mt-5 flex justify-center">

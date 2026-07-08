@@ -12,7 +12,7 @@ interface BookCoverProps {
 export function BookCover({ book, index = 0, className, rounded = 'rounded-md' }: BookCoverProps) {
   const imageUrl = book.cover_url ?? (book.cover_path ? `/api/v1/books/${book.id}/cover` : null);
   if (imageUrl) {
-    return <img src={imageUrl} alt={book.title} className={cn(className, rounded, 'object-cover shadow-sm')} loading="lazy" />;
+    return <img src={imageUrl} alt={book.title} className={cn(className, rounded, 'block object-cover shadow-sm')} loading="lazy" />;
   }
 
   return (

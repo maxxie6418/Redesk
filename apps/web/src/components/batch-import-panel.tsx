@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Download, X, CheckCircle2, SkipForward } from 'lucide-react';
+import { AlertTriangle, Download, UploadCloud, X } from 'lucide-react';
 import { ApiError, api, API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { useBatchBooks } from '@/hooks/use-books';
+import { BatchResultDialog, type BatchResultRow } from '@/components/batch-result-dialog';
 
 interface ImportBooksResultRow {
   row: number;
@@ -31,8 +33,10 @@ export interface BatchImportPanelProps {
 
 export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPanelProps) {
   const qc = useQueryClient();
+  const batchBooks = useBatchBooks();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportBooksResult | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [dryRun, setDryRun] = useState(false);
@@ -55,6 +59,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         qc.invalidateQueries({ queryKey: ['categories'] });
         qc.invalidateQueries({ queryKey: ['tags'] });
       }
+      setShowDialog(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : '导入失败');
     } finally {
@@ -63,7 +68,6 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
   };
 
   const failedRows = result?.rows.filter((row) => !row.success && !row.skipped) ?? [];
-  const skippedRows = result?.rows.filter((row) => row.skipped) ?? [];
 
   function csvEscape(value: unknown): string {
     if (value == null) return '';
@@ -95,54 +99,73 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     URL.revokeObjectURL(url);
   }
 
-  function RowItem({ row, tone }: { row: ImportBooksResultRow; tone: 'skipped' | 'failed' }) {
-    return (
-      <div className="border-b border-border px-3 py-2 text-xs last:border-b-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">第 {row.row} 行</span>
-          <span className="truncate text-muted-foreground">{row.title ?? '未命名'}</span>
-        </div>
-        <div className={`mt-1 flex items-center gap-1 ${tone === 'failed' ? 'text-destructive' : 'text-amber-600'}`}>
-          {tone === 'failed' ? (
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-          ) : (
-            <SkipForward className="h-3 w-3 shrink-0" />
-          )}
-          {row.error}
+  const dialogRows: BatchResultRow[] =
+    result?.rows.map((row) => {
+      const raw = row.raw_data ?? {};
+      const status = row.success ? 'success' : row.skipped ? 'skipped' : 'failed';
+      return {
+        key: `${row.row}`,
+        id: row.book_id ?? undefined,
+        title: row.title ?? raw.title ?? raw['书名'] ?? null,
+        author: raw.author ?? raw['作者'] ?? null,
+        publisher: raw.publisher ?? raw['出版社'] ?? null,
+        isbn: raw.isbn ?? raw['ISBN'] ?? null,
+        sourceUrl: raw.source_url ?? raw['来源链接'] ?? raw['豆瓣链接'] ?? null,
+        status,
+        error: row.error,
+        rawData: raw,
+      };
+    }) ?? [];
+
+  const handleFetchInfo = async (ids: number[]) => {
+    try {
+      await batchBooks.mutateAsync({ ids, action: 'fetch_metadata' });
+      qc.invalidateQueries({ queryKey: ['books'] });
+    } catch {
+      // mutation handles error
+    }
+  };
+
+  const uploadArea = (
+    <label className="group flex flex-1 min-w-[240px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-5 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
+      <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+      <UploadCloud className="mb-2 h-8 w-8 text-primary" />
+      <div className="text-sm font-medium text-primary">{file ? file.name : '点击上传已填写的 CSV'}</div>
+      <div className="mt-1 text-xs text-muted-foreground">支持 .csv 格式</div>
+    </label>
+  );
+
+  const templateArea = (
+    <div className="flex flex-[0.85] min-w-[220px] flex-col justify-between rounded-lg border border-border bg-muted/30 p-4">
+      <div>
+        <div className="text-sm font-medium text-foreground">CSV 模板</div>
+        <div className="mt-1 text-xs leading-5 text-muted-foreground">
+          包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建元数据，不包含文件。
         </div>
       </div>
-    );
-  }
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-3 w-full"
+        onClick={() => {
+          window.location.href = `${API_BASE}/books/import/template`;
+        }}
+      >
+        <Download className="mr-1.5 h-3.5 w-3.5" />
+        下载参考 CSV
+      </Button>
+    </div>
+  );
 
   const body = (
     <div className="space-y-5 px-6 py-5">
-      <div className="rounded-lg border border-border bg-muted p-4">
-        <div className="text-sm font-medium text-foreground">CSV 模板</div>
-        <div className="mt-1 text-sm leading-6 text-muted-foreground">
-          模板包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建书籍元数据，不包含文件。
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-stretch gap-4">
+          {uploadArea}
+          {templateArea}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-3"
-          onClick={() => {
-            window.location.href = `${API_BASE}/books/import/template`;
-          }}
-        >
-          下载参考 CSV
-        </Button>
       </div>
-
-      <label className="block space-y-2">
-        <span className="text-xs font-medium text-foreground">选择已填写的 CSV</span>
-        <input
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="block w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
-        />
-      </label>
 
       <label className="flex items-center gap-2 text-sm text-foreground">
         <input
@@ -161,80 +184,6 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         </div>
       )}
 
-      {result && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
-              <div className="text-sm font-medium text-foreground">
-                共处理 {result.total} 行
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  {result.dry_run ? '校验通过' : '成功创建'}：{result.dry_run ? result.valid : result.created}
-                </span>
-                {skippedRows.length > 0 && (
-                  <span className="flex items-center gap-1">
-                    <SkipForward className="h-3.5 w-3.5 text-amber-600" />
-                    跳过（重复）：{skippedRows.length}
-                  </span>
-                )}
-                {failedRows.length > 0 && (
-                  <span className="flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                    失败：{failedRows.length}
-                  </span>
-                )}
-              </div>
-            </div>
-            {failedRows.length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={downloadFailedCsv}
-                className="shrink-0"
-              >
-                <Download className="mr-1 h-3.5 w-3.5" />
-                下载失败记录
-              </Button>
-            )}
-          </div>
-
-          {failedRows.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-1.5 text-xs font-medium text-destructive">失败记录</div>
-              <div className="max-h-48 overflow-y-auto rounded-md border border-border">
-                {failedRows.slice(0, 20).map((row) => (
-                  <RowItem key={row.row} row={row} tone="failed" />
-                ))}
-                {failedRows.length > 20 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    还有 {failedRows.length - 20} 条失败记录，可下载完整 CSV 查看
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {skippedRows.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-1.5 text-xs font-medium text-amber-600">跳过记录（重复）</div>
-              <div className="max-h-36 overflow-y-auto rounded-md border border-border">
-                {skippedRows.slice(0, 10).map((row) => (
-                  <RowItem key={row.row} row={row} tone="skipped" />
-                ))}
-                {skippedRows.length > 10 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    还有 {skippedRows.length - 10} 条跳过记录
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="flex justify-end gap-2.5 border-t border-border pt-5">
         {variant === 'dialog' && onClose ? (
           <Button type="button" variant="outline" onClick={onClose}>
@@ -248,11 +197,9 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     </div>
   );
 
-  if (variant === 'embedded') {
-    return <div className="rounded-xl border border-border bg-card">{body}</div>;
-  }
+  const panel = variant === 'embedded' ? <div className="rounded-xl border border-border bg-card">{body}</div> : null;
 
-  return (
+  const dialog = variant === 'dialog' ? (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/35 px-4 py-12"
       onClick={onClose}
@@ -274,5 +221,28 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         {body}
       </div>
     </div>
+  ) : null;
+
+  return (
+    <>
+      {panel}
+      {dialog}
+      {showDialog && result ? (
+        <BatchResultDialog
+          title={dryRun ? '校验结果' : '导入结果'}
+          subtitle={`共 ${result.total} 行 · 成功 ${result.created || result.valid} · 跳过 ${result.skipped} · 失败 ${result.failed}`}
+          rows={dialogRows}
+          mode="import"
+          onClose={() => {
+            setShowDialog(false);
+            setResult(null);
+            setFile(null);
+          }}
+          onFetchInfo={handleFetchInfo}
+          isFetching={batchBooks.isPending}
+          onDownloadFailed={failedRows.length > 0 ? downloadFailedCsv : undefined}
+        />
+      ) : null}
+    </>
   );
 }

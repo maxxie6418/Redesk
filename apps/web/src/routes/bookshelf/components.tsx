@@ -15,42 +15,13 @@ import { bookMetaLine, bookProgress, statusDotClass, statusLabel } from './utils
 interface BookCardProps {
   book: BookSummary;
   index: number;
-  onOpenDetail: () => void;
   isTrash?: boolean;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
-  selected?: boolean;
-  onSelect?: (id: number, selected: boolean) => void;
 }
 
 function getBookSummaryText(book: BookSummary) {
   return book.description || book.entry_reason || book.reading_purpose || null;
-}
-
-function MenuMore({
-  onClick,
-  className,
-}: {
-  onClick?: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'absolute z-10 flex items-center gap-[3px] rounded p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
-        className,
-      )}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick?.();
-      }}
-    >
-      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
-      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
-      <span className="block h-1 w-1 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/60" />
-    </button>
-  );
 }
 
 function ProgressBar({ progress, trackWidth = 'w-[70px]', trackHeight = 'h-1' }: { progress: number; trackWidth?: string; trackHeight?: string }) {
@@ -137,45 +108,26 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
   );
 }
 
-export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, selected, onSelect }: BookCardProps) {
+export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
 
   return (
     <article
-      className={cn(
-        'group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]',
-        selected && 'ring-2 ring-primary',
-      )}
+      className="group relative flex gap-[18px] rounded-xl bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_12px_rgba(0,0,0,0.06)] transition-[transform,box-shadow] duration-[0.25s] hover:-translate-y-[3px] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]"
       style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' } as CSSProperties}
     >
-      {onSelect ? (
-        <button
-          type="button"
-          className="absolute left-3 top-3 z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background shadow-sm transition-colors hover:border-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(book.id, !selected);
-          }}
-        >
-          {selected ? (
-            <div className="h-3 w-3 rounded-sm bg-primary" />
-          ) : null}
-        </button>
-      ) : null}
-      {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-5 top-5" /> : null}
       <button
         type="button"
-        className={cn('relative mt-0.5 shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        className={cn('relative mt-0.5 block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
-        <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
-      <div className="flex min-w-0 flex-1 flex-col" onClick={onOpenDetail}>
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
             <span className={cn('h-2 w-2 shrink-0 rounded-full', statusDotClass(book.status))} />
@@ -211,29 +163,17 @@ export function BookCardA({ book, index, onOpenDetail, isTrash, onRestore, onPer
   );
 }
 
-export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, selected, onSelect }: BookCardProps) {
+export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className={cn('group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]', selected && 'ring-2 ring-primary')}>
-      <div className="relative mb-3 overflow-hidden rounded-xl">
-        {onSelect ? (
-          <button
-            type="button"
-            className="absolute left-2 top-2 z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background/90 shadow-sm transition-colors hover:border-primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(book.id, !selected);
-            }}
-          >
-            {selected ? <div className="h-3 w-3 rounded-sm bg-primary" /> : null}
-          </button>
-        ) : null}
+    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
+      <div className="relative mb-3 overflow-hidden rounded-xl leading-[0]">
         <button
           type="button"
-          className={cn('block w-full', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+          className={cn('block w-full leading-[0]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
           disabled={!book.has_readable_file}
           title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
           onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
@@ -244,21 +184,9 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
           <span className={cn('h-1.5 w-1.5 rounded-full', statusDotClass(book.status))} />
           {statusLabel(book.status)}
         </div>
-        {!isTrash ? (
-          <div
-            className="absolute right-2.5 top-2.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white/90 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white hover:text-foreground"
-            onClick={onOpenDetail}
-          >
-            <div className="flex flex-col gap-[3px]">
-              <span className="block h-[3px] w-[3px] rounded-full bg-current" />
-              <span className="block h-[3px] w-[3px] rounded-full bg-current" />
-              <span className="block h-[3px] w-[3px] rounded-full bg-current" />
-            </div>
-          </div>
-        ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col" onClick={onOpenDetail}>
+      <div className="flex flex-1 flex-col">
         <div className="mb-1 flex items-center justify-between gap-1">
           <h3 className="line-clamp-1 flex-1 text-base font-semibold leading-tight text-foreground">{book.title}</h3>
         </div>
@@ -305,35 +233,21 @@ export function BookCardB({ book, index, onOpenDetail, isTrash, onRestore, onPer
   );
 }
 
-export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, selected, onSelect }: BookCardProps) {
+export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className={cn('group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]', selected && 'ring-2 ring-primary')}>
-      {onSelect ? (
-        <button
-          type="button"
-          className="absolute left-3 top-3 z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background shadow-sm transition-colors hover:border-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(book.id, !selected);
-          }}
-        >
-          {selected ? <div className="h-3 w-3 rounded-sm bg-primary" /> : null}
-        </button>
-      ) : null}
-      {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-4" /> : null}
+    <article className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
-        className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        className={cn('relative block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCover book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
-        <div className="pointer-events-none absolute inset-0 rounded-md shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col pr-7">
         <div className="mb-2 flex items-center justify-between">
@@ -370,37 +284,23 @@ export function BookCardC({ book, index, onOpenDetail, isTrash, onRestore, onPer
   );
 }
 
-export function BookCardD({ book, index, onOpenDetail, isTrash, onRestore, onPermanentDelete, selected, onSelect }: BookCardProps) {
+export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete }: BookCardProps) {
   const navigate = useNavigate();
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
 
   return (
-    <article className={cn('group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30', selected && 'ring-2 ring-primary')}>
-      {onSelect ? (
-        <button
-          type="button"
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background shadow-sm transition-colors hover:border-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(book.id, !selected);
-          }}
-        >
-          {selected ? <div className="h-3 w-3 rounded-sm bg-primary" /> : null}
-        </button>
-      ) : null}
-      {!isTrash ? <MenuMore onClick={onOpenDetail} className="right-4 top-3" /> : null}
+    <article className="group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30">
       <button
         type="button"
-        className={cn('relative shrink-0 overflow-hidden rounded shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
+        className={cn('relative block shrink-0 overflow-hidden rounded leading-[0] shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
         disabled={!book.has_readable_file}
         title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
         onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
       >
         <BookCover book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
-        <div className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
       </button>
-      <div className="min-w-0 flex-1 cursor-pointer pr-12" onClick={onOpenDetail}>
+      <div className="min-w-0 flex-1 cursor-pointer pr-12">
         <div className="flex items-center gap-2">
           <span className={cn('h-[6px] w-[6px] shrink-0 rounded-full', statusDotClass(book.status))} />
           <span className="truncate text-sm font-medium text-foreground">{book.title}</span>
@@ -603,20 +503,14 @@ export function BookshelfContent({
   books,
   viewMode,
   isTrash,
-  onOpenDetail,
   onRestore,
   onPermanentDelete,
-  selectedIds = [],
-  onSelect,
 }: {
   books: BookSummary[];
   viewMode: ViewMode;
   isTrash: boolean;
-  onOpenDetail: (bookId: number) => void;
   onRestore: (bookId: number) => void;
   onPermanentDelete: (bookId: number) => void;
-  selectedIds?: number[];
-  onSelect?: (id: number, selected: boolean) => void;
 }) {
   if (viewMode === 'A') {
     return (
@@ -626,12 +520,9 @@ export function BookshelfContent({
             key={book.id}
             book={book}
             index={index}
-            onOpenDetail={() => onOpenDetail(book.id)}
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
-            selected={selectedIds.includes(book.id)}
-            onSelect={onSelect}
           />
         ))}
       </section>
@@ -646,12 +537,9 @@ export function BookshelfContent({
             key={book.id}
             book={book}
             index={index}
-            onOpenDetail={() => onOpenDetail(book.id)}
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
-            selected={selectedIds.includes(book.id)}
-            onSelect={onSelect}
           />
         ))}
       </section>
@@ -666,12 +554,9 @@ export function BookshelfContent({
             key={book.id}
             book={book}
             index={index}
-            onOpenDetail={() => onOpenDetail(book.id)}
             isTrash={isTrash}
             onRestore={() => onRestore(book.id)}
             onPermanentDelete={() => onPermanentDelete(book.id)}
-            selected={selectedIds.includes(book.id)}
-            onSelect={onSelect}
           />
         ))}
       </section>
@@ -695,12 +580,9 @@ export function BookshelfContent({
           key={book.id}
           book={book}
           index={index}
-          onOpenDetail={() => onOpenDetail(book.id)}
           isTrash={isTrash}
           onRestore={() => onRestore(book.id)}
           onPermanentDelete={() => onPermanentDelete(book.id)}
-          selected={selectedIds.includes(book.id)}
-          onSelect={onSelect}
         />
       ))}
     </section>
