@@ -16,6 +16,7 @@ import { statSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync, re
 
 const GITHUB_REPO = 'maxxie6418/Redesk';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 分钟
+const CDN_PKG_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@main/package.json`;
 
 interface UpdateCache {
   result: UpdateCheckResult;
@@ -25,7 +26,6 @@ interface UpdateCache {
 let updateCache: UpdateCache | null = null;
 
 function compareVersions(a: string, b: string): number {
-  // 忽略 -tag 后缀，只比较 x.y.z
   const pa = a.replace(/-.*$/, '').split('.').map(Number);
   const pb = b.replace(/-.*$/, '').split('.').map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -52,10 +52,15 @@ interface UpdateCheckResult {
   release_notes: string | null;
 }
 
-async function fetchLatestRelease(): Promise<GitHubRelease | null> {
+async function fetchLatestReleaseViaApi(): Promise<GitHubRelease | null> {
+  const token = process.env.GITHUB_TOKEN || '';
+  const headers: Record<string, string> = {
+    'User-Agent': 'redesk-update-checker',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-      headers: { 'User-Agent': 'redesk-update-checker' },
+      headers,
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return null;
@@ -65,39 +70,62 @@ async function fetchLatestRelease(): Promise<GitHubRelease | null> {
   }
 }
 
+async function fetchVersionViaCdn(): Promise<string | null> {
+  try {
+    const res = await fetch(CDN_PKG_URL, { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) return null;
+    const pkg = (await res.json()) as { version: string };
+    return pkg.version || null;
+  } catch {
+    return null;
+  }
+}
+
 async function checkForUpdates(): Promise<UpdateCheckResult> {
   const currentVersion = getAppVersion();
 
-  // 缓存命中直接返回
   if (updateCache && Date.now() - updateCache.ts < CACHE_TTL_MS) {
-    // 但需要确保 current_version 始终是最新的
     return { ...updateCache.result, current_version: currentVersion };
   }
 
-  const release = await fetchLatestRelease();
-  if (!release) {
-    const result: UpdateCheckResult = {
+  let result: UpdateCheckResult;
+
+  const release = await fetchLatestReleaseViaApi();
+  if (release) {
+    const latestVersion = release.tag_name.replace(/^v/, '');
+    const hasUpdate = compareVersions(latestVersion, currentVersion) > 0;
+    result = {
       current_version: currentVersion,
-      latest_version: null,
-      has_update: null,
-      release_url: null,
-      published_at: null,
-      release_notes: null,
+      latest_version: latestVersion,
+      has_update: hasUpdate,
+      release_url: release.html_url,
+      published_at: release.published_at,
+      release_notes: release.body,
     };
-    return result;
+  } else {
+    // GitHub API 不可用时，通过 jsDelivr CDN 获取 main 分支 package.json 版本号
+    const cdnVersion = await fetchVersionViaCdn();
+    if (cdnVersion) {
+      const hasUpdate = compareVersions(cdnVersion, currentVersion) > 0;
+      result = {
+        current_version: currentVersion,
+        latest_version: cdnVersion,
+        has_update: hasUpdate,
+        release_url: `https://github.com/${GITHUB_REPO}`,
+        published_at: null,
+        release_notes: null,
+      };
+    } else {
+      result = {
+        current_version: currentVersion,
+        latest_version: null,
+        has_update: null,
+        release_url: null,
+        published_at: null,
+        release_notes: null,
+      };
+    }
   }
-
-  const latestVersion = release.tag_name.replace(/^v/, '');
-  const hasUpdate = compareVersions(latestVersion, currentVersion) > 0;
-
-  const result: UpdateCheckResult = {
-    current_version: currentVersion,
-    latest_version: latestVersion,
-    has_update: hasUpdate,
-    release_url: release.html_url,
-    published_at: release.published_at,
-    release_notes: release.body,
-  };
 
   updateCache = { result, ts: Date.now() };
   return result;

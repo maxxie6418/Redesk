@@ -18,6 +18,7 @@ services:
       - STORAGE_DIR=/data/storage
       - SESSION_SECRET=${SESSION_SECRET:?请在环境变量或 .env 中设置强随机 SESSION_SECRET}
       - AUTH_DISABLED=true
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

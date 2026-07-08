@@ -1,6 +1,5 @@
 {
   "name": "@redesk/web",
-  "version": "2.1.1",
   "private": true,
   "type": "module",
   "scripts": {

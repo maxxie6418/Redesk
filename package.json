@@ -19,8 +19,7 @@
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @redesk/db generate",
     "db:migrate": "pnpm --filter @redesk/db migrate",
-    "db:seed": "pnpm --filter @redesk/db seed",
-    "bump": "node scripts/bump-version.js"
+    "db:seed": "pnpm --filter @redesk/db seed"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
