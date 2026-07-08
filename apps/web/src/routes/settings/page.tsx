@@ -83,7 +83,7 @@ function AdminSettingsPage() {
 
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
-    { key: 'batch', label: '批量管理', icon: <Upload className="h-4 w-4" /> },
+    { key: 'batch', label: '书籍管理', icon: <Upload className="h-4 w-4" /> },
     { key: 'ai', label: 'AI', icon: <Sparkles className="h-4 w-4" /> },
     { key: 'login', label: '登录管理', icon: <Shield className="h-4 w-4" /> },
     { key: 'properties', label: '属性设置', icon: <List className="h-4 w-4" /> },
@@ -452,7 +452,7 @@ function MobileAdminSettingsPage({ user }: { user: AuthUser }) {
           <div className="mt-3 flex items-center justify-between rounded-[18px] bg-muted px-3 py-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-foreground">桌面端完整设置</div>
-              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">批量管理、AI、存储、登录管理、属性设置等高级功能仍建议在桌面端完成。</div>
+              <div className="mt-1 text-[11px] leading-5 text-muted-foreground">书籍管理、AI、存储、登录管理、属性设置等高级功能仍建议在桌面端完成。</div>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </div>

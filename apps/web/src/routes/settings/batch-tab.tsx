@@ -306,7 +306,7 @@ export function BatchTab({
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">批量管理</CardTitle>
+          <CardTitle className="text-base">书籍管理</CardTitle>
           <CardDescription>管理员专用。集中承接批量上传、批量导入、批量更新、批量抓取和发送到对象存储等操作。</CardDescription>
         </CardHeader>
       </Card>
@@ -315,7 +315,7 @@ export function BatchTab({
 
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">批量导入书籍</CardTitle>
+          <CardTitle className="text-base">批量添加</CardTitle>
           <CardDescription>通过 CSV 批量创建书籍，仅写入元数据，不包含文件内容。</CardDescription>
         </CardHeader>
         <CardContent>

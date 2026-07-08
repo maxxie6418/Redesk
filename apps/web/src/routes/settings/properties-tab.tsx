@@ -42,13 +42,9 @@ export function PropertiesTab() {
 
   const showToast = useCallback((m: StatusMessage) => {
     if (!m) return;
-    if (m.type === 'error') {
-      toast.error(m.text);
-    } else if (m.type === 'warning') {
-      toast.warning(m.text);
-    } else {
-      toast.success(m.text);
-    }
+    if (m.type === 'error') toast.error(m.text);
+    else if (m.type === 'warning') toast.warning(m.text);
+    else toast.success(m.text);
   }, []);
 
   const handleCreateCat = useCallback(async () => {
@@ -84,92 +80,94 @@ export function PropertiesTab() {
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader className="pb-4 flex-row items-center justify-between">
+        <CardHeader className="pb-3 flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">分类</CardTitle>
             <p className="text-xs text-muted-foreground">管理书籍分类，一书一分类</p>
           </div>
           <Button size="sm" onClick={() => setCatShow(true)}><Plus className="mr-1.5 h-4 w-4" />新建</Button>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent>
           {categories.isError && <p className="text-sm text-muted-foreground">加载失败</p>}
           {categories.data && categories.data.length === 0 && !catShow && (
             <p className="text-sm text-muted-foreground">还没有分类</p>
           )}
-          {categories.data?.map((cat: CategoryItem) => (
-            <div key={cat.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-              <FolderTree className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex-1 min-w-0">
-                {catEditId === cat.id ? (
-                  <div className="flex items-center gap-2">
-                    <Input className="h-8 flex-1 text-sm" value={catEditName} onChange={(e) => setCatEditName(e.target.value)} />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdateCat(cat.id)}><Check className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setCatEditId(null)}><X className="h-4 w-4" /></Button>
-                  </div>
-                ) : (
-                  <p className="text-sm font-medium text-foreground">{cat.name}</p>
-                )}
-                <p className="text-xs text-muted-foreground">{cat.book_count} 本书</p>
-              </div>
-              {catEditId !== cat.id && (
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setCatEditId(cat.id); setCatEditName(cat.name); }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteCat(cat.id)}><Trash2 className="mr-1 h-3 w-3" />删除</Button>
+          <div className="grid grid-cols-2 gap-2">
+            {categories.data?.map((cat: CategoryItem) => (
+              <div key={cat.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                <FolderTree className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  {catEditId === cat.id ? (
+                    <div className="flex items-center gap-1">
+                      <Input className="h-7 flex-1 text-xs" value={catEditName} onChange={(e) => setCatEditName(e.target.value)} />
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleUpdateCat(cat.id)}><Check className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setCatEditId(null)}><X className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  ) : (
+                    <p className="truncate text-sm font-medium text-foreground">{cat.name}</p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">{cat.book_count} 本</p>
                 </div>
-              )}
-            </div>
-          ))}
+                {catEditId !== cat.id && (
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setCatEditId(cat.id); setCatEditName(cat.name); }}><Pencil className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => handleDeleteCat(cat.id)}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
           {catShow && (
-            <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
-              <Input className="h-8 flex-1 text-sm" placeholder="分类名称" value={catName} onChange={(e) => setCatName(e.target.value)} />
-              <Button size="sm" className="h-8" onClick={handleCreateCat} disabled={createCategory.isPending}>创建</Button>
-              <Button size="sm" variant="ghost" className="h-8" onClick={() => setCatShow(false)}>取消</Button>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+              <Input className="h-7 flex-1 text-xs" placeholder="分类名称" value={catName} onChange={(e) => setCatName(e.target.value)} />
+              <Button size="sm" className="h-7 text-xs" onClick={handleCreateCat} disabled={createCategory.isPending}>创建</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setCatShow(false)}>取消</Button>
             </div>
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-4 flex-row items-center justify-between">
+        <CardHeader className="pb-3 flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base">标签</CardTitle>
-            <p className="text-xs text-muted-foreground">管理书籍标签，一书本可多标签</p>
+            <p className="text-xs text-muted-foreground">管理书籍标签，一书可多标签</p>
           </div>
           <Button size="sm" onClick={() => setTagShow(true)}><Plus className="mr-1.5 h-4 w-4" />新建</Button>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent>
           {tags.isError && <p className="text-sm text-muted-foreground">加载失败</p>}
           {tags.data && tags.data.length === 0 && !tagShow && (
             <p className="text-sm text-muted-foreground">还没有标签</p>
           )}
-          {tags.data?.map((tag: TagItem) => (
-            <div key={tag.id} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-              <Tags className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap gap-2">
+            {tags.data?.map((tag: TagItem) => (
+              <div key={tag.id} className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5">
+                <Tags className="h-3 w-3 shrink-0 text-muted-foreground" />
                 {tagEditId === tag.id ? (
-                  <div className="flex items-center gap-2">
-                    <Input className="h-8 flex-1 text-sm" value={tagEditName} onChange={(e) => setTagEditName(e.target.value)} />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdateTag(tag.id)}><Check className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTagEditId(null)}><X className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-1">
+                    <Input className="h-6 w-20 text-xs" value={tagEditName} onChange={(e) => setTagEditName(e.target.value)} />
+                    <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => handleUpdateTag(tag.id)}><Check className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setTagEditId(null)}><X className="h-3 w-3" /></Button>
                   </div>
                 ) : (
-                  <p className="text-sm font-medium text-foreground">#{tag.name}</p>
+                  <>
+                    <span className="max-w-[6ch] truncate text-sm font-medium text-foreground" title={tag.name}>
+                      {tag.name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">({tag.book_count})</span>
+                    <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => { setTagEditId(tag.id); setTagEditName(tag.name); }}><Pencil className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive hover:text-destructive" onClick={() => handleDeleteTag(tag.id)}><Trash2 className="h-3 w-3" /></Button>
+                  </>
                 )}
-                <p className="text-xs text-muted-foreground">{tag.book_count} 本书</p>
               </div>
-              {tagEditId !== tag.id && (
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setTagEditId(tag.id); setTagEditName(tag.name); }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleDeleteTag(tag.id)}><Trash2 className="mr-1 h-3 w-3" />删除</Button>
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
           {tagShow && (
-            <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
-              <Input className="h-8 flex-1 text-sm" placeholder="标签名称" value={tagName} onChange={(e) => setTagName(e.target.value)} />
-              <Button size="sm" className="h-8" onClick={handleCreateTag} disabled={createTag.isPending}>创建</Button>
-              <Button size="sm" variant="ghost" className="h-8" onClick={() => setTagShow(false)}>取消</Button>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+              <Input className="h-7 flex-1 text-xs" placeholder="标签名称" value={tagName} onChange={(e) => setTagName(e.target.value)} />
+              <Button size="sm" className="h-7 text-xs" onClick={handleCreateTag} disabled={createTag.isPending}>创建</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTagShow(false)}>取消</Button>
             </div>
           )}
         </CardContent>

@@ -97,7 +97,6 @@ export function AppSidebar({
             R
           </div>
           <div className="font-display text-xl font-medium text-sidebar-foreground">Redesk</div>
-          <span className="ml-auto text-[11px] font-medium tabular-nums text-muted-foreground/50">v{__APP_VERSION__}</span>
         </div>
 
         <div className="relative mt-4">

@@ -145,7 +145,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
   };
 
   const uploadArea = (
-    <label className="group flex flex-1 min-w-[240px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-5 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
+    <label className="group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-5 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
       <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
       <UploadCloud className="mb-2 h-8 w-8 text-primary" />
       <div className="text-sm font-medium text-primary">{file ? file.name : '点击上传已填写的 CSV'}</div>
@@ -153,36 +153,10 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
     </label>
   );
 
-  const templateArea = (
-    <div className="flex flex-[0.85] min-w-[220px] flex-col justify-between rounded-lg border border-border bg-muted/30 p-4">
-      <div>
-        <div className="text-sm font-medium text-foreground">CSV 模板</div>
-        <div className="mt-1 text-xs leading-5 text-muted-foreground">
-          包含书名、作者、ISBN、分类、标签、状态、评分等字段。导入只创建元数据，不包含文件。
-        </div>
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-3 w-full"
-        onClick={() => {
-          window.location.href = `${API_BASE}/books/import/template`;
-        }}
-      >
-        <Download className="mr-1.5 h-3.5 w-3.5" />
-        下载参考 CSV
-      </Button>
-    </div>
-  );
-
   const body = (
     <div className="space-y-5 px-6 py-5">
       <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex flex-wrap items-stretch gap-4">
-          {uploadArea}
-          {templateArea}
-        </div>
+        {uploadArea}
       </div>
 
       <label className="flex items-center gap-2 text-sm text-foreground">
@@ -203,6 +177,14 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
       )}
 
       <div className="flex justify-end gap-2.5 border-t border-border pt-5">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => { window.location.href = `${API_BASE}/books/import/template`; }}
+        >
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          下载 CSV 模板
+        </Button>
         {variant === 'dialog' && onClose ? (
           <Button type="button" variant="outline" onClick={onClose}>
             关闭
@@ -227,7 +209,7 @@ export function BatchImportPanel({ variant = 'dialog', onClose }: BatchImportPan
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="font-display text-xl font-medium text-foreground">批量导入书籍</h2>
+          <h2 className="font-display text-xl font-medium text-foreground">批量添加</h2>
           <button
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
