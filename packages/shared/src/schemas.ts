@@ -63,6 +63,20 @@ export const bookQuerySchema = paginationSchema.extend({
 });
 export type BookQueryInput = z.infer<typeof bookQuerySchema>;
 
+export const maintenanceListSchema = paginationSchema.extend({
+  q: z.string().optional(),
+  missing: z.string().optional(),
+  no_source_url: z.coerce.boolean().optional(),
+  has_source_url_not_fetched: z.coerce.boolean().optional(),
+  no_cover: z.coerce.boolean().optional(),
+  category_id: positiveInt.optional(),
+  genre_category_id: positiveInt.optional(),
+  status: z.string().optional(),
+  tag_ids: z.string().optional(),
+  book_ids: z.string().optional(),
+});
+export type MaintenanceListInput = z.infer<typeof maintenanceListSchema>;
+
 export const trashQuerySchema = paginationSchema.extend({
   q: z.string().optional(),
 });
@@ -709,6 +723,40 @@ export const updateReadingProgressSchema = z.object({
   percentage: z.number().min(0).max(100),
 });
 export type UpdateReadingProgressInput = z.infer<typeof updateReadingProgressSchema>;
+
+export const heartbeatSchema = z.object({
+  book_id: positiveInt,
+});
+export type HeartbeatInput = z.infer<typeof heartbeatSchema>;
+
+export const closeSessionSchema = z.object({
+  book_id: positiveInt,
+});
+export type CloseSessionInput = z.infer<typeof closeSessionSchema>;
+
+export const readerPreferencesSchema = z.object({
+  color_scheme: z.enum(['default', 'sepia', 'green', 'dark']).default('default'),
+  font_family: z.string().default('serif'),
+  font_size: z.number().min(12).max(28).default(18),
+  line_height: z.number().min(1.2).max(2.4).default(1.6),
+  custom_fonts: z.array(z.string()).default([]),
+});
+export type ReaderPreferences = z.infer<typeof readerPreferencesSchema>;
+
+export const quickTemplateSchema = z.object({
+  key: z.string(),
+  icon: z.string(),
+  label: z.string(),
+  mark_type: z.string(),
+});
+export type QuickTemplate = z.infer<typeof quickTemplateSchema>;
+
+export const defaultQuickTemplates: QuickTemplate[] = [
+  { key: 'inspiration', icon: '💡', label: '启发', mark_type: 'INSPIRATION' },
+  { key: 'question', icon: '❓', label: '疑问', mark_type: 'QUESTION' },
+  { key: 'important', icon: '⭐', label: '重要', mark_type: 'IMPORTANT' },
+  { key: 'todo', icon: '📌', label: '待查', mark_type: 'TODO' },
+];
 
 export interface ApiErrorPayload {
   error: {
