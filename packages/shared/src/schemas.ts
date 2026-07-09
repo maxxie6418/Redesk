@@ -63,11 +63,6 @@ export const bookQuerySchema = paginationSchema.extend({
 });
 export type BookQueryInput = z.infer<typeof bookQuerySchema>;
 
-export const trashQuerySchema = paginationSchema.extend({
-  q: z.string().optional(),
-});
-export type TrashQueryInput = z.infer<typeof trashQuerySchema>;
-
 export const maintenanceListSchema = paginationSchema.extend({
   q: z.string().optional(),
   missing: z.string().optional(),
@@ -81,6 +76,11 @@ export const maintenanceListSchema = paginationSchema.extend({
   book_ids: z.string().optional(),
 });
 export type MaintenanceListInput = z.infer<typeof maintenanceListSchema>;
+
+export const trashQuerySchema = paginationSchema.extend({
+  q: z.string().optional(),
+});
+export type TrashQueryInput = z.infer<typeof trashQuerySchema>;
 
 export const readingMarkListQuerySchema = z.object({
   page: positiveInt.default(1),

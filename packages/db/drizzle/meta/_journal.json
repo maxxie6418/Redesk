@@ -232,6 +232,13 @@
       "when": 1783390800003,
       "tag": "0032_deep_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1783522458640,
+      "tag": "0033_reading_sessions",
+      "breakpoints": true
     }
   ]
 }
