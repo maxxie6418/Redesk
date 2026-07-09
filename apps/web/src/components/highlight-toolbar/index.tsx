@@ -16,6 +16,7 @@ interface BubbleToolbarProps {
   onComment: () => void;
   onClear?: () => void;
   onDismiss: () => void;
+  onQuickTemplate?: (templateKey: string) => void;
 }
 
 export const BubbleToolbar: FC<BubbleToolbarProps> = ({

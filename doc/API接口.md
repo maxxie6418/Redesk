@@ -5,9 +5,9 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档名称 | Redesk API 接口 |
-| 当前版本 | v1.1.1 |
+| 当前版本 | v1.1.3 |
 | 文档状态 | 待评审 |
-| 最后更新 | 2026-07-02 |
+| 最后更新 | 2026-07-09 |
 | 适用范围 | 全项目实现期 |
 | 关联文档 | 数据模型.md、技术方案.md、功能清单.md |
 
@@ -30,6 +30,7 @@
 | v1.1.0 | 2026-07-01 | 存储策略三态改造：book_files/book_covers 增加 storage_mode/local_path/remote_key/primary_location/sync_status；上传接口支持 `storage_mode` 字段；新增默认存储方式设置 `default_storage_mode`；设置页增加批量上传弹窗；云未配置时禁用 `cloud_only`/`dual` | AI |
 | v1.1.1 | 2026-07-02 | 鉴权与文件管理修正：会话改为长期保持直至主动退出；封面管理补充 PATCH/DELETE 跨域支持；新封面在无活动封面时自动设为当前封面 | AI |
 | v1.1.2 | 2026-07-04 | 文件匹配流程重设计：批量上传后可选进入匹配；新增批量候选生成 POST /files/match/candidates 与批量应用 POST /files/match/apply-batch；匹配候选允许结合文件名与 EPUB 元数据综合判断 | AI |
+| v1.1.3 | 2026-07-09 | 文档回填当前实现：补充 `reading-sessions`、`reading-stats`、`reader/fonts`、`system/update-check` 与 `update-script` 端点；同步文档头部版本与日期 | AI |
 
 ## 文档说明
 
@@ -758,6 +759,7 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 
 - 登录用户可读：`GET /system/stats`、`GET /system/storage`。
 - 仅管理员可写：`POST /system/backup`、`POST /system/fts-rebuild`、`POST /system/clear-cache`、`POST /system/reset`。
+- 仅管理员可读：`GET /system/update-check`、`GET /update-script/{name}`。
 - 错误码：未登录 401；已登录非管理员访问写接口 403。
 - 免登录模式（`VITE_AUTH_DISABLED=true` / `AUTH_DISABLED=true`）视为默认管理员会话，鉴权层统一放行。
 
@@ -765,10 +767,12 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 | --- | --- | --- | --- |
 | GET | /system/stats | 系统统计（DB 大小/存储/书籍/文件数） | 登录可读 |
 | GET | /system/storage | 存储目录分布与 OSS 配置 | 登录可读 |
+| GET | /system/update-check | 检查是否有新版本 | 管理员 |
 | POST | /system/backup | 手动备份（VACUUM INTO） | 管理员 |
 | POST | /system/fts-rebuild | 重建 FTS5 全文索引 | 管理员 |
 | POST | /system/clear-cache | 清理 tmp 缓存 | 管理员 |
 | POST | /system/reset | 清库 + 重跑迁移（高破坏性，需二次口令验证） | 管理员 |
+| GET | /update-script/{name} | 下载更新脚本（`update.sh` / `update.ps1`） | 管理员 |
 
 ### GET /system/stats
 ```json
@@ -843,11 +847,39 @@ query：`format`（json/csv）、`ids`（逗号分隔，缺省全书架）。
 响应 200：`{ "data": { "success": true, "message": "应用已重置，请刷新页面后重新设置管理员账户" } }`
 未登录 401；非管理员 403；口令错误 401。
 
+### GET /system/update-check
+
+用于检查 GitHub 最新 release 或 CDN 上的主分支版本，结果会做短时缓存。
+
+```json
+{
+  "data": {
+    "current_version": "2.0.4",
+    "latest_version": "2.0.5",
+    "has_update": true,
+    "release_url": "https://github.com/maxxie6418/Redesk/releases/tag/v2.0.5",
+    "published_at": "2026-07-08T12:00:00.000Z",
+    "release_notes": "..."
+  }
+}
+```
+
+当外部源不可达时，`latest_version` / `has_update` / `release_url` / `published_at` / `release_notes` 允许为 `null`。
+
+### GET /update-script/{name}
+
+下载更新脚本，当前支持：
+
+- `update.sh`
+- `update.ps1`
+
+响应为脚本文本附件下载；未知脚本名返回 404。
+
 ---
 
-## 13. 阅读器与笔记（A-F 已完成）
+## 13. 阅读器与笔记（已闭环）
 
-M2 分阶段推进中，当前完成状态：阅读进度（A）✔、高亮闭环（B）✔、笔记闭环（C）✔（选区附注保存时会先创建视觉高亮；若填写附注内容，再额外创建独立 note）、痕迹跳回（D）✔（含失败可见提示）、入口收口（E）✔、搜索与导出（F）✔。端点清单：
+M2 当前已闭环，除阅读进度、高亮、笔记、搜索与导出外，还包括阅读会话心跳统计、单书/全局阅读时长统计，以及阅读器自定义字体管理。端点清单：
 
 | 方法 | 路径 | 说明 | 功能 |
 | --- | --- | --- | --- |
@@ -855,6 +887,9 @@ M2 分阶段推进中，当前完成状态：阅读进度（A）✔、高亮闭�
 | GET | /books/{id}/reading-progress | 读取单书阅读进度（CFI + 百分比） | 3.02 |
 | PUT | /books/{id}/reading-progress | 保存阅读进度（upsert） | 3.03 |
 | GET | /reading-progress/recent | 最近阅读列表（限 5 条） | 1.22 |
+| POST | /reading-sessions/heartbeat | 阅读会话心跳（累计阅读时长） | 5.05 |
+| POST | /reading-sessions/close | 关闭当前阅读会话 | 5.05 |
+| GET | /reading-sessions/current?book_id= | 查询当前未关闭阅读会话 | 5.05 |
 | GET | /highlights | 高亮列表（支持 `?book_id=X` 按书筛选） | 3.04 |
 | POST | /highlights | 新建高亮/划线 | 3.05 |
 | PATCH | /highlights/{hid} | 编辑高亮（含附注、标记类型） | 3.06–3.10 |
@@ -864,10 +899,83 @@ M2 分阶段推进中，当前完成状态：阅读进度（A）✔、高亮闭�
 | PATCH | /notes/{nid} | 编辑笔记 | 3.12 |
 | DELETE | /notes/{nid} | 删除笔记（软删除） | 3.13 |
 | GET | /reading-marks/stats | 留痕统计（总数/本月/已批注） | 5.06/5.07 |
+| GET | /reading-stats/summary | 全局阅读时长汇总（总/今日/本周/本月） | 5.05 |
+| GET | /books/{id}/reading-stats | 单书阅读时长与会话次数 | 5.05 |
 | GET | /notes/search?q= | 笔记全文搜索（支持 `book_id`） | 3.20 |
 | GET | /highlights/search?q= | 高亮全文搜索（支持 `book_id`） | 3.20 |
+| GET | /reader/fonts | 读取阅读器自定义字体列表 | 3.x |
+| GET | /reader/fonts/{filename} | 读取字体文件 | 3.x |
+| POST | /reader/fonts | 上传阅读器字体（ttf/otf/woff2） | 3.x |
+| DELETE | /reader/fonts/{filename} | 删除阅读器字体 | 3.x |
 
 > 阅读器实际读取主 EPUB 文件时复用已有下载端点 `/books/{id}/files/{fileId}/download`，不存在独立的 `/books/{id}/reader` 后端路由。跳回原文（3.15/3.16）由前端据 CFI 实现，无独立端点。标记体系（3.17/3.18）并入高亮/笔记的 mark_type 字段。高亮和笔记的列表/创建/编辑/删除统一走全局路径（`/highlights`、`/notes`），通过 `?book_id=X` 查询参数按书筛选，不再嵌套在 `/books/{id}/` 下。
+
+### POST /reading-sessions/heartbeat
+
+用于阅读器定期上报心跳，若当前书已有未结束会话则累加 `duration_seconds`，否则新建一条会话。
+
+```json
+{ "book_id": 12 }
+```
+
+响应：
+
+```json
+{
+  "data": {
+    "id": 3,
+    "book_id": 12,
+    "owner_id": 1,
+    "started_at": "2026-07-09T12:00:00.000Z",
+    "ended_at": null,
+    "duration_seconds": 120,
+    "last_heartbeat_at": "2026-07-09T12:02:00.000Z",
+    "created_at": "2026-07-09T12:00:00.000Z"
+  }
+}
+```
+
+### GET /reading-stats/summary
+
+```json
+{
+  "data": {
+    "total_seconds": 15420,
+    "today_seconds": 1800,
+    "week_seconds": 5400,
+    "month_seconds": 15420
+  }
+}
+```
+
+### GET /books/{id}/reading-stats
+
+```json
+{
+  "data": {
+    "total_duration": 7200,
+    "session_count": 9,
+    "last_session_at": "2026-07-09T08:00:00.000Z"
+  }
+}
+```
+
+### GET /reader/fonts
+
+返回用户可在阅读器中使用的自定义字体文件列表。
+
+```json
+{
+  "data": [
+    {
+      "filename": "LXGWWenKai-Regular.ttf",
+      "url": "/api/v1/reader/fonts/LXGWWenKai-Regular.ttf"
+    }
+  ]
+}
+```
+
+上传仅支持 `ttf` / `otf` / `woff2`，单文件上限 5MB。
 
 ---
 

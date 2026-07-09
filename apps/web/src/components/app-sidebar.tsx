@@ -36,7 +36,7 @@ export type AppSidebarKey =
 
 export interface AppSidebarStat {
   label: string;
-  value: number;
+  value: number | string;
   valueClass?: string;
 }
 
