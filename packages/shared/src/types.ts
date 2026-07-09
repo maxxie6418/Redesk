@@ -51,8 +51,8 @@ export interface QuickTemplate {
 }
 
 export const defaultQuickTemplates: QuickTemplate[] = [
-  { key: 'inspiration', icon: '💡', label: '启发', mark_type: 'INSPIRATION', note_prefix: '启发' },
+  { key: 'inspiration', icon: '💡', label: '启发', mark_type: 'INSIGHT', note_prefix: '启发' },
   { key: 'question', icon: '❓', label: '疑问', mark_type: 'QUESTION', note_prefix: '疑问' },
-  { key: 'important', icon: '⭐', label: '重要', mark_type: 'HIGHLIGHT', note_prefix: '重要' },
-  { key: 'todo', icon: '📌', label: '待查', mark_type: 'TODO', note_prefix: '待查' },
+  { key: 'important', icon: '⭐', label: '重要', mark_type: 'IMPORTANT', note_prefix: '重要' },
+  { key: 'todo', icon: '📌', label: '待查', mark_type: 'NONE', note_prefix: '待查' },
 ];

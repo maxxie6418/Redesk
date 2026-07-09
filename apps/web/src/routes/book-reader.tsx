@@ -70,6 +70,7 @@ export function BookReaderPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [cursorHidden, setCursorHidden] = useState(false);
   const [ttsBarOpen, setTtsBarOpen] = useState(false);
 
   const { preferences, updatePreferences } = useReaderPreferences();
@@ -248,7 +249,8 @@ export function BookReaderPage() {
       cfi_end: selection.cfi,
       text: selection.text,
       type: 'HIGHLIGHT',
-      note: `[${template.label}]`,
+      note: `[${template.note_prefix}]`,
+      mark_type: template.mark_type,
     });
     toast.success(`已标记为「${template.label}」`);
     setSelection(null);
@@ -266,6 +268,25 @@ export function BookReaderPage() {
     rendition.themes.override('font-size', `${preferences.font_size}px`);
     rendition.themes.override('line-height', String(preferences.line_height));
   }, [preferences, getRendition, loading]);
+
+  useEffect(() => {
+    if (!focusMode) {
+      setCursorHidden(false);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      setCursorHidden(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => setCursorHidden(true), 3000);
+    };
+    resetTimer();
+    window.addEventListener('mousemove', resetTimer);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+    };
+  }, [focusMode]);
 
   useReaderKeyboardNavigation({
     activeKey: primaryEpubId,
@@ -324,7 +345,7 @@ export function BookReaderPage() {
   }
 
   return (
-    <div className={`flex h-screen flex-col bg-background ${focusMode ? 'cursor-none' : ''}`}>
+    <div className={`flex h-screen flex-col bg-background ${cursorHidden ? 'cursor-none' : ''}`}>
       <ReaderTopBar
         title={currentTitle || book.data?.title}
         syncMessage={syncMessage}

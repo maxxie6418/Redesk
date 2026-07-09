@@ -56,5 +56,9 @@ export function formatRelativeTime(isoString: string | null): string {
   if (diffHours < 24) return `${diffHours} 小时前`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return '昨天';
-  return `${diffDays} 天前`;
+  if (diffDays < 30) return `${diffDays} 天前`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} 个月前`;
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} 年前`;
 }
