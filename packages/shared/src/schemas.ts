@@ -68,6 +68,20 @@ export const trashQuerySchema = paginationSchema.extend({
 });
 export type TrashQueryInput = z.infer<typeof trashQuerySchema>;
 
+export const maintenanceListSchema = paginationSchema.extend({
+  q: z.string().optional(),
+  missing: z.string().optional(),
+  no_source_url: z.coerce.boolean().optional(),
+  has_source_url_not_fetched: z.coerce.boolean().optional(),
+  no_cover: z.coerce.boolean().optional(),
+  category_id: positiveInt.optional(),
+  genre_category_id: positiveInt.optional(),
+  status: z.string().optional(),
+  tag_ids: z.string().optional(),
+  book_ids: z.string().optional(),
+});
+export type MaintenanceListInput = z.infer<typeof maintenanceListSchema>;
+
 export const readingMarkListQuerySchema = z.object({
   page: positiveInt.default(1),
   page_size: z.coerce.number().int().min(1).transform((value) => Math.min(value, 500)).default(20),
@@ -709,6 +723,25 @@ export const updateReadingProgressSchema = z.object({
   percentage: z.number().min(0).max(100),
 });
 export type UpdateReadingProgressInput = z.infer<typeof updateReadingProgressSchema>;
+
+export const heartbeatSchema = z.object({
+  book_id: positiveInt,
+});
+export type HeartbeatInput = z.infer<typeof heartbeatSchema>;
+
+export const closeSessionSchema = z.object({
+  book_id: positiveInt,
+});
+export type CloseSessionInput = z.infer<typeof closeSessionSchema>;
+
+export const readerPreferencesSchema = z.object({
+  color_scheme: z.enum(['default', 'sepia', 'green', 'dark']).default('default'),
+  font_family: z.string().default('serif'),
+  font_size: z.number().min(12).max(28).default(18),
+  line_height: z.number().min(1.2).max(2.4).default(1.6),
+  custom_fonts: z.array(z.string()).default([]),
+});
+export type ReaderPreferences = z.infer<typeof readerPreferencesSchema>;
 
 export interface ApiErrorPayload {
   error: {
