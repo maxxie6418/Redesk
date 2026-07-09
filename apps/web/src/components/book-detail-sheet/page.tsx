@@ -6,6 +6,7 @@ import { useActivateBookCover, useApplyBookMetadata, useBook, useBookCovers, use
 import { useDeleteFile, useBookFiles, useUploadFile, type BookFileItem } from '@/hooks/use-files';
 import { useReadingProgress } from '@/hooks/use-reading-progress';
 import { useHighlights, useNotes, type HighlightItem, type NoteItem } from '@/hooks/use-notes';
+import { useBookReadingStats, formatDuration, formatRelativeTime } from '@/hooks/use-reading-stats';
 import { useAddTopicBook } from '@/hooks/use-topics';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
@@ -33,6 +34,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const hasActiveBook = open && typeof bookId === 'number' && bookId > 0;
   const bookNotes = useNotes(bookId ?? 0, { enabled: hasActiveBook });
   const bookHighlights = useHighlights(bookId ?? 0, { enabled: hasActiveBook });
+  const bookReadingStats = useBookReadingStats(bookId ?? 0);
   const addTopicBook = useAddTopicBook();
   const covers = useBookCovers(bookId ?? 0);
   const personalCategories = useCategories('PERSONAL');
@@ -354,6 +356,9 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   traces={traces}
                   onOpenMark={openMarkInReader}
                   onOpenTrace={openTraceInReader}
+                  readingStats={bookReadingStats.data ?? null}
+                  formatDuration={formatDuration}
+                  formatRelativeTime={formatRelativeTime}
                 />
               )}
 

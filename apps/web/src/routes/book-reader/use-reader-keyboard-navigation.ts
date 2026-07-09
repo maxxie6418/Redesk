@@ -25,9 +25,26 @@ interface KeyboardRendition {
 interface UseReaderKeyboardNavigationOptions {
   activeKey: unknown;
   getRendition: () => KeyboardRendition | null;
+  onToggleToc?: () => void;
+  onToggleNotes?: () => void;
+  onToggleSearch?: () => void;
+  onToggleTheme?: () => void;
+  onToggleFocus?: () => void;
+  onBookmark?: () => void;
+  onEscape?: () => void;
 }
 
-export function useReaderKeyboardNavigation({ activeKey, getRendition }: UseReaderKeyboardNavigationOptions) {
+export function useReaderKeyboardNavigation({
+  activeKey,
+  getRendition,
+  onToggleToc,
+  onToggleNotes,
+  onToggleSearch,
+  onToggleTheme,
+  onToggleFocus,
+  onBookmark,
+  onEscape,
+}: UseReaderKeyboardNavigationOptions) {
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (shouldIgnoreKeydown(event.target)) return;
@@ -38,6 +55,33 @@ export function useReaderKeyboardNavigation({ activeKey, getRendition }: UseRead
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault();
         getRendition()?.next();
+      }
+      if (event.key === 'b' || event.key === 'B') {
+        event.preventDefault();
+        onBookmark?.();
+      }
+      if (event.key === 't' || event.key === 'T') {
+        event.preventDefault();
+        onToggleToc?.();
+      }
+      if (event.key === 'n' || event.key === 'N') {
+        event.preventDefault();
+        onToggleNotes?.();
+      }
+      if (event.key === 's' || event.key === 'S') {
+        event.preventDefault();
+        onToggleSearch?.();
+      }
+      if (event.key === 'h' || event.key === 'H') {
+        event.preventDefault();
+        onToggleTheme?.();
+      }
+      if (event.key === 'f' || event.key === 'F') {
+        event.preventDefault();
+        onToggleFocus?.();
+      }
+      if (event.key === 'Escape') {
+        onEscape?.();
       }
     };
 
@@ -51,5 +95,5 @@ export function useReaderKeyboardNavigation({ activeKey, getRendition }: UseRead
     return () => {
       window.removeEventListener('keydown', handleKeydown);
     };
-  }, [activeKey, getRendition]);
+  }, [activeKey, getRendition, onToggleToc, onToggleNotes, onToggleSearch, onToggleTheme, onToggleFocus, onBookmark, onEscape]);
 }

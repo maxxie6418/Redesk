@@ -14,6 +14,7 @@ import {
 import { BOOK_STATUS } from '@redesk/shared';
 import { useOverview } from '@/hooks/use-overview';
 import type { OverviewData } from '@/hooks/use-overview';
+import { useReadingStatsSummary, formatDuration } from '@/hooks/use-reading-stats';
 import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import { useCategories } from '@/hooks/use-categories';
 import { useMobileLayout } from '@/hooks/use-mobile-layout';
@@ -103,6 +104,7 @@ export function OverviewPage() {
   const overview = useOverview();
   const sidebarStats = useSidebarStats();
   const categories = useCategories('PERSONAL');
+  const readingStats = useReadingStatsSummary();
   const detailBookIdParam = searchParams.get('book');
   const detailBookId = detailBookIdParam && /^\d+$/.test(detailBookIdParam) ? Number(detailBookIdParam) : null;
 
@@ -276,6 +278,35 @@ export function OverviewPage() {
                 </CardContent>
               </Card>
             )}
+
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border px-[18px] py-3.5">
+                <CardTitle className="flex items-center gap-2 text-[13.5px] font-semibold">
+                  <Clock className="h-4 w-4 text-primary" />
+                  阅读时长
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-[18px] py-3.5">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">总计</div>
+                    <div className="text-sm font-semibold">{formatDuration(readingStats.data?.total_seconds ?? 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">本周</div>
+                    <div className="text-sm font-semibold">{formatDuration(readingStats.data?.week_seconds ?? 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">本月</div>
+                    <div className="text-sm font-semibold">{formatDuration(readingStats.data?.month_seconds ?? 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">今日</div>
+                    <div className="text-sm font-semibold">{formatDuration(readingStats.data?.today_seconds ?? 0)}</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card className="overflow-hidden">
               <CardHeader className="border-b border-border px-[18px] py-3.5">

@@ -356,15 +356,24 @@ interface BookTracesTabProps {
   traces: BookTraceItem[];
   onOpenMark: (mark: BookRecentMarkItem) => void;
   onOpenTrace: (trace: BookTraceItem) => void;
+  readingStats: { total_duration: number; session_count: number; last_session_at: string | null } | null;
+  formatDuration: (seconds: number) => string;
+  formatRelativeTime: (isoString: string | null) => string;
 }
 
-export function BookTracesTab({ progressPercent, counts, recentMarks, traces, onOpenMark, onOpenTrace }: BookTracesTabProps) {
+export function BookTracesTab({ progressPercent, counts, recentMarks, traces, onOpenMark, onOpenTrace, readingStats, formatDuration, formatRelativeTime }: BookTracesTabProps) {
   return (
     <div>
       <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
         <NotebookPen className="h-4 w-4 text-emerald-500" />
         阅读留痕
       </h3>
+      {readingStats && readingStats.total_duration > 0 && (
+        <div className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          累计阅读 {formatDuration(readingStats.total_duration)} · 共 {readingStats.session_count} 次
+          {readingStats.last_session_at && ` · 最近 ${formatRelativeTime(readingStats.last_session_at)}`}
+        </div>
+      )}
       {traces.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <NotebookPen className="h-8 w-8 text-muted-foreground/20" />
