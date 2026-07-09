@@ -1,6 +1,9 @@
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import type { QuickTemplate } from '@redesk/shared';
 
 export type MarkType = 'HIGHLIGHT' | 'UNDERLINE' | 'WAVY' | null;
+
+export type { QuickTemplate };
 
 interface BubbleToolbarProps {
   rect: DOMRect | null;
@@ -16,7 +19,8 @@ interface BubbleToolbarProps {
   onComment: () => void;
   onClear?: () => void;
   onDismiss: () => void;
-  onQuickTemplate?: (templateKey: string) => void;
+  quickTemplates?: QuickTemplate[];
+  onQuickTemplate?: (template: QuickTemplate) => void;
 }
 
 export const BubbleToolbar: FC<BubbleToolbarProps> = ({
@@ -33,6 +37,8 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
   onComment,
   onClear,
   onDismiss,
+  quickTemplates,
+  onQuickTemplate,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number; flip: boolean }>({ top: 0, left: 0, flip: false });
@@ -40,7 +46,9 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
   useEffect(() => {
     if (!visible || !rect) return;
 
-    const toolbarWidth = showClear ? 292 : 248;
+    const baseWidth = showClear ? 292 : 248;
+    const templateCount = quickTemplates?.length ?? 0;
+    const toolbarWidth = baseWidth + (templateCount > 0 ? templateCount * 44 + 9 : 0);
     const toolbarHeight = 52;
     const gap = 10;
 
@@ -64,7 +72,7 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
     }
 
     setPosition({ top, left, flip });
-  }, [rect, showClear, visible]);
+  }, [rect, showClear, visible, quickTemplates]);
 
   useEffect(() => {
     if (!visible) return;
@@ -232,6 +240,24 @@ export const BubbleToolbar: FC<BubbleToolbarProps> = ({
             </ToolbarButton>
           </>
         ) : null}
+
+        {quickTemplates && quickTemplates.length > 0 && (
+          <>
+            <div className="mx-0.5 h-7 w-px" style={{ background: dividerColor }} />
+            {quickTemplates.map((t) => (
+              <ToolbarButton
+                key={t.key}
+                label={t.label}
+                onClick={() => handleAction(() => onQuickTemplate?.(t))}
+                hoverBg={btnHoverBg}
+                labelColor={labelColor}
+                labelHoverColor={labelHoverColor}
+              >
+                <span className="text-sm">{t.icon}</span>
+              </ToolbarButton>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

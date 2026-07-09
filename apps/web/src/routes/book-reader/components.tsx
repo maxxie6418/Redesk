@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Menu, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Clock, Maximize, Menu, Pencil, Plus, Search, Palette, StickyNote, Trash2, Volume2, X } from 'lucide-react';
 import type { NoteItem } from '@/hooks/use-notes';
 import { Button } from '@/components/ui/button';
 
@@ -19,16 +19,50 @@ export interface EditingHighlight {
 interface ReaderTopBarProps {
   title: string | undefined;
   syncMessage: string | null;
+  currentPage?: number;
+  totalPages?: number;
+  sessionDuration?: number;
+  estimatedRemainingSeconds?: number | null;
+  focusMode?: boolean;
   onBack: () => void;
   onToggleToc: () => void;
   onToggleNotes: () => void;
+  onToggleSearch?: () => void;
+  onToggleTheme?: () => void;
+  onToggleTts?: () => void;
+  onToggleFocus?: () => void;
   onPrev: () => void;
   onNext: () => void;
 }
 
-export function ReaderTopBar({ title, syncMessage, onBack, onToggleToc, onToggleNotes, onPrev, onNext }: ReaderTopBarProps) {
+function formatSessionDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function ReaderTopBar({
+  title,
+  syncMessage,
+  currentPage,
+  totalPages,
+  sessionDuration,
+  estimatedRemainingSeconds,
+  focusMode,
+  onBack,
+  onToggleToc,
+  onToggleNotes,
+  onToggleSearch,
+  onToggleTheme,
+  onToggleTts,
+  onToggleFocus,
+  onPrev,
+  onNext,
+}: ReaderTopBarProps) {
   return (
-    <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+    <header className={`flex items-center gap-3 border-b border-border px-4 py-2.5 transition-opacity duration-300 ${focusMode ? 'group opacity-0 hover:opacity-100' : ''}`}>
       <Button variant="ghost" size="icon" onClick={onBack}>
         <ArrowLeft className="h-5 w-5" />
       </Button>
@@ -38,9 +72,43 @@ export function ReaderTopBar({ title, syncMessage, onBack, onToggleToc, onToggle
       <Button variant="ghost" size="icon" onClick={onToggleNotes}>
         <StickyNote className="h-5 w-5" />
       </Button>
+      {onToggleSearch && (
+        <Button variant="ghost" size="icon" onClick={onToggleSearch}>
+          <Search className="h-5 w-5" />
+        </Button>
+      )}
+      {onToggleTheme && (
+        <Button variant="ghost" size="icon" onClick={onToggleTheme}>
+          <Palette className="h-5 w-5" />
+        </Button>
+      )}
+      {onToggleTts && (
+        <Button variant="ghost" size="icon" onClick={onToggleTts}>
+          <Volume2 className="h-5 w-5" />
+        </Button>
+      )}
+      {onToggleFocus && (
+        <Button variant="ghost" size="icon" onClick={onToggleFocus}>
+          <Maximize className="h-5 w-5" />
+        </Button>
+      )}
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-foreground">{title}</div>
-        {syncMessage ? <div className="truncate text-xs text-amber-600 dark:text-amber-300">{syncMessage}</div> : null}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {currentPage != null && totalPages != null && totalPages > 0 && (
+            <span>第 {currentPage} / {totalPages} 页</span>
+          )}
+          {sessionDuration != null && sessionDuration > 0 && (
+            <span className="inline-flex items-center gap-0.5">
+              <Clock className="h-3 w-3" />
+              {formatSessionDuration(sessionDuration)}
+            </span>
+          )}
+          {estimatedRemainingSeconds != null && estimatedRemainingSeconds > 0 && (
+            <span>剩余 ≈ {formatSessionDuration(estimatedRemainingSeconds)}</span>
+          )}
+          {syncMessage && <span className="text-amber-600 dark:text-amber-300">{syncMessage}</span>}
+        </div>
       </div>
       <Button variant="ghost" size="icon" onClick={onPrev}>
         <ChevronLeft className="h-5 w-5" />

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Pause, Play, Square, Volume2 } from 'lucide-react';
 import { BubbleToolbar, type MarkType } from '@/components/highlight-toolbar';
 import { CommentInput } from '@/components/reader/comment-input';
 import { ImagePreviewViewer, PdfPreviewViewer, TextPreviewViewer, UnsupportedPreviewViewer } from '@/components/reader/preview-viewers';
@@ -9,10 +9,11 @@ import { useBookFiles, type BookFileItem } from '@/hooks/use-files';
 import { useBook } from '@/hooks/use-books';
 import { useHighlights, useCreateHighlight, useUpdateHighlight, useDeleteHighlight, useNotes, useCreateNote, useUpdateNote, useDeleteNote, useBookmarks, useCreateBookmark, useDeleteBookmark, type HighlightItem } from '@/hooks/use-notes';
 import { useAddTopicHighlight } from '@/hooks/use-topics';
+import { useReadingStatsSummary } from '@/hooks/use-reading-stats';
 import { Button } from '@/components/ui/button';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { API_BASE } from '@/lib/api';
-import { normalizeFileFormat, selectReadableFile } from '@redesk/shared';
+import { normalizeFileFormat, selectReadableFile, defaultQuickTemplates, type QuickTemplate as SharedQuickTemplate } from '@redesk/shared';
 import { HighlightEditPopover, ReaderEmptyState, ReaderNotesPanel, ReaderPreviewShell, ReaderTopBar, TocPanel, type EditingHighlight } from './book-reader/components';
 import { useEpubReader } from './book-reader/use-epub-reader';
 import { useReadingProgressSync } from './book-reader/reading-progress-sync';
@@ -20,6 +21,20 @@ import { useReaderHighlightActions, type ReaderSelectionState } from './book-rea
 import { useReaderHighlightRenderer } from './book-reader/use-reader-highlight-renderer';
 import { useReaderKeyboardNavigation } from './book-reader/use-reader-keyboard-navigation';
 import { useReaderNotes } from './book-reader/use-reader-notes';
+import { useReaderPreferences } from './book-reader/use-reader-preferences';
+import { ThemeSettingsPanel } from './book-reader/theme-settings-panel';
+import { SearchPanel } from './book-reader/search-panel';
+import { useTts } from './book-reader/use-tts';
+import { useReadingSession } from './book-reader/use-reading-session';
+
+const COLOR_SCHEMES_MAP: Record<string, { bg: string; text: string }> = {
+  default: { bg: '#ffffff', text: '#1a1a1a' },
+  sepia: { bg: '#f4ecd8', text: '#5b4636' },
+  green: { bg: '#c7edcc', text: '#1a3a1a' },
+  dark: { bg: '#1a1a1a', text: '#e0e0e0' },
+};
+
+const QUICK_TEMPLATES = defaultQuickTemplates;
 
 export function BookReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +67,12 @@ export function BookReaderPage() {
   const [commentTargetHighlightId, setCommentTargetHighlightId] = useState<number | null>(null);
   const [editing, setEditing] = useState<EditingHighlight | null>(null);
   const [topicHighlightId, setTopicHighlightId] = useState<number | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [ttsBarOpen, setTtsBarOpen] = useState(false);
 
+  const { preferences, updatePreferences } = useReaderPreferences();
 
   const readableFile = selectReadableFile<BookFileItem>(files.data);
   const readableFileId = readableFile?.id;
@@ -69,10 +89,14 @@ export function BookReaderPage() {
     viewerRef,
     toc,
     currentTitle,
+    currentPage,
+    totalPages,
+    epubLang,
     loading,
     error,
     getCurrentCfi,
     getRendition,
+    getBookRef,
     goPrev,
     goNext,
     goToHref: displayHref,
@@ -89,6 +113,22 @@ export function BookReaderPage() {
     setCommentMode,
     setCommentTargetHighlightId,
   });
+
+  const tts = useTts(getRendition, epubLang);
+  const { sessionDuration } = useReadingSession({ bookId, enabled: isEpub && !loading && !!primaryEpubId });
+  const readingStats = useReadingStatsSummary();
+
+  const estimatedRemainingSeconds = useMemo(() => {
+    const stats = readingStats.data;
+    if (!stats || !totalPages || totalPages === 0) return null;
+    const currentPct = (currentPage / totalPages) * 100;
+    if (currentPct < 5) return null;
+    if (stats.total_seconds <= 0) return null;
+    const secondsPerPercent = stats.total_seconds / currentPct;
+    const remainingPercent = 100 - currentPct;
+    return Math.round(secondsPerPercent * remainingPercent);
+  }, [readingStats.data, currentPage, totalPages]);
+
   useReaderHighlightRenderer({
     loading,
     highlightsMapRef,
@@ -151,11 +191,48 @@ export function BookReaderPage() {
   const toggleToc = () => {
     setTocOpen(!tocOpen);
     setNotesPanelOpen(false);
+    setSearchOpen(false);
+    setThemeOpen(false);
   };
 
   const toggleNotesPanel = () => {
     setNotesPanelOpen(!notesPanelOpen);
     setTocOpen(false);
+    setSearchOpen(false);
+    setThemeOpen(false);
+  };
+
+  const toggleSearch = () => {
+    setSearchOpen(!searchOpen);
+    setTocOpen(false);
+    setNotesPanelOpen(false);
+    setThemeOpen(false);
+  };
+
+  const toggleTheme = () => {
+    setThemeOpen(!themeOpen);
+    setSearchOpen(false);
+    setTocOpen(false);
+    setNotesPanelOpen(false);
+  };
+
+  const toggleFocus = () => {
+    setFocusMode(!focusMode);
+  };
+
+  const toggleTts = () => {
+    if (ttsBarOpen) {
+      tts.stop();
+    }
+    setTtsBarOpen(!ttsBarOpen);
+  };
+
+  const handleEscape = () => {
+    if (searchOpen) setSearchOpen(false);
+    else if (themeOpen) setThemeOpen(false);
+    else if (tocOpen) setTocOpen(false);
+    else if (notesPanelOpen) setNotesPanelOpen(false);
+    else if (focusMode) setFocusMode(false);
   };
 
   const goToHref = (href: string) => {
@@ -163,7 +240,44 @@ export function BookReaderPage() {
     setTocOpen(false);
   };
 
-  useReaderKeyboardNavigation({ activeKey: primaryEpubId, getRendition });
+  const handleQuickTemplate = async (template: SharedQuickTemplate) => {
+    if (!selection) return;
+    await createHighlight.mutateAsync({
+      book_id: bookId,
+      cfi_start: selection.cfi,
+      cfi_end: selection.cfi,
+      text: selection.text,
+      type: 'HIGHLIGHT',
+      note: `[${template.label}]`,
+    });
+    toast.success(`已标记为「${template.label}」`);
+    setSelection(null);
+  };
+
+  useEffect(() => {
+    const rendition = getRendition();
+    if (!rendition) return;
+    const scheme = COLOR_SCHEMES_MAP[preferences.color_scheme] || COLOR_SCHEMES_MAP.default;
+    rendition.themes.override('color', scheme.text);
+    rendition.themes.override('background', scheme.bg);
+    if (preferences.font_family) {
+      rendition.themes.font(preferences.font_family);
+    }
+    rendition.themes.override('font-size', `${preferences.font_size}px`);
+    rendition.themes.override('line-height', String(preferences.line_height));
+  }, [preferences, getRendition, loading]);
+
+  useReaderKeyboardNavigation({
+    activeKey: primaryEpubId,
+    getRendition,
+    onToggleToc: toggleToc,
+    onToggleNotes: toggleNotesPanel,
+    onToggleSearch: toggleSearch,
+    onToggleTheme: toggleTheme,
+    onToggleFocus: toggleFocus,
+    onToggleTts: toggleTts,
+    onEscape: handleEscape,
+  });
 
   if (book.isLoading || files.isLoading) {
     return (
@@ -210,16 +324,39 @@ export function BookReaderPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className={`flex h-screen flex-col bg-background ${focusMode ? 'cursor-none' : ''}`}>
       <ReaderTopBar
         title={currentTitle || book.data?.title}
         syncMessage={syncMessage}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        sessionDuration={sessionDuration}
+        estimatedRemainingSeconds={estimatedRemainingSeconds}
+        focusMode={focusMode}
         onBack={() => navigate(`/books/${bookId}`)}
         onToggleToc={toggleToc}
         onToggleNotes={toggleNotesPanel}
+        onToggleSearch={toggleSearch}
+        onToggleTheme={toggleTheme}
+        onToggleTts={toggleTts}
+        onToggleFocus={toggleFocus}
         onPrev={goPrev}
         onNext={goNext}
       />
+
+      {ttsBarOpen && (
+        <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-1.5">
+          <Button variant="ghost" size="sm" onClick={() => (tts.paused ? tts.resume() : tts.speaking ? tts.pause() : tts.speakCurrentPage())}>
+            {tts.paused ? <Play className="h-4 w-4" /> : tts.speaking ? <Pause className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={tts.stop} disabled={!tts.speaking && !tts.paused}>
+            <Square className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">语速</span>
+          <input type="range" min={0.5} max={2.0} step={0.1} value={tts.rate} onChange={(e) => tts.setRate(Number(e.target.value))} className="w-24 accent-primary" />
+          <span className="text-xs text-muted-foreground">{tts.rate.toFixed(1)}x</span>
+        </div>
+      )}
 
       <div className="relative flex-1 overflow-hidden">
         {tocOpen && <TocPanel toc={toc} onClose={() => setTocOpen(false)} onOpenItem={goToHref} />}
@@ -241,6 +378,24 @@ export function BookReaderPage() {
           />
         )}
 
+        {searchOpen && (
+          <SearchPanel
+            visible={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            getRendition={getRendition}
+            book={getBookRef()}
+          />
+        )}
+
+        {themeOpen && (
+          <ThemeSettingsPanel
+            visible={themeOpen}
+            preferences={preferences}
+            onChange={updatePreferences}
+            onClose={() => setThemeOpen(false)}
+          />
+        )}
+
         <div ref={viewerRef} className="h-full w-full" />
 
         {loading && (
@@ -250,7 +405,6 @@ export function BookReaderPage() {
         )}
       </div>
 
-      {/* 新选区气泡工具条 */}
       <BubbleToolbar
         rect={selection?.rect ?? null}
         visible={selection !== null && !commentMode}
@@ -264,9 +418,10 @@ export function BookReaderPage() {
         onComment={handleOpenComment}
         onClear={handleClearMark}
         onDismiss={handleDismissSelection}
+        quickTemplates={QUICK_TEMPLATES}
+        onQuickTemplate={(t) => { void handleQuickTemplate(t); }}
       />
 
-      {/* 评论迷你输入 */}
       <CommentInput
         rect={selection?.rect ?? null}
         visible={commentMode}
@@ -274,7 +429,6 @@ export function BookReaderPage() {
         onCancel={handleCommentCancel}
       />
 
-      {/* 已有高亮编辑态气泡 */}
       <AddToTopicDialog
         open={topicHighlightId !== null}
         title="将高亮加入话题"
@@ -292,17 +446,17 @@ export function BookReaderPage() {
       {editing && (
         <HighlightEditPopover
           editing={editing}
-          onComment={(id) => {
-            setCommentTargetHighlightId(id);
+          onComment={(commentId) => {
+            setCommentTargetHighlightId(commentId);
             setCommentMode(true);
             setEditing(null);
           }}
-          onAddToTopic={(id) => {
-            setTopicHighlightId(id);
+          onAddToTopic={(topicId) => {
+            setTopicHighlightId(topicId);
             setEditing(null);
           }}
-          onDelete={(id) => {
-            deleteHighlight.mutate(id);
+          onDelete={(deleteId) => {
+            deleteHighlight.mutate(deleteId);
             setEditing(null);
           }}
         />
