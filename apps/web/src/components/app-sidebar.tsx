@@ -114,13 +114,38 @@ export function AppSidebar({
         </div>
       </div>
 
-      <nav className="mt-5 space-y-0.5">
-        <SidebarItem active={activeKey === 'bookshelf'} icon={<BookOpen className="h-4 w-4" />} label={'书架'} onClick={() => navigate('/')} />
-        <SidebarItem active={activeKey === 'overview'} icon={<Archive className="h-4 w-4" />} label={'档案'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/overview') : toast('未登录无法操作'))} />
-        <SidebarItem active={activeKey === 'files'} icon={<FolderOpen className="h-4 w-4" />} label={'书库文件'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/files') : toast('未登录无法操作'))} />
-        <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label={'读书笔记'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-notes') : toast('未登录无法操作'))} />
-        <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label={'阅读话题'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-topics') : toast('未登录无法操作'))} />
-        <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label={'回收站'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/trash') : toast('未登录无法操作'))} />
+      <nav className="mt-5 space-y-2">
+        <CoreNavCard
+          active={activeKey === 'bookshelf'}
+          accent="blue"
+          icon={<BookOpen className="h-[18px] w-[18px]" />}
+          label={'书架'}
+          onClick={() => navigate('/')}
+        />
+        <CoreNavCard
+          active={activeKey === 'overview'}
+          accent="amber"
+          icon={<Archive className="h-[18px] w-[18px]" />}
+          label={'档案'}
+          disabled={!loggedIn}
+          onClick={() => (loggedIn ? navigate('/overview') : toast('未登录无法操作'))}
+        />
+        <CoreNavCard
+          active={activeKey === 'files'}
+          accent="emerald"
+          icon={<FolderOpen className="h-[18px] w-[18px]" />}
+          label={'书库文件'}
+          disabled={!loggedIn}
+          onClick={() => (loggedIn ? navigate('/files') : toast('未登录无法操作'))}
+        />
+
+        <div className="my-2 h-px bg-sidebar-border" />
+
+        <div className="space-y-0.5">
+          <SidebarItem active={activeKey === 'reading-notes'} icon={<NotebookPen className="h-4 w-4" />} label={'读书笔记'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-notes') : toast('未登录无法操作'))} />
+          <SidebarItem active={activeKey === 'reading-topics'} icon={<Grid3X3 className="h-4 w-4" />} label={'阅读话题'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/reading-topics') : toast('未登录无法操作'))} />
+          <SidebarItem active={activeKey === 'trash'} icon={<Trash2 className="h-4 w-4" />} label={'回收站'} disabled={!loggedIn} onClick={() => (loggedIn ? navigate('/trash') : toast('未登录无法操作'))} />
+        </div>
       </nav>
 
       <div className="min-h-20 flex-1" />
@@ -217,6 +242,79 @@ function SidebarItem({
       {icon}
       <span>{label}</span>
       {badge && <span className={cn('ml-auto text-[10px]', active ? 'text-sidebar-primary-foreground/60' : 'text-muted-foreground/35')}>{badge}</span>}
+    </button>
+  );
+}
+
+function CoreNavCard({
+  active,
+  accent,
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  active?: boolean;
+  accent: 'blue' | 'amber' | 'emerald';
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  const accentMap = {
+    blue: {
+      bg: 'bg-blue-500',
+      shadow: 'shadow-blue-500/20',
+      glow: 'bg-blue-500 shadow-blue-500',
+      gradient: 'from-blue-500/10 to-indigo-500/5',
+      border: 'border-blue-500/20',
+    },
+    amber: {
+      bg: 'bg-amber-500',
+      shadow: 'shadow-amber-500/20',
+      glow: 'bg-amber-500 shadow-amber-500',
+      gradient: 'from-amber-500/10 to-orange-500/5',
+      border: 'border-amber-500/20',
+    },
+    emerald: {
+      bg: 'bg-emerald-500',
+      shadow: 'shadow-emerald-500/20',
+      glow: 'bg-emerald-500 shadow-emerald-500',
+      gradient: 'from-emerald-500/10 to-teal-500/5',
+      border: 'border-emerald-500/20',
+    },
+  };
+  const a = accentMap[accent];
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex w-full items-center gap-3.5 rounded-2xl border p-4 transition-all duration-200',
+        active
+          ? cn('bg-gradient-to-br shadow-sm', a.gradient, a.border)
+          : 'border-border bg-card hover:bg-accent',
+        disabled && 'cursor-not-allowed opacity-50',
+      )}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+    >
+      <div
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          active ? cn(a.bg, 'shadow-md', a.shadow) : 'border border-border bg-muted',
+        )}
+      >
+        <span className={active ? 'text-white' : 'text-muted-foreground'}>{icon}</span>
+      </div>
+      <span className={cn('text-base font-bold', active ? 'text-foreground' : 'text-muted-foreground')}>
+        {label}
+      </span>
+      {active && (
+        <div
+          className={cn('ml-auto h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_6px]', a.glow)}
+        />
+      )}
     </button>
   );
 }
