@@ -546,7 +546,7 @@ export const updateSettingsSchema = z.record(
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 
 export const storageSettingsSchema = z.object({
-  default_storage_mode: z.enum(STORAGE_MODE_VALUES),
+  default_storage_mode: z.enum(STORAGE_MODE_VALUES).optional(),
   driver: z.enum(STORAGE_DRIVER_VALUES).optional().nullable(),
   provider: z.string().max(100).optional().nullable(),
   bucket: z.string().max(255).optional().nullable(),
