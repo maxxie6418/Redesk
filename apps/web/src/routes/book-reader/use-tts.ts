@@ -23,8 +23,12 @@ export interface UseTtsReturn {
   speakCurrentPage: () => void;
 }
 
+interface TtsRendition {
+  currentLocation: () => { start?: { href?: string } } | null;
+}
+
 export function useTts(
-  getRendition: () => any | null,
+  getRendition: () => TtsRendition | null,
   epubLang?: string,
 ): UseTtsReturn {
   const [speaking, setSpeaking] = useState(false);

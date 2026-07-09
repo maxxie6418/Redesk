@@ -24,6 +24,13 @@ interface EpubRendition {
       register: (callback: (contents: EpubContents) => void) => void;
     };
   };
+  themes: {
+    override: (prop: string, value: string) => void;
+    font: (family: string) => void;
+    register: (name: string, styles: object) => void;
+    select: (name: string) => void;
+  };
+  currentLocation: () => EpubLocation | null;
   display: (target?: string) => Promise<unknown>;
   prev: () => void;
   next: () => void;
@@ -35,13 +42,15 @@ interface EpubBook {
   renderTo: (element: HTMLElement, options: { width: string; height: string; flow: string; spread: string }) => EpubRendition;
   ready: Promise<unknown>;
   navigation: { toc: { label: string; href: string }[] };
-  loaded: { metadata: Promise<{ title?: string }> };
+  loaded: { metadata: Promise<{ title?: string; language?: string }> };
+  search: (query: string) => Promise<{ cfi: string; excerpt: string }[]>;
   destroy: () => void;
 }
 
 interface EpubLocation {
   start?: {
     cfi?: string;
+    href?: string;
     displayed?: {
       page?: number;
       total?: number;
@@ -88,11 +97,15 @@ export function useEpubReader({
 
   const [toc, setToc] = useState<TocItem[]>([]);
   const [currentTitle, setCurrentTitle] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [epubLang, setEpubLang] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const getCurrentCfi = useCallback(() => renditionRef.current?.location?.start?.cfi ?? currentCfiRef.current, []);
   const getRendition = useCallback(() => renditionRef.current, []);
+  const getBookRef = useCallback(() => bookRef.current, []);
   const goPrev = useCallback(() => renditionRef.current?.prev(), []);
   const goNext = useCallback(() => renditionRef.current?.next(), []);
   const goToHref = useCallback((href: string) => {
@@ -240,21 +253,23 @@ export function useEpubReader({
           });
 
         epubBook.loaded.metadata
-          .then((meta: { title?: string }) => {
+          .then((meta: { title?: string; language?: string }) => {
             if (cancelled) return;
             if (meta?.title) setCurrentTitle(meta.title);
+            if (meta?.language) setEpubLang(meta.language);
           })
           .catch((metadataError: unknown) => ignoreError(metadataError));
 
-        rendition.on('relocated', (location: { start?: { cfi?: string; displayed?: { page?: number; total?: number } } }) => {
+        rendition.on('relocated', (location: EpubLocation) => {
           if (cancelled) return;
           if (location?.start?.cfi) {
             currentCfiRef.current = location.start.cfi;
           }
           if (location?.start?.displayed?.page) {
-            const page = location.start.displayed.page;
-            const total = location.start.displayed.total;
-            setCurrentTitle(`${bookTitle} · ${page} / ${total}`);
+            setCurrentPage(location.start.displayed.page);
+          }
+          if (location?.start?.displayed?.total) {
+            setTotalPages(location.start.displayed.total);
           }
 
           if (saveTimer) clearTimeout(saveTimer);
@@ -308,10 +323,14 @@ export function useEpubReader({
     viewerRef,
     toc,
     currentTitle,
+    currentPage,
+    totalPages,
+    epubLang,
     loading,
     error,
     getCurrentCfi,
     getRendition,
+    getBookRef,
     goPrev,
     goNext,
     goToHref,

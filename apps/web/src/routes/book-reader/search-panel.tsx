@@ -7,11 +7,19 @@ interface SearchResult {
   excerpt: string;
 }
 
+interface SearchPanelRendition {
+  display: (target?: string) => unknown;
+}
+
+interface SearchPanelBook {
+  search: (query: string) => Promise<SearchResult[]>;
+}
+
 interface SearchPanelProps {
   visible: boolean;
   onClose: () => void;
-  getRendition: () => any;
-  book: any;
+  getRendition: () => SearchPanelRendition | null;
+  book: SearchPanelBook | null;
 }
 
 function escapeRegex(str: string) {

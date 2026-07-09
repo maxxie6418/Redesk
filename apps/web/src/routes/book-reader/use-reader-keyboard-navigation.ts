@@ -30,6 +30,7 @@ interface UseReaderKeyboardNavigationOptions {
   onToggleSearch?: () => void;
   onToggleTheme?: () => void;
   onToggleFocus?: () => void;
+  onToggleTts?: () => void;
   onBookmark?: () => void;
   onEscape?: () => void;
 }
@@ -42,6 +43,7 @@ export function useReaderKeyboardNavigation({
   onToggleSearch,
   onToggleTheme,
   onToggleFocus,
+  onToggleTts,
   onBookmark,
   onEscape,
 }: UseReaderKeyboardNavigationOptions) {
@@ -80,6 +82,10 @@ export function useReaderKeyboardNavigation({
         event.preventDefault();
         onToggleFocus?.();
       }
+      if (event.key === 'v' || event.key === 'V') {
+        event.preventDefault();
+        onToggleTts?.();
+      }
       if (event.key === 'Escape') {
         onEscape?.();
       }
@@ -95,5 +101,5 @@ export function useReaderKeyboardNavigation({
     return () => {
       window.removeEventListener('keydown', handleKeydown);
     };
-  }, [activeKey, getRendition, onToggleToc, onToggleNotes, onToggleSearch, onToggleTheme, onToggleFocus, onBookmark, onEscape]);
+  }, [activeKey, getRendition, onToggleToc, onToggleNotes, onToggleSearch, onToggleTheme, onToggleFocus, onToggleTts, onBookmark, onEscape]);
 }
