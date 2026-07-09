@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateTopicDialog } from '@/components/create-topic-dialog';
+import { ProtectedShell } from '@/components/protected-shell';
 import { Button } from '@/components/ui/button';
+import { useSidebarStats } from '@/hooks/use-sidebar-stats';
 import {
   useAddTopicBook,
   useCreateTopic,
@@ -21,6 +23,7 @@ import { mapTopicDetailToViewModel } from './mapping';
 
 export function ReadingTopicsPage() {
   const navigate = useNavigate();
+  const sidebarStats = useSidebarStats();
   const [view, setView] = useState<'list' | 'workspace'>('list');
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +58,8 @@ export function ReadingTopicsPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-6 lg:p-10">
+    <ProtectedShell activeKey="reading-topics" stats={sidebarStats} mainClassName="overflow-y-auto px-6 py-6 lg:px-10">
+      <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">主题阅读</h1>
@@ -181,6 +185,7 @@ export function ReadingTopicsPage() {
           setCreateOpen(false);
         }}
       />
-    </div>
+      </div>
+    </ProtectedShell>
   );
 }
