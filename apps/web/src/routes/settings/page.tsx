@@ -201,7 +201,7 @@ function SimpleSettingsPage({ user }: { user: AuthUser }) {
 
   return (
     <ProtectedShell activeKey="settings" mobileNavKey="settings" mainClassName="overflow-y-auto px-6 py-6">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">个人设置</h1>
           <p className="mt-1 text-sm text-muted-foreground">管理你的账号信息和偏好。</p>
