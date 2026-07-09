@@ -1,5 +1,6 @@
 import { ERROR_CODE } from '@redesk/shared';
 import { AppError } from './errors';
+import { fetchHtml } from './fetch-utils';
 
 export interface LinkMetadata {
   title?: string;
@@ -202,20 +203,9 @@ export async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkM
     throw new AppError(ERROR_CODE.VALIDATION_ERROR, '只支持 http 或 https 链接');
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const referer = url.hostname.includes('douban.com') ? 'https://book.douban.com/' : undefined;
   try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 Redesk/0.1 book metadata fetcher',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-    });
-    if (!res.ok) {
-      throw new AppError(ERROR_CODE.BUSINESS_ERROR, `获取链接失败：HTTP ${res.status}`);
-    }
-    const html = await res.text();
+    const html = await fetchHtml(url.toString(), referer);
     if (url.hostname.includes('douban.com')) {
       return parseDoubanHtml(html, url.toString());
     }
@@ -232,7 +222,5 @@ export async function fetchBookMetadataFromUrl(sourceUrl: string): Promise<LinkM
   } catch (err) {
     if (err instanceof AppError) throw err;
     throw new AppError(ERROR_CODE.BUSINESS_ERROR, '获取链接失败，请改用粘贴文本导入');
-  } finally {
-    clearTimeout(timeout);
   }
 }

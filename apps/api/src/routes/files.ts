@@ -31,6 +31,7 @@ import {
 } from '../lib/storage-factory';
 import type { Storage } from '../lib/storage';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
+import { fetchPage } from '../lib/fetch-utils';
 import { randomStorageToken, storageDebug, storageError } from '../lib/storage-debug';
 
 export const EXTENSION_FORMAT: Record<string, string> = EXTENSION_FORMATS;
@@ -908,16 +909,11 @@ export async function downloadRemoteCover(input: {
     }
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 Redesk/0.1 cover fetcher',
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        Referer: 'https://book.douban.com/',
-      },
+    const res = await fetchPage({
+      url: url.toString(),
+      accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      referer: 'https://book.douban.com/',
     });
     if (!res.ok) return null;
     const contentType = res.headers.get('content-type');
@@ -952,8 +948,6 @@ export async function downloadRemoteCover(input: {
     };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
