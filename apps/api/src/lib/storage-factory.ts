@@ -3,7 +3,8 @@ import { LocalStorage } from './storage';
 import { S3Storage, type S3StorageConfig } from './s3-storage';
 import { config } from '../config';
 import { eq, and, asc } from 'drizzle-orm';
-import { settings, users, type StorageMode } from '@redesk/db';
+import { cloudConnections, cloudUsageAssignments, settings, users, type CloudConnectionType, type CloudUsage, type StorageMode } from '@redesk/db';
+import { WebDavStorage } from './webdav-storage';
 import { getDb } from '../db';
 import { storageDebug, storageError } from './storage-debug';
 
@@ -46,6 +47,52 @@ export class StorageModeNotAvailableError extends Error {
   constructor(public readonly mode: StorageMode, reason?: string) {
     super(`存储模式不可用: ${mode}${reason ? ` (${reason})` : ''}`);
   }
+}
+
+function parseCloudConfig(raw: string): Record<string, unknown> {
+  try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+}
+
+function createCloudStorage(type: CloudConnectionType, raw: string): Storage {
+  const cfg = parseCloudConfig(raw);
+  if (type === 's3') {
+    return new S3Storage({
+      endpoint: String(cfg.endpoint ?? ''), region: String(cfg.region ?? 'auto'), bucket: String(cfg.bucket ?? ''),
+      accessKeyId: String(cfg.access_key ?? ''), secretAccessKey: String(cfg.secret_key ?? ''),
+      publicUrlBase: typeof cfg.public_url === 'string' && cfg.public_url ? cfg.public_url : undefined, forcePathStyle: true,
+    });
+  }
+  return new WebDavStorage({ url: String(cfg.url ?? ''), username: typeof cfg.username === 'string' ? cfg.username : null, password: String(cfg.password ?? ''), basePath: typeof cfg.base_path === 'string' ? cfg.base_path : null });
+}
+
+function getActiveConnection(id: number) {
+  const ownerId = getSettingsOwnerId();
+  if (!ownerId) return null;
+  return getDb().select().from(cloudConnections).where(and(eq(cloudConnections.id, id), eq(cloudConnections.owner_id, ownerId), eq(cloudConnections.is_active, true))).get() ?? null;
+}
+
+export function getStorageByConnectionId(connectionId: number): Storage {
+  const connection = getActiveConnection(connectionId);
+  if (!connection) throw new StorageNotConfiguredError('s3');
+  return createCloudStorage(connection.type, connection.config);
+}
+
+export function getCloudStoragesForUsage(usage: CloudUsage): Array<{ connectionId: number; storage: Storage }> {
+  const ownerId = getSettingsOwnerId();
+  if (!ownerId) return [];
+  const rows = getDb().select({ connection_id: cloudUsageAssignments.connection_id, type: cloudConnections.type, config: cloudConnections.config })
+    .from(cloudUsageAssignments)
+    .innerJoin(cloudConnections, eq(cloudUsageAssignments.connection_id, cloudConnections.id))
+    .where(and(eq(cloudUsageAssignments.owner_id, ownerId), eq(cloudUsageAssignments.usage, usage), eq(cloudConnections.is_active, true)))
+    .orderBy(asc(cloudUsageAssignments.priority))
+    .all();
+  return rows.map((row) => ({ connectionId: row.connection_id, storage: createCloudStorage(row.type, row.config) }));
+}
+
+export function getCloudStorageForUsage(usage: CloudUsage): { connectionId: number; storage: Storage } {
+  const target = getCloudStoragesForUsage(usage)[0];
+  if (!target) throw new StorageNotConfiguredError('s3');
+  return target;
 }
 
 function readSettingsValue(key: string): string | null {
@@ -187,15 +234,12 @@ export function getStorageForMode(mode: StorageMode): Storage {
 }
 
 export function isCloudAvailable(): boolean {
-  return ensureCache().s3 != null;
+  return getCloudStoragesForUsage('book_files').length > 0;
 }
 
 export function assertStorageModeAvailable(mode: StorageMode): void {
   if (mode === 'local_only') return;
-  const c = ensureCache();
-  if (!c.s3) {
-    throw new StorageModeNotAvailableError(mode, c.s3Error ?? '云存储未配置');
-  }
+  if (!isCloudAvailable()) throw new StorageModeNotAvailableError(mode, '书籍文件未分配可用的云连接');
 }
 
 export function getDefaultStorageMode(): StorageMode {
@@ -209,19 +253,21 @@ export function normalizeStorageMode(mode: unknown): StorageMode {
 
 export function getStorageStatus(): StorageStatus {
   const c = ensureCache();
-  const cfg = buildS3Config();
+  const target = getCloudStoragesForUsage('book_files')[0] ?? null;
+  const connection = target ? getActiveConnection(target.connectionId) : null;
+  const cfg = connection ? parseCloudConfig(connection.config) : null;
   return {
     defaultStorageMode: c.defaultStorageMode,
-    cloudAvailable: c.s3 != null,
-    configured: c.s3 != null,
-    provider: readSettingsValue(SETTINGS_KEYS.provider),
-    bucket: cfg.bucket || null,
-    endpoint: cfg.endpoint || null,
-    hasAccessKey: Boolean(cfg.accessKeyId),
-    hasSecretKey: Boolean(cfg.secretAccessKey),
-    region: cfg.region,
-    publicUrl: cfg.publicUrlBase ?? null,
-    reason: c.s3 ? null : c.s3Error,
+    cloudAvailable: target != null,
+    configured: target != null,
+    provider: typeof cfg?.provider === 'string' ? cfg.provider : connection?.type ?? null,
+    bucket: typeof cfg?.bucket === 'string' ? cfg.bucket : null,
+    endpoint: typeof cfg?.endpoint === 'string' ? cfg.endpoint : typeof cfg?.url === 'string' ? cfg.url : null,
+    hasAccessKey: Boolean(cfg?.access_key ?? cfg?.username),
+    hasSecretKey: Boolean(cfg?.secret_key ?? cfg?.password),
+    region: typeof cfg?.region === 'string' ? cfg.region : null,
+    publicUrl: typeof cfg?.public_url === 'string' ? cfg.public_url : null,
+    reason: target ? null : '书籍文件尚未分配云连接',
   };
 }
 

@@ -128,7 +128,7 @@ function AdminSettingsPage() {
         mobileNavKey="settings"
         mainClassName={isMobileLayout ? 'overflow-y-auto px-0 py-0' : 'overflow-y-auto px-6 py-6'}
       >
-        <div className={cn('mx-auto max-w-7xl', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
+        <div className={cn('mx-auto w-full max-w-[1600px]', isMobileLayout ? 'space-y-4 px-4 py-4' : '')}>
           <div className={cn(isMobileLayout ? 'space-y-1' : 'mb-5')}>
             <h1 className="text-xl font-semibold text-foreground">设置</h1>
             {isMobileLayout ? (

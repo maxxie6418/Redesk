@@ -44,46 +44,42 @@ export interface FetchPageOptions {
   maxRetries?: number;
 }
 
-export async function fetchPage(options: FetchPageOptions): Promise<Response> {
-  const { url, accept, referer, timeoutMs = 10_000, maxRetries = 3 } = options;
+export interface FetchExternalOptions extends FetchPageOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: BodyInit;
+  acceptableStatuses?: number[];
+}
+
+export async function fetchExternal(options: FetchExternalOptions): Promise<Response> {
+  const { url, accept, referer, timeoutMs = 10_000, maxRetries = 3, method = 'GET', headers: extraHeaders, body, acceptableStatuses = [] } = options;
   const parsedUrl = new URL(url);
-  const domain = parsedUrl.hostname;
-
-  await respectRateLimit(domain);
-
-  const ua = randomUserAgent();
+  await respectRateLimit(parsedUrl.hostname);
   const headers: Record<string, string> = {
-    'User-Agent': ua,
+    'User-Agent': randomUserAgent(),
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
     'Accept-Encoding': 'gzip, deflate, br',
     'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-    'Cache-Control': 'max-age=0',
+    ...extraHeaders,
   };
-  if (accept) headers['Accept'] = accept;
-  if (referer) headers['Referer'] = referer;
+  if (accept) headers.Accept = accept;
+  if (referer) headers.Referer = referer;
 
   let lastError: unknown;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    if (attempt > 0) {
-      const backoff = Math.min(1000 * 2 ** attempt, 10_000) + Math.random() * 1000;
-      await new Promise((resolve) => setTimeout(resolve, backoff));
-    }
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 10_000) + Math.random() * 1000));
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url, { signal: controller.signal, headers });
+      const res = await fetch(url, { method, headers, body, signal: controller.signal });
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
-        const waitMs = Number.isFinite(retryAfter) ? retryAfter * 1000 : 5000 + Math.random() * 5000;
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-        lastError = new Error(`HTTP 429`);
+        await new Promise((resolve) => setTimeout(resolve, Number.isFinite(retryAfter) ? retryAfter * 1000 : 5000 + Math.random() * 5000));
+        lastError = new Error('HTTP 429');
         continue;
       }
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      return res;
+      if (res.ok || acceptableStatuses.includes(res.status)) return res;
+      throw new Error(`HTTP ${res.status}`);
     } catch (err) {
       lastError = err;
     } finally {
@@ -91,6 +87,10 @@ export async function fetchPage(options: FetchPageOptions): Promise<Response> {
     }
   }
   throw lastError ?? new Error('fetch failed');
+}
+
+export async function fetchPage(options: FetchPageOptions): Promise<Response> {
+  return fetchExternal({ ...options, headers: { 'Upgrade-Insecure-Requests': '1', 'Cache-Control': 'max-age=0' } });
 }
 
 export async function fetchHtml(url: string, referer?: string): Promise<string> {

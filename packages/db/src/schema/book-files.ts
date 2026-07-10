@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { books } from './books';
 import { users } from './users';
+import { cloudConnections } from './cloud-connections';
 
 export const STORAGE_MODES = ['local_only', 'cloud_only', 'dual'] as const;
 export type StorageMode = (typeof STORAGE_MODES)[number];
@@ -18,6 +19,7 @@ export const bookFiles = sqliteTable('book_files', {
   storage_mode: text('storage_mode', { enum: STORAGE_MODES }).notNull().default('local_only'),
   local_path: text('local_path'),
   remote_key: text('remote_key'),
+  connection_id: integer('connection_id').references(() => cloudConnections.id, { onDelete: 'set null' }),
   primary_location: text('primary_location', { enum: ['local', 'cloud'] }).notNull().default('local'),
   sync_status: text('sync_status', { enum: SYNC_STATUSES }).notNull().default('synced'),
   original_filename: text('original_filename'),

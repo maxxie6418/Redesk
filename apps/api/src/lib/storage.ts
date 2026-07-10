@@ -25,7 +25,7 @@ export interface PutResult {
 export type StorageInputStream = AsyncIterable<Buffer | Uint8Array> | NodeJS.ReadableStream;
 
 export interface Storage {
-  readonly driver: 'local' | 's3';
+  readonly driver: 'local' | 's3' | 'webdav';
 
   putBytes(key: string, bytes: Buffer, opts?: StoragePutOptions): Promise<PutResult>;
   putStream(key: string, stream: StorageInputStream, opts?: StoragePutOptions): Promise<PutResult>;

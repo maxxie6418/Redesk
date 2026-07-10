@@ -24,9 +24,10 @@ import { requireAdmin, requireUserId } from '../lib/auth';
 import { validate } from '../lib/zod';
 import {
   assertStorageModeAvailable,
+  getCloudStorageForUsage,
+  getStorageByConnectionId,
   getDefaultStorageMode,
   getStorageByDriver,
-  getStorageDriversForMode,
   resolvePrimaryLocation,
 } from '../lib/storage-factory';
 import type { Storage } from '../lib/storage';
@@ -305,34 +306,40 @@ function filePathForStorage(mode: StorageMode, key: string): { localPath: string
 
 async function writeBytesForMode(
   mode: StorageMode,
+  usage: 'book_files' | 'covers',
   key: string,
   bytes: Buffer,
   contentType: string,
-): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
-  const drivers = getStorageDriversForMode(mode);
-  storageDebug(`[Storage] writeBytesForMode: mode=${mode}, drivers=${JSON.stringify(drivers)}, size=${bytes.length}`);
+): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; connectionId: number | null; syncStatus: 'synced' | 'partial_failed' }> {
+  const cloudTarget = mode === 'local_only' ? null : getCloudStorageForUsage(usage);
+  const targets = mode === 'local_only'
+    ? [{ driver: 'local' as const, storage: getStorageByDriver('local'), connectionId: null }]
+    : mode === 'cloud_only'
+      ? [{ driver: 'cloud' as const, storage: cloudTarget!.storage, connectionId: cloudTarget!.connectionId }]
+      : [{ driver: 'local' as const, storage: getStorageByDriver('local'), connectionId: null }, { driver: 'cloud' as const, storage: cloudTarget!.storage, connectionId: cloudTarget!.connectionId }];
+  storageDebug(`[Storage] writeBytesForMode: mode=${mode}, usage=${usage}, targets=${targets.length}, size=${bytes.length}`);
 
   const results = await Promise.allSettled(
-    drivers.map(async (driver) => {
+    targets.map(async (target) => {
       try {
-        const storage = getStorageByDriver(driver);
-        storageDebug(`[Storage] Writing to ${driver}`);
+        const storage = target.storage;
+        storageDebug(`[Storage] Writing to ${target.driver}`);
         const { size } = await storage.putBytes(key, bytes, { contentType });
-        storageDebug(`[Storage] Written to ${driver}: size=${size}`);
+        storageDebug(`[Storage] Written to ${target.driver}: size=${size}`);
         const checksum = await fileSha256(storage, key);
-        storageDebug(`[Storage] Checksum calculated for ${driver}`);
-        return { driver, size, checksum };
+        storageDebug(`[Storage] Checksum calculated for ${target.driver}`);
+        return { driver: target.driver, connectionId: target.connectionId, size, checksum };
       } catch (err) {
         const errorName = err instanceof Error ? err.name : 'UnknownError';
         const errorMessage = err instanceof Error ? err.message : '未知错误';
-        storageError(`[Storage] Failed to write to ${driver}: error_name=${errorName}, message=${errorMessage}`);
+        storageError(`[Storage] Failed to write to ${target.driver}: error_name=${errorName}, message=${errorMessage}`);
         throw err;
       }
     }),
   );
 
   const successes = results
-    .filter((item): item is PromiseFulfilledResult<{ driver: 'local' | 's3'; size: number; checksum: string }> => item.status === 'fulfilled')
+    .filter((item): item is PromiseFulfilledResult<{ driver: 'local' | 'cloud'; connectionId: number | null; size: number; checksum: string }> => item.status === 'fulfilled')
     .map((item) => item.value);
 
   storageDebug(`[Storage] writeBytesForMode result: successes=${successes.map((s) => s.driver).join(',')}, failures=${results.filter((r) => r.status === 'rejected').length}`);
@@ -345,22 +352,24 @@ async function writeBytesForMode(
     size: successes[0].size,
     checksum: successes[0].checksum,
     localPath: successes.some((item) => item.driver === 'local') ? key : null,
-    remoteKey: successes.some((item) => item.driver === 's3') ? key : null,
-    syncStatus: successes.length === drivers.length ? 'synced' : 'partial_failed',
+    remoteKey: successes.some((item) => item.driver === 'cloud') ? key : null,
+    connectionId: successes.find((item) => item.driver === 'cloud')?.connectionId ?? null,
+    syncStatus: successes.length === targets.length ? 'synced' : 'partial_failed',
   };
 }
 
 async function writeStreamForMode(
   mode: StorageMode,
+  usage: 'book_files' | 'covers',
   key: string,
   stream: NodeJS.ReadableStream,
   contentType: string,
-): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; syncStatus: 'synced' | 'partial_failed' }> {
+): Promise<{ size: number; checksum: string; localPath: string | null; remoteKey: string | null; connectionId: number | null; syncStatus: 'synced' | 'partial_failed' }> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  return writeBytesForMode(mode, key, Buffer.concat(chunks), contentType);
+  return writeBytesForMode(mode, usage, key, Buffer.concat(chunks), contentType);
 }
 
 async function sendFileRecordToCloud(file: typeof bookFiles.$inferSelect): Promise<typeof bookFiles.$inferSelect> {
@@ -371,7 +380,8 @@ async function sendFileRecordToCloud(file: typeof bookFiles.$inferSelect): Promi
   assertStorageModeAvailable('cloud_only');
 
   const localStorage = getStorageByDriver('local');
-  const cloudStorage = getStorageByDriver('s3');
+  const cloudTarget = getCloudStorageForUsage('book_files');
+  const cloudStorage = cloudTarget.storage;
   const existsLocally = await localStorage.exists(file.local_path).catch(() => false);
   if (!existsLocally) {
     throw new AppError(ERROR_CODE.BUSINESS_ERROR, '本地文件不存在，无法补发到云端');
@@ -387,6 +397,7 @@ async function sendFileRecordToCloud(file: typeof bookFiles.$inferSelect): Promi
   db.update(bookFiles)
     .set({
       remote_key: remoteKey,
+      connection_id: cloudTarget.connectionId,
       storage_mode: file.storage_mode === 'local_only' ? 'dual' : file.storage_mode,
       sync_status: 'synced',
       file_size: size,
@@ -403,21 +414,24 @@ async function sendFileRecordToCloud(file: typeof bookFiles.$inferSelect): Promi
   return updated;
 }
 
-async function resolveReadableAsset(input: { local_path: string | null; remote_key: string | null; primary_location: 'local' | 'cloud' }) {
+async function resolveReadableAsset(input: { local_path: string | null; remote_key: string | null; connection_id: number | null; primary_location: 'local' | 'cloud' }) {
   const candidates =
     input.primary_location === 'cloud'
       ? [
-          { driver: 's3' as const, key: input.remote_key },
+          { driver: 'cloud' as const, key: input.remote_key },
           { driver: 'local' as const, key: input.local_path },
         ]
       : [
           { driver: 'local' as const, key: input.local_path },
-          { driver: 's3' as const, key: input.remote_key },
+          { driver: 'cloud' as const, key: input.remote_key },
         ];
 
   for (const candidate of candidates) {
     if (!candidate.key) continue;
-    const storage = getStorageByDriver(candidate.driver);
+    const storage = candidate.driver === 'cloud'
+      ? input.connection_id ? getStorageByConnectionId(input.connection_id) : null
+      : getStorageByDriver('local');
+    if (!storage) continue;
     const exists = await storage.exists(candidate.key).catch(() => false);
     if (exists) {
       return { storage, key: candidate.key };
@@ -466,11 +480,16 @@ function upsertBookCover(input: {
   mimeType: string;
   fileSize: number;
   checksum: string;
+  localPath?: string | null;
+  remoteKey?: string | null;
+  connectionId?: number | null;
   activate?: boolean;
 }): number {
   const db = getDb();
   const timestamp = now();
-  const { localPath, remoteKey } = filePathForStorage(input.storageMode, input.key);
+  const { localPath: modeLocalPath, remoteKey: modeRemoteKey } = filePathForStorage(input.storageMode, input.key);
+  const localPath = input.localPath ?? modeLocalPath;
+  const remoteKey = input.remoteKey ?? modeRemoteKey;
   const primary = resolvePrimaryLocation(input.storageMode);
 
   const existing =
@@ -499,6 +518,7 @@ function upsertBookCover(input: {
         storage_mode: input.storageMode,
         local_path: localPath,
         remote_key: remoteKey,
+        connection_id: input.connectionId ?? null,
         primary_location: primary,
         sync_status: 'synced',
         mime_type: input.mimeType,
@@ -529,6 +549,7 @@ function upsertBookCover(input: {
       storage_mode: input.storageMode,
       local_path: localPath,
       remote_key: remoteKey,
+      connection_id: input.connectionId ?? null,
       primary_location: primary,
       sync_status: 'synced',
       mime_type: input.mimeType,
@@ -924,7 +945,7 @@ export async function downloadRemoteCover(input: {
 
     const ext = coverExtFromResponse(url.toString(), contentType);
     const key = remoteCoverKey(input.bookId, ext);
-    const writeResult = await writeBytesForMode(defaultMode, key, bytes, contentType ?? coverMimeFromExt(ext));
+    const writeResult = await writeBytesForMode(defaultMode, 'covers', key, bytes, contentType ?? coverMimeFromExt(ext));
 
     const coverId = upsertBookCover({
       ownerId: input.ownerId,
@@ -966,7 +987,7 @@ export async function saveUploadedFile(
   const format = detectFormat(filename);
   const mime = detectMime(filename);
   const key = bookId != null ? bookFileKey(bookId, ext) : unassociatedFileKey(ext);
-  const writeResult = await writeStreamForMode(mode, key, stream, mime);
+  const writeResult = await writeStreamForMode(mode, 'book_files', key, stream, mime);
   const primary = resolvePrimaryLocation(mode);
   const timestamp = now();
 
@@ -1001,6 +1022,7 @@ export async function saveUploadedFile(
       storage_mode: mode,
       local_path: writeResult.localPath,
       remote_key: writeResult.remoteKey,
+      connection_id: writeResult.connectionId,
       primary_location: primary,
       sync_status: writeResult.syncStatus,
       original_filename: basename(filename),
@@ -1024,10 +1046,10 @@ export async function saveUploadedFile(
 
   if (bookId != null) {
     try {
-      const primaryStorage = getStorageByDriver(primary === 'cloud' ? 's3' : 'local');
+      const primaryStorage = primary === 'cloud' ? getCloudStorageForUsage('book_files').storage : getStorageByDriver('local');
       const coverInfo = await extractEpubCover(primaryStorage, key, bookId);
       if (coverInfo) {
-        const coverWriteResult = await writeBytesForMode(mode, coverInfo.key, coverInfo.bytes, coverMimeFromExt(coverInfo.ext));
+        const coverWriteResult = await writeBytesForMode(mode, 'covers', coverInfo.key, coverInfo.bytes, coverMimeFromExt(coverInfo.ext));
         upsertBookCover({
           ownerId,
           bookId,
@@ -1039,6 +1061,9 @@ export async function saveUploadedFile(
           mimeType: coverMimeFromExt(coverInfo.ext),
           fileSize: coverInfo.bytes.length,
           checksum: coverWriteResult.checksum,
+          localPath: coverWriteResult.localPath,
+          remoteKey: coverWriteResult.remoteKey,
+          connectionId: coverWriteResult.connectionId,
           activate: true,
         });
       }
@@ -1086,7 +1111,7 @@ export async function replaceBookFile(
   const primary = resolvePrimaryLocation(mode);
 
   // 1) 写新文件到临时 key。失败时旧文件未动，无副作用。
-  const writeResult = await writeStreamForMode(mode, tmpKey, stream, mime);
+  const writeResult = await writeStreamForMode(mode, 'book_files', tmpKey, stream, mime);
   const newLocalPath = writeResult.localPath ? newKey : null;
   const newRemoteKey = writeResult.remoteKey ? newKey : null;
   const timestamp = now();
@@ -1098,6 +1123,7 @@ export async function replaceBookFile(
       storage_mode: mode,
       local_path: newLocalPath,
       remote_key: newRemoteKey,
+      connection_id: writeResult.connectionId,
       primary_location: primary,
       sync_status: writeResult.syncStatus,
       original_filename: basename(filename),
@@ -1111,9 +1137,9 @@ export async function replaceBookFile(
     .run();
 
   // 3) storage.move 临时 → 正式。失败回滚 DB 到旧 path 并清理 tmp。
-  const driver = primary === 'cloud' ? 's3' : 'local';
+  const primaryStorage = primary === 'cloud' ? getCloudStorageForUsage('book_files').storage : getStorageByDriver('local');
   try {
-    const storage = getStorageByDriver(driver);
+    const storage = primaryStorage;
     await storage.move(tmpKey, newKey);
   } catch (err) {
     db.update(bookFiles)
@@ -1133,7 +1159,7 @@ export async function replaceBookFile(
       .where(eq(bookFiles.id, fileId))
       .run();
     try {
-      await getStorageByDriver(driver).delete(tmpKey);
+      await primaryStorage.delete(tmpKey);
     } catch {
       // 临时文件清理失败不阻塞回滚；孤儿文件留给未来清理任务
     }
@@ -1150,7 +1176,7 @@ export async function replaceBookFile(
   }
   if (old.remote_key && old.remote_key !== newKey) {
     try {
-      getStorageByDriver('s3').delete(old.remote_key).catch(() => undefined);
+      if (old.connection_id) getStorageByConnectionId(old.connection_id).delete(old.remote_key).catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1185,8 +1211,10 @@ export function deleteStoredBookFile(file: typeof bookFiles.$inferSelect): void 
   }
   if (file.remote_key) {
     try {
-      const s = getStorageByDriver('s3');
-      s.delete(file.remote_key).catch(() => undefined);
+      if (file.connection_id) {
+        const s = getStorageByConnectionId(file.connection_id);
+        s.delete(file.remote_key).catch(() => undefined);
+      }
     } catch {
       // ignore
     }
@@ -1688,7 +1716,7 @@ export function fileRoutes(app: FastifyInstance): void {
     }
 
     const finalKey = bookCoverKey(bookId, ext);
-    const writeResult = await writeBytesForMode(mode, finalKey, bytes, coverMimeFromExt(ext));
+    const writeResult = await writeBytesForMode(mode, 'covers', finalKey, bytes, coverMimeFromExt(ext));
 
     const coverId = upsertBookCover({
       ownerId: userId,
@@ -1790,7 +1818,7 @@ export function fileRoutes(app: FastifyInstance): void {
       try { getStorageByDriver('local').delete(cover.local_path); } catch { /* ignore */ }
     }
     if (cover.remote_key) {
-      try { getStorageByDriver('s3').delete(cover.remote_key); } catch { /* ignore */ }
+      try { if (cover.connection_id) getStorageByConnectionId(cover.connection_id).delete(cover.remote_key); } catch { /* ignore */ }
     }
     getDb().delete(bookCovers).where(eq(bookCovers.id, cid)).run();
 

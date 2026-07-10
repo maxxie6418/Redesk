@@ -37,6 +37,8 @@ export const RESTORE_CONFLICT_STRATEGY_VALUES = ['skip', 'overwrite', 'rename', 
 const STORAGE_MODE_VALUES = ['local_only', 'cloud_only', 'dual'] as const;
 const FILE_MATCH_MODE_VALUES = ['conservative', 'balanced', 'loose'] as const;
 const STORAGE_DRIVER_VALUES = ['local', 's3'] as const;
+export const CLOUD_CONNECTION_TYPE_VALUES = ['s3', 'webdav'] as const;
+export const CLOUD_USAGE_VALUES = ['book_files', 'covers', 'notes', 'backup_db', 'backup_full'] as const;
 
 export const idParamSchema = z.object({
   id: positiveInt,
@@ -559,6 +561,51 @@ export const storageSettingsSchema = z.object({
   clear_secret_key: z.boolean().optional(),
 });
 export type StorageSettingsInput = z.infer<typeof storageSettingsSchema>;
+
+const s3ConnectionConfigSchema = z.object({
+  provider: z.string().max(100).optional().nullable(),
+  endpoint: z.string().url().max(500),
+  bucket: z.string().min(1).max(255),
+  region: z.string().max(100).optional().nullable(),
+  access_key: z.string().min(1).max(500),
+  secret_key: z.string().min(1).max(500),
+  public_url: z.string().url().max(500).optional().nullable(),
+  prefix: z.string().max(500).optional().nullable(),
+});
+
+const webdavConnectionConfigSchema = z.object({
+  url: z.string().url().max(500),
+  username: z.string().max(500).optional().nullable(),
+  password: z.string().min(1).max(500),
+  base_path: z.string().max(500).optional().nullable(),
+});
+
+export const cloudConnectionConfigSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('s3'), config: s3ConnectionConfigSchema }),
+  z.object({ type: z.literal('webdav'), config: webdavConnectionConfigSchema }),
+]);
+
+export const createCloudConnectionSchema = z.intersection(
+  z.object({ name: z.string().min(1).max(100) }),
+  cloudConnectionConfigSchema,
+);
+export type CreateCloudConnectionInput = z.infer<typeof createCloudConnectionSchema>;
+
+export const updateCloudConnectionSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  is_active: z.boolean().optional(),
+  config: z.union([s3ConnectionConfigSchema, webdavConnectionConfigSchema]).optional(),
+}).refine((value) => Object.keys(value).length > 0, { message: '至少提供一个更新字段' });
+export type UpdateCloudConnectionInput = z.infer<typeof updateCloudConnectionSchema>;
+
+export const cloudAssignmentSchema = z.object({
+  usage: z.enum(CLOUD_USAGE_VALUES),
+  connection_ids: z.array(positiveInt).max(5),
+});
+export const updateCloudAssignmentsSchema = z.object({
+  assignments: z.array(cloudAssignmentSchema).min(1).max(CLOUD_USAGE_VALUES.length),
+});
+export type UpdateCloudAssignmentsInput = z.infer<typeof updateCloudAssignmentsSchema>;
 
 export const createUserSchema = z.object({
   username: z.string().min(1).max(50),

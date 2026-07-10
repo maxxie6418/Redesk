@@ -19,3 +19,5 @@ export * from './topic-segments';
 export * from './topic-entries';
 export * from './reading-progress';
 export * from './reading-sessions';
+export * from './cloud-connections';
+export * from './cloud-connections';

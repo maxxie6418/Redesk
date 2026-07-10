@@ -1,7 +1,7 @@
 services:
   redesk:
     build: .
-    image: redesk:2.3.0
+    image: redesk:2.4.0
     container_name: redesk
     restart: unless-stopped
     # 容器以 root 启动，entrypoint 会 chown /data 给 redesk 后再降权运行应用。

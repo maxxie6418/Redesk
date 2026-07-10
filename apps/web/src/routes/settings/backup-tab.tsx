@@ -1,14 +1,18 @@
 import { useCallback } from 'react';
-import { Download } from 'lucide-react';
+import { CloudUpload, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBackupList, triggerAutoBackup, triggerFullBackup, type BackupItem } from '@/hooks/use-export';
 import { API_BASE } from '@/lib/api';
-import { CloudStorageCard } from './storage-tab';
+import { useStorageStatus } from '@/hooks/use-storage-config';
+import { BatchCloudSyncCard } from './batch-tab';
+import { useCloudDatabaseBackup } from '@/hooks/use-cloud-connections';
 import type { StatusMessage } from './types';
 
 export function BackupTab({ settings: _settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const backupList = useBackupList();
+  const storageStatus = useStorageStatus();
+  const cloudDatabaseBackup = useCloudDatabaseBackup();
 
   const handleAutoBackup = useCallback(async () => {
     try {
@@ -90,6 +94,15 @@ export function BackupTab({ settings: _settings, onToast }: { settings: Record<s
             </Button>
           </div>
 
+          <div className="border-t border-border pt-4">
+            <p className="mb-1.5 text-sm font-medium text-foreground">发送数据库备份到云端</p>
+            <p className="mb-3 text-sm text-muted-foreground">生成一致的 SQLite 快照，并发送到“存储”页为数据库备份分配的所有云连接。</p>
+            <Button variant="outline" size="sm" disabled={cloudDatabaseBackup.isPending} onClick={() => void cloudDatabaseBackup.mutateAsync().then((result) => onToast({ type: result.failed.length > 0 ? 'warning' : 'info', text: `已发送到 ${result.completed.length} 个云端目标${result.failed.length > 0 ? `，${result.failed.length} 个失败` : ''}` })).catch((error: unknown) => onToast({ type: 'error', text: error instanceof Error ? error.message : '云备份失败' }))}>
+              {cloudDatabaseBackup.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CloudUpload className="mr-2 h-4 w-4" />}
+              发送数据库备份
+            </Button>
+          </div>
+
           {backupList.data && backupList.data.length > 0 && (
             <div className="border-t border-border pt-4">
               <p className="mb-2 text-sm text-muted-foreground">
@@ -110,7 +123,7 @@ export function BackupTab({ settings: _settings, onToast }: { settings: Record<s
         </CardContent>
       </Card>
 
-      <CloudStorageCard onToast={onToast} />
+      <BatchCloudSyncCard cloudAvailable={storageStatus.data?.cloudAvailable ?? false} onToast={onToast} />
     </div>
   );
 }

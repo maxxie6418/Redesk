@@ -8,6 +8,9 @@ import {
   Image,
   Link,
   Loader2,
+  Plus,
+  Power,
+  Send,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -31,6 +34,7 @@ import {
 import { useSystemStorage, useClearCache, type DirInfo } from '@/hooks/use-system';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useCloudAssignments, useCloudConnections, useCreateCloudConnection, useDeleteCloudConnection, useSaveCloudAssignments, useSnapshotNotes, useTestCloudConnection, useToggleCloudConnection, type CloudConnectionType, type CloudUsage } from '@/hooks/use-cloud-connections';
 import { formatBytes, type StatusMessage } from './types';
 
 const STORAGE_MODE_LABELS: Record<StorageMode, string> = {
@@ -188,8 +192,70 @@ export function StorageTab({ onToast }: { onToast: (msg: StatusMessage) => void 
       </Card>
 
       <DefaultStorageCard onToast={onToast} />
+      <CloudConnectionManager onToast={onToast} />
     </div>
   );
+}
+
+const CLOUD_USAGE_LABELS: Record<CloudUsage, string> = {
+  book_files: '书籍文件', covers: '封面图片', notes: '笔记快照（Markdown / JSON）', backup_db: '数据库备份', backup_full: '完整备份',
+};
+
+function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => void }) {
+  const connections = useCloudConnections();
+  const assignments = useCloudAssignments();
+  const create = useCreateCloudConnection();
+  const test = useTestCloudConnection();
+  const toggle = useToggleCloudConnection();
+  const remove = useDeleteCloudConnection();
+  const saveAssignments = useSaveCloudAssignments();
+  const snapshotNotes = useSnapshotNotes();
+  const [type, setType] = useState<CloudConnectionType>('s3');
+  const [name, setName] = useState('');
+  const [fields, setFields] = useState<Record<string, string>>({ region: 'auto' });
+  const [routing, setRouting] = useState<Record<CloudUsage, number[]>>({ book_files: [], covers: [], notes: [], backup_db: [], backup_full: [] });
+
+  useEffect(() => {
+    if (!assignments.data) return;
+    const next: Record<CloudUsage, number[]> = { book_files: [], covers: [], notes: [], backup_db: [], backup_full: [] };
+    assignments.data.forEach((item) => next[item.usage].push(item.connection_id));
+    setRouting(next);
+  }, [assignments.data]);
+
+  const field = (key: string, label: string, secret = false) => <div className="space-y-1" key={key}><label className="text-xs text-muted-foreground">{label}</label><Input type={secret ? 'password' : 'text'} value={fields[key] ?? ''} onChange={(event) => setFields((current) => ({ ...current, [key]: event.target.value }))} /></div>;
+  const handleCreate = async () => {
+    try {
+      const config = type === 's3'
+        ? { provider: fields.provider || null, endpoint: fields.endpoint, bucket: fields.bucket, region: fields.region || 'auto', access_key: fields.access_key, secret_key: fields.secret_key, public_url: fields.public_url || null, prefix: fields.prefix || null }
+        : { url: fields.url, username: fields.username || null, password: fields.password, base_path: fields.base_path || null };
+      await create.mutateAsync({ name, type, config });
+      setName(''); setFields({ region: 'auto' }); onToast({ type: 'info', text: '云连接已保存' });
+    } catch (error) { onToast({ type: 'error', text: error instanceof Error ? error.message : '保存失败' }); }
+  };
+  const activeConnections = (connections.data ?? []).filter((connection) => connection.is_active);
+  const updateRoute = (usage: CloudUsage, values: number[]) => setRouting((current) => ({ ...current, [usage]: values }));
+  return <>
+    <Card>
+      <CardHeader className="pb-4"><CardTitle className="text-base">云连接配置</CardTitle></CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-4">
+          <div className="space-y-1"><label className="text-xs text-muted-foreground">名称</label><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：家庭 NAS" /></div>
+          <div className="space-y-1"><label className="text-xs text-muted-foreground">类型</label><Select value={type} onValueChange={(value) => { setType(value as CloudConnectionType); setFields({ region: 'auto' }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="s3">S3 兼容（OSS / R2）</SelectItem><SelectItem value="webdav">WebDAV</SelectItem></SelectContent></Select></div>
+          {type === 's3' ? <><div className="grid grid-cols-2 gap-2 lg:col-span-2">{field('endpoint', 'Endpoint')}{field('bucket', 'Bucket')}{field('access_key', 'Access Key', true)}{field('secret_key', 'Secret Key', true)}</div><div className="grid grid-cols-3 gap-2 lg:col-span-3">{field('provider', 'Provider')}{field('region', 'Region')}{field('prefix', '前缀')}</div></> : <><div className="grid grid-cols-2 gap-2 lg:col-span-2">{field('url', '服务器 URL')}{field('base_path', '基础路径')}{field('username', '用户名')}{field('password', '密码 / Token', true)}</div></>}
+          <div className="flex items-end"><Button onClick={() => void handleCreate()} disabled={create.isPending || !name}><Plus className="mr-1 h-4 w-4" />保存连接</Button></div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">{(connections.data ?? []).map((connection) => <div key={connection.id} className="rounded-lg border border-border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium text-foreground">{connection.name}</p><p className="text-xs text-muted-foreground">{connection.type === 's3' ? 'S3 兼容对象存储' : 'WebDAV'} · {connection.is_active ? '已启用' : '已停用'}</p><p className="mt-1 text-xs text-muted-foreground">最后测试：{connection.tested_at ? new Date(connection.tested_at).toLocaleString() : '尚未测试'}</p></div><div className="flex gap-1"><Button variant="outline" size="sm" onClick={() => void test.mutateAsync(connection.id).then(() => onToast({ type: 'info', text: '连接测试成功' })).catch((error: unknown) => onToast({ type: 'error', text: error instanceof Error ? error.message : '测试失败' }))}><Check className="h-4 w-4" /></Button><Button variant="outline" size="sm" onClick={() => void toggle.mutateAsync(connection.id)}><Power className="h-4 w-4" /></Button><Button variant="outline" size="sm" onClick={() => void remove.mutateAsync(connection.id)}><Trash2 className="h-4 w-4" /></Button></div></div></div>)}</div>
+        {connections.data?.length === 0 ? <p className="text-sm text-muted-foreground">尚未保存云连接。最多可保存 5 条。</p> : null}
+      </CardContent>
+    </Card>
+    <Card>
+      <CardHeader className="pb-4"><CardTitle className="text-base">数据路由</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {(Object.keys(CLOUD_USAGE_LABELS) as CloudUsage[]).map((usage) => <div key={usage} className="grid items-center gap-3 rounded-lg border border-border px-3 py-3 md:grid-cols-[220px_1fr]"><div><p className="text-sm font-medium">{CLOUD_USAGE_LABELS[usage]}</p><p className="text-xs text-muted-foreground">{usage.startsWith('backup') ? '可选择多个目标，按顺序冗余发送' : '当前选择一个目标连接'}</p></div><select multiple={usage.startsWith('backup')} value={routing[usage].map(String)} onChange={(event) => updateRoute(usage, Array.from(event.currentTarget.selectedOptions).map((option) => Number(option.value)))} className="min-h-9 rounded-md border border-input bg-background px-3 text-sm" >{!usage.startsWith('backup') ? <option value="">不发送到云端</option> : null}{activeConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name}（{connection.type}）</option>)}</select></div>)}
+        <div className="flex flex-wrap gap-2 pt-2"><Button onClick={() => void saveAssignments.mutateAsync(Object.entries(routing).map(([usage, connection_ids]) => ({ usage: usage as CloudUsage, connection_ids }))).then(() => onToast({ type: 'info', text: '数据路由已保存' })).catch((error: unknown) => onToast({ type: 'error', text: error instanceof Error ? error.message : '保存失败' }))} disabled={saveAssignments.isPending}>保存数据路由</Button><Button variant="outline" onClick={() => void snapshotNotes.mutateAsync().then((result) => onToast({ type: 'info', text: `已发送 ${result.note_count} 条笔记的 Markdown / JSON 快照` })).catch((error: unknown) => onToast({ type: 'error', text: error instanceof Error ? error.message : '发送失败' }))} disabled={snapshotNotes.isPending || routing.notes.length === 0}><Send className="mr-1 h-4 w-4" />发送笔记快照</Button></div>
+      </CardContent>
+    </Card>
+  </>;
 }
 
 function DefaultStorageCard({ onToast }: { onToast: (msg: StatusMessage) => void }) {

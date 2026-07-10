@@ -9,7 +9,7 @@ import type { StatusMessage } from './types';
 
 const BATCH_PAGE_SIZE = 50;
 
-function BatchCloudSyncCard({
+export function BatchCloudSyncCard({
   cloudAvailable,
   onToast,
 }: {
@@ -179,7 +179,6 @@ export function BatchTab({
         </CardContent>
       </Card>
 
-      <BatchCloudSyncCard cloudAvailable={cloudAvailable} onToast={onToast} />
     </div>
   );
 }
