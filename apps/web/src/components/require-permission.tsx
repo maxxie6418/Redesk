@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/use-auth';
+import { ShellUserContext } from '@/components/shell-user-context';
 import { FullScreenLoader } from '@/components/full-screen-loader';
 import { checkPermission } from '@/lib/permissions';
+import { LOCAL_AUTH_USER } from '@/lib/auth-mode';
 import type { PermissionLevel } from '@redesk/shared';
 
 interface RequirePermissionProps {
@@ -27,7 +29,11 @@ export function RequirePermission({ requiredLevel, children }: RequirePermission
     return <Navigate to="/" replace />;
   }
 
-  return children ?? <Outlet />;
+  return (
+    <ShellUserContext.Provider value={currentUser.data}>
+      {children ?? <Outlet />}
+    </ShellUserContext.Provider>
+  );
 }
 
 interface OptionalAuthProps {
@@ -35,5 +41,12 @@ interface OptionalAuthProps {
 }
 
 export function OptionalAuth({ children }: OptionalAuthProps) {
-  return children;
+  const currentUser = useCurrentUser();
+  const user = currentUser.data ?? LOCAL_AUTH_USER;
+
+  return (
+    <ShellUserContext.Provider value={user}>
+      {children}
+    </ShellUserContext.Provider>
+  );
 }

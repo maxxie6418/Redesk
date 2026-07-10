@@ -262,17 +262,29 @@ export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete, 
 
 export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const isLoggedIn = Boolean(currentUser.data);
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
+
+  const handleReadClick = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    if (book.has_readable_file) {
+      navigate(`/books/${book.id}/read`);
+    }
+  };
 
   return (
     <article data-book-card className="group relative flex items-start gap-4 rounded-lg bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       <button
         type="button"
-        className={cn('relative block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
-        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative block shrink-0 overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', (isLoggedIn && book.has_readable_file) ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!(isLoggedIn && book.has_readable_file)}
+        title={isLoggedIn ? (book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件') : '登录后可阅读'}
+        onClick={handleReadClick}
       >
         <BookCover book={book} index={index} className="h-[130px] w-[100px]" rounded="rounded-md" />
       </button>
@@ -313,17 +325,29 @@ export function BookCardC({ book, index, isTrash, onRestore, onPermanentDelete, 
 
 export function BookCardD({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const isLoggedIn = Boolean(currentUser.data);
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
+
+  const handleReadClick = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    if (book.has_readable_file) {
+      navigate(`/books/${book.id}/read`);
+    }
+  };
 
   return (
     <article data-book-card className="group relative flex items-start gap-4 rounded border border-border bg-card px-3 py-3 hover:border-primary/30 hover:bg-muted/30">
       <button
         type="button"
-        className={cn('relative block shrink-0 overflow-hidden rounded leading-[0] shadow-[0_2px_6px_rgba(0,0,0,0.08)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
-        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative block shrink-0 overflow-hidden rounded leading-[0] shadow-[0_2px_6px_rgba(0,0,0,0.08)]', (isLoggedIn && book.has_readable_file) ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!(isLoggedIn && book.has_readable_file)}
+        title={isLoggedIn ? (book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件') : '登录后可阅读'}
+        onClick={handleReadClick}
       >
         <BookCover book={book} index={index} className="h-[60px] w-[44px]" rounded="rounded-sm" />
       </button>
