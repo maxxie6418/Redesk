@@ -30,32 +30,33 @@ const MISSING_CHIPS: { key: string; label: string; field: string }[] = [
 const ALL_COLUMNS = [
   { key: 'title', label: '书名', required: true },
   { key: 'cover', label: '封面', required: false },
+  { key: 'status', label: '状态', required: false },
+  { key: 'category_id', label: '分类', required: false },
   { key: 'author', label: '作者', required: false },
-  { key: 'isbn', label: 'ISBN', required: false },
   { key: 'publisher', label: '出版社', required: false },
   { key: 'publish_year', label: '出版年', required: false },
   { key: 'source_url', label: '来源链接', required: false },
-  { key: 'status', label: '状态', required: false },
-  { key: 'category_id', label: '分类', required: false },
-  { key: 'tags', label: '标签', required: false },
   { key: 'metadata_source', label: '来源', required: false },
+  { key: 'tags', label: '标签', required: false },
+  { key: 'rating', label: '评分', required: false },
+  { key: 'isbn', label: 'ISBN', required: false },
   { key: 'subtitle', label: '副标题', required: false },
   { key: 'translator', label: '译者', required: false },
   { key: 'original_title', label: '原书名', required: false },
   { key: 'page_count', label: '页数', required: false },
   { key: 'description', label: '描述', required: false },
   { key: 'language', label: '语言', required: false },
-  { key: 'rating', label: '评分', required: false },
 ] as const;
 
 const DEFAULT_VISIBLE = new Set([
-  'title', 'cover', 'author', 'isbn', 'publisher', 'publish_year',
-  'source_url', 'status', 'category_id', 'metadata_source',
+  'title', 'cover', 'status', 'category_id', 'author', 'publisher',
+  'publish_year', 'source_url', 'metadata_source',
 ]);
 
 const TEXT_EDITABLE = new Set([
-  'author', 'isbn', 'publisher', 'publish_year', 'translator',
-  'original_title', 'subtitle', 'page_count', 'source_url',
+  'title', 'author', 'isbn', 'publisher', 'publish_year', 'translator',
+  'original_title', 'subtitle', 'page_count', 'source_url', 'description',
+  'language',
 ]);
 
 const STATUS_LABEL: Record<string, string> = {
@@ -92,6 +93,14 @@ const SOURCE_LABEL: Record<string, string> = {
 
 function isEmpty(value: unknown): boolean {
   return value == null || (typeof value === 'string' && value.trim() === '');
+}
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 interface ImportBooksResultRow {
@@ -138,6 +147,8 @@ export function MaintenanceTab() {
   const [importResult, setImportResult] = useState<ImportBooksResult | null>(null);
   const [importingBookIds, setImportingBookIds] = useState<string | undefined>(undefined);
   const [showFetchDialog, setShowFetchDialog] = useState(false);
+  const [singleFetchBookId, setSingleFetchBookId] = useState<number | null>(null);
+  const [singleFetchLoading, setSingleFetchLoading] = useState(false);
 
   const importResultRows: BatchResultRow[] = useMemo(() => {
     if (!importResult) return [];
@@ -362,9 +373,63 @@ export function MaintenanceTab() {
     });
   }, [selected, batchFetchCovers, stats]);
 
+  const handleSingleFetch = useCallback(async (book: MaintenanceBookRow) => {
+    if (!book.source_url) {
+      toast.error('缺少来源链接，无法抓取');
+      return;
+    }
+    setSingleFetchBookId(book.id);
+    setSingleFetchLoading(true);
+    try {
+      const preview = await batchPreview.mutateAsync([book.id]);
+      const previewRows = preview as FetchPreviewRow[];
+      if (previewRows.length === 0 || !previewRows[0].success) {
+        toast.error(previewRows[0]?.error || '抓取失败');
+        return;
+      }
+      const result = await batchApply.mutateAsync({ ids: [book.id] });
+      const applyRows = result as FetchApplyRow[];
+      if (applyRows[0]?.success) {
+        toast.success('已更新');
+        stats.refetch();
+        list.refetch();
+      } else {
+        toast.error(applyRows[0]?.error || '应用失败');
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '抓取失败');
+    } finally {
+      setSingleFetchLoading(false);
+      setSingleFetchBookId(null);
+    }
+  }, [batchPreview, batchApply, stats, list]);
+
   const renderCellValue = useCallback((book: MaintenanceBookRow, col: string) => {
     const value = book[col as keyof MaintenanceBookRow];
     const isEditing = editingCell?.bookId === book.id && editingCell?.field === col;
+
+    if (col === '__actions') {
+      const loading = singleFetchBookId === book.id && singleFetchLoading;
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          disabled={loading || isEmpty(book.source_url)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSingleFetch(book);
+          }}
+          title={isEmpty(book.source_url) ? '缺少来源链接' : '抓取信息'}
+        >
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      );
+    }
 
     if (col === 'cover') {
       if (book.has_cover || book.cover_path) {
@@ -439,7 +504,10 @@ export function MaintenanceTab() {
           <button
             type="button"
             className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
-            onClick={() => startEdit(book.id, col, value)}
+            onClick={(e) => {
+              e.stopPropagation();
+              startEdit(book.id, col, value);
+            }}
           >
             <CircleDot className="h-3 w-3" />
             补充链接
@@ -455,7 +523,7 @@ export function MaintenanceTab() {
           title={String(value)}
           onClick={(e) => e.stopPropagation()}
         >
-          {String(value).replace(/^https?:\/\/(www\.)?/, '').slice(0, 30)}
+          {extractDomain(String(value))}
         </a>
       );
     }
@@ -475,13 +543,27 @@ export function MaintenanceTab() {
       }
       if (isEmpty(value)) {
         return (
-          <button type="button" className="text-xs text-muted-foreground/50 hover:text-foreground" onClick={() => startEdit(book.id, col, value)}>
+          <button
+            type="button"
+            className="text-xs text-muted-foreground/50 hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              startEdit(book.id, col, value);
+            }}
+          >
             点击补充...
           </button>
         );
       }
       return (
-        <span className="block max-w-[200px] truncate text-xs" title={String(value)}>
+        <span
+          className="block max-w-[200px] cursor-pointer truncate text-xs hover:underline"
+          title={String(value)}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            startEdit(book.id, col, value);
+          }}
+        >
           {String(value)}
         </span>
       );
@@ -506,26 +588,40 @@ export function MaintenanceTab() {
           <button
             type="button"
             className="flex items-center gap-1 text-xs text-amber-600/60 hover:text-amber-600 dark:text-amber-400/60 dark:hover:text-amber-400"
-            onClick={() => startEdit(book.id, col, value)}
+            onClick={(e) => {
+              e.stopPropagation();
+              startEdit(book.id, col, value);
+            }}
           >
             <CircleDot className="h-3 w-3" />
             补充
           </button>
         );
       }
+      const isAuthor = col === 'author';
       return (
         <span
-          className="cursor-pointer text-xs hover:underline"
-          onClick={() => startEdit(book.id, col, value)}
-          title="点击编辑"
+          className={`cursor-pointer text-xs hover:underline ${isAuthor ? 'block max-w-[120px] truncate' : ''}`}
+          title={String(value)}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            startEdit(book.id, col, value);
+          }}
         >
           {String(value)}
         </span>
       );
     }
 
+    if (col === 'rating') {
+      if (value == null || Number(value) === 0) {
+        return <span className="text-xs text-muted-foreground/50">—</span>;
+      }
+      return <span className="text-xs">{Number(value).toFixed(1)}</span>;
+    }
+
     return <span className="text-xs">{value == null ? '' : String(value)}</span>;
-  }, [editingCell, editValue, startEdit, saveEdit, cancelEdit]);
+  }, [editingCell, editValue, startEdit, saveEdit, cancelEdit, singleFetchBookId, singleFetchLoading, handleSingleFetch]);
 
   const handleExportCsv = useCallback(() => {
     window.open(`${API_BASE}/export/books?format=csv`, '_blank', 'noopener');
@@ -705,46 +801,39 @@ export function MaintenanceTab() {
         </CardContent>
       </Card>
 
-      {selected.size > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex items-center gap-3 py-3">
-            <span className="text-sm font-medium text-primary">已选 {selected.size} 本</span>
-            <div className="h-4 w-px bg-primary/20" />
-            <Button variant="outline" size="sm" className="text-xs" onClick={handleBatchFetch}>
-              <Pencil className="mr-1.5 h-3 w-3" />
-              批量抓取信息
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              disabled={batchFetchCovers.isPending}
-              onClick={handleBatchFetchCovers}
-            >
-              {batchFetchCovers.isPending ? (
-                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-              ) : (
-                <Image className="mr-1.5 h-3 w-3" />
-              )}
-              批量抓取封面
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs">
-              设置分类
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs">
-              设置标签
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs">
-              设置状态
-            </Button>
-            <div className="ml-auto">
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setSelected(new Set())}>
-                取消选择
+      <div className="min-h-[52px]">
+        {selected.size > 0 && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="flex items-center gap-3 py-3">
+              <span className="text-sm font-medium text-primary">已选 {selected.size} 本</span>
+              <div className="h-4 w-px bg-primary/20" />
+              <Button variant="outline" size="sm" className="text-xs" onClick={handleBatchFetch}>
+                <Pencil className="mr-1.5 h-3 w-3" />
+                批量抓取信息
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                disabled={batchFetchCovers.isPending}
+                onClick={handleBatchFetchCovers}
+              >
+                {batchFetchCovers.isPending ? (
+                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                ) : (
+                  <Image className="mr-1.5 h-3 w-3" />
+                )}
+                批量抓取封面
+              </Button>
+              <div className="ml-auto">
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setSelected(new Set())}>
+                  取消选择
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -806,18 +895,21 @@ export function MaintenanceTab() {
                       </th>
                     );
                   })}
+                  <th className="w-12 px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {list.isLoading ? (
                   <tr>
-                    <td colSpan={visibleCols.size + 1} className="px-3 py-12 text-center">
+                    <td colSpan={visibleCols.size + 2} className="px-3 py-12 text-center">
                       <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                     </td>
                   </tr>
                 ) : books.length === 0 ? (
                   <tr>
-                    <td colSpan={visibleCols.size + 1} className="px-3 py-12 text-center text-sm text-muted-foreground">
+                    <td colSpan={visibleCols.size + 2} className="px-3 py-12 text-center text-sm text-muted-foreground">
                       {debouncedQuery || activeMissing.size > 0 ? '没有匹配的书籍' : '书库为空'}
                     </td>
                   </tr>
@@ -855,6 +947,9 @@ export function MaintenanceTab() {
                             {renderCellValue(book, col.key)}
                           </td>
                         ))}
+                        <td className="px-3 py-2">
+                          {renderCellValue(book, '__actions')}
+                        </td>
                       </tr>
                     );
                   })
