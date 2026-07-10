@@ -715,12 +715,9 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
         </CardHeader>
         <CardContent className="space-y-4">
           {/* 路由摘要 */}
-          <div className="rounded-lg border border-blue-200/50 bg-blue-50/95 px-4 py-3 text-sm text-blue-800 dark:border-blue-800/50 dark:bg-blue-950/30 dark:text-blue-200 flex items-center gap-2">
-            <span className="shrink-0">ℹ</span>
-            <span className="truncate" title={routingSummary()}>
-              {routingSummary()}
-            </span>
-          </div>
+          <p className="text-sm text-muted-foreground truncate" title={routingSummary()}>
+            {routingSummary()}
+          </p>
 
           {(Object.keys(CLOUD_USAGE_LABELS) as CloudUsage[]).map((usage) => {
             const isMulti = usage.startsWith('backup');
