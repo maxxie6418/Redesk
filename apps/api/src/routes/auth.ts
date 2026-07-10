@@ -26,6 +26,7 @@ function userToResponse(user: {
   display_name: string | null;
   is_active: number;
   is_admin: number;
+  permission_level?: string;
   must_change_password?: number | null;
 }) {
   return {
@@ -34,6 +35,7 @@ function userToResponse(user: {
     display_name: user.display_name,
     is_active: user.is_active === 1,
     is_admin: user.is_admin === 1,
+    permission_level: user.permission_level ?? 'use',
     must_change_password: (user.must_change_password ?? 0) === 1,
   };
 }
