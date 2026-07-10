@@ -31,6 +31,8 @@ export function useLogin() {
     onSuccess: (user: AuthUser) => {
       qc.setQueryData(['current-user'], user);
       qc.invalidateQueries({ queryKey: ['auth-status'] });
+      qc.invalidateQueries({ queryKey: ['books'] });
+      qc.invalidateQueries({ queryKey: ['trash'] });
     },
   });
 }
