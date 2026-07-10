@@ -162,19 +162,24 @@ interface BookPrimaryActionsProps {
   readableFile: BookFileItem | undefined;
   favorited: boolean;
   editMode: boolean;
+  canRead: boolean;
   onRead: () => void;
   onToggleCoverPanel: () => void;
   onToggleEditMode: () => void;
   onFavorite: () => void;
 }
 
-export function BookPrimaryActions({ readableFile, favorited, editMode, onRead, onToggleCoverPanel, onToggleEditMode, onFavorite }: BookPrimaryActionsProps) {
+export function BookPrimaryActions({ readableFile, favorited, editMode, canRead, onRead, onToggleCoverPanel, onToggleEditMode, onFavorite }: BookPrimaryActionsProps) {
   return (
     <div className="mb-6 space-y-2.5">
-      <button type="button" disabled={!readableFile} title={readableFile ? '打开阅读/预览' : '请先上传可预览文件'} onClick={onRead} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed">
-        <BookOpen className="h-4 w-4" />打开阅读/预览
-      </button>
-      <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">EPUB 保留阅读留痕能力，PDF、Markdown、TXT 和图片先支持在线预览</p>
+      {canRead && (
+        <button type="button" disabled={!readableFile} title={readableFile ? '打开阅读/预览' : '请先上传可预览文件'} onClick={onRead} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-white shadow-[0_2px_8px_rgba(217,119,87,0.25)] transition-all hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed">
+          <BookOpen className="h-4 w-4" />打开阅读/预览
+        </button>
+      )}
+      {canRead && (
+        <p className="px-1 text-[11px] leading-relaxed text-muted-foreground/70">EPUB 保留阅读留痕能力，PDF、Markdown、TXT 和图片先支持在线预览</p>
+      )}
       <div className="flex gap-2">
         <button type="button" onClick={onToggleCoverPanel} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px"><ArrowUpFromLine className="h-3.5 w-3.5" />选择封面</button>
         <button type="button" onClick={onToggleEditMode} className={cn('flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-card text-xs font-medium text-foreground shadow-sm transition-all hover:-translate-y-px', editMode ? 'border-primary bg-primary/10 text-primary' : 'border-border')}><Pencil className="h-3.5 w-3.5" />{editMode ? '完成编辑' : '编辑信息'}</button>
@@ -260,6 +265,7 @@ export function BookCoverManager({ book, bookId, coverUrlBase, coverGroups, cove
 
 interface BookFilesListProps {
   files: BookFileItem[] | undefined;
+  canManage: boolean;
   onDeleteFile: (file: BookFileItem) => void;
   onUploadFile: (file: File) => void;
   uploadPending: boolean;
@@ -267,27 +273,29 @@ interface BookFilesListProps {
 
 const BOOK_FILE_ACCEPT = '.epub,.pdf,.mobi,.azw,.azw3,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp';
 
-export function BookFilesList({ files, onDeleteFile, onUploadFile, uploadPending }: BookFilesListProps) {
+export function BookFilesList({ files, canManage, onDeleteFile, onUploadFile, uploadPending }: BookFilesListProps) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">文件</div>
-        <label className={cn('inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border bg-card px-1.5 text-[11px] font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-primary', uploadPending && 'pointer-events-none opacity-50')}>
-          <Upload className="h-3 w-3" />
-          {uploadPending ? '上传中…' : '上传'}
-          <input
-            type="file"
-            className="hidden"
-            accept={BOOK_FILE_ACCEPT}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                onUploadFile(file);
-                event.target.value = '';
-              }
-            }}
-          />
-        </label>
+        {canManage && (
+          <label className={cn('inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border bg-card px-1.5 text-[11px] font-medium text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-primary', uploadPending && 'pointer-events-none opacity-50')}>
+            <Upload className="h-3 w-3" />
+            {uploadPending ? '上传中…' : '上传'}
+            <input
+              type="file"
+              className="hidden"
+              accept={BOOK_FILE_ACCEPT}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  onUploadFile(file);
+                  event.target.value = '';
+                }
+              }}
+            />
+          </label>
+        )}
       </div>
       {files && files.length > 0 ? (
         <div className="space-y-1">
@@ -296,10 +304,14 @@ export function BookFilesList({ files, onDeleteFile, onUploadFile, uploadPending
               <span className={cn('h-2 w-2 shrink-0 rounded-full', file.is_primary === 1 ? 'bg-primary' : 'bg-muted-foreground/40')} />
               <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">{file.original_filename ?? '未知文件'}</span>
               <StorageStatusBadge file={file} />
-              <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(file.file_size)}</span>
-              <button type="button" onClick={() => onDeleteFile(file)} className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100" title="删除文件" aria-label={`删除 ${file.original_filename ?? '文件'}`}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              {canManage && (
+                <span className="shrink-0 text-[11px] text-muted-foreground">{formatFileSize(file.file_size)}</span>
+              )}
+              {canManage && (
+                <button type="button" onClick={() => onDeleteFile(file)} className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100" title="删除文件" aria-label={`删除 ${file.original_filename ?? '文件'}`}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -332,6 +344,8 @@ export interface BookTraceItem {
   title: string;
   cfi: string | null | undefined;
   createdAt: string;
+  ownerId: number;
+  isMine: boolean;
 }
 
 export interface BookRecentMarkItem {
@@ -354,6 +368,7 @@ interface BookTracesTabProps {
   counts: BookTraceCounts;
   recentMarks: BookRecentMarkItem[];
   traces: BookTraceItem[];
+  canRead: boolean;
   onOpenMark: (mark: BookRecentMarkItem) => void;
   onOpenTrace: (trace: BookTraceItem) => void;
   readingStats: { total_duration: number; session_count: number; last_session_at: string | null } | null;
@@ -361,7 +376,10 @@ interface BookTracesTabProps {
   formatRelativeTime: (isoString: string | null) => string;
 }
 
-export function BookTracesTab({ progressPercent, counts, recentMarks, traces, onOpenMark, onOpenTrace, readingStats, formatDuration, formatRelativeTime }: BookTracesTabProps) {
+export function BookTracesTab({ progressPercent, counts, recentMarks, traces, canRead, onOpenMark, onOpenTrace, readingStats, formatDuration, formatRelativeTime }: BookTracesTabProps) {
+  const myTraces = traces.filter((t) => t.isMine);
+  const otherTraces = traces.filter((t) => !t.isMine);
+
   return (
     <div>
       <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-foreground">
@@ -412,20 +430,57 @@ export function BookTracesTab({ progressPercent, counts, recentMarks, traces, on
               </div>
             </div>
           )}
-          <div className="space-y-2">
-            {traces.slice(0, 20).map((trace) => (
-              <div key={trace.id} className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3">
-                <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{trace.type}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] text-foreground">{trace.title}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground/60">{new Date(trace.createdAt).toLocaleDateString('zh-CN')}</p>
-                </div>
-                <button type="button" onClick={() => onOpenTrace(trace)} className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground opacity-0 transition-all hover:border-primary hover:text-primary group-hover:opacity-100">
-                  跳转
-                </button>
+          {myTraces.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                我的留痕
               </div>
-            ))}
-          </div>
+              <div className="space-y-2">
+                {myTraces.slice(0, 10).map((trace) => (
+                  <div key={trace.id} className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+                    <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{trace.type}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] text-foreground">{trace.title}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/60">{new Date(trace.createdAt).toLocaleDateString('zh-CN')}</p>
+                    </div>
+                    {canRead && (
+                      <button type="button" onClick={() => onOpenTrace(trace)} className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground opacity-0 transition-all hover:border-primary hover:text-primary group-hover:opacity-100">
+                        跳转
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {canRead && otherTraces.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                其他人的标记
+              </div>
+              <div className="space-y-2">
+                {otherTraces.slice(0, 10).map((trace) => (
+                  <div key={trace.id} className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+                    <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{trace.type}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] text-foreground">{trace.title}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/60">{new Date(trace.createdAt).toLocaleDateString('zh-CN')}</p>
+                    </div>
+                    <button type="button" onClick={() => onOpenTrace(trace)} className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground opacity-0 transition-all hover:border-primary hover:text-primary group-hover:opacity-100">
+                      跳转
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {!canRead && otherTraces.length > 0 && (
+            <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              当前为浏览模式，仅可查看其他人的公开标记
+            </div>
+          )}
         </div>
       )}
     </div>

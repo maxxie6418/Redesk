@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookPlus } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/lib/api';
+import { useCurrentUser } from '@/hooks/use-auth';
 import { useBooks, useEmptyTrash, usePermanentDeleteBook, useRestoreBook, useTrash, type BookSummary } from '@/hooks/use-books';
 import { useCategories, type CategoryItem } from '@/hooks/use-categories';
 import { useTags, type TagItem } from '@/hooks/use-tags';
@@ -21,6 +22,9 @@ import { SORT_API_MAP, SORT_OPTIONS, VIEW_PAGE_SIZE_MULTIPLIERS, type PageView, 
 
 
 export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?: PageView }) {
+  const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const isLoggedIn = Boolean(currentUser.data);
   const isMobileLayout = useMobileLayout();
   const sidebarStats = useSidebarStats();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -270,6 +274,14 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
     setReadableFilter('all');
   }, []);
 
+  const handleOpenDetail = useCallback((bookId: number) => {
+    if (!isLoggedIn) {
+      navigate(`/login?redirect=/books/${bookId}`);
+      return;
+    }
+    setDetailBookId(bookId);
+  }, [isLoggedIn, navigate]);
+
   const handleRestore = useCallback(async (id: number) => {
     try {
       await restoreBook.mutateAsync(id);
@@ -318,17 +330,17 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
             onStatusChange={setStatus}
             category={category}
             onCategoryChange={setCategory}
-            categoryOptions={categoryOptions}
+            categoryOptions={isLoggedIn ? categoryOptions : [{ value: 'ALL', label: '全部分类' }]}
             tag={tag}
             onTagChange={setTag}
-            tagOptions={tagOptions}
+            tagOptions={isLoggedIn ? tagOptions : [{ value: 'ALL', label: '全部标签' }]}
             visibility={visibility}
             onVisibilityChange={setVisibility}
-            visibilityOptions={visibilityOptions}
+            visibilityOptions={isLoggedIn ? visibilityOptions : [{ value: 'ALL', label: '全部可见性' }]}
             favorited={favorited}
             onFavoritedChange={() => setFavorited((value) => !value)}
             onResetFilters={resetFilters}
-            onOpenDetail={(nextId) => setDetailBookId(nextId)}
+            onOpenDetail={handleOpenDetail}
           />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
@@ -337,12 +349,12 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">{pageView === 'trash' ? '回收站' : '书架'}</h1>
               </div>
               <div className="flex items-center gap-2">
-                {pageView === 'trash' && books.length > 0 ? (
+                {isLoggedIn && pageView === 'trash' && books.length > 0 ? (
                   <Button variant="destructive" size="sm" onClick={() => void handleEmptyTrash()}>
                     清空回收站
                   </Button>
                 ) : null}
-                {pageView === 'bookshelf' ? (
+                {isLoggedIn && pageView === 'bookshelf' ? (
                   <Button className="rounded-full" onClick={() => setShowCreate(true)}>
                     <BookPlus className="h-4 w-4" />
                     添加书籍
@@ -351,7 +363,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
               </div>
             </header>
 
-            {pageView === 'bookshelf' ? (
+            {isLoggedIn && pageView === 'bookshelf' ? (
               <BookshelfFilterBar
                 status={status}
                 onStatusChange={setStatus}
@@ -374,11 +386,17 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                 viewMode={viewMode}
                 onViewModeChange={handleViewModeChange}
               />
-            ) : (
+            ) : null}
+            {!isLoggedIn && pageView === 'bookshelf' ? (
+              <section className="mb-5 px-6 lg:px-8">
+                <p className="text-sm text-muted-foreground">登录后可查看更多书籍和功能</p>
+              </section>
+            ) : null}
+            {isLoggedIn && pageView === 'trash' ? (
               <section className="mb-5 px-6 lg:px-8">
                 <StatusPills value={status} onChange={setStatus} />
               </section>
-            )}
+            ) : null}
 
             {isLoading ? (
               <div className="rounded-lg border border-dashed border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground">正在整理书架...</div>
@@ -421,7 +439,7 @@ export function Bookshelf({ initialPageView = 'bookshelf' }: { initialPageView?:
                       isTrash={pageView === 'trash'}
                       onRestore={handleRestore}
                       onPermanentDelete={handlePermanentDelete}
-                      onOpenDetail={setDetailBookId}
+                      onOpenDetail={handleOpenDetail}
                     />
                   </div>
                 </div>

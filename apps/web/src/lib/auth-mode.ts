@@ -14,5 +14,6 @@ export const LOCAL_AUTH_USER: AuthUser = {
   display_name: '未登录',
   is_active: true,
   is_admin: false,
+  permission_level: 'view',
   must_change_password: false,
 };

@@ -79,26 +79,36 @@ export function LoginManagementTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [editingPermission, setEditingPermission] = useState('');
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPwd, setResetPwd] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
+  const [newPermission, setNewPermission] = useState('use');
 
   const handleCreate = useCallback(async () => {
     try {
-      await createUser.mutateAsync({ password: newPassword, display_name: newDisplayName || undefined });
+      await createUser.mutateAsync({
+        password: newPassword,
+        display_name: newDisplayName || undefined,
+        permission_level: newPermission,
+      });
       showToast({ type: 'info', text: '用户已创建' });
-      setShowCreate(false); setNewPassword(''); setNewDisplayName('');
+      setShowCreate(false); setNewPassword(''); setNewDisplayName(''); setNewPermission('use');
     } catch { showToast({ type: 'error', text: '创建失败' }); }
-  }, [newPassword, newDisplayName, createUser, showToast]);
+  }, [newPassword, newDisplayName, newPermission, createUser, showToast]);
 
   const handleUpdate = useCallback(async (id: number) => {
     try {
-      await updateUser.mutateAsync({ id, display_name: editingName || null });
+      await updateUser.mutateAsync({
+        id,
+        display_name: editingName || null,
+        permission_level: editingPermission,
+      });
       showToast({ type: 'info', text: '已更新' });
       setEditingId(null);
     } catch { showToast({ type: 'error', text: '更新失败' }); }
-  }, [editingName, updateUser, showToast]);
+  }, [editingName, editingPermission, updateUser, showToast]);
 
   const handleDelete = useCallback(async (id: number) => {
     try { await deleteUser.mutateAsync(id); showToast({ type: 'info', text: '用户已删除' }); }
@@ -121,6 +131,12 @@ export function LoginManagementTab() {
   }, [toggleActive, showToast]);
 
   const displayNameOf = (u: UserAdminSummary) => u.display_name || `用户 ${u.id}`;
+
+  const permissionLabelOf = (level: string) => {
+    if (level === 'view') return '浏览';
+    if (level === 'read') return '阅读';
+    return '使用';
+  };
 
   return (
     <div className="space-y-6">
@@ -174,17 +190,34 @@ export function LoginManagementTab() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{displayNameOf(u)}</p>
-                  <p className="truncate text-xs text-muted-foreground">普通用户{!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    普通用户
+                    <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] text-foreground">{permissionLabelOf(u.permission_level)}</span>
+                    {!u.is_active && <span className="ml-1.5 rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">已停用</span>}
+                  </p>
                 </div>
                 {editingId === u.id ? (
                   <div className="flex items-center gap-2">
                     <Input className="h-8 w-32 text-xs" value={editingName} onChange={(e) => setEditingName(e.target.value)} placeholder="昵称" />
+                    <select
+                      className="h-8 w-20 text-xs rounded border border-border px-2"
+                      value={editingPermission}
+                      onChange={(e) => setEditingPermission(e.target.value)}
+                    >
+                      <option value="view">浏览</option>
+                      <option value="read">阅读</option>
+                      <option value="use">使用</option>
+                    </select>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleUpdate(u.id)}><Check className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(u.id); setEditingName(u.display_name ?? ''); }}>编辑</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => {
+                      setEditingId(u.id);
+                      setEditingName(u.display_name ?? '');
+                      setEditingPermission(u.permission_level);
+                    }}>编辑</Button>
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setResetId(resetId === u.id ? null : u.id)}><Key className="mr-1 h-3 w-3" />重置口令</Button>
                     <Button size="sm" variant="ghost" className={cn('h-7 text-xs', u.is_active ? 'text-muted-foreground' : 'text-primary')} onClick={() => handleToggleActive(u)}>
                       {u.is_active ? <Ban className="mr-1 h-3 w-3" /> : <CheckCircle className="mr-1 h-3 w-3" />}{u.is_active ? '停用' : '启用'}
@@ -205,6 +238,18 @@ export function LoginManagementTab() {
               <div className="space-y-2 rounded-lg border border-border px-4 py-4">
                 <Input type="password" className="h-9 text-sm" placeholder="口令（至少 5 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 <Input className="h-9 text-sm" placeholder="昵称（可选）" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">权限级别：</span>
+                  <select
+                    className="h-9 text-sm rounded border border-border px-2"
+                    value={newPermission}
+                    onChange={(e) => setNewPermission(e.target.value)}
+                  >
+                    <option value="view">浏览</option>
+                    <option value="read">阅读</option>
+                    <option value="use">使用（默认）</option>
+                  </select>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setShowCreate(false)}>取消</Button>
                   <Button onClick={handleCreate} disabled={createUser.isPending}>{createUser.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}创建</Button>

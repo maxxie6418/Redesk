@@ -157,7 +157,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       if (!userId) throw unauthorized();
     }
     const user = getDb()
-      .select()
+      .select({
+        id: users.id,
+        username: users.username,
+        display_name: users.display_name,
+        is_active: users.is_active,
+        is_admin: users.is_admin,
+        permission_level: users.permission_level,
+        must_change_password: users.must_change_password,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .get();

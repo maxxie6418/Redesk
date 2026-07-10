@@ -7,6 +7,7 @@ export interface UserAdminSummary {
   display_name: string | null;
   is_active: boolean;
   is_admin: boolean;
+  permission_level: string;
   created_at: string;
 }
 
@@ -21,7 +22,7 @@ export function useUserList() {
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { password: string; display_name?: string }) =>
+    mutationFn: (input: { password: string; display_name?: string; permission_level?: string }) =>
       api.post<UserAdminSummary>('/users', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -32,7 +33,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; display_name?: string | null; is_active?: boolean }) =>
+    mutationFn: ({ id, ...data }: { id: number; display_name?: string | null; is_active?: boolean; permission_level?: string }) =>
       api.patch<UserAdminSummary>(`/users/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });

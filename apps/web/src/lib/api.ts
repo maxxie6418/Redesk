@@ -4,7 +4,7 @@ export interface AuthUser {
   display_name: string | null;
   is_active: boolean;
   is_admin: boolean;
-  permission_level: 'view' | 'read' | 'use';
+  permission_level: string;
   must_change_password: boolean;
 }
 

@@ -10,6 +10,7 @@ import { useBookReadingStats, formatDuration, formatRelativeTime } from '@/hooks
 import { useAddTopicBook } from '@/hooks/use-topics';
 import { useCategories } from '@/hooks/use-categories';
 import { useTags } from '@/hooks/use-tags';
+import { useCurrentUser } from '@/hooks/use-auth';
 import { API_BASE } from '@/lib/api';
 import { AddToTopicDialog } from '@/components/add-to-topic-dialog';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -40,6 +41,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const personalCategories = useCategories('PERSONAL');
   const genreCategories = useCategories('GENRE');
   const tagsQuery = useTags();
+  const currentUser = useCurrentUser();
   const fetchCover = useFetchBookCover();
   const activateCover = useActivateBookCover();
   const deleteCover = useDeleteBookCover();
@@ -185,6 +187,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
   const notes = useMemo(() => (bookNotes.data ?? []) as NoteItem[], [bookNotes.data]);
   const highlights = useMemo(() => (bookHighlights.data ?? []) as HighlightItem[], [bookHighlights.data]);
   const traces = useMemo<BookTraceItem[]>(() => {
+    const currentUserId = currentUser.data?.id;
     return [
       ...notes.map((n) => ({
         id: `n-${n.id}`,
@@ -192,6 +195,8 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
         title: n.title ?? '无标题',
         cfi: n.cfi,
         createdAt: n.created_at,
+        ownerId: n.owner_id,
+        isMine: n.owner_id === currentUserId,
       })),
       ...highlights.map((h) => ({
         id: `h-${h.id}`,
@@ -199,9 +204,11 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
         title: h.text.slice(0, 80),
         cfi: h.cfi_start,
         createdAt: h.created_at,
+        ownerId: h.owner_id,
+        isMine: h.owner_id === currentUserId,
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [notes, highlights]);
+  }, [notes, highlights, currentUser.data?.id]);
   const traceCounts = {
     highlights: reviewSummary?.counts.highlights ?? highlights.length,
     notes: reviewSummary?.counts.notes ?? notes.length,
@@ -288,6 +295,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                 readableFile={readableFile ?? undefined}
                 favorited={Boolean(b.favorited_at)}
                 editMode={editMode}
+                canRead={currentUser.data?.permission_level !== 'view'}
                 onRead={() => {
                   if (!bookId || !readableFile) return;
                   openReader();
@@ -312,6 +320,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
               )}
               <BookFilesList
                 files={files.data}
+                canManage={currentUser.data?.permission_level !== 'view'}
                 onDeleteFile={handleRequestFileDelete}
                 onUploadFile={handleUploadFile}
                 uploadPending={uploadFile.isPending}
@@ -354,6 +363,7 @@ export function BookDetailSheet({ bookId, open, onClose, variant = 'sheet' }: { 
                   counts={traceCounts}
                   recentMarks={recentMarks}
                   traces={traces}
+                  canRead={currentUser.data?.permission_level !== 'view'}
                   onOpenMark={openMarkInReader}
                   onOpenTrace={openTraceInReader}
                   readingStats={bookReadingStats.data ?? null}

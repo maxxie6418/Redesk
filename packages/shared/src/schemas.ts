@@ -616,6 +616,7 @@ export const createUserSchema = z.object({
   password: z.string().min(6).max(200),
   display_name: z.string().max(100).optional().nullable(),
   is_admin: z.boolean().optional().default(false),
+  permission_level: permissionLevelSchema.optional().default('use'),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 

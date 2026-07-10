@@ -58,7 +58,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         password_hash: passwordHash,
         display_name: input.display_name ?? null,
         is_admin: 0,
-        permission_level: 'use',
+        permission_level: input.permission_level ?? 'use',
         created_at: timestamp,
         updated_at: timestamp,
       })

@@ -1,6 +1,7 @@
 import { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, ExternalLink, Grid3X3, Heart, LayoutGrid, LayoutList, Star } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/use-auth';
 import type { BookSummary } from '@/hooks/use-books';
 import { Button } from '@/components/ui/button';
 import { FilterSelect, type FilterSelectOption } from '@/components/page-ui/filter-select';
@@ -111,8 +112,20 @@ function TrashActions({ onRestore, onPermanentDelete }: { onRestore?: () => void
 
 export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const isLoggedIn = Boolean(currentUser.data);
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
+
+  const handleReadClick = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    if (book.has_readable_file) {
+      navigate(`/books/${book.id}/read`);
+    }
+  };
 
   return (
     <article
@@ -122,10 +135,10 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, 
     >
       <button
         type="button"
-        className={cn('relative mt-0.5 block shrink-0 self-start overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
-        disabled={!book.has_readable_file}
-        title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
-        onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
+        className={cn('relative mt-0.5 block shrink-0 self-start overflow-hidden rounded-md leading-[0] shadow-[0_4px_12px_rgba(0,0,0,0.1)]', (isLoggedIn && book.has_readable_file) ? 'cursor-pointer' : 'cursor-not-allowed')}
+        disabled={!(isLoggedIn && book.has_readable_file)}
+        title={isLoggedIn ? (book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件') : '登录后可阅读'}
+        onClick={handleReadClick}
       >
         <BookCover book={book} index={index} className="h-[182px] w-[130px]" rounded="rounded-md" />
       </button>
@@ -167,18 +180,30 @@ export function BookCardA({ book, index, isTrash, onRestore, onPermanentDelete, 
 
 export function BookCardB({ book, index, isTrash, onRestore, onPermanentDelete, onOpenDetail }: BookCardProps) {
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
+  const isLoggedIn = Boolean(currentUser.data);
   const progress = bookProgress(book);
   const summaryText = getBookSummaryText(book);
+
+  const handleReadClick = () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    if (book.has_readable_file) {
+      navigate(`/books/${book.id}/read`);
+    }
+  };
 
   return (
     <article data-book-card className="group flex flex-col overflow-hidden rounded-2xl bg-card p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]">
       <div className="relative mb-3 overflow-hidden rounded-xl leading-[0]">
         <button
           type="button"
-          className={cn('block w-full leading-[0]', book.has_readable_file ? 'cursor-pointer' : 'cursor-not-allowed')}
-          disabled={!book.has_readable_file}
-          title={book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件'}
-          onClick={() => { if (book.has_readable_file) navigate(`/books/${book.id}/read`); }}
+          className={cn('block w-full leading-[0]', (isLoggedIn && book.has_readable_file) ? 'cursor-pointer' : 'cursor-not-allowed')}
+          disabled={!(isLoggedIn && book.has_readable_file)}
+          title={isLoggedIn ? (book.has_readable_file ? '打开阅读/预览' : '暂无可预览文件') : '登录后可阅读'}
+          onClick={handleReadClick}
         >
           <BookCover book={book} index={index} className="aspect-[6/7] w-full" rounded="rounded-xl" />
         </button>
