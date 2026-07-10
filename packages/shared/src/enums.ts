@@ -99,14 +99,14 @@ export const AUTH_MODE = {
 export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE];
 
 export const PERMISSION_LEVEL = {
-  VIEW: 'VIEW',
-  READ: 'READ',
-  USE: 'USE',
+  VIEW: 'view',
+  READ: 'read',
+  USE: 'use',
 } as const;
 export type PermissionLevel = (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL];
 
 export const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = {
-  VIEW: '可见',
-  READ: '只读',
-  USE: '可操作',
+  view: '浏览',
+  read: '阅读',
+  use: '使用',
 };

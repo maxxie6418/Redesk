@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/use-auth';
 import { ShellUserContext } from '@/components/shell-user-context';
 import { FullScreenLoader } from '@/components/full-screen-loader';
-import { checkPermission } from '@/lib/permissions';
+import { checkUserPermission } from '@/lib/permissions';
 import { LOCAL_AUTH_USER } from '@/lib/auth-mode';
 import type { PermissionLevel } from '@redesk/shared';
 
@@ -23,9 +23,7 @@ export function RequirePermission({ requiredLevel, children }: RequirePermission
     return <Navigate to="/login" replace />;
   }
 
-  const userLevel = currentUser.data.permission_level as PermissionLevel;
-
-  if (!checkPermission(userLevel, requiredLevel)) {
+  if (!checkUserPermission(currentUser.data, requiredLevel)) {
     return <Navigate to="/" replace />;
   }
 
