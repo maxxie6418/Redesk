@@ -9,7 +9,6 @@ import {
   Link,
   Loader2,
   Plus,
-  Power,
   Send,
   Trash2,
   Upload,
@@ -339,32 +338,57 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
     setRouting(next);
   }, [assignments.data]);
 
+  const buildConfig = () =>
+    type === 's3'
+      ? {
+          provider: fields.provider || null,
+          endpoint: fields.endpoint,
+          bucket: fields.bucket,
+          region: fields.region || 'auto',
+          access_key: fields.access_key,
+          secret_key: fields.secret_key,
+          public_url: fields.public_url || null,
+          prefix: fields.prefix || null,
+        }
+      : {
+          url: fields.url,
+          username: fields.username || null,
+          password: fields.password,
+          base_path: fields.base_path || null,
+        };
+
   const handleCreate = async () => {
     try {
-      const config =
-        type === 's3'
-          ? {
-              provider: fields.provider || null,
-              endpoint: fields.endpoint,
-              bucket: fields.bucket,
-              region: fields.region || 'auto',
-              access_key: fields.access_key,
-              secret_key: fields.secret_key,
-              public_url: fields.public_url || null,
-              prefix: fields.prefix || null,
-            }
-          : {
-              url: fields.url,
-              username: fields.username || null,
-              password: fields.password,
-              base_path: fields.base_path || null,
-            };
-      await create.mutateAsync({ name, type, config });
+      await create.mutateAsync({ name, type, config: buildConfig() });
       setName('');
       setFields({ region: 'auto' });
       onToast({ type: 'info', text: '云连接已保存' });
     } catch (error) {
       onToast({ type: 'error', text: error instanceof Error ? error.message : '保存失败' });
+    }
+  };
+
+  const handleTest = async () => {
+    if (!name) {
+      onToast({ type: 'error', text: '请填写连接名称' });
+      return;
+    }
+    if (type === 's3' && (!fields.endpoint || !fields.bucket || !fields.access_key || !fields.secret_key)) {
+      onToast({ type: 'error', text: '请填写必要的 S3 连接信息（服务端点、存储桶、访问密钥、私有密钥）' });
+      return;
+    }
+    if (type === 'webdav' && (!fields.url || !fields.password)) {
+      onToast({ type: 'error', text: '请填写必要的 WebDAV 连接信息（服务器 URL、密码 / Token）' });
+      return;
+    }
+    try {
+      const connection = await create.mutateAsync({ name, type, config: buildConfig() });
+      await test.mutateAsync(connection.id);
+      setName('');
+      setFields({ region: 'auto' });
+      onToast({ type: 'info', text: '连接已保存并通过测试' });
+    } catch (error) {
+      onToast({ type: 'error', text: error instanceof Error ? error.message : '测试失败' });
     }
   };
 
@@ -399,7 +423,10 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">名称</label>
+              <label className="text-xs text-muted-foreground">
+                名称 <span className="text-red-500">*</span>{' '}
+                <span className="text-[10px] text-muted-foreground/60">Name</span>
+              </label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：家庭 NAS" />
             </div>
 
@@ -442,21 +469,29 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                   <p className="text-xs font-medium text-muted-foreground">连接信息</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Endpoint</label>
+                      <label className="text-xs text-muted-foreground">
+                        服务端点 <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Endpoint</span>
+                      </label>
                       <Input
                         value={fields.endpoint ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, endpoint: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Bucket</label>
+                      <label className="text-xs text-muted-foreground">
+                        存储桶 <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Bucket</span>
+                      </label>
                       <Input
                         value={fields.bucket ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, bucket: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Region</label>
+                      <label className="text-xs text-muted-foreground">
+                        区域 <span className="text-[10px] text-muted-foreground/60">Region</span>
+                      </label>
                       <Input
                         value={fields.region ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, region: e.target.value }))}
@@ -464,7 +499,9 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Provider</label>
+                      <label className="text-xs text-muted-foreground">
+                        服务商 <span className="text-[10px] text-muted-foreground/60">Provider</span>
+                      </label>
                       <Input
                         value={fields.provider ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, provider: e.target.value }))}
@@ -477,7 +514,10 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                   <p className="text-xs font-medium text-muted-foreground">认证信息</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Access Key</label>
+                      <label className="text-xs text-muted-foreground">
+                        访问密钥 <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Access Key</span>
+                      </label>
                       <Input
                         type="password"
                         value={fields.access_key ?? ''}
@@ -485,7 +525,10 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Secret Key</label>
+                      <label className="text-xs text-muted-foreground">
+                        私有密钥 <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Secret Key</span>
+                      </label>
                       <Input
                         type="password"
                         value={fields.secret_key ?? ''}
@@ -498,7 +541,9 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                   <p className="text-xs font-medium text-muted-foreground">可选配置</p>
                   <div className="grid gap-3 md:grid-cols-3">
                     <div className="space-y-1 md:col-span-2">
-                      <label className="text-xs text-muted-foreground">公开访问 URL</label>
+                      <label className="text-xs text-muted-foreground">
+                        公开访问地址 <span className="text-[10px] text-muted-foreground/60">Public URL</span>
+                      </label>
                       <Input
                         value={fields.public_url ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, public_url: e.target.value }))}
@@ -506,7 +551,9 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">前缀</label>
+                      <label className="text-xs text-muted-foreground">
+                        前缀 <span className="text-[10px] text-muted-foreground/60">Prefix</span>
+                      </label>
                       <Input
                         value={fields.prefix ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, prefix: e.target.value }))}
@@ -522,21 +569,28 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                   <p className="text-xs font-medium text-muted-foreground">连接信息</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1 md:col-span-2">
-                      <label className="text-xs text-muted-foreground">服务器 URL</label>
+                      <label className="text-xs text-muted-foreground">
+                        服务器地址 <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Server URL</span>
+                      </label>
                       <Input
                         value={fields.url ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, url: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">基础路径</label>
+                      <label className="text-xs text-muted-foreground">
+                        基础路径 <span className="text-[10px] text-muted-foreground/60">Base Path</span>
+                      </label>
                       <Input
                         value={fields.base_path ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, base_path: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">用户名</label>
+                      <label className="text-xs text-muted-foreground">
+                        用户名 <span className="text-[10px] text-muted-foreground/60">Username</span>
+                      </label>
                       <Input
                         value={fields.username ?? ''}
                         onChange={(e) => setFields((c) => ({ ...c, username: e.target.value }))}
@@ -548,7 +602,10 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                   <p className="text-xs font-medium text-muted-foreground">认证信息</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">密码 / Token</label>
+                      <label className="text-xs text-muted-foreground">
+                        密码 / Token <span className="text-red-500">*</span>{' '}
+                        <span className="text-[10px] text-muted-foreground/60">Password / Token</span>
+                      </label>
                       <Input
                         type="password"
                         value={fields.password ?? ''}
@@ -560,7 +617,19 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => void handleTest()}
+                disabled={create.isPending || test.isPending || !name}
+              >
+                {test.isPending ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-1 h-4 w-4" />
+                )}
+                测试连接
+              </Button>
               <Button onClick={() => void handleCreate()} disabled={create.isPending || !name}>
                 <Plus className="mr-1 h-4 w-4" />
                 保存连接
@@ -605,7 +674,7 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-1 shrink-0">
+                    <div className="flex gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -618,13 +687,18 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
                             )
                         }
                       >
-                        <Check className="h-4 w-4" />
+                        测试
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => void toggle.mutateAsync(connection.id)}>
-                        <Power className="h-4 w-4" />
+                        {connection.is_active ? '停用' : '启用'}
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => void remove.mutateAsync(connection.id)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => void remove.mutateAsync(connection.id)}
+                      >
+                        删除
                       </Button>
                     </div>
                   </div>

@@ -76,16 +76,16 @@ function readMultipartBool(field: unknown): 'true' | 'false' | undefined {
   throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'is_primary 仅接受字符串 true 或 false');
 }
 
-function safeName(ext: string): string {
-  return `${Date.now()}_${randomStorageToken()}${ext}`;
+function sanitizeFilename(name: string): string {
+  return basename(name).replace(/[\\/:*?"<>|]/g, '_');
 }
 
-function bookFileKey(bookId: number, ext: string): string {
-  return `books/${bookId}/${safeName(ext)}`;
+function bookFileKey(bookId: number, filename: string): string {
+  return `books/${bookId}/${sanitizeFilename(filename)}`;
 }
 
-function unassociatedFileKey(ext: string): string {
-  return `unassociated/${safeName(ext)}`;
+function unassociatedFileKey(filename: string): string {
+  return `unassociated/${sanitizeFilename(filename)}`;
 }
 
 function bookCoverKey(bookId: number, ext: string): string {
@@ -983,10 +983,9 @@ export async function saveUploadedFile(
   const mode = preferredMode ?? getDefaultStorageMode();
   assertStorageModeAvailable(mode);
 
-  const ext = extname(filename).toLowerCase();
   const format = detectFormat(filename);
   const mime = detectMime(filename);
-  const key = bookId != null ? bookFileKey(bookId, ext) : unassociatedFileKey(ext);
+  const key = bookId != null ? bookFileKey(bookId, filename) : unassociatedFileKey(filename);
   const writeResult = await writeStreamForMode(mode, 'book_files', key, stream, mime);
   const primary = resolvePrimaryLocation(mode);
   const timestamp = now();
@@ -1106,7 +1105,7 @@ export async function replaceBookFile(
   const format = detectFormat(filename);
   const mime = detectMime(filename);
   const mode = old.storage_mode;
-  const newKey = bookFileKey(bookId, ext);
+  const newKey = bookFileKey(bookId, filename);
   const tmpKey = `books/${bookId}/.tmp/replace-${fileId}-${Date.now()}${ext}`;
   const primary = resolvePrimaryLocation(mode);
 
