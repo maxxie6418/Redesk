@@ -33,7 +33,7 @@ import {
 import { useSystemStorage, useClearCache, type DirInfo } from '@/hooks/use-system';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useCloudAssignments, useCloudConnections, useCreateCloudConnection, useDeleteCloudConnection, useSaveCloudAssignments, useSnapshotNotes, useTestCloudConnection, useToggleCloudConnection, type CloudConnectionType, type CloudUsage } from '@/hooks/use-cloud-connections';
+import { useCloudAssignments, useCloudConnections, useCreateCloudConnection, useDeleteCloudConnection, useSaveCloudAssignments, useSnapshotNotes, useTestCloudConnection, useTestCloudConfig, useToggleCloudConnection, type CloudConnectionType, type CloudUsage } from '@/hooks/use-cloud-connections';
 import { formatBytes, type StatusMessage } from './types';
 
 const STORAGE_MODE_LABELS: Record<StorageMode, string> = {
@@ -310,6 +310,7 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
   const assignments = useCloudAssignments();
   const create = useCreateCloudConnection();
   const test = useTestCloudConnection();
+  const testConfig = useTestCloudConfig();
   const toggle = useToggleCloudConnection();
   const remove = useDeleteCloudConnection();
   const saveAssignments = useSaveCloudAssignments();
@@ -382,11 +383,8 @@ function CloudConnectionManager({ onToast }: { onToast: (msg: StatusMessage) => 
       return;
     }
     try {
-      const connection = await create.mutateAsync({ name, type, config: buildConfig() });
-      await test.mutateAsync(connection.id);
-      setName('');
-      setFields({ region: 'auto' });
-      onToast({ type: 'info', text: '连接已保存并通过测试' });
+      await testConfig.mutateAsync({ type, config: buildConfig() });
+      onToast({ type: 'info', text: '连接测试成功' });
     } catch (error) {
       onToast({ type: 'error', text: error instanceof Error ? error.message : '测试失败' });
     }

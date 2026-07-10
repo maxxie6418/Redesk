@@ -105,6 +105,25 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
     }
   });
 
+  app.post('/cloud-connections/test-config', async (req) => {
+    requireUserId(req);
+    const input = req.body as { type: CloudConnectionType; config: Record<string, unknown> };
+    if (!input.type || !input.config) throw new AppError('VALIDATION_ERROR', '请提供连接类型和配置');
+    const storage = createStorage(input.type, input.config);
+    const key = `__redesk_probe__/${Date.now()}_${randomStorageToken()}.txt`;
+    const body = Buffer.from(`redesk-cloud-probe-${Date.now()}`);
+    try {
+      await storage.putBytes(key, body, { contentType: 'text/plain' });
+      const readBack = await storage.getBytes(key);
+      if (!readBack.equals(body)) throw businessError('连接回读校验失败');
+      await storage.delete(key);
+      return { data: { ok: true } };
+    } catch (error) {
+      await storage.delete(key).catch(() => undefined);
+      throw businessError(error instanceof Error ? `连接测试失败：${error.message}` : '连接测试失败');
+    }
+  });
+
   app.post('/cloud-connections/:id/toggle', async (req) => {
     const ownerId = requireUserId(req);
     const id = Number((req.params as { id: string }).id);

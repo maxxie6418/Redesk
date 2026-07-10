@@ -30,6 +30,10 @@ export function useTestCloudConnection() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (id: number) => api.post<{ ok: boolean; tested_at: string }>(`/cloud-connections/${id}/test`), onSuccess: () => qc.invalidateQueries({ queryKey: KEY }) });
 }
+
+export function useTestCloudConfig() {
+  return useMutation({ mutationFn: (input: { type: CloudConnectionType; config: Record<string, unknown> }) => api.post<{ ok: boolean }>('/cloud-connections/test-config', input) });
+}
 export function useToggleCloudConnection() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (id: number) => api.post<CloudConnection>(`/cloud-connections/${id}/toggle`), onSuccess: () => qc.invalidateQueries({ queryKey: KEY }) });
