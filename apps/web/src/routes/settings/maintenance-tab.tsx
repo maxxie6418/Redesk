@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronLeft, ChevronRight, CircleDot, Database, Download, FileSpreadsheet, Image, Loader2, Pencil, Search, Upload, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronLeft, ChevronRight, Database, Download, FileSpreadsheet, Image, Loader2, Pencil, RefreshCw, Search, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,34 +18,70 @@ import {
 } from '@/hooks/use-maintenance';
 import { BatchResultDialog, BatchFetchResultDialog, type BatchResultRow, type FetchPreviewRow, type FetchApplyRow } from '@/components/batch-result-dialog';
 
-const MISSING_CHIPS: { key: string; label: string; field: string }[] = [
-  { key: 'author', label: '缺少作者', field: 'author' },
-  { key: 'isbn', label: '缺少 ISBN', field: 'isbn' },
-  { key: 'publisher', label: '缺少出版社', field: 'publisher' },
-  { key: 'publish_year', label: '缺少出版年', field: 'publish_year' },
-  { key: 'description', label: '缺少描述', field: 'description' },
-  { key: 'translator', label: '缺少译者', field: 'translator' },
+const MISSING_CHIPS: { key: string; label: string; field: string; tone: string; countTone: string }[] = [
+  {
+    key: 'author',
+    label: '缺少作者',
+    field: 'author',
+    tone: 'border-sky-300/70 bg-sky-50/90 text-sky-900 hover:border-sky-400 dark:border-sky-800/70 dark:bg-sky-950/25 dark:text-sky-200',
+    countTone: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+  },
+  {
+    key: 'isbn',
+    label: '缺少 ISBN',
+    field: 'isbn',
+    tone: 'border-violet-300/70 bg-violet-50/90 text-violet-900 hover:border-violet-400 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200',
+    countTone: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
+  },
+  {
+    key: 'publisher',
+    label: '缺少出版社',
+    field: 'publisher',
+    tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-900 hover:border-emerald-400 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200',
+    countTone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+  },
+  {
+    key: 'publish_year',
+    label: '缺少出版年',
+    field: 'publish_year',
+    tone: 'border-amber-300/70 bg-amber-50/90 text-amber-900 hover:border-amber-400 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200',
+    countTone: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  },
+  {
+    key: 'description',
+    label: '缺少描述',
+    field: 'description',
+    tone: 'border-rose-300/70 bg-rose-50/90 text-rose-900 hover:border-rose-400 dark:border-rose-800/70 dark:bg-rose-950/25 dark:text-rose-200',
+    countTone: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200',
+  },
+  {
+    key: 'translator',
+    label: '缺少译者',
+    field: 'translator',
+    tone: 'border-teal-300/70 bg-teal-50/90 text-teal-900 hover:border-teal-400 dark:border-teal-800/70 dark:bg-teal-950/25 dark:text-teal-200',
+    countTone: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200',
+  },
 ];
 
 const ALL_COLUMNS = [
-  { key: 'title', label: '书名', required: true },
-  { key: 'cover', label: '封面', required: false },
-  { key: 'status', label: '状态', required: false },
-  { key: 'category_id', label: '分类', required: false },
-  { key: 'author', label: '作者', required: false },
-  { key: 'publisher', label: '出版社', required: false },
-  { key: 'publish_year', label: '出版年', required: false },
-  { key: 'source_url', label: '来源链接', required: false },
-  { key: 'metadata_source', label: '来源', required: false },
-  { key: 'tags', label: '标签', required: false },
-  { key: 'rating', label: '评分', required: false },
-  { key: 'isbn', label: 'ISBN', required: false },
-  { key: 'subtitle', label: '副标题', required: false },
-  { key: 'translator', label: '译者', required: false },
-  { key: 'original_title', label: '原书名', required: false },
-  { key: 'page_count', label: '页数', required: false },
-  { key: 'description', label: '描述', required: false },
-  { key: 'language', label: '语言', required: false },
+  { key: 'title', label: '书名', required: true, tone: 'border-slate-300/70 bg-slate-100/90 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200' },
+  { key: 'cover', label: '封面', required: false, tone: 'border-sky-300/70 bg-sky-50/90 text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/25 dark:text-sky-200' },
+  { key: 'status', label: '状态', required: false, tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200' },
+  { key: 'category_id', label: '分类', required: false, tone: 'border-lime-300/70 bg-lime-50/90 text-lime-800 dark:border-lime-800/70 dark:bg-lime-950/25 dark:text-lime-200' },
+  { key: 'author', label: '作者', required: false, tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
+  { key: 'publisher', label: '出版社', required: false, tone: 'border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-800/70 dark:bg-cyan-950/25 dark:text-cyan-200' },
+  { key: 'publish_year', label: '出版年', required: false, tone: 'border-amber-300/70 bg-amber-50/90 text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200' },
+  { key: 'source_url', label: '来源链接', required: false, tone: 'border-orange-300/70 bg-orange-50/90 text-orange-800 dark:border-orange-800/70 dark:bg-orange-950/25 dark:text-orange-200' },
+  { key: 'metadata_source', label: '来源', required: false, tone: 'border-indigo-300/70 bg-indigo-50/90 text-indigo-800 dark:border-indigo-800/70 dark:bg-indigo-950/25 dark:text-indigo-200' },
+  { key: 'tags', label: '标签', required: false, tone: 'border-fuchsia-300/70 bg-fuchsia-50/90 text-fuchsia-800 dark:border-fuchsia-800/70 dark:bg-fuchsia-950/25 dark:text-fuchsia-200' },
+  { key: 'rating', label: '评分', required: false, tone: 'border-yellow-300/70 bg-yellow-50/90 text-yellow-800 dark:border-yellow-800/70 dark:bg-yellow-950/25 dark:text-yellow-200' },
+  { key: 'isbn', label: 'ISBN', required: false, tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
+  { key: 'subtitle', label: '副标题', required: false, tone: 'border-pink-300/70 bg-pink-50/90 text-pink-800 dark:border-pink-800/70 dark:bg-pink-950/25 dark:text-pink-200' },
+  { key: 'translator', label: '译者', required: false, tone: 'border-teal-300/70 bg-teal-50/90 text-teal-800 dark:border-teal-800/70 dark:bg-teal-950/25 dark:text-teal-200' },
+  { key: 'original_title', label: '原书名', required: false, tone: 'border-slate-300/70 bg-slate-50/90 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200' },
+  { key: 'page_count', label: '页数', required: false, tone: 'border-stone-300/70 bg-stone-50/90 text-stone-800 dark:border-stone-700 dark:bg-stone-900/40 dark:text-stone-200' },
+  { key: 'description', label: '描述', required: false, tone: 'border-rose-300/70 bg-rose-50/90 text-rose-800 dark:border-rose-800/70 dark:bg-rose-950/25 dark:text-rose-200' },
+  { key: 'language', label: '语言', required: false, tone: 'border-sky-300/70 bg-sky-50/90 text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/25 dark:text-sky-200' },
 ] as const;
 
 const DEFAULT_VISIBLE = new Set([
@@ -138,9 +174,12 @@ export function MaintenanceTab() {
         const arr = JSON.parse(saved) as string[];
         return new Set(arr);
       }
-    } catch { /* ignore */ }
+    } catch {
+      // 忽略 localStorage 解析错误
+    }
     return new Set(DEFAULT_VISIBLE);
   });
+  const [editingEnabled, setEditingEnabled] = useState(false);
   const [editingCell, setEditingCell] = useState<{ bookId: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showImportResult, setShowImportResult] = useState(false);
@@ -170,13 +209,10 @@ export function MaintenanceTab() {
   const updateField = useUpdateBookField();
   const batchPreview = useBatchPreviewMetadata();
   const batchApply = useBatchApplyMetadata();
-
   const batchFetchCovers = useBatchFetchCovers();
 
   const params: MaintenanceListParams = useMemo(() => {
-    const missingKeys = Array.from(activeMissing).filter(
-      (k) => !k.startsWith('__'),
-    );
+    const missingKeys = Array.from(activeMissing).filter((k) => !k.startsWith('__'));
     return {
       page,
       page_size: pageSize,
@@ -268,9 +304,10 @@ export function MaintenanceTab() {
   }, [books]);
 
   const startEdit = useCallback((bookId: number, field: string, currentValue: unknown) => {
+    if (!editingEnabled) return;
     setEditingCell({ bookId, field });
     setEditValue(currentValue == null ? '' : String(currentValue));
-  }, []);
+  }, [editingEnabled]);
 
   const saveEdit = useCallback(() => {
     if (!editingCell) return;
@@ -294,6 +331,13 @@ export function MaintenanceTab() {
     setEditingCell(null);
     setEditValue('');
   }, []);
+
+  const toggleEditingMode = useCallback(() => {
+    if (editingCell) {
+      cancelEdit();
+    }
+    setEditingEnabled((prev) => !prev);
+  }, [cancelEdit, editingCell]);
 
   const handleCsvImport = useCallback(() => {
     const input = document.createElement('input');
@@ -414,7 +458,7 @@ export function MaintenanceTab() {
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-7 w-7 rounded-md border border-transparent p-0 text-muted-foreground hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
           disabled={loading || isEmpty(book.source_url)}
           onClick={(e) => {
             e.stopPropagation();
@@ -425,7 +469,7 @@ export function MaintenanceTab() {
           {loading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Download className="h-3.5 w-3.5" />
+            <RefreshCw className="h-3.5 w-3.5" />
           )}
         </Button>
       );
@@ -460,17 +504,17 @@ export function MaintenanceTab() {
 
     if (col === 'category_id') {
       const name = book.category_name ?? (value ? `分类 #${value}` : null);
-      if (!name) return <span className="text-xs text-muted-foreground/50">未分类</span>;
+      if (!name) return <span className="text-xs text-muted-foreground">-</span>;
       return <span className="text-xs">{name}</span>;
     }
 
     if (col === 'tags') {
       const tags = book.tags ?? [];
-      if (tags.length === 0) return <span className="text-xs text-muted-foreground/50">无标签</span>;
+      if (tags.length === 0) return <span className="text-xs text-muted-foreground">-</span>;
       return (
         <div className="flex flex-wrap gap-1">
           {tags.map((t) => (
-            <span key={t} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{t}</span>
+            <span key={t} className="rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-xs text-muted-foreground">{t}</span>
           ))}
         </div>
       );
@@ -500,17 +544,19 @@ export function MaintenanceTab() {
         );
       }
       if (isEmpty(value)) {
+        if (!editingEnabled) {
+          return <span className="text-xs text-muted-foreground">-</span>;
+        }
         return (
           <button
             type="button"
-            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            <CircleDot className="h-3 w-3" />
-            补充链接
+            -
           </button>
         );
       }
@@ -542,24 +588,28 @@ export function MaintenanceTab() {
         );
       }
       if (isEmpty(value)) {
+        if (!editingEnabled) {
+          return <span className="text-xs text-muted-foreground">-</span>;
+        }
         return (
           <button
             type="button"
-            className="text-xs text-muted-foreground/50 hover:text-foreground"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            点击补充...
+            -
           </button>
         );
       }
       return (
         <span
-          className="block max-w-[200px] cursor-pointer truncate text-xs hover:underline"
+          className={`block max-w-[200px] text-xs ${editingEnabled ? 'cursor-pointer hover:underline' : ''}`}
           title={String(value)}
-          onDoubleClick={(e) => {
+          onClick={(e) => {
+            if (!editingEnabled) return;
             e.stopPropagation();
             startEdit(book.id, col, value);
           }}
@@ -584,70 +634,64 @@ export function MaintenanceTab() {
 
     if (TEXT_EDITABLE.has(col)) {
       if (isEmpty(value)) {
+        if (!editingEnabled) {
+          return <span className="text-xs text-muted-foreground">-</span>;
+        }
         return (
           <button
             type="button"
-            className="flex items-center gap-1 text-xs text-amber-600/60 hover:text-amber-600 dark:text-amber-400/60 dark:hover:text-amber-400"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            <CircleDot className="h-3 w-3" />
-            补充
+            -
           </button>
         );
       }
       const isAuthor = col === 'author';
       return (
-        <span
-          className={`cursor-pointer text-xs hover:underline ${isAuthor ? 'block max-w-[120px] truncate' : ''}`}
+        <button
+          type="button"
+          disabled={!editingEnabled}
+          className={`text-left text-xs ${editingEnabled ? 'cursor-pointer hover:underline' : 'cursor-default'} ${isAuthor ? 'block max-w-[120px] truncate' : ''}`}
           title={String(value)}
-          onDoubleClick={(e) => {
+          onClick={(e) => {
+            if (!editingEnabled) return;
             e.stopPropagation();
             startEdit(book.id, col, value);
           }}
         >
           {String(value)}
-        </span>
+        </button>
       );
     }
 
     if (col === 'rating') {
       if (value == null || Number(value) === 0) {
-        return <span className="text-xs text-muted-foreground/50">—</span>;
+        return <span className="text-xs text-muted-foreground">-</span>;
       }
       return <span className="text-xs">{Number(value).toFixed(1)}</span>;
     }
 
-    return <span className="text-xs">{value == null ? '' : String(value)}</span>;
-  }, [editingCell, editValue, startEdit, saveEdit, cancelEdit, singleFetchBookId, singleFetchLoading, handleSingleFetch]);
+    return <span className="text-xs">{value == null || value === '' ? '-' : String(value)}</span>;
+  }, [editingCell, editValue, editingEnabled, startEdit, saveEdit, cancelEdit, singleFetchBookId, singleFetchLoading, handleSingleFetch]);
 
   const handleExportCsv = useCallback(() => {
     window.open(`${API_BASE}/export/books?format=csv`, '_blank', 'noopener');
   }, []);
 
   const statsData = stats.data;
+  const visibleColumns = ALL_COLUMNS.filter((c) => visibleCols.has(c.key));
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">数据维护</CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleCsvImport}>
-                <Upload className="mr-1.5 h-3.5 w-3.5" />
-                导入 CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportCsv}>
-                <Download className="mr-1.5 h-3.5 w-3.5" />
-                导出 CSV
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">数据维护</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -662,14 +706,14 @@ export function MaintenanceTab() {
                   type="button"
                   className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                     active
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                      ? chip.tone
+                      : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
                   }`}
                   onClick={() => toggleMissing(chip.field)}
                 >
                   {chip.label}
                   <span className={`ml-0.5 rounded-full px-1.5 py-0 text-[10px] ${
-                    active ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                    active ? chip.countTone : 'bg-muted text-muted-foreground'
                   }`}>
                     {count}
                   </span>
@@ -680,14 +724,14 @@ export function MaintenanceTab() {
               type="button"
               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeMissing.has('__no_source_url')
-                  ? 'border-amber-400/40 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
-                  : 'border-border bg-card text-muted-foreground hover:border-amber-300 hover:text-foreground'
+                  ? 'border-orange-300/70 bg-orange-50/90 text-orange-900 dark:border-orange-800/70 dark:bg-orange-950/25 dark:text-orange-200'
+                  : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
               }`}
               onClick={() => toggleMissing('__no_source_url')}
             >
               缺少来源链接
               <span className={`ml-0.5 rounded-full px-1.5 py-0 text-[10px] ${
-                activeMissing.has('__no_source_url') ? 'bg-amber-200/50 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground'
+                activeMissing.has('__no_source_url') ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200' : 'bg-muted text-muted-foreground'
               }`}>
                 {statsData?.no_source_url ?? 0}
               </span>
@@ -696,14 +740,14 @@ export function MaintenanceTab() {
               type="button"
               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeMissing.has('__has_source_not_fetched')
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                  ? 'border-indigo-300/70 bg-indigo-50/90 text-indigo-900 dark:border-indigo-800/70 dark:bg-indigo-950/25 dark:text-indigo-200'
+                  : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
               }`}
               onClick={() => toggleMissing('__has_source_not_fetched')}
             >
               有链接未抓取
               <span className={`ml-0.5 rounded-full px-1.5 py-0 text-[10px] ${
-                activeMissing.has('__has_source_not_fetched') ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                activeMissing.has('__has_source_not_fetched') ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200' : 'bg-muted text-muted-foreground'
               }`}>
                 {statsData?.has_source_url_not_fetched ?? 0}
               </span>
@@ -712,15 +756,15 @@ export function MaintenanceTab() {
               type="button"
               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                 activeMissing.has('__no_cover')
-                  ? 'border-rose-400/40 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
-                  : 'border-border bg-card text-muted-foreground hover:border-rose-300 hover:text-foreground'
+                  ? 'border-rose-300/70 bg-rose-50/90 text-rose-900 dark:border-rose-800/70 dark:bg-rose-950/25 dark:text-rose-200'
+                  : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
               }`}
               onClick={() => toggleMissing('__no_cover')}
             >
               <Image className="h-3 w-3" />
               缺少封面
               <span className={`ml-0.5 rounded-full px-1.5 py-0 text-[10px] ${
-                activeMissing.has('__no_cover') ? 'bg-rose-200/50 text-rose-700 dark:text-rose-300' : 'bg-muted text-muted-foreground'
+                activeMissing.has('__no_cover') ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' : 'bg-muted text-muted-foreground'
               }`}>
                 {statsData?.no_cover ?? 0}
               </span>
@@ -745,11 +789,11 @@ export function MaintenanceTab() {
                 key={col.key}
                 type="button"
                 disabled={col.required}
-                className={`rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors ${
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
                   visibleCols.has(col.key)
-                    ? 'border border-emerald-300/60 bg-emerald-50/80 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                    : 'border border-border bg-card text-muted-foreground hover:border-muted-foreground/30'
-                } ${col.required ? 'cursor-default opacity-70' : 'cursor-pointer'}`}
+                    ? col.tone
+                    : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
+                } ${col.required ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
                 onClick={() => !col.required && toggleCol(col.key)}
               >
                 {col.label}
@@ -776,12 +820,6 @@ export function MaintenanceTab() {
                 <span className="h-2 w-2 rounded-full bg-rose-500" />
                 无封面 {statsData.no_cover}
               </span>
-              {selected.size > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  选中 {selected.size}
-                </span>
-              )}
             </div>
           )}
 
@@ -801,52 +839,68 @@ export function MaintenanceTab() {
         </CardContent>
       </Card>
 
-      <div className="min-h-[52px]">
-        {selected.size > 0 && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center gap-3 py-3">
-              <span className="text-sm font-medium text-primary">已选 {selected.size} 本</span>
-              <div className="h-4 w-px bg-primary/20" />
-              <Button variant="outline" size="sm" className="text-xs" onClick={handleBatchFetch}>
-                <Pencil className="mr-1.5 h-3 w-3" />
-                批量抓取信息
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBatchFetch} disabled={selected.size === 0}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                更新信息
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs"
-                disabled={batchFetchCovers.isPending}
+                className="h-8 text-xs"
+                disabled={selected.size === 0 || batchFetchCovers.isPending}
                 onClick={handleBatchFetchCovers}
               >
                 {batchFetchCovers.isPending ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Image className="mr-1.5 h-3 w-3" />
+                  <Image className="mr-1.5 h-3.5 w-3.5" />
                 )}
-                批量抓取封面
+                更新封面
               </Button>
-              <div className="ml-auto">
-                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setSelected(new Set())}>
-                  取消选择
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex items-center justify-between border-b border-border px-4 py-2">
+            <div className="hidden h-6 w-px bg-border md:block" />
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleCsvImport}>
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                导入 CSV
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleExportCsv}>
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                导出 CSV
+              </Button>
+            </div>
+
+            <div className="hidden h-6 w-px bg-border md:block" />
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant={editingEnabled ? 'default' : 'outline'}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={toggleEditingMode}
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                {editingEnabled ? '结束编辑' : '编辑'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-2">
             <div className="flex items-center gap-2">
               <button type="button" className="flex h-4 w-4 items-center justify-center" onClick={selectAll}>
-                <div className={`h-4 w-4 rounded border ${
+                <div className={`flex h-4 w-4 items-center justify-center rounded border ${
                   selected.size === books.length && books.length > 0
                     ? 'border-primary bg-primary'
                     : selected.size > 0
                       ? 'border-primary bg-primary/30'
                       : 'border-muted-foreground/30'
-                } flex items-center justify-center`}>
+                }`}>
                   {(selected.size === books.length && books.length > 0) || selected.size > 0 ? (
                     <Check className="h-3 w-3 text-primary-foreground" />
                   ) : null}
@@ -857,11 +911,29 @@ export function MaintenanceTab() {
               <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={selectMissing}>只选缺失项</button>
               <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={selectWithSource}>只选有链接</button>
             </div>
-            {pagination && (
-              <span className="text-xs text-muted-foreground">
-                显示 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, pagination.total)} / 共 {pagination.total} 本
-              </span>
-            )}
+
+            <div className="min-w-[140px] flex-1 text-center">
+              {selected.size > 0 ? (
+                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary shadow-sm">
+                  已选中 {selected.size} 本书
+                </span>
+              ) : (
+                <span className="text-xs text-transparent select-none">已选中 0 本书</span>
+              )}
+            </div>
+
+            <div className="ml-auto flex items-center gap-3">
+              {selected.size > 0 ? (
+                <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setSelected(new Set())}>
+                  取消选择
+                </button>
+              ) : null}
+              {pagination ? (
+                <span className="text-xs text-muted-foreground">
+                  显示 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, pagination.total)} / 共 {pagination.total} 本
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -875,7 +947,10 @@ export function MaintenanceTab() {
                       ) : null}
                     </div>
                   </th>
-                  {ALL_COLUMNS.filter((c) => visibleCols.has(c.key)).map((col) => {
+                  <th className="w-12 px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                    操作
+                  </th>
+                  {visibleColumns.map((col) => {
                     const isActive = sort === col.key || sort === `-${col.key}`;
                     const isDesc = sort === `-${col.key}`;
                     return (
@@ -895,9 +970,6 @@ export function MaintenanceTab() {
                       </th>
                     );
                   })}
-                  <th className="w-12 px-3 py-2 text-left text-xs font-medium text-muted-foreground">
-                    操作
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -942,14 +1014,14 @@ export function MaintenanceTab() {
                             </div>
                           </button>
                         </td>
-                        {ALL_COLUMNS.filter((c) => visibleCols.has(c.key)).map((col) => (
+                        <td className="px-3 py-2">
+                          {renderCellValue(book, '__actions')}
+                        </td>
+                        {visibleColumns.map((col) => (
                           <td key={col.key} className="px-3 py-2">
                             {renderCellValue(book, col.key)}
                           </td>
                         ))}
-                        <td className="px-3 py-2">
-                          {renderCellValue(book, '__actions')}
-                        </td>
                       </tr>
                     );
                   })
