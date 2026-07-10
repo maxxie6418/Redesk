@@ -301,6 +301,24 @@ function serializeBooks(rows: RawBookRow[], ownerId: number) {
   );
 }
 
+function buildSearchCondition(q: string) {
+  const trimmed = q.trim();
+  if (!trimmed) return undefined;
+
+  const escapedLike = trimmed.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+  const likePattern = `%${escapedLike}%`;
+
+  const escapedFts = trimmed.replace(/"/g, '""');
+  const ftsQuery = `"${escapedFts}"`;
+
+  return or(
+    sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${ftsQuery})`,
+    sql`${books.title} LIKE ${likePattern} ESCAPE '\\'`,
+    sql`${books.author} LIKE ${likePattern} ESCAPE '\\'`,
+    sql`${books.isbn} LIKE ${likePattern} ESCAPE '\\'`,
+  );
+}
+
 function buildBookListQuery(input: BookQueryInput, ownerId: number) {
   const db = getDb();
   const conditions: ReturnType<typeof and>[] = [eq(books.owner_id, ownerId)];
@@ -314,9 +332,10 @@ function buildBookListQuery(input: BookQueryInput, ownerId: number) {
   }
 
   if (input.q) {
-    conditions.push(
-      sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
-    );
+    const searchCondition = buildSearchCondition(input.q);
+    if (searchCondition) {
+      conditions.push(searchCondition);
+    }
   }
 
   if (input.status) {
@@ -1836,9 +1855,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     ];
 
     if (input.q) {
-      conditions.push(
-        sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
-      );
+      const searchCondition = buildSearchCondition(input.q);
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     const where = and(...conditions);
@@ -2057,9 +2077,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     ];
 
     if (input.q) {
-      conditions.push(
-        sql`${books.id} IN (SELECT rowid FROM books_fts WHERE books_fts MATCH ${input.q})`,
-      );
+      const searchCondition = buildSearchCondition(input.q);
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     if (input.missing) {
