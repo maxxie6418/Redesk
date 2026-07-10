@@ -84,19 +84,17 @@ const ALL_COLUMNS = [
   { key: 'language', label: '语言', required: false, tone: 'border-sky-300/70 bg-sky-50/90 text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/25 dark:text-sky-200' },
 ] as const;
 
-const SORT_OPTIONS: { key: string; label: string; tone: string }[] = [
-  { key: 'import_order', label: '导入顺序', tone: 'border-slate-300/70 bg-slate-100/90 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200' },
-  { key: '-updated_at', label: '最近更新', tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200' },
-  { key: 'updated_at', label: '最早更新', tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200' },
-  { key: '-created_at', label: '最新加入', tone: 'border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-800/70 dark:bg-cyan-950/25 dark:text-cyan-200' },
-  { key: 'created_at', label: '最早加入', tone: 'border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-800/70 dark:bg-cyan-950/25 dark:text-cyan-200' },
-  { key: 'title', label: '书名 A→Z', tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
-  { key: '-title', label: '书名 Z→A', tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
-  { key: 'author', label: '作者 A→Z', tone: 'border-fuchsia-300/70 bg-fuchsia-50/90 text-fuchsia-800 dark:border-fuchsia-800/70 dark:bg-fuchsia-950/25 dark:text-fuchsia-200' },
-  { key: '-author', label: '作者 Z→A', tone: 'border-fuchsia-300/70 bg-fuchsia-50/90 text-fuchsia-800 dark:border-fuchsia-800/70 dark:bg-fuchsia-950/25 dark:text-fuchsia-200' },
-  { key: '-publish_year', label: '出版年最新', tone: 'border-amber-300/70 bg-amber-50/90 text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200' },
-  { key: 'publish_year', label: '出版年最早', tone: 'border-amber-300/70 bg-amber-50/90 text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200' },
-];
+const SORT_BASE_LABEL: Record<string, string> = {
+  import_order: '导入顺序',
+  updated_at: '最近更新',
+};
+
+function stripBorderClasses(tone: string): string {
+  return tone
+    .split(' ')
+    .filter((c) => !c.startsWith('border-') && !c.startsWith('hover:border-') && !c.startsWith('dark:border-'))
+    .join(' ');
+}
 
 const DEFAULT_VISIBLE = new Set([
   'title', 'cover', 'status', 'category_id', 'author', 'publisher',
@@ -303,6 +301,22 @@ export function MaintenanceTab() {
     });
     setPage(1);
   }, []);
+
+  const sortBase = useMemo(() => (sort.startsWith('-') ? sort.slice(1) : sort), [sort]);
+  const sortDir = useMemo(() => (sort.startsWith('-') ? 'desc' : 'asc'), [sort]);
+
+  const toggleSortDimension = useCallback(() => {
+    const nextBase = sortBase === 'import_order' ? 'updated_at' : 'import_order';
+    const nextSort = nextBase === 'import_order' ? 'import_order' : '-updated_at';
+    setSort(nextSort);
+    setPage(1);
+  }, [sortBase]);
+
+  const toggleSortDirection = useCallback(() => {
+    const nextSort = sortDir === 'asc' ? `-${sortBase}` : sortBase;
+    setSort(nextSort);
+    setPage(1);
+  }, [sortBase, sortDir]);
 
   const toggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
@@ -573,22 +587,23 @@ export function MaintenanceTab() {
           />
         );
       }
-      if (isEmpty(value)) {
-        if (!editingEnabled) {
-          return <span className="text-xs text-muted-foreground">-</span>;
-        }
+      if (editingEnabled) {
         return (
           <button
             type="button"
-            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="truncate text-left text-xs text-primary underline-offset-2 hover:underline"
+            title={isEmpty(value) ? '' : String(value)}
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            -
+            {isEmpty(value) ? '-' : extractDomain(String(value))}
           </button>
         );
+      }
+      if (isEmpty(value)) {
+        return <span className="text-xs text-muted-foreground">-</span>;
       }
       return (
         <a
@@ -617,33 +632,26 @@ export function MaintenanceTab() {
           />
         );
       }
-      if (isEmpty(value)) {
-        if (!editingEnabled) {
-          return <span className="text-xs text-muted-foreground">-</span>;
-        }
+      if (editingEnabled) {
         return (
           <button
             type="button"
-            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="block max-w-[200px] text-left text-xs hover:underline"
+            title={isEmpty(value) ? '' : String(value)}
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            -
+            {isEmpty(value) ? '-' : String(value)}
           </button>
         );
       }
+      if (isEmpty(value)) {
+        return <span className="text-xs text-muted-foreground">-</span>;
+      }
       return (
-        <span
-          className={`block max-w-[200px] text-xs ${editingEnabled ? 'cursor-pointer hover:underline' : ''}`}
-          title={String(value)}
-          onClick={(e) => {
-            if (!editingEnabled) return;
-            e.stopPropagation();
-            startEdit(book.id, col, value);
-          }}
-        >
+        <span className="block max-w-[200px] text-xs" title={String(value)}>
           {String(value)}
         </span>
       );
@@ -663,38 +671,30 @@ export function MaintenanceTab() {
     }
 
     if (TEXT_EDITABLE.has(col)) {
-      if (isEmpty(value)) {
-        if (!editingEnabled) {
-          return <span className="text-xs text-muted-foreground">-</span>;
-        }
+      if (editingEnabled) {
+        const isAuthor = col === 'author';
         return (
           <button
             type="button"
-            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className={`text-left text-xs hover:underline ${isAuthor ? 'block max-w-[120px] truncate' : ''}`}
+            title={isEmpty(value) ? '' : String(value)}
             onClick={(e) => {
               e.stopPropagation();
               startEdit(book.id, col, value);
             }}
           >
-            -
+            {isEmpty(value) ? '-' : String(value)}
           </button>
         );
       }
+      if (isEmpty(value)) {
+        return <span className="text-xs text-muted-foreground">-</span>;
+      }
       const isAuthor = col === 'author';
       return (
-        <button
-          type="button"
-          disabled={!editingEnabled}
-          className={`text-left text-xs ${editingEnabled ? 'cursor-pointer hover:underline' : 'cursor-default'} ${isAuthor ? 'block max-w-[120px] truncate' : ''}`}
-          title={String(value)}
-          onClick={(e) => {
-            if (!editingEnabled) return;
-            e.stopPropagation();
-            startEdit(book.id, col, value);
-          }}
-        >
+        <span className={`text-xs ${isAuthor ? 'block max-w-[120px] truncate' : ''}`} title={String(value)}>
           {String(value)}
-        </button>
+        </span>
       );
     }
 
@@ -819,40 +819,16 @@ export function MaintenanceTab() {
                 key={col.key}
                 type="button"
                 disabled={col.required}
-                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
                   visibleCols.has(col.key)
-                    ? col.tone
-                    : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
+                    ? stripBorderClasses(col.tone)
+                    : 'bg-card text-muted-foreground hover:text-foreground'
                 } ${col.required ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
                 onClick={() => !col.required && toggleCol(col.key)}
               >
                 {col.label}
               </button>
             ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">排序</span>
-            {SORT_OPTIONS.map((opt) => {
-              const active = sort === opt.key;
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                    active
-                      ? opt.tone
-                      : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
-                  } cursor-pointer`}
-                  onClick={() => {
-                    setSort(opt.key);
-                    setPage(1);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
           </div>
 
           {statsData && (
@@ -964,6 +940,30 @@ export function MaintenanceTab() {
               <span className="text-xs text-muted-foreground/30">|</span>
               <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={selectMissing}>只选缺失项</button>
               <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={selectWithSource}>只选有链接</button>
+              <span className="text-xs text-muted-foreground/30">|</span>
+              <span className="text-[11px] text-muted-foreground/70">排序</span>
+              <button
+                type="button"
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  sortBase === 'import_order'
+                    ? 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-200'
+                    : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/25 dark:text-emerald-200'
+                }`}
+                onClick={toggleSortDimension}
+              >
+                {SORT_BASE_LABEL[sortBase] ?? sortBase}
+              </button>
+              <button
+                type="button"
+                className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium transition-colors ${
+                  sortDir === 'asc'
+                    ? 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-200'
+                    : 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-200'
+                }`}
+                onClick={toggleSortDirection}
+              >
+                {sortDir === 'asc' ? '正序' : '倒序'}
+              </button>
             </div>
 
             <div className="min-w-[140px] flex-1 text-center">
