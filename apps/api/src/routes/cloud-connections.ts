@@ -4,7 +4,7 @@ import { bookCovers, bookFiles, books, cloudConnections, cloudNoteSnapshots, clo
 import { createCloudConnectionSchema, updateCloudAssignmentsSchema, updateCloudConnectionSchema } from '@redesk/shared';
 import { getDb } from '../db';
 import { getSqlite } from '../db';
-import { requireAdmin, requireUserId } from '../lib/auth';
+import { requireAdmin, requirePermission } from '../lib/auth';
 import { AppError, businessError, notFound } from '../lib/errors';
 import { validate } from '../lib/zod';
 import { S3Storage } from '../lib/s3-storage';
@@ -53,13 +53,13 @@ function getOwnedConnection(id: number, ownerId: number) {
 
 export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void> {
   app.get('/cloud-connections', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const rows = getDb().select().from(cloudConnections).where(eq(cloudConnections.owner_id, ownerId)).orderBy(asc(cloudConnections.created_at)).all();
     return { data: rows.map(serializeConnection), limit: 5 };
   });
 
   app.post('/cloud-connections', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const input = validate(createCloudConnectionSchema, req.body);
     const db = getDb();
     const count = db.select({ id: cloudConnections.id }).from(cloudConnections).where(eq(cloudConnections.owner_id, ownerId)).all().length;
@@ -71,7 +71,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.patch('/cloud-connections/:id', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id)) throw new AppError('VALIDATION_ERROR', '无效的云连接 ID');
     const input = validate(updateCloudConnectionSchema, req.body);
@@ -84,7 +84,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/cloud-connections/:id/test', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id)) throw new AppError('VALIDATION_ERROR', '无效的云连接 ID');
     const connection = getOwnedConnection(id, ownerId);
@@ -106,7 +106,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/cloud-connections/test-config', async (req) => {
-    requireUserId(req);
+    requirePermission(req, 'use');
     const input = req.body as { type: CloudConnectionType; config: Record<string, unknown> };
     if (!input.type || !input.config) throw new AppError('VALIDATION_ERROR', '请提供连接类型和配置');
     const storage = createStorage(input.type, input.config);
@@ -125,7 +125,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/cloud-connections/:id/toggle', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id)) throw new AppError('VALIDATION_ERROR', '无效的云连接 ID');
     const current = getOwnedConnection(id, ownerId);
@@ -135,7 +135,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.delete('/cloud-connections/:id', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id)) throw new AppError('VALIDATION_ERROR', '无效的云连接 ID');
     getOwnedConnection(id, ownerId);
@@ -150,13 +150,13 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.get('/cloud-assignments', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const rows = getDb().select().from(cloudUsageAssignments).where(eq(cloudUsageAssignments.owner_id, ownerId)).orderBy(asc(cloudUsageAssignments.usage), asc(cloudUsageAssignments.priority)).all();
     return { data: rows };
   });
 
   app.put('/cloud-assignments', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const input = validate(updateCloudAssignmentsSchema, req.body);
     const ids = input.assignments.flatMap((assignment) => assignment.connection_ids);
     const active = ids.length === 0 ? [] : getDb().select({ id: cloudConnections.id }).from(cloudConnections).where(and(eq(cloudConnections.owner_id, ownerId), eq(cloudConnections.is_active, true), inArray(cloudConnections.id, ids))).all();
@@ -172,7 +172,7 @@ export async function cloudConnectionRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/cloud-sync/notes/snapshot', async (req) => {
-    const ownerId = requireUserId(req);
+    const ownerId = requirePermission(req, 'use');
     const assignments = getDb().select({ connection_id: cloudUsageAssignments.connection_id, type: cloudConnections.type, config: cloudConnections.config })
       .from(cloudUsageAssignments)
       .innerJoin(cloudConnections, eq(cloudUsageAssignments.connection_id, cloudConnections.id))

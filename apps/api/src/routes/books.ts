@@ -20,7 +20,7 @@ import {
 import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput, MaintenanceListInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound, businessError } from '../lib/errors';
-import { requireUserId, getPublicUserId } from '../lib/auth';
+import { requireUserId, getOptionalUserId, requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { extname } from 'node:path';
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
@@ -230,62 +230,71 @@ function hasActiveBookCover(bookId: number): boolean {
   return Boolean(activeCover);
 }
 
-function serializeBooks(rows: RawBookRow[], ownerId: number) {
+function serializeBooks(rows: RawBookRow[], userId?: number) {
   if (rows.length === 0) {
     return [];
   }
 
   const db = getDb();
   const bookIds = rows.map((row) => row.id);
-  const allCategoryIds = [
-    ...new Set(rows.map((row) => row.category_id).filter((v): v is number => v != null)),
-    ...new Set(rows.map((row) => row.genre_category_id).filter((v): v is number => v != null)),
-  ];
 
+  // 未登录用户不返回分类、标签等私有信息
   const categoryMap = new Map<number, { name: string; type: string }>();
-  if (allCategoryIds.length > 0) {
-    const categoryRows = db
-      .select({ id: categories.id, name: categories.name, type: categories.type })
-      .from(categories)
-      .where(and(eq(categories.owner_id, ownerId), inArray(categories.id, allCategoryIds)))
+  const tagMap = new Map<number, { tag_ids: number[]; tag_names: string[] }>();
+
+  if (userId) {
+    const allCategoryIds = [
+      ...new Set(rows.map((row) => row.category_id).filter((v): v is number => v != null)),
+      ...new Set(rows.map((row) => row.genre_category_id).filter((v): v is number => v != null)),
+    ];
+
+    if (allCategoryIds.length > 0) {
+      const categoryRows = db
+        .select({ id: categories.id, name: categories.name, type: categories.type })
+        .from(categories)
+        .where(and(eq(categories.owner_id, userId), inArray(categories.id, allCategoryIds)))
+        .all();
+
+      for (const categoryRow of categoryRows) {
+        categoryMap.set(categoryRow.id, { name: categoryRow.name, type: categoryRow.type });
+      }
+    }
+
+    const tagRows = db
+      .select({
+        book_id: bookTags.book_id,
+        tag_id: tags.id,
+        tag_name: tags.name,
+      })
+      .from(bookTags)
+      .innerJoin(tags, eq(bookTags.tag_id, tags.id))
+      .where(and(inArray(bookTags.book_id, bookIds), eq(tags.owner_id, userId)))
       .all();
 
-    for (const categoryRow of categoryRows) {
-      categoryMap.set(categoryRow.id, { name: categoryRow.name, type: categoryRow.type });
+    for (const tagRow of tagRows) {
+      const existing = tagMap.get(tagRow.book_id) ?? { tag_ids: [], tag_names: [] };
+      existing.tag_ids.push(tagRow.tag_id);
+      existing.tag_names.push(tagRow.tag_name);
+      tagMap.set(tagRow.book_id, existing);
     }
   }
 
-  const tagMap = new Map<number, { tag_ids: number[]; tag_names: string[] }>();
-  const tagRows = db
-    .select({
-      book_id: bookTags.book_id,
-      tag_id: tags.id,
-      tag_name: tags.name,
-    })
-    .from(bookTags)
-    .innerJoin(tags, eq(bookTags.tag_id, tags.id))
-    .where(and(inArray(bookTags.book_id, bookIds), eq(tags.owner_id, ownerId)))
-    .all();
-
-  for (const tagRow of tagRows) {
-    const existing = tagMap.get(tagRow.book_id) ?? { tag_ids: [], tag_names: [] };
-    existing.tag_ids.push(tagRow.tag_id);
-    existing.tag_names.push(tagRow.tag_name);
-    tagMap.set(tagRow.book_id, existing);
-  }
-
+  // 未登录用户不返回文件相关信息
   const fileMap = new Map<number, boolean>();
   const readableFileMap = new Map<number, boolean>();
-  const fileRows = db
-    .select({ book_id: bookFiles.book_id, is_primary: bookFiles.is_primary, file_format: bookFiles.file_format })
-    .from(bookFiles)
-    .where(inArray(bookFiles.book_id, bookIds))
-    .all();
-  for (const f of fileRows) {
-    if (f.book_id != null) {
-      fileMap.set(f.book_id, true);
-      if (f.is_primary === 1 && isReadableFileFormat(f.file_format)) {
-        readableFileMap.set(f.book_id, true);
+
+  if (userId) {
+    const fileRows = db
+      .select({ book_id: bookFiles.book_id, is_primary: bookFiles.is_primary, file_format: bookFiles.file_format })
+      .from(bookFiles)
+      .where(inArray(bookFiles.book_id, bookIds))
+      .all();
+    for (const f of fileRows) {
+      if (f.book_id != null) {
+        fileMap.set(f.book_id, true);
+        if (f.is_primary === 1 && isReadableFileFormat(f.file_format)) {
+          readableFileMap.set(f.book_id, true);
+        }
       }
     }
   }
@@ -319,9 +328,17 @@ function buildSearchCondition(q: string) {
   );
 }
 
-function buildBookListQuery(input: BookQueryInput, ownerId: number) {
+function buildBookListQuery(input: BookQueryInput, userId?: number) {
   const db = getDb();
-  const conditions: ReturnType<typeof and>[] = [eq(books.owner_id, ownerId)];
+  const conditions: ReturnType<typeof and>[] = [];
+
+  // 未登录用户：只返回公开书籍；已登录用户：返回自己的书籍 + 公开书籍
+  if (userId) {
+    conditions.push(or(eq(books.owner_id, userId), eq(books.visibility, 'PUBLIC')));
+  } else {
+    conditions.push(eq(books.visibility, 'PUBLIC'));
+  }
+
   const page = input.page ?? 1;
   const pageSize = input.page_size ?? 20;
 
@@ -662,7 +679,7 @@ function hasDuplicateBook(ownerId: number, title: string, author: string | null,
 
 export async function bookRoutes(app: FastifyInstance): Promise<void> {
   app.post('/books', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const contentType = req.headers['content-type'] ?? '';
 
     let input;
@@ -734,7 +751,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/books/import/template', async (req, reply) => {
-    requireUserId(req);
+    requirePermission(req, 'use');
     const sample = [
       '如何阅读一本书',
       '经典阅读指南',
@@ -768,7 +785,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/import', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const dryRun = (req.query as { dry_run?: string | boolean } | undefined)?.dry_run === 'true';
     const data = await req.file();
     if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供 CSV 文件');
@@ -919,7 +936,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/metadata/fetch', async (req) => {
-    requireUserId(req);
+    requirePermission(req, 'use');
     const body = req.body as { source_url?: unknown };
     const sourceUrl = typeof body?.source_url === 'string' ? body.source_url.trim() : '';
     if (!sourceUrl) {
@@ -931,7 +948,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/:id/metadata/apply', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1006,7 +1023,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   }
 
   app.post('/books/metadata/batch-preview', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(batchPreviewSchema, req.body);
     const db = getDb();
 
@@ -1116,7 +1133,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/metadata/batch-apply', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(batchApplySchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -1186,7 +1203,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/books', async (req) => {
-    const userId = getPublicUserId(req);
+    const userId = getOptionalUserId(req);
     const input = validate(bookQuerySchema, req.query);
     const { rows, total, page, pageSize } = buildBookListQuery(input, userId);
 
@@ -1366,7 +1383,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/books/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -1459,7 +1476,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/books/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -1500,7 +1517,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/batch', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(batchBooksSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -1705,7 +1722,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/books/:id/favorite', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -1734,7 +1751,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/books/:id/favorite', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -1894,7 +1911,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/trash/:bookId/restore', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { bookId: bookIdStr } = req.params as { bookId: string };
     const bookId = Number(bookIdStr);
 
@@ -1926,7 +1943,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/trash/:bookId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { bookId: bookIdStr } = req.params as { bookId: string };
     const bookId = Number(bookIdStr);
 
@@ -1961,7 +1978,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/trash', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const db = getDb();
 
     const trashedBooks = db

@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, asc, desc } from 'drizzle-orm';
 import { books, notes, highlights } from '@redesk/db';
 import { ERROR_CODE, exportQuerySchema, importNotesSchema } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
-import { requireAdmin, requireUserId } from '../lib/auth';
+import { requireAdmin, requirePermission } from '../lib/auth';
 import { AppError } from '../lib/errors';
 import { validate } from '../lib/zod';
 import { config } from '../config';
@@ -100,7 +100,7 @@ function addMarkdownExports(archive: ArchiverInstance) {
 
 export async function exportRoutes(app: FastifyInstance): Promise<void> {
   app.get('/export/books', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(exportQuerySchema, req.query as Record<string, unknown>);
     const db = getDb();
 
@@ -148,7 +148,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/export/books/:id/notes', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -181,7 +181,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/export/books/:id/highlights', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -216,7 +216,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/export/books/:id/marks', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -273,7 +273,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/backup/list', async (req) => {
-    requireUserId(req);
+    requirePermission(req, 'use');
     const dir = join(config.storageDir, 'backups');
     if (!existsSync(dir)) return { data: [] };
 
@@ -326,7 +326,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/import/notes', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(importNotesSchema, req.query as Record<string, unknown>);
 
     const data = await req.file();

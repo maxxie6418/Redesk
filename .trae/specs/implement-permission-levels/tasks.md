@@ -18,40 +18,40 @@
 
 ## Phase 2: 后端权限校验基础设施
 
-- [ ] Task 3: auth.ts 权限函数
-  - [ ] SubTask 3.1: 新增 `PermissionLevel` 类型定义
-  - [ ] SubTask 3.2: 新增 `getPermissionLevel(userId)` 函数
-  - [ ] SubTask 3.3: 新增 `requirePermission(req, minLevel)` 函数
-  - [ ] SubTask 3.4: 新增 `getOptionalUserId(req)` 支持匿名访问
+- [x] Task 3: auth.ts 权限函数
+  - [x] SubTask 3.1: 新增 `PermissionLevel` 类型定义
+  - [x] SubTask 3.2: 新增 `getPermissionLevel(userId)` 函数
+  - [x] SubTask 3.3: 新增 `requirePermission(req, minLevel)` 函数
+  - [x] SubTask 3.4: 确认 `getOptionalUserId(req)` 已支持匿名访问
 
-- [ ] Task 4: 书籍路由权限改造（`books.ts`）
-  - [ ] SubTask 4.1: 书籍列表接口支持匿名访问（仅返回 public 书籍）
-  - [ ] SubTask 4.2: 书籍详情接口要求登录（`requireUserId`）
-  - [ ] SubTask 4.3: 书籍写操作要求 `use` 权限（上传、编辑、删除）
-  - [ ] SubTask 4.4: 书籍列表查询逻辑：匿名看 public，登录用户看 own + public
+- [x] Task 4: 书籍路由权限改造（`books.ts`）
+  - [x] SubTask 4.1: 书籍列表接口支持匿名访问（仅返回 public 书籍）
+  - [x] SubTask 4.2: 书籍详情接口要求登录（`requireUserId`）
+  - [x] SubTask 4.3: 书籍写操作要求 `use` 权限（上传、编辑、删除）
+  - [x] SubTask 4.4: 书籍列表查询逻辑：匿名看 public，登录用户看 own + public
 
-- [ ] Task 5: 高亮路由权限改造（`highlights.ts` 或相关路由）
-  - [ ] SubTask 5.1: 高亮查询：公开书返回所有用户高亮，私有书仅返回 owner 高亮
-  - [ ] SubTask 5.2: 高亮写操作要求 `read` 权限
-  - [ ] SubTask 5.3: 高亮删除/更新校验 `owner_id` 匹配
+- [x] Task 5: 高亮路由权限改造（`notes.ts` 中的 highlights 接口）
+  - [x] SubTask 5.1: 高亮查询：公开书返回所有用户高亮，私有书仅返回 owner 高亮
+  - [x] SubTask 5.2: 高亮写操作要求 `read` 权限
+  - [x] SubTask 5.3: 高亮删除/更新校验 `owner_id` 匹配
 
-- [ ] Task 6: 笔记路由权限改造（`notes.ts`）
-  - [ ] SubTask 6.1: 笔记查询永远按 `owner_id` 隔离
-  - [ ] SubTask 6.2: 笔记写操作要求 `read` 权限
-  - [ ] SubTask 6.3: 笔记删除/更新校验 `owner_id` 匹配
+- [x] Task 6: 笔记路由权限改造（`notes.ts`）
+  - [x] SubTask 6.1: 笔记查询永远按 `owner_id` 隔离（管理员例外）
+  - [x] SubTask 6.2: 笔记写操作要求 `read` 权限
+  - [x] SubTask 6.3: 笔记删除/更新校验 `owner_id` 匹配
 
-- [ ] Task 7: 其他路由权限改造
-  - [ ] SubTask 7.1: `files.ts`：所有接口要求 `read` 或 `use` 权限
-  - [ ] SubTask 7.2: `reading-progress.ts`：要求 `read` 权限
-  - [ ] SubTask 7.3: `categories.ts`、`tags.ts`、`topics.ts`：写操作要求 `read` 权限
-  - [ ] SubTask 7.4: `export.ts`：要求 `use` 权限
-  - [ ] SubTask 7.5: `cloud-connections.ts`：要求 `use` 权限
-  - [ ] SubTask 7.6: `settings.ts`：要求 `use` 权限
+- [x] Task 7: 其他路由权限改造
+  - [x] SubTask 7.1: `files.ts`：读取 `read`，写入 `use`
+  - [x] SubTask 7.2: `reading-progress.ts`：要求 `read` 权限
+  - [x] SubTask 7.3: `categories.ts`、`tags.ts`、`topics.ts`：查询 `view`，写操作 `read`
+  - [x] SubTask 7.4: `export.ts`：要求 `use` 权限
+  - [x] SubTask 7.5: `cloud-connections.ts`：要求 `use` 权限
+  - [x] SubTask 7.6: `settings.ts`：要求 `use` 权限
 
-- [ ] Task 8: 用户管理路由更新（`users.ts`）
-  - [ ] SubTask 8.1: 创建用户时设置默认 `permission_level = 'use'`
-  - [ ] SubTask 8.2: 更新用户接口支持修改 `permission_level`
-  - [ ] SubTask 8.3: 用户列表返回包含 `permission_level` 字段
+- [x] Task 8: 用户管理路由更新（`users.ts`）
+  - [x] SubTask 8.1: 创建用户时设置默认 `permission_level = 'use'`
+  - [x] SubTask 8.2: 更新用户接口支持修改 `permission_level`
+  - [x] SubTask 8.3: 用户列表返回包含 `permission_level` 字段
 
 ---
 

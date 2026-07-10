@@ -20,7 +20,7 @@ import {
 } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireAdmin, requireUserId } from '../lib/auth';
+import { requireAdmin, requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 import {
   assertStorageModeAvailable,
@@ -1222,7 +1222,7 @@ export function deleteStoredBookFile(file: typeof bookFiles.$inferSelect): void 
 
 export function fileRoutes(app: FastifyInstance): void {
   app.post('/files/unassociated', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const data = await req.file();
     if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供文件');
 
@@ -1240,7 +1240,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/files/unassociated', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const page = Number((req.query as { page?: string }).page ?? '1');
     const pageSize = Number((req.query as { page_size?: string }).page_size ?? '20');
 
@@ -1264,7 +1264,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/files', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const query = req.query as { page?: string; page_size?: string; format?: string; associated?: string };
     const page = Number(query.page ?? '1');
     const pageSize = Number(query.page_size ?? '20');
@@ -1338,7 +1338,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/files/unassociated/:id/associate', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const fileId = Number(id);
     if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
@@ -1349,7 +1349,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/files/match/candidates', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(fileMatchCandidatesSchema, req.body ?? {});
     const db = getDb();
 
@@ -1369,7 +1369,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/files/match/apply-batch', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(applyFileMatchesSchema, req.body ?? {});
     const db = getDb();
 
@@ -1440,7 +1440,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/files/:id/match', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const fileId = Number(id);
     if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
@@ -1451,7 +1451,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.delete('/files/unassociated/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const fileId = Number(id);
     if (Number.isNaN(fileId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的文件 ID');
@@ -1470,7 +1470,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/books/:id/files', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1486,7 +1486,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/books/:id/files', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1513,7 +1513,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.patch('/books/:id/files/:fileId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id, fileId } = req.params as { id: string; fileId: string };
     const bookId = Number(id);
     const fid = Number(fileId);
@@ -1546,7 +1546,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/books/:id/files/:fileId/replace', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id, fileId } = req.params as { id: string; fileId: string };
     const bookId = Number(id);
     const fid = Number(fileId);
@@ -1563,7 +1563,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.delete('/books/:id/files/:fileId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id, fileId } = req.params as { id: string; fileId: string };
     const bookId = Number(id);
     const fid = Number(fileId);
@@ -1596,7 +1596,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/books/:id/files/:fileId/download', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id, fileId } = req.params as { id: string; fileId: string };
     const bookId = Number(id);
     const fid = Number(fileId);
@@ -1627,7 +1627,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/books/:id/covers', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1650,7 +1650,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/books/:id/covers/fetch', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1685,7 +1685,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/books/:id/covers/upload', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');
@@ -1735,7 +1735,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.post('/books/covers/batch-fetch', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const input = validate(batchFetchBookCoversSchema, req.body);
     const rows: Array<{ book_id: number; success: boolean; error: string | null }> = [];
 
@@ -1780,7 +1780,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.patch('/books/:id/covers/:coverId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id, coverId } = req.params as { id: string; coverId: string };
     const bookId = Number(id);
     const cid = Number(coverId);
@@ -1800,7 +1800,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.delete('/books/:id/covers/:coverId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     const { id, coverId } = req.params as { id: string; coverId: string };
     const bookId = Number(id);
     const cid = Number(coverId);
@@ -1835,7 +1835,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/books/:id/covers/:coverId/file', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id, coverId } = req.params as { id: string; coverId: string };
     const bookId = Number(id);
     const cid = Number(coverId);
@@ -1869,7 +1869,7 @@ export function fileRoutes(app: FastifyInstance): void {
   });
 
   app.get('/books/:id/cover', async (req, reply) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
     if (Number.isNaN(bookId)) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '无效的书籍 ID');

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq, count, desc, sql } from 'drizzle-orm';
+import { and, eq, count, desc, sql, or } from 'drizzle-orm';
 import { highlights, notes, books, bookmarks } from '@redesk/db';
 import {
   ERROR_CODE,
@@ -13,7 +13,7 @@ import {
 } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requirePermission, getPublicUserId, isAdmin } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -30,13 +30,16 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Highlights ==========
 
   app.get('/highlights', async (req) => {
-    const userId = requireUserId(req);
+    const userId = getPublicUserId(req);
     const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
     const conditions = [
-      eq(highlights.owner_id, userId),
       sql`${highlights.deleted_at} IS NULL`,
+      or(
+        eq(books.visibility, 'PUBLIC'),
+        eq(books.owner_id, userId),
+      ),
     ];
     if (bookId) {
       conditions.push(eq(highlights.book_id, bookId));
@@ -47,6 +50,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
     const total = db
       .select({ value: count() })
       .from(highlights)
+      .innerJoin(books, eq(highlights.book_id, books.id))
       .where(where)
       .get()?.value ?? 0;
 
@@ -69,7 +73,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
         book_cover_path: books.cover_path,
       })
       .from(highlights)
-      .leftJoin(books, eq(highlights.book_id, books.id))
+      .innerJoin(books, eq(highlights.book_id, books.id))
       .where(where)
       .orderBy(desc(highlights.created_at))
       .limit(pageSize)
@@ -83,7 +87,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/highlights', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createHighlightSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -119,7 +123,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/highlights/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const highlightId = Number(id);
     if (Number.isNaN(highlightId)) {
@@ -156,7 +160,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/highlights/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const highlightId = Number(id);
     if (Number.isNaN(highlightId)) {
@@ -184,14 +188,19 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Notes ==========
 
   app.get('/notes', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
     const conditions = [
-      eq(notes.owner_id, userId),
       sql`${notes.deleted_at} IS NULL`,
     ];
+
+    // 管理员可查看所有笔记，普通用户只能查看自己的笔记
+    if (!isAdmin(userId)) {
+      conditions.push(eq(notes.owner_id, userId));
+    }
+
     if (bookId) {
       conditions.push(eq(notes.book_id, bookId));
     }
@@ -235,7 +244,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/notes', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createNoteSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -269,7 +278,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/notes/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const noteId = Number(id);
     if (Number.isNaN(noteId)) {
@@ -304,7 +313,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/notes/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const noteId = Number(id);
     if (Number.isNaN(noteId)) {
@@ -332,16 +341,21 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Bookmarks ==========
 
   app.get('/bookmarks', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const { page, page_size: pageSize, book_id: bookId } = validate(readingMarkListQuerySchema, req.query);
 
     const db = getDb();
-    const conditions = [eq(bookmarks.owner_id, userId)];
+    const conditions = [];
+
+    // 管理员可查看所有书签，普通用户只能查看自己的书签
+    if (!isAdmin(userId)) {
+      conditions.push(eq(bookmarks.owner_id, userId));
+    }
     if (bookId) {
       conditions.push(eq(bookmarks.book_id, bookId));
     }
 
-    const where = and(...conditions);
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const total = db
       .select({ value: count() })
@@ -365,7 +379,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/bookmarks', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createBookmarkSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -413,7 +427,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/bookmarks/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookmarkId = Number(id);
     if (Number.isNaN(bookmarkId)) {
@@ -437,19 +451,24 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Stats ==========
 
   app.get('/reading-marks/stats', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const db = getDb();
+    const admin = isAdmin(userId);
+
+    // 管理员统计所有用户，普通用户只统计自己
+    const ownerCondition = admin ? undefined : eq(highlights.owner_id, userId);
+    const noteOwnerCondition = admin ? undefined : eq(notes.owner_id, userId);
 
     const totalHighlights = db
       .select({ value: count() })
       .from(highlights)
-      .where(and(eq(highlights.owner_id, userId), sql`${highlights.deleted_at} IS NULL`))
+      .where(ownerCondition ? and(ownerCondition, sql`${highlights.deleted_at} IS NULL`) : sql`${highlights.deleted_at} IS NULL`)
       .get()?.value ?? 0;
 
     const totalNotes = db
       .select({ value: count() })
       .from(notes)
-      .where(and(eq(notes.owner_id, userId), sql`${notes.deleted_at} IS NULL`))
+      .where(noteOwnerCondition ? and(noteOwnerCondition, sql`${notes.deleted_at} IS NULL`) : sql`${notes.deleted_at} IS NULL`)
       .get()?.value ?? 0;
 
     const monthStart = new Date();
@@ -461,11 +480,9 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
       .select({ value: count() })
       .from(notes)
       .where(
-        and(
-          eq(notes.owner_id, userId),
-          sql`${notes.deleted_at} IS NULL`,
-          sql`${notes.created_at} >= ${monthStartIso}`,
-        ),
+        noteOwnerCondition
+          ? and(noteOwnerCondition, sql`${notes.deleted_at} IS NULL`, sql`${notes.created_at} >= ${monthStartIso}`)
+          : and(sql`${notes.deleted_at} IS NULL`, sql`${notes.created_at} >= ${monthStartIso}`),
       )
       .get()?.value ?? 0;
 
@@ -473,11 +490,9 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
       .select({ value: count() })
       .from(notes)
       .where(
-        and(
-          eq(notes.owner_id, userId),
-          sql`${notes.deleted_at} IS NULL`,
-          sql`${notes.content_html} IS NOT NULL AND ${notes.content_html} != ''`,
-        ),
+        noteOwnerCondition
+          ? and(noteOwnerCondition, sql`${notes.deleted_at} IS NULL`, sql`${notes.content_html} IS NOT NULL AND ${notes.content_html} != ''`)
+          : and(sql`${notes.deleted_at} IS NULL`, sql`${notes.content_html} IS NOT NULL AND ${notes.content_html} != ''`),
       )
       .get()?.value ?? 0;
 
@@ -494,12 +509,15 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   // ========== Search ==========
 
   app.get('/notes/search', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const { q, page, page_size: pageSize, book_id: bookId } = validate(readingMarkSearchQuerySchema, req.query);
     const escaped = createFtsQuery(q);
     const sqlite = getSqlite();
     const bookFilter = bookId ? 'AND n.book_id = ?' : '';
-    const baseParams = [escaped, userId, ...(bookId ? [bookId] : [])];
+
+    // 管理员可搜索所有笔记，普通用户只能搜索自己的笔记
+    const ownerFilter = isAdmin(userId) ? '' : 'AND n.owner_id = ?';
+    const baseParams = [escaped, ...(isAdmin(userId) ? [] : [userId]), ...(bookId ? [bookId] : [])];
 
     const total = (sqlite
       .prepare(
@@ -508,7 +526,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
          JOIN notes n ON n.id = f.rowid
          WHERE notes_fts MATCH ?
            AND n.deleted_at IS NULL
-           AND n.owner_id = ?
+           ${ownerFilter}
          ${bookFilter}`,
       )
       .get(...baseParams) as { total: number } | undefined)?.total ?? 0;
@@ -523,7 +541,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
          LEFT JOIN books b ON b.id = n.book_id
          WHERE notes_fts MATCH ?
            AND n.deleted_at IS NULL
-           AND n.owner_id = ?
+           ${ownerFilter}
          ${bookFilter}
          ORDER BY rank
          LIMIT ? OFFSET ?`,
@@ -538,7 +556,7 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/highlights/search', async (req) => {
-    const userId = requireUserId(req);
+    const userId = getPublicUserId(req);
     const { q, page, page_size: pageSize, book_id: bookId } = validate(readingMarkSearchQuerySchema, req.query);
     const escaped = createFtsQuery(q);
     const sqlite = getSqlite();
@@ -550,9 +568,10 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
         `SELECT COUNT(*) AS total
          FROM highlights_fts f
          JOIN highlights h ON h.id = f.rowid
+         JOIN books b ON b.id = h.book_id
          WHERE highlights_fts MATCH ?
            AND h.deleted_at IS NULL
-           AND h.owner_id = ?
+           AND (b.visibility = 'PUBLIC' OR b.owner_id = ?)
          ${bookFilter}`,
       )
       .get(...baseParams) as { total: number } | undefined)?.total ?? 0;
@@ -564,10 +583,10 @@ export async function noteRoutes(app: FastifyInstance): Promise<void> {
                 b.title AS book_title, b.author AS book_author, b.cover_path AS book_cover_path
          FROM highlights_fts f
          JOIN highlights h ON h.id = f.rowid
-         LEFT JOIN books b ON b.id = h.book_id
+         JOIN books b ON b.id = h.book_id
          WHERE highlights_fts MATCH ?
            AND h.deleted_at IS NULL
-           AND h.owner_id = ?
+           AND (b.visibility = 'PUBLIC' OR b.owner_id = ?)
          ${bookFilter}
          ORDER BY rank
          LIMIT ? OFFSET ?`,

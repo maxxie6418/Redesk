@@ -24,7 +24,7 @@ import {
 } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -69,7 +69,7 @@ function entryTypeTitle(entryType: string): string {
 
 export async function topicRoutes(app: FastifyInstance): Promise<void> {
   app.get('/topics', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const db = getDb();
 
     const rows = db
@@ -111,7 +111,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createTopicSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -132,7 +132,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/topics/:id/timeline', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
     const db = getDb();
@@ -304,7 +304,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/topics/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
     const db = getDb();
@@ -398,7 +398,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/topics/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
 
@@ -427,7 +427,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
 
@@ -450,7 +450,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics/:id/books', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
 
@@ -492,7 +492,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:id/books/:bookId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id, bookId: bookIdStr } = req.params as { id: string; bookId: string };
     const topicId = parseTopicId(id);
     const bookId = parseResourceId(bookIdStr, '书籍 ID');
@@ -520,7 +520,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics/:id/highlights', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
     const input = validate(linkTopicHighlightSchema, req.body);
@@ -562,7 +562,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:id/highlights/:highlightId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id, highlightId: highlightIdStr } = req.params as { id: string; highlightId: string };
     const topicId = parseTopicId(id);
     const highlightId = parseResourceId(highlightIdStr, '高亮 ID');
@@ -589,7 +589,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics/:id/notes', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
     const input = validate(linkTopicNoteSchema, req.body);
@@ -625,7 +625,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:id/notes/:noteId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id, noteId: noteIdStr } = req.params as { id: string; noteId: string };
     const topicId = parseTopicId(id);
     const noteId = parseResourceId(noteIdStr, '笔记 ID');
@@ -652,7 +652,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics/:id/segments', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
     const input = validate(createTopicSegmentSchema, req.body);
@@ -689,7 +689,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/topics/:topicId/segments/:segmentId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { topicId: topicIdStr, segmentId: segmentIdStr } = req.params as { topicId: string; segmentId: string };
     const topicId = parseTopicId(topicIdStr);
     const segmentId = parseResourceId(segmentIdStr, '片段 ID');
@@ -722,7 +722,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:topicId/segments/:segmentId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { topicId: topicIdStr, segmentId: segmentIdStr } = req.params as { topicId: string; segmentId: string };
     const topicId = parseTopicId(topicIdStr);
     const segmentId = parseResourceId(segmentIdStr, '片段 ID');
@@ -746,7 +746,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/topics/:id/entries', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const topicId = parseTopicId(id);
 
@@ -774,7 +774,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/topics/:topicId/entries/:entryId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { topicId: topicIdStr, entryId: entryIdStr } = req.params as { topicId: string; entryId: string };
     const topicId = parseTopicId(topicIdStr);
     const entryId = parseResourceId(entryIdStr, '沉淀内容 ID');
@@ -807,7 +807,7 @@ export async function topicRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/topics/:topicId/entries/:entryId', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { topicId: topicIdStr, entryId: entryIdStr } = req.params as { topicId: string; entryId: string };
     const topicId = parseTopicId(topicIdStr);
     const entryId = parseResourceId(entryIdStr, '沉淀内容 ID');

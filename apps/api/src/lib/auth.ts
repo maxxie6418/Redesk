@@ -8,6 +8,8 @@ import { getDb } from '../db';
 import { forbidden, unauthorized } from './errors';
 import { getSessionUserId, setSessionUserId } from './session';
 
+export type PermissionLevel = 'view' | 'read' | 'use';
+
 export async function hashPassword(password: string): Promise<string> {
   return hash(password, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
 }
@@ -144,4 +146,29 @@ export async function tryLoginByPassword(
   }
 
   return null;
+}
+
+export function getPermissionLevel(userId: number): PermissionLevel {
+  if (isAdmin(userId)) return 'use'; // 管理员默认全开
+  const user = getDb()
+    .select({ permission_level: users.permission_level })
+    .from(users)
+    .where(sql`${users.id} = ${userId}`)
+    .get();
+  return (user?.permission_level as PermissionLevel) ?? 'use';
+}
+
+const PERMISSION_LEVELS: PermissionLevel[] = ['view', 'read', 'use'];
+
+export function requirePermission(req: FastifyRequest, minLevel: PermissionLevel): number {
+  const userId = requireUserId(req);
+  const level = getPermissionLevel(userId);
+
+  const userIdx = PERMISSION_LEVELS.indexOf(level);
+  const requiredIdx = PERMISSION_LEVELS.indexOf(minLevel);
+
+  if (userIdx < requiredIdx) {
+    throw forbidden('权限不足');
+  }
+  return userId;
 }

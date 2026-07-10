@@ -4,7 +4,7 @@ import { settings } from '@redesk/db';
 import { ERROR_CODE, updateSettingsSchema } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError } from '../lib/errors';
-import { requireUserId, isAdmin } from '../lib/auth';
+import { requirePermission, isAdmin } from '../lib/auth';
 import { getSettingsOwnerId } from '../lib/storage-factory';
 import { validate } from '../lib/zod';
 
@@ -27,7 +27,7 @@ function serializeSettingValue(value: string | number | boolean | null): string 
 
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/settings', async (req) => {
-    requireUserId(req);
+    requirePermission(req, 'use');
     const db = getDb();
     const ownerId = getSettingsOwnerId();
     if (!ownerId) return { data: {} };
@@ -50,7 +50,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/settings', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'use');
     if (!isAdmin(userId)) {
       throw new AppError(ERROR_CODE.FORBIDDEN, '只有管理员可以修改系统设置');
     }

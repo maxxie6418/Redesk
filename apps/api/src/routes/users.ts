@@ -18,6 +18,7 @@ function userSelect() {
     display_name: users.display_name,
     is_active: users.is_active,
     is_admin: users.is_admin,
+    permission_level: users.permission_level,
     created_at: users.created_at,
   };
 }
@@ -57,6 +58,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         password_hash: passwordHash,
         display_name: input.display_name ?? null,
         is_admin: 0,
+        permission_level: 'use',
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -97,6 +99,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
     if (input.is_active !== undefined) {
       setData.is_active = input.is_active ? 1 : 0;
+    }
+    if (input.permission_level !== undefined) {
+      setData.permission_level = input.permission_level;
     }
 
     db.update(users)

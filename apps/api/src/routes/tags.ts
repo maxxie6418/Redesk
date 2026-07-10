@@ -4,7 +4,7 @@ import { bookTags, books, tags } from '@redesk/db';
 import { ERROR_CODE, createTagSchema, updateTagSchema } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -13,7 +13,7 @@ function now(): string {
 
 export async function tagRoutes(app: FastifyInstance): Promise<void> {
   app.get('/tags', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'view');
     const db = getDb();
 
     const rows = db
@@ -47,7 +47,7 @@ export async function tagRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/tags', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createTagSchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -76,7 +76,7 @@ export async function tagRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/tags/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const tagId = Number(id);
 
@@ -127,7 +127,7 @@ export async function tagRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/tags/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const tagId = Number(id);
 

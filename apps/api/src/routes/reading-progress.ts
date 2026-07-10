@@ -5,7 +5,7 @@ import { ERROR_CODE, updateReadingProgressSchema } from '@redesk/shared';
 import type { UpdateReadingProgressInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId } from '../lib/auth';
+import { requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -15,7 +15,7 @@ function now(): string {
 export async function readingProgressRoutes(app: FastifyInstance): Promise<void> {
   // 获取单本书的阅读进度
   app.get('/books/:id/reading-progress', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -39,7 +39,7 @@ export async function readingProgressRoutes(app: FastifyInstance): Promise<void>
 
   // 保存或更新单本书的阅读进度
   app.put('/books/:id/reading-progress', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const bookId = Number(id);
 
@@ -112,7 +112,7 @@ export async function readingProgressRoutes(app: FastifyInstance): Promise<void>
 
   // 获取最近阅读列表（用于概览页）
   app.get('/reading-progress/recent', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const db = getDb();
 
     const rows = db

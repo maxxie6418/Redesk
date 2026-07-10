@@ -5,7 +5,7 @@ import { ERROR_CODE, createCategorySchema, updateCategorySchema, categoryQuerySc
 import type { CategoryQueryInput } from '@redesk/shared';
 import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
-import { requireUserId, getPublicUserId } from '../lib/auth';
+import { requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 
 function now(): string {
@@ -14,7 +14,7 @@ function now(): string {
 
 export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/categories', async (req) => {
-    const userId = getPublicUserId(req);
+    const userId = requirePermission(req, 'view');
     const input = validate(categoryQuerySchema, req.query) as CategoryQueryInput;
     const db = getDb();
 
@@ -58,7 +58,7 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/categories', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const input = validate(createCategorySchema, req.body);
     const db = getDb();
     const timestamp = now();
@@ -92,7 +92,7 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/categories/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const categoryId = Number(id);
 
@@ -157,7 +157,7 @@ export async function categoryRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/categories/:id', async (req) => {
-    const userId = requireUserId(req);
+    const userId = requirePermission(req, 'read');
     const { id } = req.params as { id: string };
     const categoryId = Number(id);
 
