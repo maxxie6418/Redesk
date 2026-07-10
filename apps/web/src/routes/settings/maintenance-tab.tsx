@@ -84,6 +84,20 @@ const ALL_COLUMNS = [
   { key: 'language', label: '语言', required: false, tone: 'border-sky-300/70 bg-sky-50/90 text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/25 dark:text-sky-200' },
 ] as const;
 
+const SORT_OPTIONS: { key: string; label: string; tone: string }[] = [
+  { key: 'import_order', label: '导入顺序', tone: 'border-slate-300/70 bg-slate-100/90 text-slate-800 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200' },
+  { key: '-updated_at', label: '最近更新', tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200' },
+  { key: 'updated_at', label: '最早更新', tone: 'border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-800/70 dark:bg-emerald-950/25 dark:text-emerald-200' },
+  { key: '-created_at', label: '最新加入', tone: 'border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-800/70 dark:bg-cyan-950/25 dark:text-cyan-200' },
+  { key: 'created_at', label: '最早加入', tone: 'border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-800/70 dark:bg-cyan-950/25 dark:text-cyan-200' },
+  { key: 'title', label: '书名 A→Z', tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
+  { key: '-title', label: '书名 Z→A', tone: 'border-violet-300/70 bg-violet-50/90 text-violet-800 dark:border-violet-800/70 dark:bg-violet-950/25 dark:text-violet-200' },
+  { key: 'author', label: '作者 A→Z', tone: 'border-fuchsia-300/70 bg-fuchsia-50/90 text-fuchsia-800 dark:border-fuchsia-800/70 dark:bg-fuchsia-950/25 dark:text-fuchsia-200' },
+  { key: '-author', label: '作者 Z→A', tone: 'border-fuchsia-300/70 bg-fuchsia-50/90 text-fuchsia-800 dark:border-fuchsia-800/70 dark:bg-fuchsia-950/25 dark:text-fuchsia-200' },
+  { key: '-publish_year', label: '出版年最新', tone: 'border-amber-300/70 bg-amber-50/90 text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200' },
+  { key: 'publish_year', label: '出版年最早', tone: 'border-amber-300/70 bg-amber-50/90 text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/25 dark:text-amber-200' },
+];
+
 const DEFAULT_VISIBLE = new Set([
   'title', 'cover', 'status', 'category_id', 'author', 'publisher',
   'publish_year', 'source_url', 'metadata_source',
@@ -162,7 +176,15 @@ interface ImportBooksResult {
 export function MaintenanceTab() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
-  const [sort, setSort] = useState('-updated_at');
+  const [sort, setSort] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('maintenance_sort');
+      if (saved) return saved;
+    } catch {
+      // 忽略 localStorage 解析错误
+    }
+    return 'import_order';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeMissing, setActiveMissing] = useState<Set<string>>(new Set());
@@ -245,6 +267,14 @@ export function MaintenanceTab() {
   useEffect(() => {
     localStorage.setItem('maintenance_visible_cols', JSON.stringify(Array.from(visibleCols)));
   }, [visibleCols]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('maintenance_sort', sort);
+    } catch {
+      // 忽略 localStorage 写入错误
+    }
+  }, [sort]);
 
   const toggleMissing = useCallback((field: string) => {
     setActiveMissing((prev) => {
@@ -799,6 +829,30 @@ export function MaintenanceTab() {
                 {col.label}
               </button>
             ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">排序</span>
+            {SORT_OPTIONS.map((opt) => {
+              const active = sort === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                    active
+                      ? opt.tone
+                      : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
+                  } cursor-pointer`}
+                  onClick={() => {
+                    setSort(opt.key);
+                    setPage(1);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
 
           {statsData && (

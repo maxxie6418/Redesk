@@ -2186,6 +2186,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         publish_year: descending ? desc(books.publish_year) : asc(books.publish_year),
         created_at: descending ? desc(books.created_at) : asc(books.created_at),
         updated_at: descending ? desc(books.updated_at) : asc(books.updated_at),
+        import_order: descending ? desc(books.import_order) : asc(books.import_order),
       };
       if (sortable[field]) {
         orderBy = sortable[field];
