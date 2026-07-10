@@ -97,3 +97,16 @@ export const AUTH_MODE = {
   MULTI_TOKEN: 'multi_token',
 } as const;
 export type AuthMode = (typeof AUTH_MODE)[keyof typeof AUTH_MODE];
+
+export const PERMISSION_LEVEL = {
+  VIEW: 'VIEW',
+  READ: 'READ',
+  USE: 'USE',
+} as const;
+export type PermissionLevel = (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL];
+
+export const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = {
+  VIEW: '可见',
+  READ: '只读',
+  USE: '可操作',
+};

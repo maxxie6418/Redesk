@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `permission_level` text NOT NULL DEFAULT 'use';

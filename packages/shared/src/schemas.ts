@@ -1,10 +1,14 @@
 import { z } from 'zod';
-import { BOOK_STATUS, VISIBILITY, TOPIC_ENTRY_TYPE } from './enums';
+import { BOOK_STATUS, VISIBILITY, TOPIC_ENTRY_TYPE, PERMISSION_LEVEL } from './enums';
 import type { ErrorCode } from './errors';
 
 const positiveInt = z.coerce.number().int().positive();
 const BOOK_STATUS_VALUES = Object.values(BOOK_STATUS) as [string, ...string[]];
 const VISIBILITY_VALUES = Object.values(VISIBILITY) as [string, ...string[]];
+const PERMISSION_LEVEL_VALUES = Object.values(PERMISSION_LEVEL) as [string, ...string[]];
+
+export const permissionLevelSchema = z.enum(PERMISSION_LEVEL_VALUES);
+export type PermissionLevelInput = z.infer<typeof permissionLevelSchema>;
 export const BACKUP_MODULE_ID_VALUES = [
   'settings.public',
   'settings.secrets',
@@ -272,7 +276,7 @@ export const createBookSchema = z.object({
   category_id: positiveInt.optional().nullable(),
   genre_category_id: positiveInt.optional().nullable(),
   status: z.enum(BOOK_STATUS_VALUES).optional().default('COLLECTED'),
-  visibility: z.enum(VISIBILITY_VALUES).optional().default('PRIVATE'),
+  visibility: z.enum(VISIBILITY_VALUES).optional().default('PUBLIC'),
   reading_purpose: z.string().max(255).optional().nullable(),
   entry_reason: z.string().max(500).optional().nullable(),
   rating: z.number().int().min(1).max(5).optional().nullable(),
@@ -515,7 +519,7 @@ export const bookImportRecordSchema = z.object({
   category_name: z.string().max(100).optional().nullable(),
   genre_category_name: z.string().max(100).optional().nullable(),
   status: z.enum(BOOK_STATUS_VALUES).optional().default('COLLECTED'),
-  visibility: z.enum(VISIBILITY_VALUES).optional().default('PRIVATE'),
+  visibility: z.enum(VISIBILITY_VALUES).optional().default('PUBLIC'),
   reading_purpose: z.string().max(255).optional().nullable(),
   entry_reason: z.string().max(500).optional().nullable(),
   rating: z.number().int().min(1).max(5).optional().nullable(),
@@ -622,6 +626,7 @@ export const updateUserSchema = z
     is_active: z.boolean().optional(),
     is_admin: z.boolean().optional(),
     must_change_password: z.boolean().optional(),
+    permission_level: permissionLevelSchema.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: '至少提供一个更新字段' });
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

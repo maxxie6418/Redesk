@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
   display_name: text('display_name'),
   is_active: integer('is_active').notNull().default(1),
   is_admin: integer('is_admin').notNull().default(0),
+  permission_level: text('permission_level').notNull().default('use'),
   must_change_password: integer('must_change_password').notNull().default(0),
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),

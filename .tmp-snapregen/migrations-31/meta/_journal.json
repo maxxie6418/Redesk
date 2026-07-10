@@ -225,34 +225,6 @@
       "when": 1783390800002,
       "tag": "0015_reading_progress",
       "breakpoints": true
-    },
-    {
-      "idx": 32,
-      "version": "6",
-      "when": 1783390800003,
-      "tag": "0032_deep_skin",
-      "breakpoints": true
-    },
-    {
-      "idx": 33,
-      "version": "6",
-      "when": 1783522458640,
-      "tag": "0033_reading_sessions",
-      "breakpoints": true
-    },
-    {
-      "idx": 34,
-      "version": "6",
-      "when": 1783652725050,
-      "tag": "0034_mature_famine",
-      "breakpoints": true
-    },
-    {
-      "idx": 35,
-      "version": "6",
-      "when": 1783664098000,
-      "tag": "0035_add_permission_level",
-      "breakpoints": true
     }
   ]
 }
