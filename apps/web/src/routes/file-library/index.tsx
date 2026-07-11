@@ -188,9 +188,9 @@ export function FileLibraryPage() {
           <p className="mt-1 text-[13.5px] text-muted-foreground">管理所有导入的电子书文件，共 {totalCount} 个文件。</p>
         </div>
         {user.is_admin ? (
-          <Button variant="outline" onClick={() => navigate('/settings?tab=batch')}>
+          <Button variant="outline" onClick={() => navigate('/settings?tab=general')}>
             <Settings2 className="mr-1.5 h-4 w-4" />
-            去批量管理
+            去批量添加
           </Button>
         ) : null}
       </div>

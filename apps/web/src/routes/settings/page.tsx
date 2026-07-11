@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { AlertTriangle, ChevronRight, Cloud, Database, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles, Upload } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Cloud, Database, Download, HardDrive, Key, List, Loader2, LogOut, Monitor, Server, Shield, Sparkles } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { SimpleChangePassword } from './simple-change-password';
 import type { StatusMessage, Tab } from './types';
 
 const AiTab = lazy(() => import('./ai-tab').then((module) => ({ default: module.AiTab })));
-const BatchTab = lazy(() => import('./batch-tab').then((module) => ({ default: module.BatchTab })));
 const BackupTab = lazy(() => import('./backup-tab').then((module) => ({ default: module.BackupTab })));
 const GeneralTab = lazy(() => import('./general-tab').then((module) => ({ default: module.GeneralTab })));
 const LoginManagementTab = lazy(() => import('./login-management-tab').then((module) => ({ default: module.LoginManagementTab })));
@@ -27,7 +26,7 @@ const PropertiesTab = lazy(() => import('./properties-tab').then((module) => ({ 
 const StorageTab = lazy(() => import('./storage-tab').then((module) => ({ default: module.StorageTab })));
 const SystemTab = lazy(() => import('./system-tab').then((module) => ({ default: module.SystemTab })));
 
-const VALID_TABS: Tab[] = ['general', 'batch', 'maintenance', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
+const VALID_TABS: Tab[] = ['general', 'maintenance', 'ai', 'login', 'properties', 'backup', 'storage', 'system'];
 
 function isValidTab(value: string | null): value is Tab {
   return value != null && VALID_TABS.includes(value as Tab);
@@ -84,7 +83,6 @@ function AdminSettingsPage() {
 
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
     { key: 'general', label: '通用', icon: <Monitor className="h-4 w-4" /> },
-    { key: 'batch', label: '书籍管理', icon: <Upload className="h-4 w-4" /> },
     { key: 'maintenance', label: '数据维护', icon: <Database className="h-4 w-4" /> },
     { key: 'ai', label: 'AI', icon: <Sparkles className="h-4 w-4" /> },
     { key: 'login', label: '登录管理', icon: <Shield className="h-4 w-4" /> },
@@ -163,9 +161,7 @@ function AdminSettingsPage() {
                   setActiveTab(tab.key);
                   const nextParams = new URLSearchParams(searchParams);
                   nextParams.set('tab', tab.key);
-                  if (tab.key !== 'batch') {
-                    nextParams.delete('books');
-                  }
+                  nextParams.delete('books');
                   setSearchParams(nextParams, { replace: true });
                 }}
               >
@@ -177,9 +173,6 @@ function AdminSettingsPage() {
 
           <Suspense fallback={<TabFallback />}>
             {activeTab === 'general' ? <GeneralTab settings={settings.data ?? {}} onToast={showToast} /> : null}
-            {activeTab === 'batch' ? (
-              <BatchTab settings={settings.data ?? {}} onToast={showToast} />
-            ) : null}
             {activeTab === 'maintenance' ? <MaintenanceTab /> : null}
             {activeTab === 'ai' ? <AiTab settings={settings.data ?? {}} onToast={showToast} /> : null}
             {activeTab === 'login' ? <LoginManagementTab /> : null}

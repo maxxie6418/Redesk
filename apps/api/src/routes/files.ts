@@ -81,7 +81,14 @@ function sanitizeFilename(name: string): string {
 }
 
 function bookFileKey(bookId: number, filename: string): string {
-  return `books/${bookId}/${sanitizeFilename(filename)}`;
+  const book = getDb()
+    .select({ isbn: books.isbn })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .get();
+  const isbn = book?.isbn ? sanitizeFilename(book.isbn).trim() : '';
+  const directory = isbn || String(bookId);
+  return `books/${directory}/${sanitizeFilename(filename)}`;
 }
 
 function unassociatedFileKey(filename: string): string {
@@ -428,13 +435,16 @@ async function resolveReadableAsset(input: { local_path: string | null; remote_k
 
   for (const candidate of candidates) {
     if (!candidate.key) continue;
-    const storage = candidate.driver === 'cloud'
-      ? input.connection_id ? getStorageByConnectionId(input.connection_id) : null
-      : getStorageByDriver('local');
-    if (!storage) continue;
-    const exists = await storage.exists(candidate.key).catch(() => false);
-    if (exists) {
-      return { storage, key: candidate.key };
+    try {
+      const storage = candidate.driver === 'cloud'
+        ? input.connection_id ? getStorageByConnectionId(input.connection_id) : getStorageByDriver('s3')
+        : getStorageByDriver('local');
+      const exists = await storage.exists(candidate.key).catch(() => false);
+      if (exists) {
+        return { storage, key: candidate.key };
+      }
+    } catch {
+      continue;
     }
   }
 
@@ -1845,6 +1855,7 @@ export function fileRoutes(app: FastifyInstance): void {
       .select({
         local_path: bookCovers.local_path,
         remote_key: bookCovers.remote_key,
+        connection_id: bookCovers.connection_id,
         mime_type: bookCovers.mime_type,
         primary_location: bookCovers.primary_location,
       })
@@ -1853,17 +1864,12 @@ export function fileRoutes(app: FastifyInstance): void {
       .get();
     if (!cover) return reply.code(404).send();
 
-    const key = cover.primary_location === 'cloud' ? cover.remote_key : cover.local_path;
-    if (!key) return reply.code(404).send();
+    const readable = await resolveReadableAsset(cover);
+    if (!readable) return reply.code(404).send();
 
-    const driver = cover.primary_location === 'cloud' ? 's3' : 'local';
-    const storage = getStorageByDriver(driver);
-    const exists = await storage.exists(key).catch(() => false);
-    if (!exists) return reply.code(404).send();
-
-    const stream = await storage.getStream(key);
+    const stream = await readable.storage.getStream(readable.key);
     return reply
-      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(key)))
+      .header('Content-Type', cover.mime_type ?? coverMimeFromExt(extname(readable.key)))
       .header('Cache-Control', 'public, max-age=86400')
       .send(stream);
   });
@@ -1890,6 +1896,7 @@ export function fileRoutes(app: FastifyInstance): void {
       .select({
         local_path: bookCovers.local_path,
         remote_key: bookCovers.remote_key,
+        connection_id: bookCovers.connection_id,
         primary_location: bookCovers.primary_location,
         mime_type: bookCovers.mime_type,
       })
@@ -1898,28 +1905,27 @@ export function fileRoutes(app: FastifyInstance): void {
       .orderBy(desc(bookCovers.updated_at), desc(bookCovers.id))
       .get();
 
-    const candidates = activeCover
-      ? activeCover.primary_location === 'cloud'
-        ? [
-            { driver: 's3' as const, key: activeCover.remote_key, mimeType: activeCover.mime_type },
-            { driver: 'local' as const, key: activeCover.local_path, mimeType: activeCover.mime_type },
-          ]
-        : [
-            { driver: 'local' as const, key: activeCover.local_path, mimeType: activeCover.mime_type },
-            { driver: 's3' as const, key: activeCover.remote_key, mimeType: activeCover.mime_type },
-          ]
-      : [{ driver: 'local' as const, key: book.cover_path, mimeType: null }];
+    if (activeCover) {
+      const readable = await resolveReadableAsset(activeCover);
+      if (readable) {
+        const stream = await readable.storage.getStream(readable.key);
+        return reply
+          .header('Content-Type', activeCover.mime_type ?? coverMimeFromExt(extname(readable.key)))
+          .header('Cache-Control', 'no-store')
+          .send(stream);
+      }
+    }
 
-    for (const candidate of candidates) {
-      if (!candidate.key) continue;
-      const storage = getStorageByDriver(candidate.driver);
-      const exists = await storage.exists(candidate.key).catch(() => false);
-      if (!exists) continue;
-      const stream = await storage.getStream(candidate.key);
-      return reply
-        .header('Content-Type', candidate.mimeType ?? coverMimeFromExt(extname(candidate.key)))
-        .header('Cache-Control', 'no-store')
-        .send(stream);
+    if (book.cover_path) {
+      const storage = getStorageByDriver('local');
+      const exists = await storage.exists(book.cover_path).catch(() => false);
+      if (exists) {
+        const stream = await storage.getStream(book.cover_path);
+        return reply
+          .header('Content-Type', coverMimeFromExt(extname(book.cover_path)))
+          .header('Cache-Control', 'no-store')
+          .send(stream);
+      }
     }
 
     reply.header('Cache-Control', 'no-store');

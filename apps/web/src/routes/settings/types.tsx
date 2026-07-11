@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Check, AlertTriangle, X } from 'lucide-react';
 
-export type Tab = 'general' | 'batch' | 'maintenance' | 'ai' | 'login' | 'properties' | 'backup' | 'storage' | 'system';
+export type Tab = 'general' | 'maintenance' | 'ai' | 'login' | 'properties' | 'backup' | 'storage' | 'system';
 
 export type ToastType = 'info' | 'warning' | 'error';
 

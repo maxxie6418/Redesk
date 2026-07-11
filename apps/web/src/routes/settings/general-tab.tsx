@@ -19,6 +19,7 @@ import { useAddQuickLink, useDeleteQuickLink, useQuickLinks, useReorderQuickLink
 import { useUpdateSettings } from '@/hooks/use-settings';
 import { useLogout } from '@/hooks/use-auth';
 import type { StatusMessage } from './types';
+import { BatchTab } from './batch-tab';
 
 export function GeneralTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
@@ -95,6 +96,8 @@ export function GeneralTab({ settings, onToast }: { settings: Record<string, str
           </div>
         </CardContent>
       </Card>
+
+      <BatchTab settings={settings} onToast={onToast} />
 
       <QuickLinksSection onToast={onToast} />
 
