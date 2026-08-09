@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { and, eq, inArray, isNull, asc, desc } from 'drizzle-orm';
-import { books, notes, highlights, categories } from '@redesk/db';
+import { books, notes, highlights, categories, bookTags, tags, bookCovers } from '@redesk/db';
 import { ERROR_CODE, exportQuerySchema, importNotesSchema } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { requireAdmin, requirePermission } from '../lib/auth';
@@ -115,7 +115,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       ? [and(eq(books.owner_id, userId), isNull(books.deleted_at), inArray(books.id, idList))]
       : [and(eq(books.owner_id, userId), isNull(books.deleted_at))];
 
-    const rows = db
+    const baseRows = db
       .select({
         id: books.id,
         title: books.title,
@@ -155,20 +155,65 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       .all();
 
     if (input.format === 'csv') {
+      const bookIds = baseRows.map((r) => r.id);
+
+      const genreCategories = bookIds.length > 0
+        ? db
+            .select({ id: categories.id, name: categories.name })
+            .from(categories)
+            .where(and(eq(categories.type, 'GENRE'), inArray(categories.id, baseRows.map((r) => r.genre_category_id).filter((id): id is number => id != null))))
+            .all()
+        : [];
+      const genreCatMap = new Map(genreCategories.map((c) => [c.id, c.name!]));
+
+      const tagRows = bookIds.length > 0
+        ? db
+            .select({ book_id: bookTags.book_id, tag_name: tags.name })
+            .from(bookTags)
+            .innerJoin(tags, eq(bookTags.tag_id, tags.id))
+            .where(inArray(bookTags.book_id, bookIds))
+            .all()
+        : [];
+      const tagMap = new Map<number, string[]>();
+      for (const tr of tagRows) {
+        const arr = tagMap.get(tr.book_id) ?? [];
+        arr.push(tr.tag_name!);
+        tagMap.set(tr.book_id, arr);
+      }
+
+      const coverRows = bookIds.length > 0
+        ? db
+            .select({ book_id: bookCovers.book_id, original_url: bookCovers.original_url })
+            .from(bookCovers)
+            .where(and(inArray(bookCovers.book_id, bookIds), eq(bookCovers.is_active, 1)))
+            .all()
+        : [];
+      const coverMap = new Map<number, string>();
+      for (const cr of coverRows) {
+        if (cr.original_url && !coverMap.has(cr.book_id)) coverMap.set(cr.book_id, cr.original_url);
+      }
+
       const headers = [
-        'id', 'title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year',
-        'description', 'language', 'cover_path', 'status', 'visibility',
-        'reading_purpose', 'entry_reason', 'rating', 'custom_attributes',
-        'metadata_source', 'source_url', 'translator', 'original_title',
-        'page_count', 'category_id', 'category_name', 'genre_category_id',
-        'favorited_at', 'started_at', 'finished_at', 'import_order',
+        'title', 'subtitle', 'author', 'translator', 'original_title',
+        'isbn', 'publisher', 'publish_year', 'page_count', 'language',
+        'status', 'visibility', 'rating', 'reading_purpose', 'entry_reason',
+        'category_name', 'genre_category_name', 'tag_names',
+        'source_url', 'cover_url', 'description',
+        'metadata_source', 'custom_attributes',
+        'favorited_at', 'started_at', 'finished_at',
         'created_at', 'updated_at',
       ];
       const csvRows = [headers.join(',')];
 
-      for (const row of rows) {
+      for (const row of baseRows) {
+        const enriched: Record<string, string | number | null> = {
+          ...row,
+          genre_category_name: row.genre_category_id ? (genreCatMap.get(row.genre_category_id) ?? null) : null,
+          tag_names: (tagMap.get(row.id) ?? []).join(';'),
+          cover_url: coverMap.get(row.id) ?? null,
+        };
         const vals = headers.map((h: string) => {
-          const v = row[h as keyof typeof row];
+          const v = enriched[h];
           if (v == null) return '';
           const s = String(v);
           return s.includes(',') || s.includes('"') || s.includes('\n')
@@ -184,7 +229,7 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
     }
 
     reply.header('Content-Disposition', `attachment; filename="redesk-books-${Date.now()}.json"`);
-    return { data: rows, exported_at: now(), count: rows.length };
+    return { data: baseRows, exported_at: now(), count: baseRows.length };
   });
 
   app.get('/export/books/:id/notes', async (req) => {

@@ -894,7 +894,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
           source_url: optionalText(item.source_url),
           cover_url: optionalText(item.cover_url),
           description: optionalText(item.description),
-          metadata_source: 'manual',
+          metadata_source: optionalText(item.metadata_source) ?? 'manual',
         });
 
         if (dryRun) {
