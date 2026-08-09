@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { and, eq, inArray, isNull, asc, desc } from 'drizzle-orm';
-import { books, notes, highlights } from '@redesk/db';
+import { books, notes, highlights, categories } from '@redesk/db';
 import { ERROR_CODE, exportQuerySchema, importNotesSchema } from '@redesk/shared';
 import { getDb, getSqlite } from '../db';
 import { requireAdmin, requirePermission } from '../lib/auth';
@@ -116,14 +116,54 @@ export async function exportRoutes(app: FastifyInstance): Promise<void> {
       : [and(eq(books.owner_id, userId), isNull(books.deleted_at))];
 
     const rows = db
-      .select()
+      .select({
+        id: books.id,
+        title: books.title,
+        author: books.author,
+        subtitle: books.subtitle,
+        isbn: books.isbn,
+        publisher: books.publisher,
+        publish_year: books.publish_year,
+        description: books.description,
+        language: books.language,
+        cover_path: books.cover_path,
+        status: books.status,
+        visibility: books.visibility,
+        reading_purpose: books.reading_purpose,
+        entry_reason: books.entry_reason,
+        rating: books.rating,
+        custom_attributes: books.custom_attributes,
+        metadata_source: books.metadata_source,
+        source_url: books.source_url,
+        translator: books.translator,
+        original_title: books.original_title,
+        page_count: books.page_count,
+        category_id: books.category_id,
+        category_name: categories.name,
+        genre_category_id: books.genre_category_id,
+        favorited_at: books.favorited_at,
+        started_at: books.started_at,
+        finished_at: books.finished_at,
+        import_order: books.import_order,
+        created_at: books.created_at,
+        updated_at: books.updated_at,
+      })
       .from(books)
+      .leftJoin(categories, eq(books.category_id, categories.id))
       .where(whereConditions.length === 1 ? whereConditions[0] : undefined)
       .orderBy(asc(books.title))
       .all();
 
     if (input.format === 'csv') {
-      const headers = ['id', 'title', 'author', 'isbn', 'publisher', 'publish_year', 'status', 'rating', 'reading_purpose', 'category_name', 'visibility', 'created_at', 'updated_at'];
+      const headers = [
+        'id', 'title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year',
+        'description', 'language', 'cover_path', 'status', 'visibility',
+        'reading_purpose', 'entry_reason', 'rating', 'custom_attributes',
+        'metadata_source', 'source_url', 'translator', 'original_title',
+        'page_count', 'category_id', 'category_name', 'genre_category_id',
+        'favorited_at', 'started_at', 'finished_at', 'import_order',
+        'created_at', 'updated_at',
+      ];
       const csvRows = [headers.join(',')];
 
       for (const row of rows) {
