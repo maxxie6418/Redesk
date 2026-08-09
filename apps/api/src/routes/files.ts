@@ -76,23 +76,24 @@ function readMultipartBool(field: unknown): 'true' | 'false' | undefined {
   throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'is_primary 仅接受字符串 true 或 false');
 }
 
-function sanitizeFilename(name: string): string {
-  return basename(name).replace(/[\\/:*?"<>|]/g, '_');
+function fileStorageKey(prefix: string, filename: string): string {
+  const ext = extname(basename(filename)).toLowerCase();
+  return `${prefix}/${randomStorageToken()}${ext}`;
 }
 
-function bookFileKey(bookId: number, filename: string): string {
-  const book = getDb()
-    .select({ isbn: books.isbn })
-    .from(books)
-    .where(eq(books.id, bookId))
-    .get();
-  const isbn = book?.isbn ? sanitizeFilename(book.isbn).trim() : '';
-  const directory = isbn || String(bookId);
-  return `books/${directory}/${sanitizeFilename(filename)}`;
+export function bookFileKey(bookId: number, filename: string): string {
+  return fileStorageKey(`books/${bookId}`, filename);
 }
 
-function unassociatedFileKey(filename: string): string {
-  return `unassociated/${sanitizeFilename(filename)}`;
+export function unassociatedFileKey(ownerId: number, filename: string): string {
+  return fileStorageKey(`unassociated/${ownerId}`, filename);
+}
+
+export function buildContentDisposition(filename: string): string {
+  const safeFilename = basename(filename).replace(/[\r\n]/g, '');
+  const ext = extname(safeFilename).replace(/[^a-zA-Z0-9.]/g, '');
+  const fallback = `download${ext || '.bin'}`;
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(safeFilename)}`;
 }
 
 function bookCoverKey(bookId: number, ext: string): string {
@@ -995,7 +996,7 @@ export async function saveUploadedFile(
 
   const format = detectFormat(filename);
   const mime = detectMime(filename);
-  const key = bookId != null ? bookFileKey(bookId, filename) : unassociatedFileKey(filename);
+  const key = bookId != null ? bookFileKey(bookId, filename) : unassociatedFileKey(ownerId, filename);
   const writeResult = await writeStreamForMode(mode, 'book_files', key, stream, mime);
   const primary = resolvePrimaryLocation(mode);
   const timestamp = now();
@@ -1629,10 +1630,9 @@ export function fileRoutes(app: FastifyInstance): void {
 
     const stream = await readable.storage.getStream(readable.key);
 
-    const filename = encodeURIComponent(file.original_filename ?? `book${extname(readable.key)}`);
     return reply
       .header('Content-Type', file.mime_type ?? 'application/octet-stream')
-      .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
+      .header('Content-Disposition', buildContentDisposition(file.original_filename ?? `book${extname(readable.key)}`))
       .send(stream);
   });
 

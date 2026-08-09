@@ -4,6 +4,7 @@ import { and, eq, isNull, sql, asc } from 'drizzle-orm';
 import { books, bookFiles, bookTags, tags } from '@redesk/db';
 import { getDb } from '../db';
 import { getStorageByDriver } from '../lib/storage-factory';
+import { buildContentDisposition } from './files';
 
 interface BookRow {
   id: number;
@@ -186,11 +187,10 @@ export async function opdsRoutes(app: FastifyInstance): Promise<void> {
       const storage = getStorageByDriver(candidate.driver);
       const exists = await storage.exists(candidate.key).catch(() => false);
       if (!exists) continue;
-      const filename = encodeURIComponent(row.original_filename ?? `book${extname(candidate.key)}`);
       const stream = await storage.getStream(candidate.key);
       return reply
         .header('Content-Type', row.mime_type ?? 'application/octet-stream')
-        .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${filename}`)
+        .header('Content-Disposition', buildContentDisposition(row.original_filename ?? `book${extname(candidate.key)}`))
         .send(stream);
     }
 
