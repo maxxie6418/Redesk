@@ -7,6 +7,8 @@ import fastifyMultipart from '@fastify/multipart';
 import { existsSync } from 'node:fs';
 import { config } from './config';
 import { errorHandler } from './plugins/error-handler';
+import { parseApiToken, ROUTE_SCOPE_MAP, writeAuditLog } from './lib/agent-token';
+import { forbidden, unauthorized } from './lib/errors';
 
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
@@ -76,6 +78,26 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   app.setErrorHandler(errorHandler);
+
+  app.addHook('preHandler', async (req) => {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer rdk_')) return;
+    const identity = parseApiToken(req);
+    if (!identity) throw unauthorized('令牌无效或已过期');
+    req.apiIdentity = identity;
+    const routeKey = `${req.method} ${req.routeOptions.url}`;
+    const scope = ROUTE_SCOPE_MAP[routeKey];
+    if (!scope || !identity.scopes.includes(scope)) {
+      writeAuditLog({
+        ownerId: identity.ownerId,
+        tokenId: identity.tokenId,
+        req,
+        action: 'scope.denied',
+        result: 'denied',
+      });
+      throw forbidden('该令牌无权访问此接口');
+    }
+  });
 
   await app.register(healthRoutes);
   await app.register(async (api) => {

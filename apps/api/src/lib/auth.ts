@@ -78,6 +78,7 @@ export function isAdmin(userId: number): boolean {
 }
 
 export function requireUserId(req: FastifyRequest): number {
+  if (req.apiIdentity) return req.apiIdentity.ownerId;
   const userId = getSessionUserId(req);
   if (userId) return userId;
   if (config.authDisabled) {
@@ -96,6 +97,7 @@ export function requireAdmin(req: FastifyRequest): number {
 }
 
 export function getOptionalUserId(req: FastifyRequest): number | undefined {
+  if (req.apiIdentity) return req.apiIdentity.ownerId;
   const userId = getSessionUserId(req);
   if (userId) return userId;
   if (config.authDisabled) return getAdminUserId();
@@ -161,6 +163,7 @@ export function getPermissionLevel(userId: number): PermissionLevel {
 const PERMISSION_LEVELS: PermissionLevel[] = ['view', 'read', 'use'];
 
 export function requirePermission(req: FastifyRequest, minLevel: PermissionLevel): number {
+  if (req.apiIdentity) return req.apiIdentity.ownerId;
   const userId = requireUserId(req);
   const level = getPermissionLevel(userId);
 
