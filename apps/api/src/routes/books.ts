@@ -1111,7 +1111,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const allowedFields = new Set([
       'title', 'author', 'subtitle', 'isbn', 'publisher', 'publish_year',
       'description', 'language', 'translator', 'original_title', 'page_count',
-      'metadata_source',
+      'metadata_source', 'source_url',
     ]);
 
     const updates: Record<string, unknown> = {};
@@ -1121,8 +1121,13 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    // Agent 仅在实际抓取封面时强制校验源链接白名单（fetch_cover=false 无需校验）
+    // Agent 提交的 source_url 必须通过白名单（无论是否抓封面）
     // 校验前置：通过后再落库，保证 403 时不产生字段变更
+    if (req.apiIdentity && typeof fields.source_url === 'string' && fields.source_url.trim() !== '') {
+      assertAgentSourceUrl(req, fields.source_url);
+    }
+
+    // Agent 仅在实际抓取封面时强制校验源链接白名单（fetch_cover=false 无需校验）
     const fetchCoverSourceUrl = fetchCover ? ((updates.source_url as string | undefined) ?? book.source_url) : null;
     if (req.apiIdentity && fetchCoverSourceUrl) {
       assertAgentSourceUrl(req, fetchCoverSourceUrl);

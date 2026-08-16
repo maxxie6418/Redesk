@@ -90,8 +90,18 @@ describe('Agent 接入路由', () => {
     const ids = skill.capabilities.map((c: { id: string }) => c.id);
     expect(ids).toContain('search_books');
     expect(ids).not.toContain('create_book');
+    expect(ids).not.toContain('update_cover');
     expect(ids).toContain('list_categories');
     expect(skill.connect_code).toBe(created.code);
+  });
+
+  it('update_cover 能力随 books:update_metadata scope 提供', async () => {
+    const created = await createConnection(['books:update_metadata']);
+    const res = await app.inject({ method: 'GET', url: created.linkPath });
+    const skill = res.json().data;
+    const ids = skill.capabilities.map((c: { id: string }) => c.id);
+    expect(ids).toContain('update_cover');
+    expect(ids).toContain('apply_metadata');
   });
 
   it('skill 返回授权指引（authorization）', async () => {

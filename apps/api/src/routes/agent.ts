@@ -34,8 +34,9 @@ const ALL_CAPABILITIES: Capability[] = [
   { id: 'get_book', method: 'GET', path: '/books/{id}', requires_scope: 'books:read', description: '查看书籍详情' },
   { id: 'fetch_metadata', method: 'POST', path: '/books/metadata/fetch', requires_scope: 'books:read', description: '从白名单源站（豆瓣读书）抓取元数据，只读不落库' },
   { id: 'create_book', method: 'POST', path: '/books', requires_scope: 'books:create', description: '新建书籍条目' },
-  { id: 'update_book', method: 'PATCH', path: '/books/{id}', requires_scope: 'books:update_metadata', description: '更新书籍元数据字段' },
-  { id: 'apply_metadata', method: 'POST', path: '/books/{id}/metadata/apply', requires_scope: 'books:update_metadata', description: '把抓取结果应用到已有书' },
+  { id: 'update_book', method: 'PATCH', path: '/books/{id}', requires_scope: 'books:update_metadata', description: '更新书籍元数据字段（不含封面，封面请用 apply_metadata 的 fetch_cover）' },
+  { id: 'apply_metadata', method: 'POST', path: '/books/{id}/metadata/apply', requires_scope: 'books:update_metadata', description: '把抓取结果应用到已有书；fetch_cover=true 时从 source_url 抓取并更新封面' },
+  { id: 'update_cover', method: 'POST', path: '/books/{id}/metadata/apply?fetch_cover=true', requires_scope: 'books:update_metadata', description: '更新封面：POST apply 且请求体带 fetch_cover:true、fields.source_url 为豆瓣链接；不要使用 PATCH cover_url/cover_path' },
   { id: 'list_categories', method: 'GET', path: '/categories', requires_scope: 'categories:manage', description: '分类列表' },
   { id: 'create_category', method: 'POST', path: '/categories', requires_scope: 'categories:manage', description: '新建分类' },
   { id: 'list_tags', method: 'GET', path: '/tags', requires_scope: 'tags:manage', description: '标签列表' },
@@ -141,7 +142,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         `2. 用授权码兑换访问令牌：POST ${authBase}/agent/token/exchange，请求体为 {"code":"${code}"}，请求头带 Content-Type: application/json。兑换成功会返回 access_token（形如 rdk_live_xxx）、scopes、expires_at。`,
         `3. 之后调用业务接口时，每个请求头带上 Authorization: Bearer <access_token>，端点前缀为 ${authBase}/api/v1。`,
         ``,
-        `约定：授权码一次性使用、10 分钟内有效；换得的 access_token 为长期令牌，可被主人吊销。未兑换令牌前调用业务接口会返回未登录。所有写操作（新增书籍、更新元数据、新建分类/标签）都必须先征求我的同意。`,
+        `约定：授权码一次性使用、10 分钟内有效；换得的 access_token 为长期令牌，可被主人吊销。未兑换令牌前调用业务接口会返回未登录。所有写操作（新增书籍、更新元数据、新建分类/标签）都必须先征求我的同意。更新封面请用 apply_metadata 且 fetch_cover=true（封面只能从豆瓣源抓取，不要尝试 PATCH cover_url/cover_path）。`,
       ].join('\n');
       reply.type('text/html; charset=utf-8');
       return reply.send(`<!doctype html>

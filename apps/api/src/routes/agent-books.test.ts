@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rmSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
+import type * as FilesModule from './files';
 import { hashPassword } from '../lib/auth';
 import { getSqlite, initDatabase } from '../db';
 import { buildServer } from '../server';
@@ -22,9 +23,19 @@ vi.mock('../lib/book-metadata', () => ({
   fetchBookMetadataFromUrl: vi.fn(),
 }));
 
+vi.mock('./files', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof FilesModule;
+  return {
+    ...actual,
+    downloadRemoteCover: vi.fn().mockResolvedValue({ id: 1, local_path: 'covers/test.jpg', remote_key: null, storage_mode: 'local_only' }),
+  };
+});
+
 import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
+import { downloadRemoteCover } from './files';
 
 const mockedFetch = vi.mocked(fetchBookMetadataFromUrl);
+const mockedDownloadCover = vi.mocked(downloadRemoteCover);
 
 let app: FastifyInstance;
 let sqlite: ReturnType<typeof getSqlite>;
@@ -47,6 +58,10 @@ async function seedUser(): Promise<number> {
       .run(`agent-user-${suffix}`, passwordHash, 'Agent测试用户', 1, 1, 0, ts, ts).lastInsertRowid,
   );
 }
+
+beforeEach(async () => {
+  mockedDownloadCover.mockClear();
+});
 
 async function createAgentToken(scopes: string[]): Promise<string> {
   const created = await app.inject({
@@ -209,6 +224,73 @@ describe('Agent 书籍操作边界', () => {
       payload: { fields: { title: '新标题' } },
     });
     expect(res.statusCode).toBe(200);
+  });
+
+  it('apply：fields.source_url 白名单外 → 403 且不落库', async () => {
+    const token = await createAgentToken(['books:create', 'books:update_metadata']);
+    const created = await createBookViaAgent(token, { title: '测试书', source_url: 'https://book.douban.com/subject/123/' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/books/${created.id}/metadata/apply`,
+      headers: auth(token),
+      payload: { fields: { source_url: 'https://evil.example.com/y' } },
+    });
+    expect(res.statusCode).toBe(403);
+    const book = sqlite.prepare('SELECT source_url FROM books WHERE id = ?').get(created.id) as { source_url: string };
+    expect(book.source_url).toBe('https://book.douban.com/subject/123/');
+  });
+
+  it('apply：fields.source_url 白名单内 → 200 且 source_url 落库', async () => {
+    const token = await createAgentToken(['books:create', 'books:update_metadata']);
+    const created = await createBookViaAgent(token, { title: '测试书' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/books/${created.id}/metadata/apply`,
+      headers: auth(token),
+      payload: { fields: { source_url: 'https://book.douban.com/subject/456/' } },
+    });
+    expect(res.statusCode).toBe(200);
+    const book = sqlite.prepare('SELECT source_url FROM books WHERE id = ?').get(created.id) as { source_url: string };
+    expect(book.source_url).toBe('https://book.douban.com/subject/456/');
+  });
+
+  it('apply：fetch_cover=true 且 fields.source_url 白名单内 → 抓取并下载封面', async () => {
+    mockedFetch.mockResolvedValueOnce({
+      title: '测试书',
+      author: '作者',
+      cover_url: 'https://img2.doubanio.com/view/subject/l/public/s123.jpg',
+      source_url: 'https://book.douban.com/subject/123/',
+      metadata_source: 'douban',
+    });
+    const token = await createAgentToken(['books:create', 'books:update_metadata']);
+    const created = await createBookViaAgent(token, { title: '测试书' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/books/${created.id}/metadata/apply`,
+      headers: auth(token),
+      payload: { fields: { source_url: 'https://book.douban.com/subject/123/' }, fetch_cover: true },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(mockedDownloadCover).toHaveBeenCalled();
+    const call = mockedDownloadCover.mock.calls[0][0] as { coverUrl: string; bookId: number };
+    expect(call.coverUrl).toBe('https://img2.doubanio.com/view/subject/l/public/s123.jpg');
+    expect(call.bookId).toBe(created.id);
+    const book = sqlite.prepare('SELECT source_url FROM books WHERE id = ?').get(created.id) as { source_url: string };
+    expect(book.source_url).toBe('https://book.douban.com/subject/123/');
+  });
+
+  it('apply：fetch_cover=true 但书内 source_url 白名单外 → 403', async () => {
+    const token = await createAgentToken(['books:update_metadata']);
+    const created = await createBookViaSession({ title: '浏览器录入', source_url: 'https://example.com/x' });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/books/${created.id}/metadata/apply`,
+      headers: auth(token),
+      payload: { fields: { title: '不应生效' }, fetch_cover: true },
+    });
+    expect(res.statusCode).toBe(403);
+    const book = sqlite.prepare('SELECT title FROM books WHERE id = ?').get(created.id) as { title: string };
+    expect(book.title).toBe('浏览器录入');
   });
 
   it('浏览器（非 agent）创建不受源链接白名单限制', async () => {
