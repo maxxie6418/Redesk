@@ -21,6 +21,9 @@ services:
       - SESSION_SECRET=${SESSION_SECRET:?请在环境变量或 .env 中设置强随机 SESSION_SECRET}
       - AUTH_DISABLED=false
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # 可选：Agent 接入链接固定的对外地址（如 http://192.168.1.10:8787）。
+      # 不设置时回退到请求 Host，本地访问用 http://localhost:8787 即可。
+      - REDESK_PUBLIC_URL=${REDESK_PUBLIC_URL:-}
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
