@@ -2,7 +2,7 @@
   "version": "6",
   "dialect": "sqlite",
   "id": "f2287701-f296-4069-b73f-985177f1603a",
-  "prevId": "2686b1ac-742b-422b-9a98-612ffc93be1a",
+  "prevId": "47946b94-b05d-4bc1-b49b-6f688f89e043",
   "tables": {
     "book_covers": {
       "name": "book_covers",
