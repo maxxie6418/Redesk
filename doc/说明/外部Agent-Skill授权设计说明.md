@@ -290,7 +290,7 @@ Agent 提交的外部源链接（元数据抓取入口、创建/更新时的 `so
 
 | 入口 | 字段 |
 | --- | --- |
-| `POST /books/metadata/fetch` | `url` |
+| `POST /books/metadata/fetch` | `source_url` |
 | `POST /books`（新建） | `source_url` |
 | `PATCH /books/:id` / `POST /books/:id/metadata/apply`（更新） | `source_url` |
 

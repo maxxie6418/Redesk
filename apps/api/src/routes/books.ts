@@ -19,7 +19,8 @@ import {
 } from '@redesk/shared';
 import type { BookQueryInput, CreateBookInput, TrashQueryInput, DuplicateQueryInput, MaintenanceListInput } from '@redesk/shared';
 import { getDb } from '../db';
-import { AppError, notFound, businessError } from '../lib/errors';
+import { AppError, notFound, businessError, forbidden } from '../lib/errors';
+import { assertAgentSourceUrl, writeAuditLog } from '../lib/agent-token';
 import { requireUserId, getOptionalUserId, requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
 import { extname } from 'node:path';
@@ -27,6 +28,24 @@ import { fetchBookMetadataFromUrl } from '../lib/book-metadata';
 import { deleteFilesForBooks, saveUploadedFile, EXTENSION_FORMAT, downloadRemoteCover } from './files';
 import { serializeBookRow, type RawBookRow } from './book-serialization';
 import { readStorageSetting } from '../lib/storage-factory';
+
+// Agent 创建/更新书籍时允许使用的字段白名单（非白名单字段直接 403）
+const AGENT_BOOK_FIELDS = new Set([
+  'title',
+  'author',
+  'subtitle',
+  'publisher',
+  'publish_year',
+  'description',
+  'source_url',
+  'translator',
+  'original_title',
+  'page_count',
+  'category_id',
+  'genre_category_id',
+  'tag_ids',
+  'entry_reason',
+]);
 
 function now(): string {
   return new Date().toISOString();
@@ -785,6 +804,10 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const userId = requirePermission(req, 'use');
     const contentType = req.headers['content-type'] ?? '';
 
+    if (req.apiIdentity && contentType.includes('multipart/form-data')) {
+      throw forbidden('Agent 不支持文件上传方式创建书籍');
+    }
+
     let input;
     let uploadedFile: { stream: NodeJS.ReadableStream; filename: string } | null = null;
 
@@ -848,7 +871,29 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
 
     input = validate(createBookSchema, req.body);
 
+    if (req.apiIdentity) {
+      const raw = (req.body ?? {}) as Record<string, unknown>;
+      const blocked = Object.keys(raw).filter((key) => !AGENT_BOOK_FIELDS.has(key));
+      if (blocked.length > 0) throw forbidden(`Agent 不能使用字段: ${blocked.join(', ')}`);
+      // 仅在请求体带非空 source_url 时校验源白名单；不修改 source_url 的创建无需校验
+      if (typeof raw.source_url === 'string' && raw.source_url.trim() !== '') {
+        assertAgentSourceUrl(req, raw.source_url);
+      }
+    }
+
     const book = await createBookRecord(userId, input, uploadedFile);
+
+    if (req.apiIdentity) {
+      writeAuditLog({
+        ownerId: req.apiIdentity.ownerId,
+        tokenId: req.apiIdentity.tokenId,
+        req,
+        action: 'books.create',
+        resourceType: 'book',
+        resourceId: String(book.id),
+        result: 'success',
+      });
+    }
 
     return { data: serializeBooks([book], userId)[0] };
   });
@@ -1040,6 +1085,8 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, '请先填写书籍介绍链接');
     }
 
+    assertAgentSourceUrl(req, sourceUrl || null);
+
     const metadata = await fetchBookMetadataFromUrl(sourceUrl);
     return { data: metadata };
   });
@@ -1074,6 +1121,13 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    // Agent 仅在实际抓取封面时强制校验源链接白名单（fetch_cover=false 无需校验）
+    // 校验前置：通过后再落库，保证 403 时不产生字段变更
+    const fetchCoverSourceUrl = fetchCover ? ((updates.source_url as string | undefined) ?? book.source_url) : null;
+    if (req.apiIdentity && fetchCoverSourceUrl) {
+      assertAgentSourceUrl(req, fetchCoverSourceUrl);
+    }
+
     if (Object.keys(updates).length > 0) {
       const db = getDb();
       db.update(books)
@@ -1083,10 +1137,9 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (fetchCover) {
-      const sourceUrl = (updates.source_url as string | undefined) ?? book.source_url;
-      if (sourceUrl) {
+      if (fetchCoverSourceUrl) {
         try {
-          const metadata = await fetchBookMetadataFromUrl(sourceUrl);
+          const metadata = await fetchBookMetadataFromUrl(fetchCoverSourceUrl);
           if (metadata.cover_url) {
             const shouldActivateCover = !hasActiveBookCover(bookId);
             await downloadRemoteCover({
@@ -1106,6 +1159,18 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .from(books)
       .where(eq(books.id, bookId))
       .get();
+
+    if (req.apiIdentity) {
+      writeAuditLog({
+        ownerId: req.apiIdentity.ownerId,
+        tokenId: req.apiIdentity.tokenId,
+        req,
+        action: 'books.metadata_apply',
+        resourceType: 'book',
+        resourceId: String(bookId),
+        result: 'success',
+      });
+    }
 
     return { data: serializeBooks([updatedBook as RawBookRow], userId)[0] };
   });
@@ -1489,6 +1554,17 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const input = validate(updateBookSchema, req.body);
+
+    if (req.apiIdentity) {
+      const raw = (req.body ?? {}) as Record<string, unknown>;
+      const blocked = Object.keys(raw).filter((key) => !AGENT_BOOK_FIELDS.has(key));
+      if (blocked.length > 0) throw forbidden(`Agent 不能使用字段: ${blocked.join(', ')}`);
+      // 仅在请求体带非空 source_url 时校验源白名单；不修改 source_url 的更新无需校验
+      if (typeof raw.source_url === 'string' && raw.source_url.trim() !== '') {
+        assertAgentSourceUrl(req, raw.source_url);
+      }
+    }
+
     const db = getDb();
     const existing = db
       .select({
@@ -1567,6 +1643,18 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const updated = db.select(bookSelect()).from(books).where(eq(books.id, bookId)).get();
     if (!updated) {
       throw notFound('书籍不存在');
+    }
+
+    if (req.apiIdentity) {
+      writeAuditLog({
+        ownerId: req.apiIdentity.ownerId,
+        tokenId: req.apiIdentity.tokenId,
+        req,
+        action: 'books.update',
+        resourceType: 'book',
+        resourceId: String(bookId),
+        result: 'success',
+      });
     }
 
     return { data: serializeBooks([updated], userId)[0] };
