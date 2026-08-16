@@ -1,6 +1,6 @@
 {
   "name": "redesk",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "private": true,
   "type": "module",
   "description": "自托管个人阅读管理与 AI 陪读系统",
