@@ -1,7 +1,9 @@
 services:
   redesk:
+    # 并存模式：有 build 时本地构建并用下方名称命名，适合开发期；
+    # 第三方部署可注释掉 build 行，直接拉取 GitHub Packages 发布的镜像。
     build: .
-    image: redesk:2.5.0
+    image: ghcr.io/maxxie6418/redesk:2.5.3
     container_name: redesk
     restart: unless-stopped
     # 容器以 root 启动，entrypoint 会 chown /data 给 redesk 后再降权运行应用。
