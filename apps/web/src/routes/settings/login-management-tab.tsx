@@ -229,14 +229,14 @@ export function LoginManagementTab() {
             ))}
             {resetId && users.data?.find((u: UserAdminSummary) => u.id === resetId) && (
               <div className="flex items-center gap-2 rounded-lg border border-border px-4 py-3">
-                <Input type="password" className="h-8 flex-1 text-xs" placeholder="新口令（至少 5 位）" value={resetPwd} onChange={(e) => setResetPwd(e.target.value)} />
+                <Input type="password" className="h-8 flex-1 text-xs" placeholder="新口令（至少 6 位）" value={resetPwd} onChange={(e) => setResetPwd(e.target.value)} />
                 <Button size="sm" className="h-8" onClick={() => handleResetPassword(resetId)}>确认</Button>
                 <Button size="sm" variant="ghost" className="h-8" onClick={() => setResetId(null)}>取消</Button>
               </div>
             )}
             {showCreate && (
               <div className="space-y-2 rounded-lg border border-border px-4 py-4">
-                <Input type="password" className="h-9 text-sm" placeholder="口令（至少 5 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <Input type="password" className="h-9 text-sm" placeholder="口令（至少 6 位）" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                 <Input className="h-9 text-sm" placeholder="昵称（可选）" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} />
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">权限级别：</span>

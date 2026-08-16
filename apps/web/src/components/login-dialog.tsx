@@ -37,8 +37,8 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 5) {
-      setError('口令至少 5 位字符');
+    if (password.length < 6) {
+      setError('口令至少 6 位字符');
       return;
     }
     try {

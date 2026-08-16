@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useChangePassword } from '@/hooks/use-auth';
 import { useShellUser } from '@/components/shell-user-context';
 
-const MIN_LENGTH = 5;
+const MIN_LENGTH = 6;
 
 interface ForcedPasswordChangeProps {
   onComplete?: () => void;
