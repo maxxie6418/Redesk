@@ -677,6 +677,109 @@ function hasDuplicateBook(ownerId: number, title: string, author: string | null,
   return existing.some((book) => normalizeKey(book.title) === titleKey && normalizeKey(book.author) === authorKey);
 }
 
+export interface ParsedImportRow {
+  row: number;
+  title: string | null;
+  success: boolean;
+  skipped: boolean;
+  book_id: number | null;
+  error: string | null;
+  raw_data: Record<string, string | null>;
+  input?: CreateBookInput;
+}
+
+function parseImportRow(
+  headers: string[],
+  raw: string[],
+  rowNo: number,
+  userId: number,
+  seenKeys: Set<string>,
+  dryRun: boolean,
+): ParsedImportRow {
+  const item: Record<string, string | undefined> = {};
+  headers.forEach((header, index) => {
+    item[header] = raw[index];
+  });
+  const rawData: Record<string, string | null> = {};
+  for (const h of headers) {
+    rawData[h] = item[h] != null ? item[h]! : null;
+  }
+
+  const errors: string[] = [];
+  const title = optionalText(item.title);
+  const author = optionalText(item.author);
+  const isbn = optionalText(item.isbn)?.replace(/[^\dXx]/g, '') ?? null;
+  if (!title) errors.push('title 不能为空');
+
+  const publishYear = optionalInt(item.publish_year, 'publish_year', errors);
+  const pageCount = optionalInt(item.page_count, 'page_count', errors);
+  const rating = optionalInt(item.rating, 'rating', errors);
+  const status = normalizeStatus(item.status, errors);
+  const visibility = normalizeVisibility(item.visibility, errors);
+
+  if (title) {
+    const duplicateKey = isbn ? `isbn:${isbn}` : `book:${normalizeKey(title)}:${normalizeKey(author)}`;
+    if (seenKeys.has(duplicateKey) || hasDuplicateBook(userId, title, author, isbn)) {
+      seenKeys.add(duplicateKey);
+      return {
+        row: rowNo,
+        title,
+        success: false,
+        skipped: true,
+        book_id: null,
+        error: '已存在相同 ISBN 或书名+作者的书籍',
+        raw_data: rawData,
+      };
+    }
+    seenKeys.add(duplicateKey);
+  }
+
+  if (errors.length > 0 || !title) {
+    return { row: rowNo, title, success: false, skipped: false, book_id: null, error: errors.join('；'), raw_data: rawData };
+  }
+
+  try {
+    const categoryName = optionalText(item.category_name);
+    const genreCategoryName = optionalText(item.genre_category_name);
+    const tagNames = splitNames(item.tag_names);
+    const input = validate(createBookSchema, {
+      title,
+      subtitle: optionalText(item.subtitle),
+      author,
+      translator: optionalText(item.translator),
+      original_title: optionalText(item.original_title),
+      isbn,
+      publisher: optionalText(item.publisher),
+      publish_year: publishYear,
+      page_count: pageCount,
+      language: optionalText(item.language),
+      status,
+      visibility,
+      rating,
+      reading_purpose: optionalText(item.reading_purpose),
+      entry_reason: optionalText(item.entry_reason),
+      category_id: !dryRun && categoryName ? findOrCreateCategory(userId, categoryName, 'PERSONAL') : null,
+      genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
+      tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
+      source_url: optionalText(item.source_url),
+      cover_url: optionalText(item.cover_url),
+      description: optionalText(item.description),
+      metadata_source: optionalText(item.metadata_source) ?? 'manual',
+    });
+    return { row: rowNo, title, success: true, skipped: false, book_id: null, error: null, raw_data: rawData, input };
+  } catch (err) {
+    return {
+      row: rowNo,
+      title,
+      success: false,
+      skipped: false,
+      book_id: null,
+      error: err instanceof Error ? err.message : '导入失败',
+      raw_data: rawData,
+    };
+  }
+}
+
 export async function bookRoutes(app: FastifyInstance): Promise<void> {
   app.post('/books', async (req) => {
     const userId = requirePermission(req, 'use');
@@ -802,118 +905,21 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'CSV 表头必须包含 title');
     }
 
-    const importRows: {
-      row: number;
-      title: string | null;
-      success: boolean;
-      skipped: boolean;
-      book_id: number | null;
-      error: string | null;
-      raw_data?: Record<string, string | null>;
-    }[] = [];
+    const importRows: ParsedImportRow[] = [];
     const seenKeys = new Set<string>();
 
     for (let i = 1; i < rows.length; i++) {
-      const raw = rows[i];
-      const rowNo = i + 1;
-      const item: Record<string, string | undefined> = {};
-      headers.forEach((header, index) => {
-        item[header] = raw[index];
-      });
-      const rawData: Record<string, string | null> = {};
-      for (const h of headers) {
-        rawData[h] = item[h] != null ? item[h]! : null;
-      }
-
-      const errors: string[] = [];
-      const title = optionalText(item.title);
-      const author = optionalText(item.author);
-      const isbn = optionalText(item.isbn)?.replace(/[^\dXx]/g, '') ?? null;
-      if (!title) errors.push('title 不能为空');
-
-      const publishYear = optionalInt(item.publish_year, 'publish_year', errors);
-      const pageCount = optionalInt(item.page_count, 'page_count', errors);
-      const rating = optionalInt(item.rating, 'rating', errors);
-      const status = normalizeStatus(item.status, errors);
-      const visibility = normalizeVisibility(item.visibility, errors);
-
-      if (title) {
-        const duplicateKey = isbn ? `isbn:${isbn}` : `book:${normalizeKey(title)}:${normalizeKey(author)}`;
-        if (seenKeys.has(duplicateKey) || hasDuplicateBook(userId, title, author, isbn)) {
-          importRows.push({
-            row: rowNo,
-            title,
-            success: false,
-            skipped: true,
-            book_id: null,
-            error: '已存在相同 ISBN 或书名+作者的书籍',
-            raw_data: rawData,
-          });
-          seenKeys.add(duplicateKey);
-          continue;
-        }
-        seenKeys.add(duplicateKey);
-      }
-
-      if (errors.length > 0 || !title) {
-        importRows.push({
-          row: rowNo,
-          title,
-          success: false,
-          skipped: false,
-          book_id: null,
-          error: errors.join('；'),
-          raw_data: rawData,
-        });
+      const parsed = parseImportRow(headers, rows[i], i + 1, userId, seenKeys, dryRun);
+      if (dryRun || !parsed.success || !parsed.input) {
+        importRows.push(parsed);
         continue;
       }
-
       try {
-        const categoryName = optionalText(item.category_name);
-        const genreCategoryName = optionalText(item.genre_category_name);
-        const tagNames = splitNames(item.tag_names);
-        const input = validate(createBookSchema, {
-          title,
-          subtitle: optionalText(item.subtitle),
-          author,
-          translator: optionalText(item.translator),
-          original_title: optionalText(item.original_title),
-          isbn,
-          publisher: optionalText(item.publisher),
-          publish_year: publishYear,
-          page_count: pageCount,
-          language: optionalText(item.language),
-          status,
-          visibility,
-          rating,
-          reading_purpose: optionalText(item.reading_purpose),
-          entry_reason: optionalText(item.entry_reason),
-          category_id: !dryRun && categoryName ? findOrCreateCategory(userId, categoryName, 'PERSONAL') : null,
-          genre_category_id: !dryRun && genreCategoryName ? findOrCreateCategory(userId, genreCategoryName, 'GENRE') : null,
-          tag_ids: !dryRun && tagNames.length > 0 ? tagNames.map((name) => findOrCreateTag(userId, name)) : undefined,
-          source_url: optionalText(item.source_url),
-          cover_url: optionalText(item.cover_url),
-          description: optionalText(item.description),
-          metadata_source: optionalText(item.metadata_source) ?? 'manual',
-        });
-
-        if (dryRun) {
-          importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: null, error: null, raw_data: rawData });
-          continue;
-        }
-
-        const book = await createBookRecord(userId, input, null);
-        importRows.push({ row: rowNo, title, success: true, skipped: false, book_id: book.id, error: null, raw_data: rawData });
+        const book = await createBookRecord(userId, parsed.input, null);
+        parsed.book_id = book.id;
+        importRows.push(parsed);
       } catch (err) {
-        importRows.push({
-          row: rowNo,
-          title,
-          success: false,
-          skipped: false,
-          book_id: null,
-          error: err instanceof Error ? err.message : '导入失败',
-          raw_data: rawData,
-        });
+        importRows.push({ ...parsed, success: false, error: err instanceof Error ? err.message : '导入失败' });
       }
     }
 
@@ -930,9 +936,100 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
         valid,
         skipped,
         failed,
-        rows: importRows,
+        rows: importRows.map(({ input: _input, ...rest }) => rest),
       },
     };
+  });
+
+  app.post('/books/import/run', async (req, reply) => {
+    const userId = requirePermission(req, 'use');
+    const data = await req.file();
+    if (!data) throw new AppError(ERROR_CODE.VALIDATION_ERROR, '未提供 CSV 文件');
+
+    const content = await readCsvFile(data);
+    const rows = parseCsv(content);
+    if (rows.length < 2) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'CSV 至少需要表头和一行数据');
+    }
+
+    const headers = rows[0].map((header) => header.trim().replace(/^\uFEFF/, ''));
+    const headerSet = new Set(headers);
+    if (!headerSet.has('title')) {
+      throw new AppError(ERROR_CODE.VALIDATION_ERROR, 'CSV 表头必须包含 title');
+    }
+
+    let cancelled = false;
+    const markCancelled = () => {
+      if (!reply.raw.writableEnded) cancelled = true;
+    };
+    reply.raw.on('close', markCancelled);
+
+    reply.hijack();
+    reply.raw.on('error', () => {});
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const writeEvent = (event: string, payload: unknown): boolean => {
+      if (reply.raw.destroyed || reply.raw.writableEnded) return false;
+      return reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const seenKeys = new Set<string>();
+    const total = rows.length - 1;
+    let processed = 0;
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    try {
+      for (let i = 1; i < rows.length; i++) {
+        if (cancelled) break;
+
+        const parsed = parseImportRow(headers, rows[i], i + 1, userId, seenKeys, false);
+        let status: 'created' | 'skipped' | 'failed';
+        if (parsed.skipped) {
+          status = 'skipped';
+        } else if (!parsed.success || !parsed.input) {
+          status = 'failed';
+        } else {
+          try {
+            const book = await createBookRecord(userId, parsed.input, null);
+            parsed.book_id = book.id;
+            status = 'created';
+          } catch (err) {
+            parsed.error = err instanceof Error ? err.message : '导入失败';
+            status = 'failed';
+          }
+        }
+
+        processed++;
+        if (status === 'created') created++;
+        else if (status === 'skipped') skipped++;
+        else failed++;
+
+        const keepGoing = writeEvent('progress', {
+          processed,
+          total,
+          row: parsed.row,
+          title: parsed.title,
+          status,
+          error: parsed.error,
+          book_id: parsed.book_id,
+        });
+        if (!keepGoing) break;
+      }
+
+      writeEvent('complete', { created, skipped, failed, cancelled });
+      reply.raw.end();
+    } catch (err) {
+      req.log.error({ err }, 'CSV 导入流式处理失败');
+      writeEvent('error', { code: ERROR_CODE.INTERNAL_ERROR, message: err instanceof Error ? err.message : '导入失败' });
+      reply.raw.end();
+    }
   });
 
   app.post('/books/metadata/fetch', async (req) => {

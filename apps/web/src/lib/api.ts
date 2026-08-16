@@ -92,3 +92,93 @@ export const api = {
     request<T>(path, { method: 'PUT', body: data === undefined ? undefined : JSON.stringify(data) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
+
+export interface CsvImportProgressData {
+  processed: number;
+  total: number;
+  row: number;
+  title: string | null;
+  status: 'created' | 'skipped' | 'failed';
+  error: string | null;
+  book_id: number | null;
+}
+
+export interface CsvImportCompleteData {
+  created: number;
+  skipped: number;
+  failed: number;
+  cancelled: boolean;
+}
+
+export interface RunCsvImportOptions {
+  file: File;
+  onProgress: (data: CsvImportProgressData) => void;
+  signal?: AbortSignal;
+}
+
+export async function runCsvImportStream(options: RunCsvImportOptions): Promise<CsvImportCompleteData> {
+  const form = new FormData();
+  form.append('file', options.file);
+
+  const res = await fetch(`${API_BASE}/books/import/run`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+    signal: options.signal,
+  });
+
+  if (!res.ok || !res.body) {
+    let err: ApiErrorShape = UNEXPECTED_RESPONSE_ERROR;
+    try {
+      const text = await res.text();
+      const body = parseJsonResponse(text) as { error?: ApiErrorShape } | null;
+      if (body?.error) err = body.error;
+    } catch {
+      err = UNEXPECTED_RESPONSE_ERROR;
+    }
+    throw new ApiError(err);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let complete: CsvImportCompleteData | undefined;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let splitAt: number;
+      while ((splitAt = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, splitAt);
+        buffer = buffer.slice(splitAt + 2);
+        const event = block.match(/^event: (.+)$/m)?.[1];
+        const dataLine = block.match(/^data: (.+)$/m)?.[1];
+        if (!dataLine) continue;
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(dataLine) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        if (event === 'progress') {
+          options.onProgress(data as unknown as CsvImportProgressData);
+        } else if (event === 'complete') {
+          complete = data as unknown as CsvImportCompleteData;
+        } else if (event === 'error') {
+          throw new ApiError(data as unknown as ApiErrorShape);
+        }
+      }
+    }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw err;
+  }
+
+  if (!complete) {
+    throw new ApiError(UNEXPECTED_RESPONSE_ERROR);
+  }
+  return complete;
+}
