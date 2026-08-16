@@ -1,218 +1,45 @@
 # 外部 Agent Skill 授权设计说明
 
-## 1. 文档定位
-
-本文定义 Redesk 面向外部 AI Agent 的 `skill` 授权能力，目标是让用户把一个 Redesk 授权链接交给外部 agent 后，agent 可以在与用户对话的过程中请求授权，并在被允许的边界内代用户操作 Redesk 内容。
-
-本文只讨论：
-
-- 外部 agent 如何接入 Redesk
-- 链接授权如何建立
-- 授权后的权限边界如何控制
-- 哪些操作允许 agent 执行
-- 哪些操作必须再次确认
-
-本文不直接替代既有《需求总纲》《决策记录》《API 接口》，而是作为实现前的专项设计说明。
+> 本文是「外部 AI Agent 协助录入」功能的**落地版设计**（2026-08-16 重写）。早期草案中的实现细节（agent_clients / agent_grants / agent_pending_actions 三层建模等）已被下文按方案 A 的取舍替换。
+>
+> 一句话定位：用户在设置页生成「Agent 接入链接」发给外部 AI 代理；代理读取链接获得 skill 能力说明与一次性授权码，换取可吊销的访问令牌；随后按 scope 复用 Redesk 现有 API，在对话内确认后代用户录入、更新书籍。
 
 ---
 
-## 2. 目标与非目标
+## 1. 目标与非目标
 
-### 2.1 目标
+### 1.1 目标
 
-实现一条完整链路：
+1. 用户在 Redesk 中生成一个「Agent 接入链接」。
+2. 用户把链接发送给外部 AI Agent（ChatGPT / Claude / 豆包等）。
+3. Agent 读取链接，获得 Redesk 的能力清单（skill 描述）与一次性授权码。
+4. Agent 换发访问令牌后，按授权范围调用 Redesk API。
+5. 用户发链接或书名给 Agent，Agent 负责查重、抓元数据、在对话中确认后录入/更新书籍。
+6. 整个过程可吊销、可过期、可审计、可限流。
 
-1. 用户在 Redesk 中生成一个“Agent 接入链接”。
-2. 用户把该链接发送给外部 AI Agent。
-3. Agent 读取链接提供的接入描述，知道 Redesk 支持哪些能力。
-4. Agent 在与用户对话时，按需发起“查看 / 新建 / 修改”请求。
-5. Redesk 按授权范围决定：
-   - 可直接执行；
-   - 需用户确认后执行；
-   - 明确拒绝执行。
-6. 整个过程可审计、可吊销、可限流、可追溯。
+### 1.2 非目标（当前阶段不做）
 
-### 2.2 非目标
-
-当前阶段不做以下内容：
-
-- 不做“拿到链接即可无限制长期控制系统”
-- 不做无审计的隐式后台操作
-- 不做开放式文件系统访问
-- 不做设置、用户、备份恢复、系统维护权限对外开放
-- 不做让外部 agent 直接共享 session cookie
+- 不做「拿到链接即可无限制长期控制系统」——链接只是授权入口，不是长期凭据。
+- 不做无审计的隐式后台写操作——所有写操作可追溯。
+- 不做设置、用户、备份恢复、系统维护、文件上传/删除等权限对外开放。
+- 不做让外部 agent 直接共享浏览器 session cookie。
+- 不做笔记/主题相关操作（`notes:create`、`topics:create` 等留待后续版本）。
+- 不做分类/标签的重命名与删除（v1 仅开放列表 + 新建）。
 
 ---
 
-## 3. 当前现状
+## 2. 端到端流程
 
-当前代码状态：
-
-- `apps/api/src/lib/auth.ts` 只有 session / admin / permission 体系，没有 Bearer token 鉴权。
-- `packages/db/src/schema/` 中尚无 `api_tokens`、`audit_logs`、`agent_grants` 相关表。
-- `apps/web/src/routes/settings/ai-tab.tsx` 目前只有 LLM provider / model / key 配置，没有外部 agent 管理界面。
-
-现有文档状态：
-
-- `doc/todo/M1-书架功能优化.md` 已明确“外部 Agent AI”方向。
-- 已确定基础原则：外部 agent 默认应以 `只读 + 创建` 为起点，不能直接拿到高风险写权限。
-
-结论：
-
-- Redesk 已有方向，但还没有可用的授权链路实现。
-- 如果直接把“长期 token 明文”塞进链接里，安全边界过低，不应采用。
-
----
-
-## 4. 核心设计判断
-
-### 4.1 链接不是权限本身，只是授权入口
-
-用户发给 agent 的链接，不能等同于长期访问凭据。
-
-推荐模型：
-
-- 链接只用于启动一次授权会话；
-- 真正可调用 API 的是授权完成后签发的 access token；
-- access token 必须可撤销、可过期、可审计。
-
-这样做的原因：
-
-- 链接可能被转发、缓存、截图；
-- 外部 agent 平台通常不是完全可信执行环境；
-- 后续必须支持“断开这个 agent”“缩小权限”“查看它干过什么”。
-
-### 4.2 外部 agent 权限不能直接等同系统内置 AI
-
-Redesk 已经区分：
-
-- 系统内置 AI：系统内部能力，未来走 `AIService`
-- 外部 Agent AI：远程第三方代理
-
-外部 agent 必须单独建模，不能直接复用管理员权限，也不能自动拥有系统内置 AI 后续可能拥有的写权限。
-
-### 4.3 “可授权操作”必须分层
-
-不是简单的“能做 / 不能做”，而应分成三层：
-
-1. 低风险：可直接执行
-2. 中风险：需单次确认
-3. 高风险：当前阶段禁止
-
-这样用户才能在对话里自然授权，而不是每一步都去设置页改配置。
-
----
-
-## 5. 推荐能力边界
-
-### 5.1 第一阶段允许的能力
-
-建议第一阶段开放以下 scope：
-
-| Scope | 能力 | 风险级别 | 默认 |
-| --- | --- | --- | --- |
-| `books:read` | 查看书架、搜索书籍、查看书籍详情 | 低 | 开 |
-| `books:create` | 新建书籍条目 | 低 | 开 |
-| `books:update_metadata` | 修改已有书籍的元数据字段 | 中 | 关 |
-| `notes:create` | 新建独立笔记 | 中 | 关 |
-| `topics:create` | 新建主题 | 中 | 关 |
-| `topics:link` | 把书 / 高亮 / 笔记加入主题 | 中 | 关 |
-
-### 5.2 第一阶段禁止的能力
-
-| 能力 | 原因 |
-| --- | --- |
-| 删除书籍 / 删除笔记 / 删除主题 | 破坏性强 |
-| 上传文件 / 替换文件 / 删除文件 | 涉及存储与内容资产 |
-| 修改设置 / 用户 / 登录方式 | 系统级风险 |
-| 备份 / 恢复 / 清缓存 / 重建索引 | 管理员能力 |
-| 任意 SQL / 任意脚本 / 任意路径访问 | 越权风险过高 |
-
-### 5.3 元数据修改的字段限制
-
-即便开放 `books:update_metadata`，也应限制为可白名单更新字段：
-
-- `title`
-- `author`
-- `subtitle`
-- `publisher`
-- `publish_year`
-- `description`
-- `source_url`
-- `translator`
-- `original_title`
-- `page_count`
-- `category_id`
-- `genre_category_id`
-- `tag_ids`
-- `entry_reason`
-
-不允许通过外部 agent 修改：
-
-- `owner_id`
-- `deleted_at`
-- 文件关联
-- 封面二进制资源
-- 系统内部状态字段
-
----
-
-## 6. 总体授权模型
-
-### 6.1 三层对象
-
-建议引入三类对象：
-
-1. `agent_clients`
-   - 表示一个外部 agent 接入方
-   - 例如“我的 ChatGPT Agent”“我的 Claude Agent”
-
-2. `agent_grants`
-   - 表示某次授权关系
-   - 记录授予了哪些 scope、是否允许修改、是否需要逐次确认
-
-3. `api_tokens`
-   - 真正调用 API 的凭据
-   - 由 grant 派生，短期或长期存在
-
-关系：
-
-- 一个 `agent_client` 可以有多个 `agent_grant`
-- 一个 `agent_grant` 可以签发一个或多个 `api_token`
-
-### 6.2 推荐授权模式
-
-建议支持两种模式：
-
-#### 模式 A：长期受限授权
-
-- 用户明确把某个 agent 连接到 Redesk
-- scope 固定
-- 可长期使用
-- 适合“我的固定 AI 助手”
-
-#### 模式 B：会话内临时授权
-
-- 仅针对某次对话/某个任务
-- TTL 很短，例如 30 分钟或 24 小时
-- 适合“这次帮我整理书架”“这次帮我补元数据”
-
-默认推荐模式 B，长期模式由用户显式开启。
-
----
-
-## 7. 链接授权流程
-
-### 7.1 用户视角流程
-
-1. 用户在设置页点击“新建 Agent 接入”。
-2. Redesk 生成一个授权链接。
-3. 用户把链接发给外部 AI Agent。
-4. Agent 告诉用户：“我可以连接你的 Redesk，请确认授权范围。”
-5. 用户同意后，Redesk 创建 grant 并向 agent 签发 token。
-6. Agent 后续即可按 scope 调用 Redesk。
-
-### 7.2 系统视角流程
+```
+① 设置页 → AI → Agent 接入：新建接入（名称 + 勾选 scope + 有效期）→ 生成链接
+② 用户把链接发给 AI：让 AI 连接 Redesk 书架
+③ AI 请求链接（GET /agent/connect/:code）→ 获得 skill 描述 + 一次性 connect_code
+④ AI 用 code 换取 access token（POST /agent/token/exchange，code 一次性，默认 10 分钟过期）
+⑤ 用户发书名/链接 → AI 查重 → 抓元数据 → 对话里展示并问「直接录入？调整分类/标签？」
+   → 用户确认 → 调用创建 API
+⑥ 更新已有书：AI 抓新元数据 → 展示字段 diff → 问「是否更新」→ 确认后应用
+⑦ 用户随时可在设置页吊销接入、查看审计日志
+```
 
 ```mermaid
 sequenceDiagram
@@ -220,366 +47,345 @@ sequenceDiagram
     participant A as 外部 Agent
     participant R as Redesk
 
-    U->>R: 创建 Agent 接入链接
-    R-->>U: 授权链接
+    U->>R: 新建 Agent 接入（名称/scope/有效期）
+    R-->>U: 接入链接（含一次性 connect_code）
     U->>A: 发送链接
-    A->>R: 读取 skill 描述 / 发起连接
-    R-->>A: 返回可申请 scope 与授权会话信息
-    A->>U: 在对话中说明要申请的能力
-    U->>R: 确认授权
-    R-->>A: 返回短期 access token
-    A->>R: 调用受限 API
-    R-->>A: 返回结果并写审计日志
+    A->>R: GET /agent/connect/:code（读取 skill 描述）
+    R-->>A: 能力清单 + connect_code
+    A->>R: POST /agent/token/exchange
+    R-->>A: 返回 access token（可吊销/可过期）
+    U->>A: 发书名或链接
+    A->>R: 查重（GET /books/duplicates 或搜索）
+    A->>R: 抓元数据（POST /books/metadata/fetch，源链接受白名单约束）
+    A->>U: 对话中展示元数据预览，询问是否调整
+    U->>A: 确认/调整
+    A->>R: POST /books 或 PATCH /books/:id
+    R-->>A: 结果并写审计日志
 ```
 
-### 7.3 链接内容建议
+---
 
-链接本身不应包含明文 token。
+## 3. 核心设计判断
 
-建议形式：
+### 3.1 链接不是权限本身，只是授权入口
 
-`https://{redesk-host}/agent/connect/{connect_code}`
+用户发给 agent 的链接**不能等同长期访问凭据**。推荐模型：
 
-其中：
+- 链接只含一次性授权码（connect_code），默认 10 分钟失效，未完成授权前不可调用业务 API。
+- 真正调用 API 的是授权完成后签发的 access token，可撤销、可过期、可审计。
+- 链接可能被转发、缓存、截图，因此明文 token 绝不进链接。
 
-- `connect_code` 是一次性或短时有效码
-- 默认 10 分钟失效
-- 未完成授权前不可调用业务 API
+### 3.2 外部 agent 与系统内置 AI 分离
+
+- 系统内置 AI：系统内部能力，走 `AIService`，属于功能清单 §9。
+- 外部 Agent AI：远程第三方代理，**单独建模**，不直接复用管理员权限，不自动获得内置 AI 的写权限。
+
+### 3.3 确认机制采用「对话内确认」
+
+本设计**不引入后端待确认动作表**（agent_pending_actions）。原因是：
+
+- 用户的真实场景是「发书名给 AI，他负责添加」，期待轻量对话体验。
+- 由 skill 文档约束 agent「写操作前必须先展示预览并征得用户同意」，后端用 scope + 字段白名单兜底。
+- 所有写操作落 `audit_logs`，出问题可追溯、可吊销。
+
+### 3.4 源链接必须过白名单（本次新增，含 SSRF 防护）
+
+Agent 提交的外部源链接（元数据抓取入口、创建/更新时的 `source_url`）必须命中域名白名单，默认仅 `book.douban.com`（豆瓣读书）。理由：
+
+- 保证元数据来源可信，防止 agent「随便找个信息源当源链接录入」。
+- 顺带防 SSRF：阻止 agent 诱导服务端 `metadata/fetch` 抓取 `localhost`、内网 IP 等地址。
+- 白名单可配置（settings 表），后续可按需放开 neodb.social 等。
 
 ---
 
-## 8. “对话中授权”的实现方式
+## 4. 新增数据模型（3 张表）
 
-### 8.1 两种确认层级
+### 4.1 `api_tokens` — 一个接入 = 一条令牌记录
 
-对话中授权需要拆成两个层级：
+| 字段 | 说明 |
+| --- | --- |
+| id | 主键 |
+| owner_id | 归属用户，复用现有 owner 边界 |
+| name | 接入名称（如「我的 Claude」） |
+| token_hash | **只存 sha256 哈希**，明文 `rdk_live_...` 仅生成时返回一次 |
+| scopes | JSON 数组，如 `["books:read","books:create"]` |
+| expires_at | 过期时间（临时模式短 TTL，长期模式可设空） |
+| last_used_at | 最近使用时间 |
+| revoked_at | 吊销时间，非空即失效 |
+| created_at | 创建时间 |
 
-#### 层级 1：接入授权
+吊销 = 设置 `revoked_at`，即时生效，不需要删除记录（保留审计可追溯）。
 
-确认 agent 是否可以连接此 Redesk。
+### 4.2 `connect_codes` — 链接里的凭据
 
-确认项：
+| 字段 | 说明 |
+| --- | --- |
+| id | 主键 |
+| owner_id | 归属用户 |
+| token_id | 指向被换发的 api_tokens 记录 |
+| code_hash | **只存哈希** |
+| expires_at | 默认 10 分钟 |
+| used_at | 换发后立即标记，一次性使用 |
 
-- agent 名称
-- 授权有效期
-- scope 范围
-- 是否允许自动执行低风险写操作
+### 4.3 `audit_logs` — 审计日志
 
-#### 层级 2：操作授权
+| 字段 | 说明 |
+| --- | --- |
+| id / owner_id | 归属与溯源 |
+| token_id | 哪个接入干的 |
+| request_id | 关联单次请求 |
+| method / path | 请求方法路径 |
+| action | 语义动作（如 `books.create` / `books.update`） |
+| resource_type / resource_id | 目标对象 |
+| result | success / denied / failed |
+| ip / user_agent / created_at | 环境与时间 |
 
-当 agent 真的要执行中风险动作时，再确认具体动作。
+记录范围：所有 agent 写操作 + 被拒绝的请求（scope 不足、白名单外源链接等）。
 
-例如：
+### 4.4 为什么砍掉早期草案的 agent_clients / agent_grants / agent_pending_actions
 
-- “把《XXX》的作者改成 YYY”
-- “把这 3 本书加入‘待读’分类”
-- “为这本书新建一条笔记”
-
-### 8.2 操作授权的决策规则
-
-建议规则：
-
-- `books:read`：直接执行
-- `books:create`：可直接执行，但必须做重复检测
-- `books:update_metadata`：默认需单次确认
-- `notes:create` / `topics:create` / `topics:link`：默认需单次确认
-
-这样可以满足“通过与 agent 对话授权他操作一些内容”，同时不把系统变成默认可写。
-
-### 8.3 为什么不建议“只要 scope 有写权限就静默执行”
-
-因为外部 agent 的行为强依赖提示词与上下文，容易出现：
-
-- 理解偏差
-- 误改对象
-- 连续误操作
-- 用户在对话里表达模糊时越权行动
-
-因此，中风险写操作建议保留 `pending_action -> user_confirmed -> execute` 流程。
-
----
-
-## 9. 数据模型建议
-
-### 9.1 `api_tokens`
-
-沿用既有文档方案：
-
-- `id`
-- `owner_id`
-- `name`
-- `token_hash`
-- `scopes`
-- `last_used_at`
-- `created_at`
-- `revoked_at`
-
-补充建议字段：
-
-- `grant_id`：来源授权关系
-- `expires_at`：过期时间
-- `token_type`：`agent_long_lived` / `agent_session`
-
-### 9.2 `audit_logs`
-
-沿用既有方案：
-
-- `id`
-- `owner_id`
-- `token_id`
-- `action`
-- `resource_type`
-- `resource_id`
-- `ip`
-- `user_agent`
-- `created_at`
-
-补充建议字段：
-
-- `request_id`
-- `result`
-- `diff_summary`
-- `confirmed_by_user`
-
-### 9.3 `agent_clients`
-
-建议新增：
-
-- `id`
-- `owner_id`
-- `name`
-- `provider`
-- `description`
-- `created_at`
-- `updated_at`
-- `revoked_at`
-
-### 9.4 `agent_grants`
-
-建议新增：
-
-- `id`
-- `owner_id`
-- `agent_client_id`
-- `grant_mode`：`session` / `persistent`
-- `scopes`
-- `require_confirmation_scopes`
-- `issued_at`
-- `expires_at`
-- `revoked_at`
-
-### 9.5 `agent_pending_actions`
-
-如果要做“对话中二次确认”，建议新增：
-
-- `id`
-- `owner_id`
-- `grant_id`
-- `action_type`
-- `resource_type`
-- `resource_id`
-- `payload_json`
-- `status`：`pending` / `approved` / `rejected` / `expired` / `executed`
-- `created_at`
-- `decided_at`
-- `expires_at`
+- **agent_clients / agent_grants**：早期草案为「一个接入方多个授权关系」建模。本设计的现实场景是「一个接入 = 一个令牌」，`api_tokens.name` 已承担接入名称，吊销即断开，两层对象属于过度建模。
+- **agent_pending_actions**：确认机制已选定「对话内确认」（见 3.3），不需要后端审批流。
+- 若未来出现「一个 agent 多份授权、不同 scope 集合」的需求，再升级建模，不提前实现。
 
 ---
 
-## 10. API 设计建议
+## 5. 鉴权层设计（改动集中在 auth.ts + 一个 preHandler）
 
-### 10.1 接入与授权
+### 5.1 Bearer token 解析
 
-- `POST /agent/connect-sessions`
-  - 创建一个接入链接
-- `GET /agent/connect/:code`
-  - 返回该链接可用的 skill 描述与授权会话信息
-- `POST /agent/connect/:code/approve`
-  - 用户确认接入授权
-- `POST /agent/token/exchange`
-  - 用 connect session 或 grant 换 access token
+在 `apps/api/src/lib/auth.ts` 新增：
 
-### 10.2 Token / Grant 管理
+- `parseApiToken(req)`：读 `Authorization: Bearer rdk_...` → sha256 → 查 `api_tokens` → 校验未吊销、未过期 → 返回 `{ ownerId, scopes }`。
+- 解析结果挂到 `req` 上（如 `req.apiIdentity`），现有路由的 `requireUserId` 优先读取它——**业务路由零改动**。
 
-- `GET /agent/clients`
-- `POST /agent/clients`
-- `GET /agent/grants`
-- `POST /agent/grants/:id/revoke`
-- `GET /agent/tokens`
-- `POST /agent/tokens/:id/revoke`
+### 5.2 scope 白名单 preHandler（全局挂载）
 
-### 10.3 待确认动作
+- 请求带 Bearer token → 查 `ROUTE_SCOPE_MAP`（method + path 正则 → 所需 scope）：
+  - 不在映射表内 → **403**；
+  - 在映射表内 → 校验 token scopes 是否包含所需 scope，不满足 → 403 + 审计 denied。
+- 请求带 session cookie → 走现有逻辑，完全不受影响。
+- owner 边界：token 归属的 owner_id 直接进入现有 owner 校验链路，复用书籍/分类/标签的归属校验。
 
-- `GET /agent/pending-actions`
-- `POST /agent/pending-actions/:id/approve`
-- `POST /agent/pending-actions/:id/reject`
+### 5.3 红线：以下路由不进白名单，agent 永久 403
 
-### 10.4 业务调用
-
-业务 API 不建议单独复制一套 `/agent/books`。
-
-推荐：
-
-- 继续复用现有 `/books`、`/topics`、`/notes`
-- 在鉴权层识别当前请求是否来自 agent token
-- 再做 scope、字段白名单、确认态检查
-
-理由：
-
-- 减少重复接口
-- 保持业务逻辑只有一套
-- 后续 Web、自带 AI、外部 agent 更容易共享规则
+- `settings`、`system`、`users`、`auth`、`backup`（如存在）、`files` 上传/替换/删除、`cloud-connections`、`storage`、`reader-fonts`（如需可后续评估）。
+- 原则：**只放行 agent 明确需要的只读/新建能力，其余一律拒绝**。
 
 ---
 
-## 11. 前端界面建议
+## 6. skill 链接内容（`GET /agent/connect/:code`）
 
-### 11.1 设置页新增「Agent 授权」分区
+按 `Accept` 返回 HTML（给人看）或 JSON（给 agent 读）。JSON 结构：
 
-建议放在设置页 `AI` Tab 下，而不是散落到 `登录管理`。
+```json
+{
+  "skill_version": 1,
+  "name": "我的书架助手",
+  "scopes": ["books:read", "books:create", "books:update_metadata"],
+  "base_url": "https://redesk.example.com/api",
+  "connect_code": "一次性授权码",
+  "capabilities": [
+    {
+      "id": "search_books",
+      "method": "GET",
+      "path": "/books?q={query}",
+      "requires_scope": "books:read",
+      "description": "搜索书架，用于查重"
+    },
+    {
+      "id": "fetch_metadata",
+      "method": "POST",
+      "path": "/books/metadata/fetch",
+      "requires_scope": "books:read",
+      "description": "从白名单源站（豆瓣读书）抓取元数据，只读不落库"
+    },
+    {
+      "id": "create_book",
+      "method": "POST",
+      "path": "/books",
+      "requires_scope": "books:create",
+      "description": "新建书籍条目"
+    },
+    {
+      "id": "apply_metadata",
+      "method": "POST",
+      "path": "/books/{id}/metadata/apply",
+      "requires_scope": "books:update_metadata",
+      "description": "把抓取结果应用到已有书"
+    },
+    {
+      "id": "list_categories",
+      "method": "GET",
+      "path": "/categories",
+      "requires_scope": "categories:manage"
+    },
+    {
+      "id": "create_category",
+      "method": "POST",
+      "path": "/categories",
+      "requires_scope": "categories:manage"
+    },
+    {
+      "id": "list_tags",
+      "method": "GET",
+      "path": "/tags",
+      "requires_scope": "tags:manage"
+    },
+    {
+      "id": "create_tag",
+      "method": "POST",
+      "path": "/tags",
+      "requires_scope": "tags:manage"
+    }
+  ],
+  "conventions": [
+    "创建或更新书籍前，必须先向用户展示元数据预览并询问是否调整，用户明确同意后才可执行写操作",
+    "只通过本服务的 /books/metadata/fetch 抓取外部页面元数据，禁止自行请求外部网站",
+    "源链接只允许豆瓣读书（book.douban.com），不得使用其他信息源链接",
+    "创建前必须先用 search_books 做重复检测，发现疑似重复须先告知用户",
+    "用户拒绝或说不必时，不要重试或纠缠",
+    "只允许调用 capabilities 中列出的端点，其余一律禁止"
+  ]
+}
+```
 
-原因：
-
-- 这是 AI 接入能力，不是用户登录方式
-- 用户心智是“管理我的 AI 助手”，不是“管理账户登录”
-
-### 11.2 页面结构
-
-#### 区块 A：已连接 Agent
-
-- Agent 名称
-- 提供方
-- 授权范围
-- 最近使用时间
-- 有效期
-- 吊销按钮
-
-#### 区块 B：新建接入链接
-
-- 链接用途名称
-- 授权模式：临时 / 长期
-- 勾选 scope
-- 中风险动作是否需要逐次确认
-- 生成链接
-
-#### 区块 C：待确认操作
-
-- 待办列表
-- 显示 agent、动作、目标对象、变更摘要
-- `批准` / `拒绝`
-
-#### 区块 D：审计日志
-
-- 时间
-- Agent
-- 操作
-- 结果
-- 目标对象
+> `base_url` 取服务端配置的公开地址（env 配置，如 `REDESK_PUBLIC_URL`），未配置时回退用请求的 `Host` 头推导，保证链接在用户把链接发给远端 agent 时仍可访问。
 
 ---
 
-## 12. 安全约束
+## 7. 能力清单与 scope 映射（全部复用现有端点）
 
-### 12.1 必须做的安全项
+| 操作 | 端点 | scope | 备注 |
+| --- | --- | --- | --- |
+| 搜索书架 | `GET /books?q=` | books:read | 查重入口 |
+| 书详情 | `GET /books/:id` | books:read | |
+| 抓取元数据 | `POST /books/metadata/fetch` | books:read | 只读外部，不落库，源链接过白名单 |
+| 新建书籍 | `POST /books` | books:create | 服务端强制重复检测提示 |
+| 更新元数据 | `PATCH /books/:id` | books:update_metadata | 字段白名单（见 7.1） |
+| 应用抓取结果 | `POST /books/:id/metadata/apply` | books:update_metadata | |
+| 分类列表 | `GET /categories` | categories:manage | |
+| 新建分类 | `POST /categories` | categories:manage | v1 不开放改名/删除 |
+| 标签列表 | `GET /tags` | tags:manage | |
+| 新建标签 | `POST /tags` | tags:manage | v1 不开放改名/删除 |
 
-- token 只存哈希，不存明文
-- 链接码短期有效且一次性
-- 支持立即吊销
-- 按 token 限流
-- 所有写操作写审计日志
-- agent 创建书籍强制重复检测
-- 中风险写操作保留确认链路
+### 7.1 元数据更新字段白名单（agent 可改）
 
-### 12.2 明确不采用的方案
+`title`、`author`、`subtitle`、`publisher`、`publish_year`、`description`、`source_url`、`translator`、`original_title`、`page_count`、`category_id`、`genre_category_id`、`tag_ids`、`entry_reason`
 
-- 不把长期 Bearer token 拼在 URL 参数里
-- 不让外部 agent 继承浏览器登录态
-- 不允许 agent 通过 prompt 拼任意接口路径越权调用
-- 不允许 agent 自声明 scope
+### 7.2 禁止 agent 修改/执行
 
-### 12.3 速率限制建议
+- `owner_id`、`deleted_at`、状态流转、文件关联、封面二进制资源、系统内部状态字段。
+- 删除书籍 / 删除分类 / 删除标签 / 重命名分类标签。
+- 上传、替换、删除文件。
+- 修改设置 / 用户 / 登录方式 / 备份恢复 / 系统维护 / 任意 SQL / 任意脚本。
 
-第一阶段建议默认：
+---
 
-- 读取：60 次 / 分钟 / token
-- 写入：10 次 / 分钟 / token
-- 待确认动作创建：20 次 / 小时 / grant
+## 8. 源链接白名单（后端强制）
+
+### 8.1 校验入口
+
+以下入口的 URL 当请求来自 agent token 时必须命中白名单，否则 403 + 审计 denied：
+
+| 入口 | 字段 |
+| --- | --- |
+| `POST /books/metadata/fetch` | `url` |
+| `POST /books`（新建） | `source_url` |
+| `PATCH /books/:id` / `POST /books/:id/metadata/apply`（更新） | `source_url` |
+
+### 8.2 默认值与配置
+
+- 默认白名单：`book.douban.com`（豆瓣读书）。
+- 设置项：settings 表新增 key（如 `agent_source_url_whitelist`），默认 `["book.douban.com"]`，设置页可编辑。
+- 校验规则：解析 URL → 协议必须 http/https → host 命中白名单项或为其子域（`host === item || host.endsWith('.' + item)`）→ 否则拒绝。
+
+### 8.3 与 Web 端的关系
+
+白名单**只在 agent 请求边界强制执行**，浏览器录入保持现有行为（任意链接可粘贴，豆瓣/neodb 深解析、其他站退化为 og:meta 通用解析）。
+
+---
+
+## 9. 书名-only 录入的处理
+
+- **约定（v1 方案）**：用户只给书名时，AI 用**自身的联网搜索**找到豆瓣读书页面链接，再调 Redesk 的 `metadata/fetch` 抓取。Redesk **不新增服务端外部搜索**，反爬面保持不变，且源链接依然过白名单。
+- 前提约束：所选 AI 平台自带联网搜索能力；若平台无此能力，后续版本再评估新增 `POST /books/metadata/search` 服务端搜索端点（走 `fetch-utils` 限速与反爬策略）。
+
+---
+
+## 10. 前端界面（设置页 AI Tab 新增「Agent 接入」分区）
+
+- **区块 A 已连接 Agent**：名称 / scope 徽章 / 有效期 / 最近使用时间 / 吊销按钮。
+- **区块 B 新建接入**：名称、scope 勾选、有效期（临时/长期）→ 生成链接（一次性展示授权码，复制按钮）。
+- **区块 C 审计日志**：时间 / Agent / 操作 / 结果 / 目标对象。
+
+---
+
+## 11. 安全约束与速率限制
+
+### 11.1 必须项
+
+- token 与 connect_code 只存哈希，不存明文。
+- connect_code 一次性使用，默认 10 分钟过期。
+- 支持立即吊销（设置 `revoked_at`）。
+- 所有 agent 写操作与被拒请求写审计日志。
+- 源链接域名白名单（见 §8）。
+- 中风险写操作依赖对话内确认（见 §3.3 与 §6 conventions + scope 兜底）。
+
+### 11.2 明确不采用
+
+- 不把长期 Bearer token 拼在 URL 参数里。
+- 不让外部 agent 继承浏览器登录态。
+- 不允许 agent 自声明 scope 或越权调用非白名单路由。
+
+### 11.3 速率限制（v1 默认）
+
+- 读取：60 次 / 分钟 / token。
+- 写入：10 次 / 分钟 / token。
+
+---
+
+## 12. 实施顺序
+
+### Phase 1：核心链路
+
+1. 新增 3 张表（api_tokens / connect_codes / audit_logs）+ 新 migration（遵守迁移红线：只新增，不改已应用 SQL）。
+2. `auth.ts` 新增 Bearer token 解析（`parseApiToken` / `requireApiToken`）。
+3. 全局 scope 白名单 preHandler + `ROUTE_SCOPE_MAP`。
+4. `GET /agent/connect/:code`（skill 描述 HTML/JSON）+ `POST /agent/token/exchange`。
+5. 源链接白名单校验（settings key + 校验函数，agent 请求边界生效）。
+6. 设置页「Agent 接入」分区（接入管理 + 生成链接 + 吊销）。
+7. skill 描述定稿。
+
+结果：外部 agent 已可安全完成「查重 → 抓元数据 → 对话确认 → 录入/更新书籍」。
+
+### Phase 2：审计与限流
+
+- `audit_logs` 记录完善（含 denied 请求）。
+- 按 token 速率限制。
+- 设置页审计日志列表。
+
+### Phase 3：可选增强
+
+- MCP server 封装（复用同一组 API 与鉴权）。
+- `POST /books/metadata/search` 服务端搜索（需评估反爬）。
+- 分类/标签重命名、笔记/主题操作（按需放开 scope）。
+
+每阶段完成跑 `pnpm typecheck`、`pnpm lint`，并用空库 `db:migrate` 演练；旧库升级走新增 migration，不触碰已应用迁移。
 
 ---
 
 ## 13. 与现有文档的关系
 
-本文与既有方向一致：
-
-- 延续 `doc/todo/M1-书架功能优化.md` 的“外部 agent 单独建模”
-- 延续 `只读 + 创建` 的保守默认值
-- 在此基础上新增“链接式接入”和“对话中的单次授权”两层机制
-
-本文对既有方案的主要补充：
-
-1. 增加“链接不是 token，只是授权入口”的约束。
-2. 增加 `agent_clients / agent_grants / agent_pending_actions` 三层建模。
-3. 增加“对话里授权具体操作”的确认机制。
+- `doc/Redesk-功能清单-v1.1.md`：§8 第三方集成新增 8.09–8.12（Agent 接入管理 / skill 链接与令牌交换 / 操作审计日志 / 源链接白名单）。
+- `doc/技术方案.md`：新增 §4.7 外部 Agent 接入小节，并登记风险行。
+- 本设计与《需求总纲》《决策记录》不冲突；属于新增强能力，开发前如需在《决策记录》登记结论，按该文档流程补充。
 
 ---
 
-## 14. 推荐实施顺序
+## 14. 遗留决策（后续版本确认）
 
-### Phase 1：基础接入
-
-- 新增 `api_tokens`
-- 新增 `audit_logs`
-- Bearer token 鉴权
-- scope 校验
-- 设置页 Token 管理
-
-结果：
-
-- 外部 agent 已可安全只读 / 创建
-- 但还没有“链接授权”和“操作待确认”
-
-### Phase 2：链接授权
-
-- 新增 `agent_clients`
-- 新增 `agent_grants`
-- 新增 connect session / token exchange API
-- 设置页生成接入链接
-
-结果：
-
-- 用户可以把接入链接发给 agent
-- agent 可建立正式连接
-
-### Phase 3：对话中的操作授权
-
-- 新增 `agent_pending_actions`
-- 中风险写操作改为待确认流
-- 设置页 / 通知中心增加批准与拒绝入口
-
-结果：
-
-- 真正实现“通过与 agent 对话授权他帮我操作一些内容”
-
----
-
-## 15. 推荐结论
-
-如果要做你说的能力，推荐按下面的原则落地：
-
-1. 先做外部 agent 的独立鉴权，不复用 session。
-2. 用户发给 agent 的是授权链接，不是长期 token。
-3. 默认只开 `books:read` + `books:create`。
-4. 修改已有内容必须进入“待确认动作”。
-5. 所有 agent 写操作必须可审计、可撤销、可限流。
-
-这条路线比“直接给 agent 一个万能 token”慢一点，但符合 Redesk 当前的安全边界，也更适合后续长期维护。
-
----
-
-## 16. 待你确认的关键点
-
-实现前还需要你拍板 3 件事：
-
-1. 第一阶段是否允许 `books:update_metadata`
-2. “待确认动作”是做在设置页，还是额外做一个全局通知入口
-3. 接入目标是否只面向“固定几个 agent 平台”，还是做通用 skill / MCP 风格接入
+- 是否开放分类/标签重命名、删除（当前 v1 不开放）。
+- 是否开放笔记/主题操作 scope。
+- 是否提供服务端书名搜索端点。
+- 是否提供 MCP 封装。
