@@ -2,17 +2,17 @@
 FROM node:22-bookworm-slim AS web-builder
 
 ARG NPM_REGISTRY=https://registry.npmmirror.com
-ARG APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
+ARG APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn
 
 ENV npm_config_registry=$NPM_REGISTRY
 ENV PNPM_REGISTRY=$NPM_REGISTRY
 
 WORKDIR /app
 
-RUN printf 'deb %s/debian bookworm main contrib non-free\n' "$APT_MIRROR" > /etc/apt/sources.list \
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+    && printf 'deb %s/debian bookworm main contrib non-free\n' "$APT_MIRROR" > /etc/apt/sources.list \
     && printf 'deb %s/debian bookworm-updates main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
     && printf 'deb %s/debian-security bookworm-security main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
-    && printf 'deb %s/debian bookworm-backports main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
     && printf 'registry=%s\n' "$NPM_REGISTRY" > /root/.npmrc \
     && printf 'registry=%s\n' "$NPM_REGISTRY" > /root/.pnpmrc
 
@@ -33,17 +33,17 @@ RUN pnpm --filter @redesk/web build
 FROM node:22-bookworm-slim AS runtime
 
 ARG NPM_REGISTRY=https://registry.npmmirror.com
-ARG APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
+ARG APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn
 
 ENV npm_config_registry=$NPM_REGISTRY
 ENV PNPM_REGISTRY=$NPM_REGISTRY
 
 WORKDIR /app
 
-RUN printf 'deb %s/debian bookworm main contrib non-free\n' "$APT_MIRROR" > /etc/apt/sources.list \
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+    && printf 'deb %s/debian bookworm main contrib non-free\n' "$APT_MIRROR" > /etc/apt/sources.list \
     && printf 'deb %s/debian bookworm-updates main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
     && printf 'deb %s/debian-security bookworm-security main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
-    && printf 'deb %s/debian bookworm-backports main contrib non-free\n' "$APT_MIRROR" >> /etc/apt/sources.list \
     && printf 'registry=%s\n' "$NPM_REGISTRY" > /root/.npmrc \
     && printf 'registry=%s\n' "$NPM_REGISTRY" > /root/.pnpmrc
 

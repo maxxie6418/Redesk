@@ -56,6 +56,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             NPM_REGISTRY=https://registry.npmjs.org
-            APT_MIRROR=https://deb.debian.org
+            APT_MIRROR=http://deb.debian.org
           cache-from: type=gha
           cache-to: type=gha,mode=max
