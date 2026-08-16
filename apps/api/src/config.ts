@@ -24,6 +24,7 @@ const envSchema = z.object({
   AUTH_DISABLED: z.string().optional(),
   BOOTSTRAP_USERNAME: z.string().min(1).max(64).optional(),
   BOOTSTRAP_PASSWORD: z.string().min(8).max(256).optional(),
+  REDESK_PUBLIC_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -61,6 +62,10 @@ export const config = {
   logLevel: env.LOG_LEVEL,
   authDisabled: readAuthDisabled(),
   devAuthDisabled: readAuthDisabled(),
+  publicUrl:
+    env.REDESK_PUBLIC_URL && env.REDESK_PUBLIC_URL.trim()
+      ? env.REDESK_PUBLIC_URL.replace(/\/+$/, '')
+      : undefined,
 };
 
 export const DEFAULT_ADMIN_USERNAME = 'admin';

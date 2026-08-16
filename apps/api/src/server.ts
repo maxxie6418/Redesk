@@ -32,6 +32,7 @@ import { readingProgressRoutes } from './routes/reading-progress';
 import { readingSessionRoutes } from './routes/reading-sessions';
 import { readingStatsRoutes } from './routes/reading-stats';
 import { readerFontRoutes } from './routes/reader-fonts';
+import { agentRoutes } from './routes/agent';
 
 interface SendFileReply {
   sendFile: (path: string) => FastifyReply;
@@ -124,6 +125,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   app.register(opdsRoutes);
+  app.register(agentRoutes);
 
   const spaExists = existsSync(config.spaDir);
   if (spaExists) {

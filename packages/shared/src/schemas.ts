@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BOOK_STATUS, VISIBILITY, TOPIC_ENTRY_TYPE, PERMISSION_LEVEL } from './enums';
+import { AGENT_SCOPES } from './types';
 import type { ErrorCode } from './errors';
 
 const positiveInt = z.coerce.number().int().positive();
@@ -867,3 +868,15 @@ export const batchApplySchema = z.object({
   fields: z.array(z.string()).optional(),
 });
 export type BatchApplyInput = z.infer<typeof batchApplySchema>;
+
+export const createAgentConnectionSchema = z.object({
+  name: z.string().min(1).max(100),
+  scopes: z.array(z.enum(AGENT_SCOPES)).min(1),
+  expires_at: z.string().datetime().optional().nullable(),
+});
+export type CreateAgentConnectionInput = z.infer<typeof createAgentConnectionSchema>;
+
+export const agentTokenExchangeSchema = z.object({
+  code: z.string().min(1).max(500),
+});
+export type AgentTokenExchangeInput = z.infer<typeof agentTokenExchangeSchema>;
