@@ -84,7 +84,7 @@ describe('Agent 接入路由', () => {
     const res = await app.inject({ method: 'GET', url: created.linkPath });
     expect(res.statusCode).toBe(200);
     const skill = res.json().data;
-    expect(skill.skill_version).toBe(1);
+    expect(skill.skill_version).toBe(2);
     expect(skill.scopes).toEqual(['books:read', 'categories:manage']);
     expect(skill.base_url.endsWith('/api/v1')).toBe(true);
     const ids = skill.capabilities.map((c: { id: string }) => c.id);
@@ -92,6 +92,29 @@ describe('Agent 接入路由', () => {
     expect(ids).not.toContain('create_book');
     expect(ids).toContain('list_categories');
     expect(skill.connect_code).toBe(created.code);
+  });
+
+  it('skill 返回授权指引（authorization）', async () => {
+    const created = await createConnection(['books:read']);
+    const res = await app.inject({ method: 'GET', url: created.linkPath });
+    const skill = res.json().data;
+    expect(skill.authorization.exchange.url).toBe(`${skill.base_url}`.slice(0, -'/api/v1'.length) + '/agent/token/exchange');
+    expect(skill.authorization.exchange.method).toBe('POST');
+    expect(skill.authorization.exchange.body.code).toBe(created.code);
+    expect(skill.authorization.usage.header).toBe('Authorization');
+    expect(skill.authorization.steps.length).toBeGreaterThan(0);
+  });
+
+  it('浏览器打开落地面板内含可复制的授权提示词', async () => {
+    const created = await createConnection(['books:read']);
+    const res = await app.inject({ method: 'GET', url: created.linkPath, headers: { accept: 'text/html' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    const html = res.body;
+    expect(html).toContain('把下面这段提示词直接复制给 AI Agent');
+    expect(html).toContain('/agent/token/exchange');
+    expect(html).toContain('Bearer');
+    expect(html).toContain('Authorization');
   });
 
   it('授权码换令牌成功，且只能使用一次', async () => {

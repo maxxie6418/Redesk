@@ -93,26 +93,68 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const scopes = parseScopes(token.scopes);
+    const authBase = resolveBaseUrl(req);
+    const fullLink = `${authBase}/agent/connect/${code}`;
     const skill = {
-      skill_version: 1,
+      skill_version: 2,
       name: token.name,
       scopes,
-      base_url: `${resolveBaseUrl(req)}/api/v1`,
+      base_url: `${authBase}/api/v1`,
       connect_code: code,
+      authorization: {
+        steps: [
+          '先读取本说明（就是当前 GET 本链接返回的这个 JSON）。',
+          '用授权码兑换访问令牌：POST `' +
+            `${authBase}` +
+            `/agent/token/exchange` +
+            '`，请求体为 `{"code":"' +
+            `${code}` +
+            '"}`，请求头带 `Content-Type: application/json`。',
+          '兑换成功会返回 `access_token`（形如 `rdk_live_xxx`）、`scopes`、`expires_at`。',
+          '之后调用业务接口时，每个请求头都带上 `Authorization: Bearer <access_token>`，端点前缀为 `' +
+            `${authBase}/api/v1` +
+            '`。',
+        ],
+        exchange: {
+          method: 'POST',
+          url: `${authBase}/agent/token/exchange`,
+          headers: { 'Content-Type': 'application/json' },
+          body: { code },
+        },
+        usage: { header: 'Authorization', scheme: 'Bearer', base_url: `${authBase}/api/v1` },
+        note: '授权码一次性使用，10 分钟内有效；换得的 access_token 为长期令牌，可被主人吊销。未兑换令牌前调用业务接口会返回未登录。',
+      },
       capabilities: ALL_CAPABILITIES.filter((c) => scopes.includes(c.requires_scope)),
       conventions: CONVENTIONS,
     };
 
     if ((req.headers.accept ?? '').includes('text/html')) {
+      const scopeText = scopes.map((s) => `\`${s}\``).join('、');
+      const promptText = [
+        `我已接入 Redesk（接入名称：${token.name}），授权范围：${scopeText}。`,
+        `请用以下链接完成授权并操作我的书籍：`,
+        ``,
+        `授权链接：${fullLink}`,
+        ``,
+        `授权步骤：`,
+        `1. 读取授权说明：GET ${fullLink}（此步不带 Authorization 头），获得授权码 code 与能力清单。`,
+        `2. 用授权码兑换访问令牌：POST ${authBase}/agent/token/exchange，请求体为 {"code":"${code}"}，请求头带 Content-Type: application/json。兑换成功会返回 access_token（形如 rdk_live_xxx）、scopes、expires_at。`,
+        `3. 之后调用业务接口时，每个请求头带上 Authorization: Bearer <access_token>，端点前缀为 ${authBase}/api/v1。`,
+        ``,
+        `约定：授权码一次性使用、10 分钟内有效；换得的 access_token 为长期令牌，可被主人吊销。未兑换令牌前调用业务接口会返回未登录。所有写操作（新增书籍、更新元数据、新建分类/标签）都必须先征求我的同意。`,
+      ].join('\n');
       reply.type('text/html; charset=utf-8');
       return reply.send(`<!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>Redesk Agent 接入</title></head>
-<body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.7">
+<body style="font-family:system-ui;max-width:760px;margin:40px auto;padding:0 16px;line-height:1.7">
 <h1>Redesk Agent 接入</h1>
 <p>接入名称：<strong>${escapeHtml(token.name)}</strong></p>
 <p>授权范围：${scopes.map((s) => `<code>${escapeHtml(s)}</code>`).join('、')}</p>
-<p>此链接是一次性授权入口，请将完整链接发送给 AI Agent。</p>
+<p>授权链接（一次性，10 分钟有效）：<code>${escapeHtml(fullLink)}</code></p>
+<h3>把下面这段提示词直接复制给 AI Agent</h3>
+<textarea readonly rows="18" style="width:100%;box-sizing:border-box;font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:12px;border:1px solid #ccc;border-radius:8px;background:#fafafa" onclick="this.select();this.setSelectionRange(0,99999)">${escapeHtml(promptText)}</textarea>
+<p style="color:#888;font-size:13px">点击文本框即可全选复制。</p>
 </body></html>`);
     }
     return { data: skill };
