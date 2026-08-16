@@ -15,7 +15,7 @@ export const bookCovers = sqliteTable('book_covers', {
   storage_mode: text('storage_mode', { enum: ['local_only', 'cloud_only', 'dual'] as const }).notNull().default('local_only'),
   local_path: text('local_path'),
   remote_key: text('remote_key'),
-  connection_id: integer('connection_id').references(() => cloudConnections.id, { onDelete: 'set null' }),
+  connection_id: integer('connection_id').references(() => cloudConnections.id),
   primary_location: text('primary_location', { enum: ['local', 'cloud'] as const }).notNull().default('local'),
   sync_status: text('sync_status', { enum: ['synced', 'pending', 'partial_failed', 'failed'] as const }).notNull().default('synced'),
   mime_type: text('mime_type'),

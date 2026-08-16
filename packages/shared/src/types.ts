@@ -34,7 +34,20 @@ export const SETTINGS_KEY = {
   BRUTE_FORCE_WINDOW_MINUTES: 'brute_force_window_minutes',
   BRUTE_FORCE_MAX_ATTEMPTS: 'brute_force_max_attempts',
   BRUTE_FORCE_LOCK_MINUTES: 'brute_force_lock_minutes',
+  AGENT_SOURCE_URL_WHITELIST: 'agent_source_url_whitelist',
 } as const;
+
+export const AGENT_SCOPES = [
+  'books:read',
+  'books:create',
+  'books:update_metadata',
+  'categories:manage',
+  'tags:manage',
+] as const;
+
+export type AgentScope = (typeof AGENT_SCOPES)[number];
+
+export const AGENT_SOURCE_URL_WHITELIST_DEFAULT = ['book.douban.com'] as const;
 
 export const BRUTE_FORCE_DEFAULTS = {
   WINDOW_MINUTES: 10,

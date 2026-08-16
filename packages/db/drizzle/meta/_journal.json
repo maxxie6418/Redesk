@@ -253,6 +253,13 @@
       "when": 1783664098000,
       "tag": "0035_add_permission_level",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1786885963959,
+      "tag": "0036_gigantic_leper_queen",
+      "breakpoints": true
     }
   ]
 }
