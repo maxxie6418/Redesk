@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useUpdateSettings } from '@/hooks/use-settings';
 import { cn } from '@/lib/utils';
 import type { StatusMessage } from './types';
+import { AgentSection } from './agent-section';
 
 export function AiTab({ settings, onToast }: { settings: Record<string, string>; onToast: (msg: StatusMessage) => void }) {
   const updateSettings = useUpdateSettings();
@@ -121,6 +122,8 @@ export function AiTab({ settings, onToast }: { settings: Record<string, string>;
           </div>
         </CardContent>
       </Card>
+
+      <AgentSection onToast={onToast} />
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateSettings.isPending}>
