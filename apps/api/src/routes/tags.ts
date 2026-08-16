@@ -6,6 +6,7 @@ import { getDb } from '../db';
 import { AppError, notFound } from '../lib/errors';
 import { requirePermission } from '../lib/auth';
 import { validate } from '../lib/zod';
+import { writeAuditLog } from '../lib/agent-token';
 
 function now(): string {
   return new Date().toISOString();
@@ -71,6 +72,18 @@ export async function tagRoutes(app: FastifyInstance): Promise<void> {
       })
       .returning()
       .get();
+
+    if (req.apiIdentity) {
+      writeAuditLog({
+        ownerId: req.apiIdentity.ownerId,
+        tokenId: req.apiIdentity.tokenId,
+        req,
+        action: 'tags.create',
+        resourceType: 'tag',
+        resourceId: String(tag.id),
+        result: 'success',
+      });
+    }
 
     return { data: { ...tag, book_count: 0 } };
   });
