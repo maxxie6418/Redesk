@@ -22,7 +22,8 @@ describe('批量列表分页策略', () => {
     const bookshelf = readRoute('apps/web/src/routes/bookshelf/index.tsx');
     const batchTab = readRoute('apps/web/src/routes/settings/batch-tab.tsx');
 
-    expect(bookshelf).toContain('加载更多');
+    expect(bookshelf).toContain('BookshelfPagination');
+    expect(bookshelf).toContain('hasMore');
     expect(batchTab).toContain('加载更多');
     expect(batchTab).toContain('下一页');
   });
